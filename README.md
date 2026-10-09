@@ -3,8 +3,8 @@
 **Small quality of life features for WoW Forever, in one addon.**
 
 Forever QoL bundles the little things you'd otherwise install five addons for: a smaller 3D
-viewport, action bars that grow the other way, junk selling and repairs at merchants, IDs and
-vendor prices in tooltips, and switches to hide UI pieces you never click. Everything is set up in
+viewport, action bars that grow the other way, class-colored health bars, junk selling and repairs
+at merchants, IDs and vendor prices in tooltips, and switches to hide UI pieces you never click. Everything is set up in
 the game's own options window. There's no minimap button.
 
 It's made for WoW Forever and also runs on retail (Midnight).
@@ -34,6 +34,13 @@ It's made for WoW Forever and also runs on retail (Midnight).
 - **Hide the social button** on top of the chat window.
 - **Show the sort button on combined bags:** adds the sort (clean up) button next to the search box
   of the combined bag.
+
+### Unit frames
+
+- **Health bars in class color:** the health bar of the player, target, target of target, focus and
+  focus target frames takes the class color of the unit it shows, each frame switched on separately. The bar
+  keeps the shading of the default green bar. Units without a clear class, like most NPCs (and the
+  player frame while you're in a vehicle), keep the default bar.
 
 ### Chat commands
 

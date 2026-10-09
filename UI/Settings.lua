@@ -55,6 +55,13 @@ local function addMain(category, layout)
     addCheckbox(category, "hideChatSocial", L.HIDE_CHAT_SOCIAL, L.HIDE_CHAT_SOCIAL_TIP)
     addCheckbox(category, "showCombinedBagSort", L.SHOW_COMBINED_BAG_SORT, L.SHOW_COMBINED_BAG_SORT_TIP)
 
+    addHeader(layout, L.SECTION_UNIT_FRAMES)
+    addCheckbox(category, "classColorPlayer", L.CLASS_COLOR_PLAYER, L.CLASS_COLOR_TIP)
+    addCheckbox(category, "classColorTarget", L.CLASS_COLOR_TARGET, L.CLASS_COLOR_TIP)
+    addCheckbox(category, "classColorTargetOfTarget", L.CLASS_COLOR_TARGET_OF_TARGET, L.CLASS_COLOR_TIP)
+    addCheckbox(category, "classColorFocus", L.CLASS_COLOR_FOCUS, L.CLASS_COLOR_TIP)
+    addCheckbox(category, "classColorFocusTarget", L.CLASS_COLOR_FOCUS_TARGET, L.CLASS_COLOR_TIP)
+
     addHeader(layout, L.SECTION_COMMANDS)
     addCheckbox(category, "reloadCommand", L.RELOAD_COMMAND, L.RELOAD_COMMAND_TIP)
 end

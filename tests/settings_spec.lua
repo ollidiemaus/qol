@@ -23,7 +23,7 @@ describe("settings page", function()
         T.eq(api.categories[2].parent, main)
         T.eq(api.categories[3].name, "Action Bars")
         T.eq(api.categories[3].parent, main)
-        T.same(main.headers, { "Merchant", "Tooltips", "Interface", "Chat commands" })
+        T.same(main.headers, { "Merchant", "Tooltips", "Interface", "Unit frames", "Chat commands" })
     end)
 
     it("has a control for every option", function()

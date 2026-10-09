@@ -22,6 +22,12 @@ local DEFAULTS = {
     hideChatSocial = false,
     showCombinedBagSort = false,
 
+    classColorPlayer = false,
+    classColorTarget = false,
+    classColorTargetOfTarget = false,
+    classColorFocus = false,
+    classColorFocusTarget = false,
+
     reloadCommand = true,
 
     viewportEnabled = false,

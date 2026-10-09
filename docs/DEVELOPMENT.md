@@ -7,7 +7,7 @@ Notes for working on the addon. What it does for players is in the [README](../R
 | Folder | What's in it |
 |---|---|
 | `Core/` | Namespace and printing (`Init`), the event frame (`Events`), saved options with defaults and change watchers (`Options`), deferred changes (`Later`), the hidden holder for hidden frames (`Hider`), `/fqol` (`Slash`) and startup (`Lifecycle`) |
-| `Features/` | One file per feature: `Merchant`, `Tooltips`, `HideFrames`, `CombinedBagSort`, `Viewport`, `ActionBars` |
+| `Features/` | One file per feature: `Merchant`, `Tooltips`, `HideFrames`, `CombinedBagSort`, `ClassHealthBars`, `Viewport`, `ActionBars`, `ReloadCommand` |
 | `UI/Settings.lua` | The pages under Options > AddOns, all proxy settings onto `ns.Options` |
 | `Locales/` | English strings, German overrides |
 | `Media/` | `Icon.tga`, the addon list icon (the TOC's `IconTexture`, 128×128, 32-bit), and `Icon.svg`, its source (not packaged) |
@@ -25,7 +25,8 @@ hard way on the Forever beta. So:
 - Never write a field on a Blizzard frame, never call its layout or update methods, and never
   `hooksecurefunc` its methods. Read fields, call widget methods (`SetPoint`, `SetParent`).
 - Every change to a Blizzard frame goes through `ns.Later(key, fn)`: it runs on a fresh timer (never
-  inside a Blizzard call stack) and waits for the end of combat.
+  inside a Blizzard call stack) and waits for the end of combat. A change the game allows in combat
+  (the health bar colors) passes `true` as a third argument and runs in combat too.
 - Hide frames by parenting them to `ns.Hider`'s holder instead of `Hide()` plus hooks; Blizzard's
   own `Show()` calls then change nothing.
 - Compare or compute with game values only after `ns.IsUsable(value)` (nil and secret values fail).
@@ -40,6 +41,14 @@ The action bar flip copies the grid math of `ActionBarMixin:UpdateGridLayout` an
 bar's button containers only. Blizzard stores a new `oldGridSettings` table each time it lays a bar
 out, so events are just wake-ups: a bar is laid out again only when that table changed since our
 last pass (or the settings changed).
+
+The class-colored health bars use only `SetStatusBarDesaturated` and `SetStatusBarColor` on the
+unit frame's own bar (`frame.healthbar`): the default green texture is desaturated and then tinted,
+so its shading stays. Blizzard sets `lockColor` on the player, target, target of target, focus and
+focus target bars and never colors them itself, so a color stays until we change it. Who gets a class color
+follows Blizzard's raid frames: `UnitIsPlayer` or `UnitTreatAsPlayerForDisplay`, with a known,
+non-secret class (`UnitClass` is secret while a unit's identity is restricted). The bar's own
+`unit` field says what it shows, so the player frame in a vehicle (`"vehicle"`) keeps its default.
 
 ## Tests and lint
 
@@ -78,6 +87,10 @@ Things only the real client can confirm:
 - Junk selling and repairs (including guild repairs) at a merchant.
 - The vendor price of a stack in your bags shows the stack total with and without a merchant open,
   and only once (the game's own sell price line is replaced, not doubled).
+- Class-colored health bars: the shading matches the default bar, an NPC target (and a rare or
+  "minus" one) shows the default green, switching targets in combat recolors at once, and turning
+  an option off brings the green back without a `/reload`. Also on the target of target, focus and
+  focus target.
 
 ### Cutscenes and the viewport
 

@@ -143,6 +143,21 @@ function Stubs.NewActionBar(fields, numContainers)
     }), raw
 end
 
+-- A unit frame's health bar, read-only to the addon like action bars: its color and desaturation
+-- change only through the widget methods, which work in combat too. It starts the way Blizzard
+-- leaves these bars: white (the texture's own green shows) and not desaturated.
+local function newHealthBar(unit)
+    local raw = { unit = unit, color = { 1, 1, 1, 1 }, desaturated = false }
+    function raw.SetStatusBarColor(_, r, g, b, a) raw.color = { r, g, b, a or 1 } end
+    function raw.GetStatusBarColor() return raw.color[1], raw.color[2], raw.color[3], raw.color[4] end
+    function raw.SetStatusBarDesaturated(_, desaturated) raw.desaturated = desaturated and true or false end
+    function raw.IsStatusBarDesaturated() return raw.desaturated end
+    return setmetatable({}, {
+        __index = raw,
+        __newindex = function(_, key) error("the addon wrote health bar field " .. tostring(key)) end,
+    }), raw
+end
+
 local function split(delimiter, text)
     local parts = {}
     for part in (text .. delimiter):gmatch("(.-)" .. delimiter:gsub("%p", "%%%0")) do
@@ -255,6 +270,37 @@ local function install()
     minimapContainer.PlayerCoords = newRegion("Frame", minimapContainer)
     G.MinimapCluster = { MinimapContainer = minimapContainer }
 
+    -- Units: state.units[unit] = { isPlayer, treatAsPlayer, class }; a unit that isn't there doesn't exist.
+    G.UnitIsPlayer = function(unit)
+        local info = state.units[unit]
+        if info and info.isPlayer ~= nil then return info.isPlayer end
+        return false
+    end
+    G.UnitTreatAsPlayerForDisplay = function(unit)
+        local info = state.units[unit]
+        return info ~= nil and info.treatAsPlayer == true
+    end
+    G.UnitClass = function(unit)
+        local info = state.units[unit]
+        if not (info and info.class) then return nil end
+        return "Localized " .. tostring(info.class), info.class, 1
+    end
+    G.RAID_CLASS_COLORS = {
+        MAGE = { r = 0.25, g = 0.78, b = 0.92 },
+        PRIEST = { r = 1, g = 1, b = 1 },
+        ROGUE = { r = 1, g = 0.96, b = 0.41 },
+        WARRIOR = { r = 0.78, g = 0.61, b = 0.43 },
+    }
+
+    -- Unit frames, each with the health bar UnitFrame_Initialize stores in frame.healthbar.
+    state.healthBars = {}
+    for name, unit in pairs({ PlayerFrame = "player", TargetFrame = "target", TargetFrameToT = "targettarget",
+        FocusFrame = "focus", FocusFrameToT = "focustarget" }) do
+        local bar, raw = newHealthBar(unit)
+        state.healthBars[name] = raw
+        G[name] = { unit = unit, healthbar = bar }
+    end
+
     -- Action bar layout helpers: record what the addon asks for.
     G.GridLayoutUtil = {
         CreateStandardGridLayout = function(stride, xPadding, yPadding, xMultiplier, yMultiplier)
@@ -299,6 +345,7 @@ function Stubs.Reset(options)
         canRepair = false, repairCost = 0, repairs = {}, money = 0,
         inGuild = false, guildCanRepair = false, guildLimit = 0, guildMoney = 0,
         layouts = {}, reloads = 0,
+        units = { player = { isPlayer = true, class = "MAGE" } },
     }
     for _, name in ipairs(ADDON_GLOBALS) do _G[name] = nil end
     _G.SlashCmdList = {}
@@ -431,6 +478,17 @@ function Stubs.InstallSettings()
     _G.CreateSettingsListSectionHeaderInitializer = function(text, tooltip) return { header = text, tooltip = tooltip } end
     _G.MinimalSliderWithSteppersMixin = { Label = { Right = 2 } }
     return api
+end
+
+-- Puts a unit in the world (info: isPlayer, treatAsPlayer, class), or removes it with nil.
+function Stubs.SetUnit(unit, info)
+    state.units[unit] = info
+end
+
+-- The raw state of a unit frame's health bar (unit, color, desaturated), by frame name. Tests
+-- change bar.unit here, the way Blizzard switches the player frame to a vehicle.
+function Stubs.HealthBar(frameName)
+    return state.healthBars[frameName]
 end
 
 -- The whole bag contents: items ={ { bag, slot, itemID, quality, count, price, hasNoValue } }.

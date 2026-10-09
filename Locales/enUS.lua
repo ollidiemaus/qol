@@ -40,6 +40,15 @@ L.HIDE_CHAT_SOCIAL_TIP = "Hides the friends and quick join button on top of the 
 L.SHOW_COMBINED_BAG_SORT = "Show sort button on combined bags"
 L.SHOW_COMBINED_BAG_SORT_TIP = "Adds the sort (clean up) button to the combined bag, next to the search box."
 
+L.SECTION_UNIT_FRAMES = "Unit frames"
+L.CLASS_COLOR_PLAYER = "Player health bar in class color"
+L.CLASS_COLOR_TARGET = "Target health bar in class color"
+L.CLASS_COLOR_TARGET_OF_TARGET = "Target of target health bar in class color"
+L.CLASS_COLOR_FOCUS = "Focus health bar in class color"
+L.CLASS_COLOR_FOCUS_TARGET = "Focus target health bar in class color"
+L.CLASS_COLOR_TIP = "Colors the health bar in the class color of the unit, with the same shading as the default bar. "
+    .. "Units without a clear class, like most NPCs, keep the default green bar."
+
 L.SECTION_COMMANDS = "Chat commands"
 L.RELOAD_COMMAND = "/rl reloads the interface"
 L.RELOAD_COMMAND_TIP = "Adds /rl as a short form of /reload. Only when the game and your other addons "
