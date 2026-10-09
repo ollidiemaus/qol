@@ -18,7 +18,13 @@ function CombinedBagSort:Apply()
                 button:SetParent(bag)
             end
             button:ClearAllPoints()
-            button:SetPoint("TOPRIGHT", bag, "TOPRIGHT", -9, -34)
+            -- Left of the search box: the right side already has another button.
+            local search = BagItemSearchBox
+            if search and search:GetParent() == bag then
+                button:SetPoint("RIGHT", search, "LEFT", -4, 0)
+            else
+                button:SetPoint("TOPLEFT", bag, "TOPLEFT", 10, -34)
+            end
             button:Show()
             self.shownByUs = true
         end

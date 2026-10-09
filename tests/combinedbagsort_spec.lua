@@ -27,7 +27,17 @@ describe("combined bag sort button", function()
         openBag()
         T.eq(BagItemAutoSortButton:GetParent(), ContainerFrameCombinedBags)
         T.truthy(BagItemAutoSortButton:IsVisible())
-        T.truthy(BagItemAutoSortButton:PointFor("TOPRIGHT"))
+        -- No search box on the bag yet: pinned to the bag's top left.
+        T.truthy(BagItemAutoSortButton:PointFor("TOPLEFT"))
+    end)
+
+    it("sits left of the search box when the bag has one", function()
+        start({ showCombinedBagSort = true })
+        BagItemSearchBox:SetParent(ContainerFrameCombinedBags)
+        openBag()
+        local point = BagItemAutoSortButton:PointFor("RIGHT")
+        T.eq(point[2], BagItemSearchBox)
+        T.eq(point[3], "LEFT")
     end)
 
     it("follows the option while the bag is open", function()

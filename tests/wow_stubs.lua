@@ -248,6 +248,7 @@ local function install()
     G.ContainerFrameCombinedBags.hooks = {}
     function G.ContainerFrameCombinedBags:HookScript(script, fn) self.hooks[script] = fn end
     G.ContainerFrame1 = newRegion("Frame", G.UIParent)
+    G.BagItemSearchBox = newRegion("Frame", G.ContainerFrame1)
     G.BagItemAutoSortButton = newRegion("Frame", G.ContainerFrame1)
     G.BagItemAutoSortButton:Hide()
     local minimapContainer = newRegion("Frame", G.UIParent)
