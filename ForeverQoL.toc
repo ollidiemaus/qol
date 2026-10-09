@@ -1,0 +1,32 @@
+## Interface: 16001, 120100, 120105
+## Title: Forever QoL
+## Notes: Small quality of life features: viewport, action bar growth, junk selling, repairs, tooltip IDs and vendor prices, hiding UI clutter.
+## Notes-deDE: Kleine Komfortfunktionen: Ansichtsfenster, Wachstumsrichtung der Aktionsleisten, Müll verkaufen, Reparieren, IDs und Händlerpreise in Tooltips, UI-Elemente ausblenden.
+## Author: ollidiemaus
+## Version: @project-version@
+## SavedVariables: ForeverQoLDB
+## Category-enUS: Quality of Life
+## Category-deDE: Komfort
+
+# Load order: Locales -> Core -> Features -> UI. Lifecycle.lua comes last and starts everything.
+
+Locales\enUS.lua
+Locales\deDE.lua
+
+Core\Init.lua
+Core\Events.lua
+Core\Options.lua
+Core\Later.lua
+Core\Hider.lua
+
+Features\Merchant.lua
+Features\Tooltips.lua
+Features\HideFrames.lua
+Features\Viewport.lua
+Features\ActionBars.lua
+Features\ReloadCommand.lua
+
+UI\Settings.lua
+
+Core\Slash.lua
+Core\Lifecycle.lua

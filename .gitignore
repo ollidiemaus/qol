@@ -1,0 +1,40 @@
+# Packager output (BigWigsMods packager, see .pkgmeta)
+.release/
+*.zip
+
+# Lua toolchains: what the CI actions install into the workspace (see .luacheckrc) and local
+# luarocks trees
+.lua/
+.luarocks/
+.install/
+lua_modules/
+
+# Lua tooling output
+luac.out
+luacov.stats.out
+luacov.report.out
+
+# macOS
+.DS_Store
+._*
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+[Dd]esktop.ini
+$RECYCLE.BIN/
+
+# Editors and IDEs
+.vscode/
+.idea/
+*.code-workspace
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
+
+# Claude Code: personal settings stay local (shared skills and settings can be committed)
+.claude/settings.local.json

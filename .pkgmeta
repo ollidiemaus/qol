@@ -1,0 +1,6 @@
+package-as: ForeverQoL
+
+ignore:
+  - docs
+  - tests
+  - README.md

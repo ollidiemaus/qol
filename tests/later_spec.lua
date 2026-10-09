@@ -1,0 +1,40 @@
+local T = require("testlib")
+local Stubs = require("wow_stubs")
+local describe, it = T.describe, T.it
+
+describe("ns.Later", function()
+    it("runs on the next timer, not right away", function()
+        local ns = Stubs.LoadAddon()
+        Stubs.Login()
+        local ran = 0
+        ns.Later("test", function() ran = ran + 1 end)
+        T.eq(ran, 0)
+        Stubs.RunTimers()
+        T.eq(ran, 1)
+    end)
+
+    it("runs a key once, with the latest function, however often it was asked for", function()
+        local ns = Stubs.LoadAddon()
+        Stubs.Login()
+        local result = {}
+        ns.Later("test", function() result[#result + 1] = "first" end)
+        ns.Later("test", function() result[#result + 1] = "second" end)
+        ns.Later("other", function() result[#result + 1] = "other" end)
+        Stubs.RunTimers()
+        table.sort(result)
+        T.same(result, { "other", "second" })
+    end)
+
+    it("waits for the end of combat", function()
+        local ns = Stubs.LoadAddon()
+        Stubs.Login()
+        local ran = 0
+        Stubs.SetCombat(true)
+        ns.Later("test", function() ran = ran + 1 end)
+        Stubs.RunTimers()
+        T.eq(ran, 0)
+        Stubs.SetCombat(false)
+        Stubs.RunTimers()
+        T.eq(ran, 1)
+    end)
+end)
