@@ -1,7 +1,7 @@
 ## Interface: 16001, 120100, 120105
 ## Title: Forever QoL
-## Notes: Small quality of life features: viewport, action bar growth, junk selling, repairs, tooltip IDs and vendor prices, hiding UI clutter.
-## Notes-deDE: Kleine Komfortfunktionen: Ansichtsfenster, Wachstumsrichtung der Aktionsleisten, Müll verkaufen, Reparieren, IDs und Händlerpreise in Tooltips, UI-Elemente ausblenden.
+## Notes: Small quality of life features: viewport, action bar growth, class-colored health bars, junk selling, repairs, tooltip IDs and vendor prices, hiding UI clutter.
+## Notes-deDE: Kleine Komfortfunktionen: Ansichtsfenster, Wachstumsrichtung der Aktionsleisten, Gesundheitsleisten in Klassenfarbe, Müll verkaufen, Reparieren, IDs und Händlerpreise in Tooltips, UI-Elemente ausblenden.
 ## Author: ollidiemaus
 ## Version: @project-version@
 ## SavedVariables: ForeverQoLDB
@@ -35,6 +35,7 @@ Features\Merchant.lua
 Features\Tooltips.lua
 Features\HideFrames.lua
 Features\CombinedBagSort.lua
+Features\ClassHealthBars.lua
 Features\Viewport.lua
 Features\ActionBars.lua
 Features\ReloadCommand.lua

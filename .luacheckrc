@@ -28,6 +28,8 @@ read_globals = {
     "InCombatLockdown", "GetPhysicalScreenSize", "ReloadUI", "IsSecureCmd", "CinematicFrame", "MovieFrame",
     -- Strings and formatting
     "GetLocale", "GetMoneyString", "SELL_PRICE",
+    -- Units
+    "UnitIsPlayer", "UnitTreatAsPlayerForDisplay", "UnitClass", "RAID_CLASS_COLORS",
     -- Bags, items and merchants
     "NUM_BAG_SLOTS", "NUM_TOTAL_EQUIPPED_BAG_SLOTS",
     "CanMerchantRepair", "GetRepairAllCost", "RepairAllItems", "GetMoney",

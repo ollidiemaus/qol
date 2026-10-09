@@ -40,6 +40,15 @@ L.HIDE_CHAT_SOCIAL_TIP = "Blendet den Freunde- und Schnellbeitritt-Knopf oben am
 L.SHOW_COMBINED_BAG_SORT = "Sortieren-Knopf an kombinierten Taschen anzeigen"
 L.SHOW_COMBINED_BAG_SORT_TIP = "Fügt der kombinierten Tasche den Sortieren-Knopf (Aufräumen) neben dem Suchfeld hinzu."
 
+L.SECTION_UNIT_FRAMES = "Einheitenfenster"
+L.CLASS_COLOR_PLAYER = "Gesundheitsleiste des Spielers in Klassenfarbe"
+L.CLASS_COLOR_TARGET = "Gesundheitsleiste des Ziels in Klassenfarbe"
+L.CLASS_COLOR_TARGET_OF_TARGET = "Gesundheitsleiste vom Ziel des Ziels in Klassenfarbe"
+L.CLASS_COLOR_FOCUS = "Gesundheitsleiste des Fokus in Klassenfarbe"
+L.CLASS_COLOR_FOCUS_TARGET = "Gesundheitsleiste vom Ziel des Fokus in Klassenfarbe"
+L.CLASS_COLOR_TIP = "Färbt die Gesundheitsleiste in der Klassenfarbe der Einheit, mit derselben Schattierung wie die "
+    .. "normale Leiste. Einheiten ohne eindeutige Klasse, wie die meisten NPCs, behalten die normale grüne Leiste."
+
 L.SECTION_COMMANDS = "Chatbefehle"
 L.RELOAD_COMMAND = "/rl lädt die Oberfläche neu"
 L.RELOAD_COMMAND_TIP = "Fügt /rl als Kurzform von /reload hinzu. Nur wenn das Spiel und deine anderen "
