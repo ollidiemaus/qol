@@ -5,8 +5,8 @@
 ## Author: ollidiemaus
 ## Version: @project-version@
 ## SavedVariables: ForeverQoLDB
-## Category-enUS: Quality of Life
-## Category-deDE: Komfort
+## Category: User Interface
+## Category-deDE: Benutzerinterface
 
 # Load order: Locales -> Core -> Features -> UI. Lifecycle.lua comes last and starts everything.
 
