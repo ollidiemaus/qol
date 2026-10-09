@@ -53,6 +53,7 @@ local function addMain(category, layout)
     addCheckbox(category, "hideBagsBar", L.HIDE_BAGS_BAR, L.HIDE_BAGS_BAR_TIP)
     addCheckbox(category, "hideMinimapCoords", L.HIDE_MINIMAP_COORDS, L.HIDE_MINIMAP_COORDS_TIP)
     addCheckbox(category, "hideChatSocial", L.HIDE_CHAT_SOCIAL, L.HIDE_CHAT_SOCIAL_TIP)
+    addCheckbox(category, "showCombinedBagSort", L.SHOW_COMBINED_BAG_SORT, L.SHOW_COMBINED_BAG_SORT_TIP)
 
     addHeader(layout, L.SECTION_COMMANDS)
     addCheckbox(category, "reloadCommand", L.RELOAD_COMMAND, L.RELOAD_COMMAND_TIP)

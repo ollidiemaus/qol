@@ -20,6 +20,7 @@ local DEFAULTS = {
     hideBagsBar = false,
     hideMinimapCoords = false,
     hideChatSocial = false,
+    showCombinedBagSort = false,
 
     reloadCommand = true,
 

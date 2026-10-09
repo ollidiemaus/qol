@@ -242,6 +242,15 @@ local function install()
     G.MicroMenuContainer = newRegion("Frame", G.UIParent)
     G.BagsBar = newRegion("Frame", G.UIParent)
     G.QuickJoinToastButton = newRegion("Frame", G.UIParent)
+    -- The combined bag starts closed; its sort button belongs to the backpack and starts hidden.
+    G.ContainerFrameCombinedBags = newRegion("Frame", G.UIParent)
+    G.ContainerFrameCombinedBags:Hide()
+    G.ContainerFrameCombinedBags.hooks = {}
+    function G.ContainerFrameCombinedBags:HookScript(script, fn) self.hooks[script] = fn end
+    G.ContainerFrame1 = newRegion("Frame", G.UIParent)
+    G.BagItemSearchBox = newRegion("Frame", G.ContainerFrame1)
+    G.BagItemAutoSortButton = newRegion("Frame", G.ContainerFrame1)
+    G.BagItemAutoSortButton:Hide()
     local minimapContainer = newRegion("Frame", G.UIParent)
     minimapContainer.PlayerCoords = newRegion("Frame", minimapContainer)
     G.MinimapCluster = { MinimapContainer = minimapContainer }

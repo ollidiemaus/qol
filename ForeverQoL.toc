@@ -32,6 +32,7 @@ Core\Hider.lua
 Features\Merchant.lua
 Features\Tooltips.lua
 Features\HideFrames.lua
+Features\CombinedBagSort.lua
 Features\Viewport.lua
 Features\ActionBars.lua
 Features\ReloadCommand.lua

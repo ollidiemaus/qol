@@ -4,7 +4,7 @@ package.path = "./tests/?.lua;" .. package.path
 local T = require("testlib")
 
 local SPECS = {
-    "options", "later", "merchant", "tooltips", "hideframes", "viewport", "actionbars", "reloadcommand",
+    "options", "later", "merchant", "tooltips", "hideframes", "combinedbagsort", "viewport", "actionbars", "reloadcommand",
     "settings", "locales",
 }
 

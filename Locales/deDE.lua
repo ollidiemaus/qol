@@ -37,6 +37,8 @@ L.HIDE_MINIMAP_COORDS_TIP = "Blendet die Spielerkoordinaten unter der Minimap au
 L.HIDE_CHAT_SOCIAL = "Sozial-Knopf über dem Chat ausblenden"
 L.HIDE_CHAT_SOCIAL_TIP = "Blendet den Freunde- und Schnellbeitritt-Knopf oben am Chatfenster aus. "
     .. "Das Kontaktefenster öffnet sich weiterhin mit seiner Tastenbelegung."
+L.SHOW_COMBINED_BAG_SORT = "Sortieren-Knopf an kombinierten Taschen anzeigen"
+L.SHOW_COMBINED_BAG_SORT_TIP = "Fügt der kombinierten Tasche den Sortieren-Knopf (Aufräumen) neben dem Suchfeld hinzu."
 
 L.SECTION_COMMANDS = "Chatbefehle"
 L.RELOAD_COMMAND = "/rl lädt die Oberfläche neu"
