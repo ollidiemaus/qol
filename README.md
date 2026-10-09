@@ -32,6 +32,8 @@ It's made for WoW Forever and also runs on retail (Midnight).
 - **Hide the bag bar:** the backpack and bag slots. Bag key bindings keep working.
 - **Hide the coordinates under the minimap.**
 - **Hide the social button** on top of the chat window.
+- **Show the sort button on combined bags:** adds the sort (clean up) button next to the search box
+  of the combined bag.
 
 ### Chat commands
 

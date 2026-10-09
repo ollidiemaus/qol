@@ -22,7 +22,8 @@ read_globals = {
     "CreateFrame", "UIParent", "WorldFrame", "DEFAULT_CHAT_FRAME", "EventRegistry",
     "Settings", "CreateSettingsListSectionHeaderInitializer", "MinimalSliderWithSteppersMixin",
     "GridLayoutUtil", "AnchorUtil", "TooltipDataProcessor",
-    "MicroMenuContainer", "BagsBar", "QuickJoinToastButton", "MinimapCluster",
+    "MicroMenuContainer", "ContainerFrameCombinedBags", "BagItemAutoSortButton",
+    "BagsBar", "QuickJoinToastButton", "MinimapCluster",
     "InCombatLockdown", "GetPhysicalScreenSize", "ReloadUI", "IsSecureCmd", "CinematicFrame", "MovieFrame",
     -- Strings and formatting
     "GetLocale", "GetMoneyString", "SELL_PRICE",

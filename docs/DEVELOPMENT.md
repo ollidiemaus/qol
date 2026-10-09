@@ -7,7 +7,7 @@ Notes for working on the addon. What it does for players is in the [README](../R
 | Folder | What's in it |
 |---|---|
 | `Core/` | Namespace and printing (`Init`), the event frame (`Events`), saved options with defaults and change watchers (`Options`), deferred changes (`Later`), the hidden holder for hidden frames (`Hider`), `/fqol` (`Slash`) and startup (`Lifecycle`) |
-| `Features/` | One file per feature: `Merchant`, `Tooltips`, `HideFrames`, `Viewport`, `ActionBars` |
+| `Features/` | One file per feature: `Merchant`, `Tooltips`, `HideFrames`, `CombinedBagSort`, `Viewport`, `ActionBars` |
 | `UI/Settings.lua` | The pages under Options > AddOns, all proxy settings onto `ns.Options` |
 | `Locales/` | English strings, German overrides |
 | `tests/` | Specs run in plain Lua against `tests/wow_stubs.lua` |

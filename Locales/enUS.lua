@@ -37,6 +37,8 @@ L.HIDE_MINIMAP_COORDS_TIP = "Hides the player coordinates shown below the minima
 L.HIDE_CHAT_SOCIAL = "Hide social button above the chat"
 L.HIDE_CHAT_SOCIAL_TIP = "Hides the friends and quick join button on top of the chat window. "
     .. "The social window still opens with its key binding."
+L.SHOW_COMBINED_BAG_SORT = "Show sort button on combined bags"
+L.SHOW_COMBINED_BAG_SORT_TIP = "Adds the sort (clean up) button to the combined bag, next to the search box."
 
 L.SECTION_COMMANDS = "Chat commands"
 L.RELOAD_COMMAND = "/rl reloads the interface"
