@@ -30,7 +30,8 @@ L.HIDE_MICRO_MENU_TIP = "Blendet die Systemleiste (Mikromenü) mit den Knöpfen 
     .. "Spielmenü aus. Deine Tastenbelegungen öffnen diese Fenster weiterhin, und in Fahrzeugen erscheinen die "
     .. "Knöpfe wie gewohnt auf der Fahrzeugleiste."
 L.HIDE_BAGS_BAR = "Taschenleiste ausblenden"
-L.HIDE_BAGS_BAR_TIP = "Blendet den Rucksack und die Taschenplätze aus. Deine Taschen-Tastenbelegungen funktionieren weiterhin."
+L.HIDE_BAGS_BAR_TIP =
+"Blendet den Rucksack und die Taschenplätze aus. Deine Taschen-Tastenbelegungen funktionieren weiterhin."
 L.HIDE_MINIMAP_COORDS = "Koordinaten unter der Minimap ausblenden"
 L.HIDE_MINIMAP_COORDS_TIP = "Blendet die Spielerkoordinaten unter der Minimap aus."
 L.HIDE_CHAT_SOCIAL = "Sozial-Knopf über dem Chat ausblenden"
@@ -43,7 +44,7 @@ L.RELOAD_COMMAND_TIP = "Fügt /rl als Kurzform von /reload hinzu. Nur wenn das S
     .. "Addons /rl nicht schon verwenden; dann bleibt deren Befehl."
 
 -- Settings: viewport page
-L.CATEGORY_VIEWPORT = "Ansichtsfenster"
+L.CATEGORY_VIEWPORT = "Viewport"
 L.VIEWPORT_ENABLE = "3D-Welt verkleinern"
 L.VIEWPORT_ENABLE_TIP = "Zeichnet die Spielwelt in einem kleineren Bereich und füllt die Ränder mit einer Farbe, "
     .. "damit Oberflächenelemente am Bildschirmrand die Welt nicht mehr verdecken."
