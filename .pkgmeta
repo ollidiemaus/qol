@@ -4,3 +4,4 @@ ignore:
   - docs
   - tests
   - README.md
+  - Media/Icon.svg

@@ -5,6 +5,7 @@
 ## Author: ollidiemaus
 ## Version: @project-version@
 ## SavedVariables: ForeverQoLDB
+## IconTexture: Interface\AddOns\ForeverQoL\Media\Icon
 ## Category: User Interface
 ## Category-deDE: Benutzerinterface
 ## Category-esES: Interfaz de usuario

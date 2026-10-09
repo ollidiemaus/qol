@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+<defs>
+  <radialGradient id="bg" cx="38%" cy="34%" r="80%">
+    <stop offset="0" stop-color="#5aa86a"/>
+    <stop offset="0.45" stop-color="#22603a"/>
+    <stop offset="1" stop-color="#081d10"/>
+  </radialGradient>
+  <filter id="drop" x="-25%" y="-25%" width="150%" height="150%">
+    <feDropShadow dx="2" dy="6" stdDeviation="5" flood-color="#000" flood-opacity="0.6"/>
+  </filter>
+  <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+    <feGaussianBlur stdDeviation="3" result="b"/>
+    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <!-- the wrench lies along +x (open end on the right) and is turned into place below -->
+  <linearGradient id="steel" x1="0" y1="-34" x2="0" y2="34" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#f6f9fc"/>
+    <stop offset="0.42" stop-color="#cfd6de"/>
+    <stop offset="0.68" stop-color="#8b97a6"/>
+    <stop offset="1" stop-color="#465060"/>
+  </linearGradient>
+  <linearGradient id="groove" x1="0" y1="-6" x2="0" y2="6" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#5a6575"/>
+    <stop offset="1" stop-color="#b9c2cd"/>
+  </linearGradient>
+  <linearGradient id="gold" x1="0" y1="-16" x2="0" y2="16" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#fff6d2"/>
+    <stop offset="1" stop-color="#f0b93e"/>
+  </linearGradient>
+  <path id="wrench" fill-rule="evenodd" d="
+     M26 -16.5 C36 -16.5 40 -19.5 45.5 -24
+     A42 42 0 0 1 119.2 -15 L74 -15 L74 15 L119.2 15
+     A42 42 0 0 1 45.5 24
+     C40 19.5 36 16.5 26 16.5 L-82 16.5
+     C-88 16.5 -92 17.5 -96.9 19
+     A22 22 0 1 1 -96.9 -19
+     C-92 -17.5 -88 -16.5 -82 -16.5 Z
+     M-99 0 A9 9 0 1 0 -117 0 A9 9 0 1 0 -99 0 Z"/>
+  <path id="sparkle" d="M0 -16 C2 -4 4 -2 16 0 C4 2 2 4 0 16 C-2 4 -4 2 -16 0 C-4 -2 -2 -4 0 -16 Z"/>
+</defs>
+<rect width="256" height="256" fill="url(#bg)"/>
+
+<!-- sparkles: the small polish a QoL addon adds -->
+<g filter="url(#glow)" fill="url(#gold)">
+  <use href="#sparkle" transform="translate(68 72) scale(1.15)"/>
+  <use href="#sparkle" transform="translate(104 44) scale(0.6)"/>
+  <use href="#sparkle" transform="translate(44 112) scale(0.5)"/>
+</g>
+
+<g filter="url(#drop)" transform="translate(125 131) rotate(-45) scale(1.05) translate(4 0)">
+  <use href="#wrench" fill="url(#steel)"/>
+  <!-- groove along the handle -->
+  <rect x="-78" y="-5.5" width="96" height="11" rx="5.5" fill="url(#groove)" stroke="#262d38" stroke-width="1.4" stroke-opacity="0.7"/>
+  <!-- edge light along the top of the handle and the head -->
+  <path d="M-86 -12.5 L22 -12.5" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-opacity="0.75"/>
+  <path d="M52 -26 A37 37 0 0 1 108 -24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-opacity="0.75"/>
+  <!-- depth inside the hole -->
+  <circle cx="-108" cy="0" r="9" fill="none" stroke="#1d242e" stroke-width="2.5" stroke-opacity="0.6"/>
+  <use href="#wrench" fill="none" stroke="#141a22" stroke-width="3" stroke-linejoin="round"/>
+</g>
+
+<defs>
+  <filter id="grainF" x="0" y="0" width="100%" height="100%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" seed="7"/>
+    <feColorMatrix type="matrix" values="0 0 0 0 0.5  0 0 0 0 0.5  0 0 0 0 0.5  0 0 0 1.6 -0.55"/>
+  </filter>
+  <radialGradient id="vigG" cx="50%" cy="46%" r="72%">
+    <stop offset="0.55" stop-color="#000" stop-opacity="0"/>
+    <stop offset="1" stop-color="#000" stop-opacity="0.62"/>
+  </radialGradient>
+</defs>
+<rect width="256" height="256" filter="url(#grainF)" opacity="0.22" style="mix-blend-mode:overlay"/>
+<rect width="256" height="256" fill="url(#vigG)"/>
+<rect x="2" y="2" width="252" height="252" fill="none" stroke="#000" stroke-opacity="0.45" stroke-width="4"/>
+<path d="M4 252 V4 H252" fill="none" stroke="#fff" stroke-opacity="0.10" stroke-width="2"/>
+</svg>

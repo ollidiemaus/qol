@@ -10,6 +10,7 @@ Notes for working on the addon. What it does for players is in the [README](../R
 | `Features/` | One file per feature: `Merchant`, `Tooltips`, `HideFrames`, `CombinedBagSort`, `Viewport`, `ActionBars` |
 | `UI/Settings.lua` | The pages under Options > AddOns, all proxy settings onto `ns.Options` |
 | `Locales/` | English strings, German overrides |
+| `Media/` | `Icon.tga`, the addon list icon (the TOC's `IconTexture`, 128×128, 32-bit), and `Icon.svg`, its source (not packaged) |
 | `tests/` | Specs run in plain Lua against `tests/wow_stubs.lua` |
 
 Features never talk to each other or to the settings page. The page writes `ns.Options`; a feature
@@ -104,5 +105,5 @@ on, that report is what to look at.
 
 `.github/workflows/release.yml` runs the [BigWigsMods packager](https://github.com/BigWigsMods/packager)
 on every pushed tag, like Wayscribe: it replaces `@project-version@` with the tag, leaves out `docs/`,
-`tests/` and `README.md`, and creates the GitHub release. For CurseForge uploads, add
+`tests/`, `README.md` and `Media/Icon.svg`, and creates the GitHub release. For CurseForge uploads, add
 `## X-Curse-Project-ID` to the TOC and the `CF_API_KEY` repository secret.
