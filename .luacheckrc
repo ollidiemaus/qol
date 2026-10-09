@@ -6,6 +6,7 @@ exclude_files = { ".git/", ".release/", ".lua/", ".luarocks/", ".install/" }
 
 -- Globals the addon defines.
 globals = {
+    "ForeverQoLAPI",
     "ForeverQoLDB",
     "SLASH_FOREVERQOL1",
     "SLASH_FOREVERQOL2",

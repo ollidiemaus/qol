@@ -1,0 +1,28 @@
+local T = require("testlib")
+local Stubs = require("wow_stubs")
+local describe, it = T.describe, T.it
+
+describe("public API", function()
+    it("is exposed as a global", function()
+        local ns = Stubs.LoadAddon()
+        T.eq(ForeverQoLAPI, ns.API)
+    end)
+
+    it("switches the viewport through the same path as the settings page", function()
+        local ns = Stubs.LoadAddon()
+        Stubs.Login()
+        T.eq(ForeverQoLAPI.IsFeatureEnabled("viewport"), false)
+        T.eq(ForeverQoLAPI.SetFeatureEnabled("viewport", true), true)
+        T.eq(ns.Options:Get("viewportEnabled"), true)
+        T.eq(ForeverQoLAPI.IsFeatureEnabled("Viewport"), true)
+        ForeverQoLAPI.SetFeatureEnabled("viewport", false)
+        T.eq(ns.Options:Get("viewportEnabled"), false)
+    end)
+
+    it("rejects unknown features", function()
+        Stubs.LoadAddon()
+        Stubs.Login()
+        T.eq(ForeverQoLAPI.IsFeatureEnabled("nope"), nil)
+        T.eq(ForeverQoLAPI.SetFeatureEnabled("nope", true), false)
+    end)
+end)
