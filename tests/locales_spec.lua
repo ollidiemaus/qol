@@ -3,7 +3,7 @@ local Stubs = require("wow_stubs")
 local describe, it = T.describe, T.it
 
 -- Strings that are the same in both languages.
-local SAME = { ADDON_TITLE = true, SECTION_TOOLTIPS = true, PIXELS = true }
+local SAME = { ADDON_TITLE = true, SECTION_TOOLTIPS = true, PIXELS = true, CATEGORY_VIEWPORT = true }
 
 local function strings(locale)
     return Stubs.LoadAddon({ locale = locale }).L
