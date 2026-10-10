@@ -38,7 +38,7 @@ describe("viewport", function()
         start({ viewportEnabled = true, viewportTop = 90, viewportBottom = 180, viewportLeft = 30, viewportRight = 60 })
         local topLeft = WorldFrame:PointFor("TOPLEFT")
         local bottomRight = WorldFrame:PointFor("BOTTOMRIGHT")
-        T.eq(topLeft[2], UIParent)
+        T.eq(topLeft[2], nil, "anchored to the screen, as the game anchors it")
         near(topLeft[4], 30 * UNIT)
         near(topLeft[5], -90 * UNIT)
         near(bottomRight[4], -60 * UNIT)
@@ -77,6 +77,32 @@ describe("viewport", function()
         ns.Options:Set("viewportLeft", 120)
         Stubs.RunTimers()
         near(WorldFrame:PointFor("TOPLEFT")[4], 120 * UNIT)
+    end)
+
+    it("sets WorldFrame and the margins again only when they come out different", function()
+        start({ viewportEnabled = true, viewportTop = 90 })
+        local function counted(region)
+            local calls = { n = 0 }
+            local clear = region.ClearAllPoints
+            region.ClearAllPoints = function(self)
+                calls.n = calls.n + 1
+                clear(self)
+            end
+            return calls
+        end
+        local world, margin = counted(WorldFrame), counted(borderFrame().edges.top)
+        Stubs.Fire("DISPLAY_SIZE_CHANGED")
+        Stubs.Fire("UI_SCALE_CHANGED")
+        Stubs.Fire("PLAYER_ENTERING_WORLD")
+        Stubs.RunTimers()
+        T.eq(world.n, 0, "WorldFrame left as it was")
+        T.eq(margin.n, 0, "margins left as they were")
+        Stubs.state().screenHeight = 1080
+        Stubs.Fire("DISPLAY_SIZE_CHANGED")
+        Stubs.RunTimers()
+        T.eq(world.n, 1)
+        T.eq(margin.n, 1)
+        near(WorldFrame:PointFor("TOPLEFT")[5], -90 * 768 / 1080)
     end)
 
     it("waits for the end of combat", function()

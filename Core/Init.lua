@@ -32,6 +32,16 @@ function ns.IsUsable(value)
     return true
 end
 
+-- Forever's controller interface (Enable Controller UI in the controller settings) brings action
+-- bars of its own. The game hides the standard bars then and never shows them while it's on, so the
+-- features for those bars stand aside.
+function ns.IsControllerUI()
+    local getStyle = C_InputInterfaceStyle and C_InputInterfaceStyle.GetCurrentStyle
+    local styles = Enum and Enum.InputDeviceInterfaceType
+    if not (getStyle and styles and styles.Gamepad ~= nil) then return false end
+    return getStyle() == styles.Gamepad
+end
+
 function ns.FormatMoney(copper)
     if GetMoneyString then
         return GetMoneyString(copper, true)

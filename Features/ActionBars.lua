@@ -8,8 +8,8 @@ local Options = ns.Options
 -- the bar for the whole session, and with secret values that taint breaks unrelated frames (party
 -- frames, cooldowns, Edit Mode). So the bars themselves are only ever read: we move their button
 -- containers, using the same grid math as ActionBarMixin:UpdateGridLayout with the chosen axes
--- flipped, always from ns.Later (fresh timer, out of combat). A bar the player never flipped is
--- never touched.
+-- flipped, always from ns.Later (fresh call stack, out of combat). A bar the player never flipped
+-- is never touched, and with the controller interface on (which never shows these bars) none is.
 local ActionBars = {}
 ns.ActionBars = ActionBars
 
@@ -96,6 +96,8 @@ local appliedOver = {}
 local settingsChanged = true
 
 function ActionBars:Update()
+    -- Settings changed meanwhile still count once the standard bars are back.
+    if ns.IsControllerUI() then return end
     local force = settingsChanged
     settingsChanged = false
     for _, info in ipairs(self.BARS) do

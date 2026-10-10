@@ -10,10 +10,10 @@ local Options = ns.Options
 --   * the cooldown swipes cover the whole icon instead of the inside of the frame;
 --   * the casting and interrupt animations, drawn for the round frame, get alpha 0.
 -- Only widget methods on the button's textures and child frames, always from ns.Later; the button
--- itself is never touched, and a button is left alone until the player turns the option on. A
--- texture shows ours only while it shows Blizzard's frame art, so the pet bar's own spell
--- highlight stays. Blizzard puts the pushed frame back when Edit Mode changes a bar's art; the
--- next wake-up replaces it again.
+-- itself is never touched, and a button is left alone until the player turns the option on, and
+-- while the controller interface is on (it never shows these bars). A texture shows ours only
+-- while it shows Blizzard's frame art, so the pet bar's own spell highlight stays. Blizzard puts
+-- the pushed frame back when Edit Mode changes a bar's art; the next wake-up replaces it again.
 local ButtonBorders = {}
 ns.ButtonBorders = ButtonBorders
 
@@ -166,6 +166,7 @@ function ButtonBorders.Restore(button)
 end
 
 function ButtonBorders:Apply()
+    if ns.IsControllerUI() then return end
     if Options:Get(KEY) then
         for _, button in ipairs(self.Buttons()) do self.Hide(button) end
     else

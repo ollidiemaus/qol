@@ -9,7 +9,7 @@ Notes for working on the addon. What it does for players is in the [README](../R
 | `Core/` | Namespace and printing (`Init`), the event frame (`Events`), saved options with defaults and change watchers (`Options`), deferred changes (`Later`), the hidden holder for hidden frames (`Hider`), `/qol` (`Slash`) and startup (`Lifecycle`) |
 | `Data/` | Static game data: `MapPins` (dungeon entrances, docks, portals; how it was made is at the top of the file) |
 | `Features/` | One file per feature: `Merchant`, `Quests`, `Tooltips`, `HideFrames` (also the chat buttons), `CombatLog`, `ChatClassColors`, `CombinedBagSort`, `ClassHealthBars`, `Minimap` (shape, positions, class colors and font sizes around the minimap), `MapPins`, `Viewport`, `ActionBars`, `ButtonBorders`, `BarPaging`, `ReloadCommand` |
-| `UI/` | `SettingsPage.lua`, our own two-column settings page; `Settings.lua`, the pages under Options > AddOns built with it (and the Viewport page as the game's list) |
+| `UI/` | `SettingsPage.lua`, our own settings page (two columns, or rows across the page); `Settings.lua`, the pages under Options > AddOns built with it |
 | `Locales/` | English strings, German overrides |
 | `Media/` | `Icon.tga`, the addon list icon (the TOC's `IconTexture`, 128×128, 32-bit), and `Icon.svg`, its source (not packaged); `Zeppelin.tga`, `Tram.tga` and `MinimapSquareBorder.tga` (see below) |
 | `tests/` | Specs run in plain Lua against `tests/wow_stubs.lua` |
@@ -25,9 +25,13 @@ hard way on the Forever beta. So:
 
 - Never write a field on a Blizzard frame, never call its layout or update methods, and never
   `hooksecurefunc` its methods. Read fields, call widget methods (`SetPoint`, `SetParent`).
-- Every change to a Blizzard frame goes through `ns.Later(key, fn)`: it runs on a fresh timer (never
-  inside a Blizzard call stack) and waits for the end of combat. A change the game allows in combat
-  (the health bar colors) passes `true` as a third argument and runs in combat too.
+- Every change to a Blizzard frame goes through `ns.Later(key, fn)`: it runs from the OnUpdate of a
+  frame of ours (never inside a Blizzard call stack), at most once per drawn frame, and waits for the
+  end of combat. A request made while the batch runs waits for the next frame, so a change that makes
+  the game fire an event asking for it again can't spin inside one frame and freeze the game
+  (nothing says when the game runs a `C_Timer.After(0)` started from a timer callback). A change the
+  game allows in combat (the health bar colors) passes `true` as a third argument and runs in combat
+  too.
 - Hide frames by parenting them to `ns.Hider`'s holder instead of `Hide()` plus hooks; Blizzard's
   own `Show()` calls then change nothing.
 - Compare or compute with game values only after `ns.IsUsable(value)` (nil and secret values fail).
@@ -40,6 +44,18 @@ hard way on the Forever beta. So:
   `WorldFrame` during a cutscene is how viewport addons crash the game. The viewport waits until
   `CinematicFrame` and `MovieFrame` are both hidden (checking back every second) and then applies
   itself again.
+- Set a Blizzard frame only when it would change. The viewport compares WorldFrame's anchors with the
+  ones it wants (and its margins with their last layout) and leaves both alone when they match, so
+  the events it follows (display size, UI scale, loading screens) cost nothing when nothing changed.
+  WorldFrame is anchored to the screen (`nil`), like `CinematicFrame` anchors it, not to UIParent.
+- With Forever's controller interface on (`C_InputInterfaceStyle.GetCurrentStyle()` is
+  `Enum.InputDeviceInterfaceType.Gamepad`, `ns.IsControllerUI()`), the game hides the standard
+  action bars for its own (`MainActionBar_InitializeGamepad`; `ActionBarMixin:SetShowGrid` says
+  they "should never be shown with gamepad UI"), and those bars don't follow the keyboard's action
+  page. So the bar flips, the hidden button borders and the bar paging overrides stand aside while
+  it's on: nothing of ours on those bars or key bindings. Closing the settings saves the bindings
+  (`SaveBindings` in `SettingsPanel`'s OnHide), which fires `UPDATE_BINDINGS`; in controller mode
+  that does nothing in QoL.
 
 The action bar flip copies the grid math of `ActionBarMixin:UpdateGridLayout` and applies it to the
 bar's button containers only. Blizzard stores a new `oldGridSettings` table each time it lays a bar
@@ -120,15 +136,26 @@ finds nothing to change.
 
 ## Settings pages
 
-The main, Action Bars and Minimap pages are canvases (`Settings.RegisterCanvasLayoutCategory`) built
-by `UI/SettingsPage.lua`: two columns of rows, each an option's name with a control from the game's
-own templates (`SettingsCheckboxTemplate`, `WowStyle2DropdownTemplate`), so they look like the game's
-pages and fit without scrolling (`SettingsPage.MAX_HEIGHT`, checked by the tests). All names use one
-font: the game's list draws dependent options smaller. A page refreshes on `OnRefresh` (the panel
-showing it) and through `Options:Watch`, and resets on `OnDefault` (the game's "all settings" reset)
-and its own Defaults button, which asks with a second click: the game's confirmation dialog would
-spread taint. The canvas pages don't show up in the settings search. Viewport stays the game's
-vertical list with proxy settings (sliders and a color swatch).
+Every page is a canvas (`Settings.RegisterCanvasLayoutCategory`) built by `UI/SettingsPage.lua`:
+two columns of rows, or rows across the page (`"wide"`, the Viewport page, as its sliders need the
+room), each an option's name with a control from the game's own templates
+(`SettingsCheckboxTemplate`, `WowStyle2DropdownTemplate`, `MinimalSliderWithSteppersTemplate`,
+`ColorSwatchTemplate` opening `ColorPickerFrame`), so they look like the game's pages and fit without
+scrolling (`SettingsPage.MAX_HEIGHT`, checked by the tests). All names use one font: the game's list
+draws dependent options smaller. A page refreshes on `OnRefresh` (the panel showing it) and through
+`Options:Watch`, and resets on `OnDefault` (the game's "all settings" reset) and its own Defaults
+button, which asks with a second click: the game's confirmation dialog would spread taint. The
+canvas pages don't show up in the settings search.
+
+No page is the game's vertical list (`RegisterVerticalLayoutSubcategory` with proxy settings).
+Viewport was one, with sliders and a color swatch, and on Forever with the controller interface on
+the game stopped responding (no Lua error, no Errors folder) when the settings closed after that
+page had been shown, whichever page was open when closing, even with nothing changed. The canvas
+pages closed fine. The list's slider and swatch controls bring controller wiring of their own
+(SmartNavigation focus overrides, a prompted binding footer for the D-pad on `UIParent`); the line
+that hangs wasn't found, so we stay off the list. On our canvas the controller cursor reaches the
+slider's arrows (one pixel a click) and the swatch; a slider set from `Options` (a refresh) doesn't
+write itself back.
 
 The world map pins are buttons on a frame of our own on the map's canvas, not pins from the map's
 pools. Their places are zone coordinates in percent (as `/way` reads them), from Forever's tables;
@@ -166,6 +193,11 @@ the packager fills it in.
 Things only the real client can confirm:
 
 - The viewport margins line up with the world at your resolution and UI scale, and stay with Alt+Z.
+- With Forever's controller interface on (Options > Controller), the viewport and the Action Bars
+  options on: open the settings, look at every page (Viewport included: step a margin with its
+  arrows, open the color picker), go to another page, and close the settings with B and with Esc.
+  The game must not freeze, and the viewport stays. The game's own controller action
+  bars show; the flips and borders come back after switching to keyboard and mouse.
 - Cutscenes with the viewport on (margins on all four sides), see below.
 - Flipped bars stay flipped after Edit Mode changes, a `/reload`, shapeshifting (stance bar) and
   summoning a pet, and no "tainted by" error shows up in combat afterwards.

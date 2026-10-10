@@ -123,12 +123,17 @@ as squares, with the game's classic button textures; the cooldown swipe covers t
 casting animation on the buttons is left out, since it is drawn for the round frame. For icons
 without the dark edge some of them have, use an icon pack like Clean Icons - Mechagnome Edition.
 
+With Forever's controller interface on, the game shows its own action bars instead of these, so
+the options on this page wait until you switch back to keyboard and mouse.
+
 ## Settings
 
 **Esc > Options > AddOns > Quality of Life**, or type `/qol` (or `/qualityoflife`). The Viewport,
-Action Bars and Minimap pages are listed below Quality of Life. The main, Action Bars and Minimap
-pages show their options in two columns, so they fit without scrolling. Changes apply right away; the few that touch protected parts
-of the interface (action bars, key bindings, viewport, system bar) wait until you leave combat.
+Action Bars and Minimap pages are listed below Quality of Life. Every page fits without scrolling;
+the main, Action Bars and Minimap pages show their options in two columns. With a controller, the
+arrows next to a viewport margin move it one pixel per press. Changes apply right away; the few that
+touch protected parts of the interface (action bars, key bindings, viewport, system bar) wait until
+you leave combat.
 
 Quality of Life is available in English and German.
 
