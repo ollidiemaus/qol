@@ -12,7 +12,7 @@ do
     end
 end
 
-local PREFIX = "|cff33ff99Forever QoL|r: "
+local PREFIX = "|cff33ff99Quality of Life|r: "
 
 function ns.Print(message)
     local text = PREFIX .. tostring(message)

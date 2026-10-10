@@ -24,11 +24,11 @@ MapPins.STYLES = {
     dungeon = { atlas = "dungeon", size = 24, option = DUNGEONS, label = "MAP_DUNGEON" },
     raid = { atlas = "raid", size = 24, option = DUNGEONS, label = "MAP_RAID" },
     boat = { atlas = "flightmasterferry", size = 20, option = TRAVEL, label = "MAP_BOAT" },
-    -- The client has no zeppelin icon; ours is drawn in the style of the boat's.
-    zeppelin = { texture = "Interface\\AddOns\\ForeverQoL\\Media\\Zeppelin", size = 22, option = TRAVEL,
+    -- The client has no zeppelin or tram icon; ours are drawn in the style of the boat's.
+    zeppelin = { texture = "Interface\\AddOns\\QoL\\Media\\Zeppelin", size = 22, option = TRAVEL,
         label = "MAP_ZEPPELIN" },
     portal = { atlas = "mageportalalliance", size = 20, option = TRAVEL, label = "MAP_PORTAL" },
-    tram = { atlas = "portalpurple", size = 20, option = TRAVEL, label = "MAP_TRAM" },
+    tram = { texture = "Interface\\AddOns\\QoL\\Media\\Tram", size = 22, option = TRAVEL, label = "MAP_TRAM" },
 }
 
 local function mapInfo(mapID)

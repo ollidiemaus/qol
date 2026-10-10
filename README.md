@@ -1,12 +1,12 @@
-# Forever QoL
+# Quality of Life
 
 **Small quality of life features for WoW Forever, in one addon.**
 
-Forever QoL bundles the little things you'd otherwise install five addons for: a smaller 3D
-viewport, action bars that grow the other way, class-colored health bars, junk selling and repairs
-at merchants, quests accepted and turned in for you, IDs and vendor prices in tooltips, a square
-minimap, dungeon entrances, boats and zeppelins on the world map, and switches to hide UI pieces
-you never click. Everything is set up in the game's own options window. There's no minimap button.
+Quality of Life bundles the little things you'd otherwise install five addons for: a smaller 3D
+viewport, action bars that grow the other way, square action buttons without borders, class-colored
+health bars, junk selling and repairs at merchants, quests accepted and turned in for you, IDs and
+vendor prices in tooltips, a square minimap, dungeon entrances, boats and zeppelins on the world
+map, and switches to hide UI pieces you never click. Everything is set up in the game's own options window. There's no minimap button.
 
 It's made for WoW Forever and also runs on retail (Midnight).
 
@@ -58,6 +58,8 @@ Hold **Shift** while talking to an NPC to do everything yourself that time.
   top.
 - **Zone text, clock and coordinates in class color.** The zone text normally shows the color for
   friendly, hostile or contested territory.
+- **Font size of the zone text and the clock,** from 9 to 24 or the game's own. With a larger font
+  the clock's button grows with it, and the rows above and below the minimap make room.
 - **Clock, addon compartment, tracking button and Forever's day and night icon:** each can move to
   a row above or below the minimap (left, center or right), or be hidden. The tracking button and
   the day and night icon can also sit inside the map: in a corner, or in the middle of its top or
@@ -71,8 +73,8 @@ Hold **Shift** while talking to an NPC to do everything yourself that time.
 - **Dungeon and raid entrances:** marked on the zone and continent maps. Point at one to see its
   name. Blackrock Mountain's dungeons show on both Searing Gorge and the Burning Steppes.
 - **Boats, zeppelins and portals:** the harbors and zeppelin towers, the portal between Darnassus
-  and Rut'theran Village and the Deeprun Tram (zeppelins get an icon of their own in the style of
-  the boat's). Point at one to see where it goes; click it and the
+  and Rut'theran Village and the Deeprun Tram (zeppelins and the tram get icons of their own in the
+  style of the boat's). Point at one to see where it goes; click it and the
   map of that place opens. Forever's new routes are there too: the boat from Stormwind Harbor, the
   stop at Southshore, the boat between Tanaris and the Riverglades and the airships to Zephras Isle.
 
@@ -114,23 +116,32 @@ to Shift+6, or whatever you bound to them) act like the same key without Shift i
 presses action button 1 and macros can check for Shift with `[mod:shift]`. Your saved key bindings
 stay as they are; turn the option off and the keys page again.
 
+**Hide button borders:** the buttons of action bars 1 to 8, the stance bar and the pet bar lose
+their frame, and the icons are square (like HideActionBarBorders). Pointing at a button, pressing
+it, an active button, the red flash of auto attack and the green glow of an equipped item light up
+as squares, with the game's classic button textures; the cooldown swipe covers the whole icon. The
+casting animation on the buttons is left out, since it is drawn for the round frame. For icons
+without the dark edge some of them have, use an icon pack like Clean Icons - Mechagnome Edition.
+
 ## Settings
 
-**Esc > Options > AddOns > Forever QoL**, or type `/fqol`. The Viewport, Action Bars and Minimap
-pages are listed below Forever QoL. The main, Action Bars and Minimap pages show their options in two
-columns, so they fit without scrolling. Changes apply right away; the few that touch protected parts
+**Esc > Options > AddOns > Quality of Life**, or type `/qol` (or `/qualityoflife`). The Viewport,
+Action Bars and Minimap pages are listed below Quality of Life. The main, Action Bars and Minimap
+pages show their options in two columns, so they fit without scrolling. Changes apply right away; the few that touch protected parts
 of the interface (action bars, key bindings, viewport, system bar) wait until you leave combat.
 
-Forever QoL is available in English and German.
+Quality of Life is available in English and German.
 
 ## Good to know
 
-- Forever QoL never replaces or hooks Blizzard's action bar, Edit Mode or tooltip code. It only
-  moves the button slots of the bars you flipped, parents hidden frames to a hidden holder, and
-  adds lines to tooltips. That keeps it clear of the "tainted by an addon" errors Midnight-era
-  clients are strict about.
+- Quality of Life never replaces or hooks Blizzard's action bar, Edit Mode or tooltip code. It only
+  moves the button slots of the bars you flipped, changes the textures of the buttons whose borders
+  you hid, parents hidden frames to a hidden holder, and adds lines to tooltips. That keeps it clear
+  of the "tainted by an addon" errors Midnight-era clients are strict about.
 - Don't run it together with another viewport or action bar growth addon (for example Midnight
-  Viewport or Action Bar Button Growth Direction): both would move the same frames.
+  Viewport or Action Bar Button Growth Direction): both would move the same frames. Hiding the
+  button borders is the same: leave it off when HideActionBarBorders, Masque or a bar addon styles
+  your buttons.
 - Other tooltip addons may show vendor prices too (Auctionator, for one); turn one of them off if
   you see the price twice.
 - The same goes for other quest automation and minimap addons (Leatrix Plus, SexyMap and the like):

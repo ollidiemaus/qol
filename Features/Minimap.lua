@@ -15,6 +15,8 @@ local Options = ns.Options
 --     goes to the hidden holder.
 --   * Class colors for the zone text, the clock and the coordinates. The game colors the zone name
 --     by its PvP status each time the zone changes; the class color is put back right after.
+--   * Font sizes for the zone text and the clock. Their buttons grow with a larger font, so the
+--     rows around the minimap make room for them.
 -- Only widget methods are called; the game's own minimap code is never called or hooked.
 local MinimapLayout = {}
 ns.MinimapLayout = MinimapLayout
@@ -23,6 +25,7 @@ local SQUARE, BORDER = "squareMinimap", "squareMinimapBorder"
 local ZONE_TEXT, CLASS_COLOR = "minimapZoneText", "minimapZoneTextClassColor"
 local CLOCK_COLOR, COORDS_COLOR = "minimapClockClassColor", "minimapCoordsClassColor"
 local CALENDAR = "hideMinimapCalendar"
+local ZONE_TEXT_SIZE, CLOCK_SIZE = "minimapZoneTextSize", "minimapClockSize"
 
 -- The choices for a moving element, in the order the settings list them (PositionsFor). "default"
 -- leaves it where the game puts it.
@@ -84,7 +87,7 @@ local ROUND_MASK_ATLAS = "ui-hud-minimap-frame-generic-mask"
 local ROUND_MASK_FILE = "Interface\\CharacterFrame\\TempPortraitAlphaMask"
 -- Forever's bronze ring on a square (Media/MinimapSquareBorder.tga): the texture reaches this far
 -- past the map's edges, the band itself about 6.5.
-local BRONZE_BORDER = "Interface\\AddOns\\ForeverQoL\\Media\\MinimapSquareBorder"
+local BRONZE_BORDER = "Interface\\AddOns\\QoL\\Media\\MinimapSquareBorder"
 local BRONZE_MARGIN = 9
 local BLACK_SIZE = 2
 
@@ -465,9 +468,69 @@ function MinimapLayout:ApplyPositions()
     setHidden(Options:Get(CALENDAR), GameTimeFrame)
 end
 
+------------------------------------------------------------------------------------------------
+-- Font sizes
+
+-- The font sizes the settings offer; 0 is the game's own.
+MinimapLayout.FONT_SIZES = { 0, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20, 22, 24 }
+
+-- The texts whose font size can change, each with the button around it. The button grows with a
+-- larger font (the clock's in both directions, the zone text's only in height: the rows give it
+-- its width). The zone text's font string has a height of its own, which grows too: a font string
+-- shows nothing of a line that doesn't fit its height.
+MinimapLayout.SIZED = {
+    { key = ZONE_TEXT_SIZE, textHeight = true,
+        text = function() return MinimapZoneText end,
+        frame = function() return MinimapCluster and MinimapCluster.ZoneTextButton end },
+    { key = CLOCK_SIZE, frameWidth = true,
+        text = function() return TimeManagerClockTicker end,
+        frame = function() return TimeManagerClockButton end },
+}
+
+-- Per option: the text's font and the sizes that grow with it, from before we changed them.
+local gameFonts = {}
+
+local function applySize(sized)
+    local text, frame = sized.text(), sized.frame()
+    if not (text and frame) then return end
+    local size = Options:Get(sized.key)
+    local saved = gameFonts[sized.key]
+    if size > 0 then
+        if not saved then
+            local file, height, flags = text:GetFont()
+            if not (file and ns.IsUsable(height) and height > 0) then return end
+            saved = { object = text:GetFontObject(), file = file, height = height, flags = flags,
+                textHeight = text:GetHeight(), frameWidth = frame:GetWidth(), frameHeight = frame:GetHeight() }
+            gameFonts[sized.key] = saved
+        end
+        text:SetFont(saved.file, size, saved.flags)
+        -- A smaller font keeps the button's size, so it stays as easy to click.
+        local grow = math.max(1, size / saved.height)
+        frame:SetHeight(saved.frameHeight * grow)
+        if sized.frameWidth then frame:SetWidth(saved.frameWidth * grow) end
+        if sized.textHeight then text:SetHeight(saved.textHeight * grow) end
+    elseif saved then
+        if saved.object then
+            text:SetFontObject(saved.object)
+        else
+            text:SetFont(saved.file, saved.height, saved.flags)
+        end
+        frame:SetHeight(saved.frameHeight)
+        if sized.frameWidth then frame:SetWidth(saved.frameWidth) end
+        if sized.textHeight then text:SetHeight(saved.textHeight) end
+        gameFonts[sized.key] = nil
+    end
+end
+
+function MinimapLayout:ApplySizes()
+    for _, sized in ipairs(self.SIZED) do applySize(sized) end
+end
+
 function MinimapLayout:Apply()
     if not Minimap then return end
     self:ApplyShape()
+    -- Before the positions: they go by the buttons' sizes.
+    self:ApplySizes()
     self:ApplyPositions()
 end
 
@@ -533,7 +596,7 @@ function MinimapLayout.HasDayNight()
     return MinimapCluster ~= nil and type(MinimapCluster.DielFrame) == "table"
 end
 
-local LAYOUT_KEYS = { SQUARE, BORDER, CALENDAR }
+local LAYOUT_KEYS = { SQUARE, BORDER, CALENDAR, ZONE_TEXT_SIZE, CLOCK_SIZE }
 for _, element in ipairs(MinimapLayout.ELEMENTS) do LAYOUT_KEYS[#LAYOUT_KEYS + 1] = element.key end
 
 local function scheduleLayout()
@@ -557,7 +620,7 @@ local function colorActive()
 end
 
 local function layoutActive()
-    if Options:Get(SQUARE) or next(originals) ~= nil then return true end
+    if Options:Get(SQUARE) or next(originals) ~= nil or next(gameFonts) ~= nil then return true end
     for _, key in ipairs(LAYOUT_KEYS) do
         local value = Options:Get(key)
         if value ~= Options:GetDefault(key) then return true end

@@ -16,7 +16,7 @@ local KEY = "disableBarPaging"
 local PAGES = 6
 local MODIFIERS = { "ALT", "CTRL", "SHIFT", "META" }
 -- A button of ours without an action, for a key with nothing to fall back to.
-local NOTHING = "ForeverQoLNoAction"
+local NOTHING = "QoLNoAction"
 
 -- "SHIFT-1" -> "1", "CTRL-SHIFT-F" -> "F"; nil for a key without modifiers.
 function BarPaging.Unmodified(key)

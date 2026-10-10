@@ -25,7 +25,7 @@ describe("/rl", function()
 
     it("waits for the first loading screen, after the other addons' PLAYER_LOGIN", function()
         local ns = Stubs.LoadAddon()
-        Stubs.Fire("ADDON_LOADED", "ForeverQoL")
+        Stubs.Fire("ADDON_LOADED", "QoL")
         Stubs.Fire("PLAYER_LOGIN")
         T.falsy(ns.ReloadCommand:IsRegistered())
         Stubs.Fire("PLAYER_ENTERING_WORLD")
@@ -37,7 +37,7 @@ describe("/rl", function()
         SLASH_OTHERADDON1 = "/RL"
         Stubs.Login()
         T.falsy(ns.ReloadCommand:IsRegistered())
-        T.eq(SLASH_FOREVERQOL_RELOAD1, nil)
+        T.eq(SLASH_QOL_RELOAD1, nil)
     end)
 
     it("leaves /rl to a command the game already copied into its lookup table", function()
@@ -65,10 +65,10 @@ describe("/rl", function()
         local ns = Stubs.LoadAddon()
         Stubs.Login()
         -- What the game does the first time chat is used.
-        hash_SlashCmdList = { ["/RL"] = SlashCmdList.FOREVERQOL_RELOAD }
+        hash_SlashCmdList = { ["/RL"] = SlashCmdList.QOL_RELOAD }
         ns.Options:Set("reloadCommand", false)
-        T.eq(SLASH_FOREVERQOL_RELOAD1, nil)
-        T.eq(SlashCmdList.FOREVERQOL_RELOAD, nil)
+        T.eq(SLASH_QOL_RELOAD1, nil)
+        T.eq(SlashCmdList.QOL_RELOAD, nil)
         T.eq(hash_SlashCmdList["/RL"], nil)
         ns.Options:Set("reloadCommand", true)
         T.truthy(ns.ReloadCommand:IsRegistered())

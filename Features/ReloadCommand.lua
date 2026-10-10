@@ -8,7 +8,7 @@ local ReloadCommand = {}
 ns.ReloadCommand = ReloadCommand
 
 local COMMAND = "/rl"
-local KEY = "FOREVERQOL_RELOAD"
+local KEY = "QOL_RELOAD"
 local GLOBAL = "SLASH_" .. KEY .. "1"
 
 local function reload()

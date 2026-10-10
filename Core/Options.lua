@@ -1,6 +1,6 @@
 local _, ns = ...
 
--- Account-wide settings (ForeverQoLDB.options) with their defaults. Features read them with Get
+-- Account-wide settings (QoLDB.options) with their defaults. Features read them with Get
 -- and react to changes through Watch, so the settings page never calls into a feature directly.
 local Options = { watchers = {} }
 ns.Options = Options
@@ -33,6 +33,7 @@ local DEFAULTS = {
     squareMinimapBorder = "bronze", -- "bronze" or "black"
     minimapZoneText = "default", -- "default", "above" or "below"
     minimapZoneTextClassColor = false,
+    minimapZoneTextSize = 0, -- a font size, 0 for the game's own
     minimapCoordsClassColor = false,
     hideMinimapCoords = false,
     -- Where the minimap's buttons go: "default", "hidden", or "topLeft", "top", "topRight",
@@ -40,6 +41,7 @@ local DEFAULTS = {
     -- and the day and night icon can also go inside the map: "insideTopLeft", "insideTop" and so on.
     minimapClock = "default",
     minimapClockClassColor = false,
+    minimapClockSize = 0,
     minimapCompartment = "default",
     minimapTracking = "default",
     minimapDayNight = "default",
@@ -64,6 +66,7 @@ local DEFAULTS = {
     viewportColor = "ff000000", -- AARRGGBB, the format the settings color swatch uses
 
     disableBarPaging = false,
+    hideButtonBorders = false,
 }
 -- Action bar flips ("flipVertical_MainActionBar" and so on) default to false and are added by
 -- ActionBars.lua through Options:AddDefault, next to the list of bars they belong to.
@@ -122,7 +125,7 @@ function Options:Watch(keys, fn)
     self.watchers[#self.watchers + 1] = { keys = lookup, fn = fn }
 end
 
--- Called once ForeverQoLDB is loaded.
+-- Called once QoLDB is loaded.
 function Options:Init(db)
     ns.db = db
     if type(db.options) ~= "table" then

@@ -78,7 +78,26 @@ local function newRegion(kind, parent, template)
     function region:GetFrameLevel() return self.frameLevel or 1 end
     function region:SetColorTexture(r, g, b, a) self.color = { r, g, b, a } end
     function region:SetAtlas(atlas) self.atlas = atlas end
-    function region:SetTexture(texture) self.texture = texture end
+    function region:GetAtlas() return self.atlas end
+    -- A file replaces an atlas (GetAtlas is nil afterwards) but not its texture coordinates.
+    function region:SetTexture(texture) self.texture, self.atlas = texture, nil end
+    function region:SetTexCoord(...) self.texCoord = { ... } end
+    function region:SetBlendMode(mode) self.blendMode = mode end
+    function region:GetBlendMode() return self.blendMode or "BLEND" end
+    function region:SetAlpha(alpha) self.alpha = alpha end
+    function region:GetAlpha() return self.alpha or 1 end
+    function region:SetDrawLayer(layer, sublevel) self.drawLayer = { layer, sublevel or 0 } end
+    function region:GetDrawLayer()
+        local layer = self.drawLayer or { "ARTWORK", 0 }
+        return layer[1], layer[2]
+    end
+    function region:AddMaskTexture(mask)
+        self.masks = self.masks or {}
+        self.masks[mask] = true
+    end
+    function region:RemoveMaskTexture(mask)
+        if self.masks then self.masks[mask] = nil end
+    end
     function region:SetMaskTexture(mask) self.mask = mask end
     function region:SetTextColor(r, g, b) self.textColor = { r, g, b } end
     function region:GetTextColor()
@@ -91,7 +110,16 @@ local function newRegion(kind, parent, template)
     function region:IsEnabled() return self.enabled end
     function region:SetText(text) self.text = text end
     function region:GetText() return self.text end
-    function region:SetFontObject(font) self.font = font end
+    -- Fonts: a font object (by name) brings its file, height and flags (state.fonts); SetFont sets
+    -- them directly.
+    function region:SetFontObject(font)
+        self.font = font
+        local known = state.fonts[font]
+        if known then self.fontFile, self.fontHeight, self.fontFlags = known[1], known[2], known[3] end
+    end
+    function region:GetFontObject() return self.font end
+    function region:SetFont(file, height, flags) self.fontFile, self.fontHeight, self.fontFlags = file, height, flags end
+    function region:GetFont() return self.fontFile, self.fontHeight, self.fontFlags end
     function region:SetJustifyH(justify) self.justifyH = justify end
     function region:GetJustifyH() return self.justifyH or "CENTER" end
     function region:IsProtected() return self.protected == true end
@@ -195,6 +223,60 @@ function Stubs.NewActionBar(fields, numContainers)
         __index = raw,
         __newindex = function(_, key) error("the addon wrote bar field " .. tostring(key)) end,
     }), raw
+end
+
+-- An action button as ActionButtonTemplate builds it (45 units, or 30 for the stance and pet bars'
+-- small buttons): the icon with its rounded mask, the frame and the textures drawn for it, the
+-- cooldowns inset for the frame and the spell effects. Protected like the real buttons.
+function Stubs.NewActionButton(small)
+    local size = small and 30 or 45
+    local frameWidth, frameHeight = small and 31.6 or 46, small and 30.9 or 45
+    local button = newRegion("CheckButton", nil)
+    button.protected = true
+    button:SetSize(size, size)
+    local function texture(atlas, width, height, blend, layer)
+        local t = newRegion("Texture", button)
+        t:SetAtlas(atlas)
+        t:SetPoint("TOPLEFT", button, "TOPLEFT", 0, 0)
+        t:SetSize(width or frameWidth, height or frameHeight)
+        if blend then t:SetBlendMode(blend) end
+        t:SetDrawLayer(layer or "OVERLAY")
+        return t
+    end
+    button.icon = newRegion("Texture", button)
+    button.icon:SetAllPoints(button)
+    button.icon:SetDrawLayer("BACKGROUND")
+    button.IconMask = newRegion("MaskTexture", button)
+    button.icon:AddMaskTexture(button.IconMask)
+    button.SlotBackground = newRegion("Texture", button)
+    button.SlotBackground:SetDrawLayer("BACKGROUND")
+    button.SlotArt = newRegion("Texture", button)
+    button.SlotArt:SetDrawLayer("BACKGROUND")
+    button.NormalTexture = texture("UI-HUD-ActionBar-IconFrame", 46, 45)
+    button.PushedTexture = texture("UI-HUD-ActionBar-IconFrame-Down", 46, 45)
+    button.HighlightTexture = texture("UI-HUD-ActionBar-IconFrame-Mouseover", nil, nil, "ADD", "HIGHLIGHT")
+    button.CheckedTexture = texture("UI-HUD-ActionBar-IconFrame-Mouseover", nil, nil, "ADD")
+    button.NewActionTexture = texture("UI-HUD-ActionBar-IconFrame-Mouseover")
+    button.Flash = texture("UI-HUD-ActionBar-IconFrame-Flash", nil, nil, nil, "ARTWORK")
+    button.Border = texture("UI-HUD-ActionBar-IconFrame-Border")
+    if small then
+        -- The pet bar's own spell highlight, not drawn for the frame.
+        button.SpellHighlightTexture = texture("bags-newitem", 38, 38, "ADD")
+    else
+        button.SpellHighlightTexture = texture("UI-HUD-ActionBar-IconFrame-Mouseover", nil, nil, "ADD")
+    end
+    local function cooldown(inset)
+        local c = newRegion("Cooldown", button)
+        c:SetPoint("TOPLEFT", button.icon, "TOPLEFT", inset, -inset)
+        c:SetPoint("BOTTOMRIGHT", button.icon, "BOTTOMRIGHT", -inset, inset)
+        return c
+    end
+    button.cooldown = cooldown(3)
+    button.lossOfControlCooldown = cooldown(3)
+    button.chargeCooldown = cooldown(2)
+    button.SpellCastAnimFrame = newRegion("Frame", button)
+    button.InterruptDisplay = newRegion("Frame", button)
+    return button
 end
 
 -- A unit frame's health bar, read-only to the addon like action bars: its color and desaturation
@@ -408,7 +490,8 @@ local function install()
     cluster.ZoneTextButton:SetSize(135, 12)
     cluster.ZoneTextButton:SetPoint("LEFT", cluster.BorderTop, "LEFT", 4, 0)
     G.MinimapZoneText = newRegion("FontString", cluster.ZoneTextButton)
-    G.MinimapZoneText:SetWidth(130)
+    G.MinimapZoneText:SetFontObject("GameFontNormal")
+    G.MinimapZoneText:SetSize(130, 12)
     G.MinimapZoneText:SetJustifyH("LEFT")
     G.MinimapZoneText:SetTextColor(1, 0.82, 0)
     local minimapContainer = newRegion("Frame", cluster)
@@ -431,6 +514,7 @@ local function install()
     G.TimeManagerClockButton:SetSize(40, 16)
     G.TimeManagerClockButton:SetPoint("TOPRIGHT", cluster.BorderTop, "TOPRIGHT", -4, 0)
     G.TimeManagerClockTicker = newRegion("FontString", G.TimeManagerClockButton)
+    G.TimeManagerClockTicker:SetFontObject("WhiteNormalNumberFont")
     G.GameTimeFrame = newRegion("Button", cluster)
     G.GameTimeFrame:SetSize(19, 18)
     G.GameTimeFrame:SetPoint("TOPLEFT", cluster.BorderTop, "TOPRIGHT", 1, 0)
@@ -604,14 +688,14 @@ end
 
 -- Globals the addon or a test may leave behind.
 local ADDON_GLOBALS = {
-    "ForeverQoLDB", "SLASH_FOREVERQOL1", "SLASH_FOREVERQOL2", "SlashCmdList", "Settings",
+    "QoLDB", "SLASH_QOL1", "SLASH_QOL2", "SlashCmdList", "Settings",
     "CreateSettingsListSectionHeaderInitializer", "MinimalSliderWithSteppersMixin",
     "MainActionBar", "MultiBarBottomLeft", "MultiBarBottomRight", "MultiBarRight", "MultiBarLeft",
     "MultiBar5", "MultiBar6", "MultiBar7", "StanceBar", "PetActionBar",
-    "SLASH_FOREVERQOL_RELOAD1", "hash_SlashCmdList", "IsSecureCmd", "SLASH_OTHERADDON1", "SLASH_RELOAD1",
+    "SLASH_QOL_RELOAD1", "hash_SlashCmdList", "IsSecureCmd", "SLASH_OTHERADDON1", "SLASH_RELOAD1",
     "HUD_EDIT_MODE_ACTION_BAR_LABEL", "HUD_EDIT_MODE_STANCE_BAR_LABEL", "HUD_EDIT_MODE_PET_ACTION_BAR_LABEL",
     "GetMinimapShape", "HybridMinimap", "TimeManagerClockButton", "GameTimeFrame", "AddonCompartmentFrame",
-    "TimeManagerClockTicker", "ForeverQoLNoAction",
+    "TimeManagerClockTicker", "QoLNoAction",
 }
 
 function Stubs.Reset(options)
@@ -628,6 +712,8 @@ function Stubs.Reset(options)
         layouts = {}, reloads = 0,
         units = { player = { isPlayer = true, class = "MAGE" } },
         atlases = { ["ui-hud-minimap-frame-generic-mask"] = { width = 215, height = 226 } },
+        fonts = { GameFontNormal = { "Fonts\\FRIZQT__.TTF", 12, "" },
+            WhiteNormalNumberFont = { "Fonts\\ARIALN.TTF", 10, "OUTLINE" } },
         cvars = { chatClassColorOverride = "2" }, cvarDefaults = { chatClassColorOverride = "2" }, cvarSets = {},
         shift = false,
         quest = { npc = "Creature-0-1-0-1-3139-0001", gossipActive = {}, gossipAvailable = {}, greetingActive = {},
@@ -653,7 +739,7 @@ end
 
 local function tocFiles()
     local files = {}
-    for rawLine in io.lines("ForeverQoL.toc") do
+    for rawLine in io.lines("QoL.toc") do
         local line = rawLine:gsub("\r", "")
         if line ~= "" and not line:find("^#") then
             files[#files + 1] = (line:gsub("\\", "/"))
@@ -668,7 +754,7 @@ function Stubs.LoadAddon(options)
     local ns = {}
     for _, path in ipairs(tocFiles()) do
         local chunk = assert(loadfile(path))
-        chunk("ForeverQoL", ns)
+        chunk("QoL", ns)
     end
     return ns
 end
@@ -716,8 +802,8 @@ end
 
 -- Loads the saved variables, logs in and lets every deferred change run.
 function Stubs.Login(savedOptions)
-    _G.ForeverQoLDB = savedOptions and { options = savedOptions } or nil
-    Stubs.Fire("ADDON_LOADED", "ForeverQoL")
+    _G.QoLDB = savedOptions and { options = savedOptions } or nil
+    Stubs.Fire("ADDON_LOADED", "QoL")
     Stubs.Fire("PLAYER_LOGIN")
     Stubs.Fire("PLAYER_ENTERING_WORLD")
     Stubs.RunTimers()

@@ -1,4 +1,4 @@
-package-as: ForeverQoL
+package-as: QoL
 
 ignore:
   - docs

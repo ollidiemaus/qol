@@ -1,4 +1,4 @@
-# Developing Forever QoL
+# Developing Quality of Life
 
 Notes for working on the addon. What it does for players is in the [README](../README.md).
 
@@ -6,12 +6,12 @@ Notes for working on the addon. What it does for players is in the [README](../R
 
 | Folder | What's in it |
 |---|---|
-| `Core/` | Namespace and printing (`Init`), the event frame (`Events`), saved options with defaults and change watchers (`Options`), deferred changes (`Later`), the hidden holder for hidden frames (`Hider`), `/fqol` (`Slash`) and startup (`Lifecycle`) |
+| `Core/` | Namespace and printing (`Init`), the event frame (`Events`), saved options with defaults and change watchers (`Options`), deferred changes (`Later`), the hidden holder for hidden frames (`Hider`), `/qol` (`Slash`) and startup (`Lifecycle`) |
 | `Data/` | Static game data: `MapPins` (dungeon entrances, docks, portals; how it was made is at the top of the file) |
-| `Features/` | One file per feature: `Merchant`, `Quests`, `Tooltips`, `HideFrames` (also the chat buttons), `CombatLog`, `ChatClassColors`, `CombinedBagSort`, `ClassHealthBars`, `Minimap` (shape, positions and class colors around the minimap), `MapPins`, `Viewport`, `ActionBars`, `BarPaging`, `ReloadCommand` |
+| `Features/` | One file per feature: `Merchant`, `Quests`, `Tooltips`, `HideFrames` (also the chat buttons), `CombatLog`, `ChatClassColors`, `CombinedBagSort`, `ClassHealthBars`, `Minimap` (shape, positions, class colors and font sizes around the minimap), `MapPins`, `Viewport`, `ActionBars`, `ButtonBorders`, `BarPaging`, `ReloadCommand` |
 | `UI/` | `SettingsPage.lua`, our own two-column settings page; `Settings.lua`, the pages under Options > AddOns built with it (and the Viewport page as the game's list) |
 | `Locales/` | English strings, German overrides |
-| `Media/` | `Icon.tga`, the addon list icon (the TOC's `IconTexture`, 128×128, 32-bit), and `Icon.svg`, its source (not packaged); `Zeppelin.tga` and `MinimapSquareBorder.tga` (see below) |
+| `Media/` | `Icon.tga`, the addon list icon (the TOC's `IconTexture`, 128×128, 32-bit), and `Icon.svg`, its source (not packaged); `Zeppelin.tga`, `Tram.tga` and `MinimapSquareBorder.tga` (see below) |
 | `tests/` | Specs run in plain Lua against `tests/wow_stubs.lua` |
 
 Features never talk to each other or to the settings page. The page writes `ns.Options`; a feature
@@ -20,7 +20,7 @@ reads it with `Options:Get` and reacts to changes through `Options:Watch`.
 ## Rules for touching Blizzard frames
 
 Forever and retail 12.x hand out secret values, and taint that leaks into Blizzard code breaks
-unrelated frames ("tainted by 'ForeverQoL'"). Action Bar Button Growth Direction learned this the
+unrelated frames ("tainted by 'QoL'"). Action Bar Button Growth Direction learned this the
 hard way on the Forever beta. So:
 
 - Never write a field on a Blizzard frame, never call its layout or update methods, and never
@@ -46,6 +46,23 @@ bar's button containers only. Blizzard stores a new `oldGridSettings` table each
 out, so events are just wake-ups: a bar is laid out again only when that table changed since our
 last pass (or the settings changed).
 
+Hiding the button borders changes only the buttons' textures and child frames, with widget methods
+(the buttons are protected, so ns.Later waits for the end of combat). The frame (`NormalTexture`)
+gets alpha 0: the button shows and hides its state textures itself, and Blizzard's
+`UpdateButtonArt` sets the frame's atlas again without touching its alpha. The icon loses its mask
+(`RemoveMaskTexture(IconMask)`; nothing in Blizzard_ActionBar adds it again). The textures drawn for
+the rounded frame (their atlases start with `UI-HUD-ActionBar-IconFrame`) get the classic square
+ones from `Interface\Buttons`, which Forever's client still has: `ButtonHilight-Square`,
+`CheckButtonHilight`, `UI-Quickslot-Depress`, `UI-QuickslotRed` and, centered at 62/36 of the
+button like on classic buttons, `UI-ActionButton-Border`. A texture showing anything else (the pet
+bar's `bags-newitem` spell highlight) is left alone, and so is one whose art Blizzard put back
+until the next wake-up (`UpdateButtonArt` sets the pushed frame again when Edit Mode changes a bar's
+art). The fill textures keep the size Blizzard gives them, only their anchors change. The swipe
+cooldowns get the icon's anchors, the slot art and background move to sublevel -1, behind the
+icon, and the casting and interrupt animations get alpha 0 (their animations only animate their
+children; reparenting them would break their `GetParent()` calls). Turning the option off puts
+back what was saved per button.
+
 The class-colored health bars use only `SetStatusBarDesaturated` and `SetStatusBarColor` on the
 unit frame's own bar (`frame.healthbar`): the default green texture is desaturated and then tinted,
 so its shading stays. Blizzard sets `lockColor` on the player, target, target of target, focus and
@@ -68,9 +85,10 @@ round frame (`ui-hud-minimap-frame-c60-2x`, file 8026708 of build 1.60.1.70291) 
 square: each pixel of a band along the square's edges, with rounded corners, takes the ring's pixel
 at the same distance from the map's edge, walking around the ring as it walks around the square. The
 north triangle is left out and the two ends of the walk are cross-faded at the top. The texture
-reaches 9 units past each edge of the 198-unit map. `Media/Zeppelin.tga` (64×64) is drawn in the
-style and colors of the boat's atlas (`flightmasterferry`), for which the client has no zeppelin.
-Both were made with small numpy scripts, not kept in the repository.
+reaches 9 units past each edge of the 198-unit map. `Media/Zeppelin.tga` and `Media/Tram.tga`
+(64×64) are drawn in the style and colors of the boat's atlas (`flightmasterferry`): gold rims, a
+dark brown body darker towards the bottom, a black outline. The client has no zeppelin or tram of
+that kind. All three were made with small numpy scripts, not kept in the repository.
 
 The square minimap replaces the minimap's mask and hides the round frame textures
 (`MinimapCompassTexture` and its underlay). Forever's minimap skin (`Blizzard_Minimap/Camelot/Skin.lua`)
@@ -87,7 +105,12 @@ out in screen units, since Edit Mode scales the minimap but not its header. Fore
 day and night icon's center again whenever the minimap's scale is set; `Minimap.OnScaleUpdated` lays
 it out again after that. The clock's text (`TimeManagerClockTicker`) and the coordinates'
 (`PlayerCoords.CoordText`) keep their color once set; the zone text is colored again by the game on
-every zone change, so the class color is put back on the zone events.
+every zone change, so the class color is put back on the zone events. A font size sets the text's
+own font file and flags at the new size (`SetFont`) and gives the font object back when set to the
+game's size again; the game never sets these fonts itself. A larger font makes the clock's button
+wider and higher and the zone text's button and font string higher (`MinimapZoneText` has a height
+of 12 and shows nothing of a line that doesn't fit), by the ratio to the game's size; a smaller one
+leaves them as they are. The sizes are set before the positions, which go by the buttons' sizes.
 
 Bar paging: each key bound to `ACTIONPAGE1` to `ACTIONPAGE6` gets an override binding on a frame of
 ours that mirrors what the key without modifiers does (`GetBindingAction(base, true)`, so a bar
@@ -135,8 +158,8 @@ down.
 
 ## Trying it in game
 
-Link or copy the repository into the client's AddOns folder as `ForeverQoL` (on the Forever beta:
-`_classic_beta_/Interface/AddOns/ForeverQoL`). The client only loads what the TOC lists, so `docs/`
+Link or copy the repository into the client's AddOns folder as `QoL` (on the Forever beta:
+`_classic_beta_/Interface/AddOns/QoL`). The client only loads what the TOC lists, so `docs/`
 and `tests/` do no harm there. An unpackaged copy reports its version as `@project-version@`; only
 the packager fills it in.
 
@@ -181,7 +204,14 @@ Things only the real client can confirm:
 - The settings pages: two columns at the panel's default size in English and German (no name cut
   off), checkboxes and dropdowns working, dependent options greyed out, and the Defaults button
   asking first.
-- The zeppelin pins' icon next to the boats', on zone and continent maps.
+- The zeppelin and tram pins' icons next to the boats', on zone and continent maps.
+- Hidden button borders on every bar (also the stance and pet bars): square icons, the mouseover,
+  pressed and checked (auto attack, an active stance) textures, the red auto attack flash, the
+  green glow of an equipped item, the cooldown swipe over the whole icon, no casting animation;
+  after changing "Hide Bar Art" of the main bar in Edit Mode, and back to the normal buttons
+  without a `/reload` when turned off. No "tainted by" error in combat afterwards.
+- The zone text and the clock at every font size, in the header bar and above and below the
+  minimap (rows with something else in them), back to the game's look when set to Default.
 - World map pins: in the right places on the zone and continent maps (the entrance positions are
   the instance portals, like retail's encounter journal pins), the tooltips' names in German, and a
   click opening the destination's map. Open the map in combat too.

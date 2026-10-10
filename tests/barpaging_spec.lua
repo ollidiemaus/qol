@@ -45,8 +45,8 @@ describe("bar paging keys", function()
         Stubs.LoadAddon()
         Stubs.state().bindings["3"] = nil
         Stubs.Login({ disableBarPaging = true })
-        T.eq(override("SHIFT-3"), "CLICK ForeverQoLNoAction:LeftButton")
-        T.truthy(ForeverQoLNoAction)
+        T.eq(override("SHIFT-3"), "CLICK QoLNoAction:LeftButton")
+        T.truthy(QoLNoAction)
     end)
 
     it("follow the player's own paging keys", function()

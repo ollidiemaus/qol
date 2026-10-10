@@ -42,6 +42,8 @@ function T.falsy(value, message)
 end
 
 local function deepEqual(a, b, path)
+    -- The same table is equal to itself (frames link to their parents, so walking them never ends).
+    if rawequal(a, b) then return true end
     if type(a) ~= type(b) then
         return false, path .. ": " .. type(a) .. " vs " .. type(b)
     end

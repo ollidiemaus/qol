@@ -2,7 +2,7 @@ local _, ns = ...
 local L = ns.L
 local Options = ns.Options
 
--- Forever QoL's pages under Options > AddOns: the main page, plus Viewport, Action Bars and Minimap
+-- Quality of Life's pages under Options > AddOns: the main page, plus Viewport, Action Bars and Minimap
 -- as subcategories. The main, Action Bars and Minimap pages are our own two-column pages
 -- (UI/SettingsPage.lua), so they fit without scrolling; Viewport, a short page with sliders and a
 -- color, is the game's own list with proxy settings. Either way the pages only read and write
@@ -18,7 +18,7 @@ local function varType(name)
 end
 
 local function register(category, key, kind, label)
-    return Settings.RegisterProxySetting(category, "ForeverQoL_" .. key, varType(kind), label,
+    return Settings.RegisterProxySetting(category, "QoL_" .. key, varType(kind), label,
         Options:GetDefault(key),
         function() return Options:Get(key) end,
         function(value) Options:Set(key, value) end)
@@ -99,6 +99,15 @@ local function positions(key)
     return choices
 end
 
+-- The font sizes for a text, as dropdown choices.
+local function fontSizes()
+    local choices = {}
+    for _, size in ipairs(ns.MinimapLayout.FONT_SIZES) do
+        choices[#choices + 1] = { value = size, label = size == 0 and L.FONT_SIZE_DEFAULT or tostring(size) }
+    end
+    return choices
+end
+
 -- Minimap page: the map and the texts around it on the left, the buttons on the right.
 local function buildMinimap(page)
     page:Header("left", L.SECTION_MINIMAP_SHAPE)
@@ -115,6 +124,7 @@ local function buildMinimap(page)
         { value = "below", label = L.ZONE_TEXT_BELOW },
     }, L.MINIMAP_ZONE_TEXT_TIP)
     page:Checkbox("left", "minimapZoneTextClassColor", L.MINIMAP_CLASS_COLOR, L.MINIMAP_ZONE_TEXT_CLASS_COLOR_TIP)
+    page:Dropdown("left", "minimapZoneTextSize", L.FONT_SIZE, fontSizes(), L.MINIMAP_ZONE_TEXT_SIZE_TIP)
 
     page:Header("left", L.SECTION_MINIMAP_COORDS)
     page:Checkbox("left", "minimapCoordsClassColor", L.MINIMAP_CLASS_COLOR, L.MINIMAP_COORDS_CLASS_COLOR_TIP,
@@ -123,8 +133,11 @@ local function buildMinimap(page)
 
     page:Header("right", L.SECTION_MINIMAP_CLOCK)
     page:Dropdown("right", "minimapClock", L.MINIMAP_POSITION, positions("minimapClock"), L.MINIMAP_POSITION_TIP)
+    local clockShown = function() return Options:Get("minimapClock") ~= "hidden" end
     page:Checkbox("right", "minimapClockClassColor", L.MINIMAP_CLASS_COLOR, L.MINIMAP_CLOCK_CLASS_COLOR_TIP,
-        { enabled = function() return Options:Get("minimapClock") ~= "hidden" end })
+        { enabled = clockShown })
+    page:Dropdown("right", "minimapClockSize", L.FONT_SIZE, fontSizes(), L.MINIMAP_CLOCK_SIZE_TIP,
+        { enabled = clockShown })
 
     page:Header("right", L.SECTION_MINIMAP_BUTTONS)
     page:Dropdown("right", "minimapCompartment", L.MINIMAP_COMPARTMENT, positions("minimapCompartment"),
@@ -139,7 +152,8 @@ local function buildMinimap(page)
     page:Checkbox("right", "hideMinimapCalendar", L.HIDE_MINIMAP_CALENDAR, L.HIDE_MINIMAP_CALENDAR_TIP)
 end
 
--- Action bar page: the two flips side by side for each bar, then the paging keys.
+-- Action bar page: the two flips side by side for each bar, then the paging keys and the buttons'
+-- look.
 local function buildActionBars(page)
     local ActionBars = ns.ActionBars
     page:Header("left", L.SECTION_FLIP_VERTICAL, L.FLIP_VERTICAL_TIP)
@@ -151,6 +165,8 @@ local function buildActionBars(page)
     page:Align()
     page:Header("left", L.SECTION_BAR_PAGING)
     page:Checkbox("left", "disableBarPaging", L.DISABLE_BAR_PAGING, L.DISABLE_BAR_PAGING_TIP)
+    page:Header("right", L.SECTION_BUTTONS)
+    page:Checkbox("right", "hideButtonBorders", L.HIDE_BUTTON_BORDERS, L.HIDE_BUTTON_BORDERS_TIP)
 end
 
 local function addViewport(category)

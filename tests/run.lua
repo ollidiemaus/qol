@@ -5,7 +5,7 @@ local T = require("testlib")
 
 local SPECS = {
     "options", "api", "later", "merchant", "quests", "tooltips", "hideframes", "combatlog", "chatclasscolors",
-    "combinedbagsort", "classhealthbars", "minimap", "mappins", "viewport", "actionbars", "barpaging", "reloadcommand",
+    "combinedbagsort", "classhealthbars", "minimap", "mappins", "viewport", "actionbars", "buttonborders", "barpaging", "reloadcommand",
     "settings", "locales",
 }
 
