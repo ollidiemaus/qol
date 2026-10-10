@@ -23,6 +23,7 @@ read_globals = {
     -- Frames and UI
     "CreateFrame", "UIParent", "WorldFrame", "DEFAULT_CHAT_FRAME", "EventRegistry",
     "Settings", "CreateSettingsListSectionHeaderInitializer", "MinimalSliderWithSteppersMixin", "SettingsTooltip",
+    "ColorPickerFrame",
     "SETTINGS_DEFAULTS", "NORMAL_FONT_COLOR", "GRAY_FONT_COLOR", "PlaySound", "SOUNDKIT",
     "GridLayoutUtil", "AnchorUtil", "TooltipDataProcessor",
     "MicroMenuContainer", "ContainerFrameCombinedBags", "BagItemAutoSortButton", "BagItemSearchBox",
@@ -51,7 +52,7 @@ read_globals = {
     "GetAddOnMetadata",
     -- Namespaces
     "Enum", "C_AddOns", "C_Container", "C_CVar", "C_EventUtils", "C_GossipInfo", "C_Item", "C_Map", "C_MerchantFrame",
-    "C_Texture", "C_Timer",
+    "C_InputInterfaceStyle", "C_Texture", "C_Timer",
 }
 
 files["Locales/"] = { max_line_length = false }

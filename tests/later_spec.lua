@@ -3,7 +3,7 @@ local Stubs = require("wow_stubs")
 local describe, it = T.describe, T.it
 
 describe("ns.Later", function()
-    it("runs on the next timer, not right away", function()
+    it("runs on the next frame, not right away", function()
         local ns = Stubs.LoadAddon()
         Stubs.Login()
         local ran = 0
@@ -23,6 +23,22 @@ describe("ns.Later", function()
         Stubs.RunTimers()
         table.sort(result)
         T.same(result, { "other", "second" })
+    end)
+
+    it("runs a request made while the others run on the next frame, never in the same one", function()
+        local ns = Stubs.LoadAddon()
+        Stubs.Login()
+        -- A change that makes the game fire an event that asks for the change again.
+        local ran = 0
+        local function again()
+            ran = ran + 1
+            ns.Later("test", again)
+        end
+        ns.Later("test", again)
+        Stubs.NextFrame()
+        T.eq(ran, 1)
+        Stubs.NextFrame()
+        T.eq(ran, 2)
     end)
 
     it("waits for the end of combat", function()

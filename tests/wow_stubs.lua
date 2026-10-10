@@ -170,6 +170,53 @@ local function newRegion(kind, parent, template)
 end
 Stubs.NewFrame = function(parent) return newRegion("Frame", parent) end
 
+-- MinimalSliderWithSteppersTemplate: a slider with a step arrow on each side and its value in
+-- RightText. As in the game, a new value (dragged, stepped or set) fires OnValueChanged, the same
+-- value again doesn't.
+function Stubs.BuildSlider(frame)
+    frame.Slider = newRegion("Slider", frame)
+    frame.Back = newRegion("Button", frame)
+    frame.Forward = newRegion("Button", frame)
+    frame.RightText = newRegion("FontString", frame)
+    frame.callbacks = {}
+    local function step(direction)
+        return function() frame:SetValue(frame.value + direction * frame.step) end
+    end
+    frame.Back:SetScript("OnClick", step(-1))
+    frame.Forward:SetScript("OnClick", step(1))
+    function frame:Init(value, minValue, maxValue, steps, formatters)
+        self.minValue, self.maxValue = minValue, maxValue
+        self.step = (maxValue - minValue) / steps
+        self.formatters = formatters
+        self.value = nil
+        self:SetValue(value)
+    end
+    function frame:RegisterCallback(event, fn, owner) self.callbacks[event] = { fn = fn, owner = owner } end
+    function frame:SetValue(value)
+        value = math.max(self.minValue, math.min(self.maxValue, value))
+        if value == self.value then return end
+        self.value = value
+        local format = self.formatters and self.formatters[_G.MinimalSliderWithSteppersMixin.Label.Right]
+        if format then self.RightText:SetText(format(value)) end
+        local callback = self.callbacks.OnValueChanged
+        if callback then callback.fn(callback.owner, value) end
+    end
+    function frame:GetValue() return self.value end
+end
+
+-- The player picks a color in the open color picker (r, g, b from 0 to 1), or cancels it.
+function Stubs.PickColor(r, g, b)
+    local picker = _G.ColorPickerFrame
+    picker.picked = { r, g, b }
+    picker.info.swatchFunc()
+end
+
+function Stubs.CancelColor()
+    local picker = _G.ColorPickerFrame
+    picker:Hide()
+    picker.info.cancelFunc()
+end
+
 -- A fake tooltip: records lines, has an owner and the info it is being built from (getterName and
 -- getterArgs, as the game's SetX methods record them).
 function Stubs.NewTooltip(owner, info)
@@ -382,8 +429,21 @@ local function install()
     G.CreateFrame = function(kind, name, parent, template)
         local frame = newRegion(kind or "Frame", parent, template)
         if name then G[name] = frame end
+        if template == "MinimalSliderWithSteppersTemplate" then Stubs.BuildSlider(frame) end
+        if template == "ColorSwatchTemplate" then
+            function frame:SetColorRGB(r, g, b) self.color = { r, g, b } end
+        end
         return frame
     end
+    -- The game's color picker: SetupColorPickerAndShow keeps the info; Stubs.PickColor picks a color.
+    G.ColorPickerFrame = newRegion("Frame", nil)
+    G.ColorPickerFrame:Hide()
+    function G.ColorPickerFrame:SetupColorPickerAndShow(info)
+        self.info, self.picked = info, { info.r, info.g, info.b }
+        self:Show()
+    end
+    function G.ColorPickerFrame:GetColorRGB() return self.picked[1], self.picked[2], self.picked[3] end
+    function G.ColorPickerFrame:GetPreviousValues() return self.info.r, self.info.g, self.info.b end
     G.UIParent = newRegion("Frame", nil)
     G.WorldFrame = newRegion("Frame", nil)
     G.WorldFrame.protected = true
@@ -404,6 +464,8 @@ local function install()
             queue[#queue + 1] = fn
         end,
     }
+    -- The interface style: Stubs.SetControllerUI switches to the controller interface.
+    G.C_InputInterfaceStyle = { GetCurrentStyle = function() return state.interfaceStyle end }
     G.C_EventUtils = { IsEventValid = function(event) return not state.unknownEvents[event] end }
     G.EventRegistry = {
         RegisterCallback = function(_, event, fn, owner)
@@ -417,6 +479,7 @@ local function install()
         TooltipDataType = { Item = 0, Spell = 1, Unit = 2, Currency = 5, UnitAura = 7, Achievement = 12, Toy = 19,
             Quest = 23 },
         TooltipDataLineType = { SellPrice = 11 },
+        InputDeviceInterfaceType = { Mkb = 0, Gamepad = 1 },
     }
     G.TooltipDataProcessor = {
         AddTooltipPostCall = function(tooltipType, fn)
@@ -695,7 +758,7 @@ local ADDON_GLOBALS = {
     "SLASH_QOL_RELOAD1", "hash_SlashCmdList", "IsSecureCmd", "SLASH_OTHERADDON1", "SLASH_RELOAD1",
     "HUD_EDIT_MODE_ACTION_BAR_LABEL", "HUD_EDIT_MODE_STANCE_BAR_LABEL", "HUD_EDIT_MODE_PET_ACTION_BAR_LABEL",
     "GetMinimapShape", "HybridMinimap", "TimeManagerClockButton", "GameTimeFrame", "AddonCompartmentFrame",
-    "TimeManagerClockTicker", "QoLNoAction",
+    "TimeManagerClockTicker", "QoLNoAction", "ColorPickerFrame",
 }
 
 function Stubs.Reset(options)
@@ -705,6 +768,7 @@ function Stubs.Reset(options)
         regions = {}, timers = {}, delayed = {}, messages = {}, registry = {}, postCalls = {}, linePreCalls = {},
         unknownEvents = options.unknownEvents or {},
         combat = false,
+        interfaceStyle = 0,
         screenWidth = 2560, screenHeight = 1440,
         bags = {}, prices = {}, used = {}, soldAll = 0, sellAllEnabled = true,
         canRepair = false, repairCost = 0, repairs = {}, money = 0,
@@ -781,16 +845,36 @@ function Stubs.AdvanceTime()
     Stubs.RunTimers()
 end
 
--- Runs C_Timer callbacks until none are left (callbacks may schedule more).
+local function onUpdateDue()
+    for _, region in ipairs(state.regions) do
+        if region.scripts.OnUpdate and region:IsVisible() then return true end
+    end
+    return false
+end
+
+-- One drawn frame: the C_Timer callbacks that are due, then the OnUpdate of every visible frame.
+function Stubs.NextFrame()
+    local timers = state.timers
+    state.timers = {}
+    for _, fn in ipairs(timers) do fn() end
+    for _, region in ipairs(state.regions) do
+        local onUpdate = region.scripts.OnUpdate
+        if onUpdate and region:IsVisible() then onUpdate(region, 0) end
+    end
+end
+
+-- Draws frames until no timer is due and no frame has an OnUpdate to run (each may start more).
 function Stubs.RunTimers()
     local guard = 0
-    while #state.timers > 0 do
-        local timers = state.timers
-        state.timers = {}
-        for _, fn in ipairs(timers) do fn() end
+    while #state.timers > 0 or onUpdateDue() do
+        Stubs.NextFrame()
         guard = guard + 1
-        assert(guard < 100, "timers keep scheduling timers")
+        assert(guard < 100, "the addon keeps scheduling work, frame after frame")
     end
+end
+
+function Stubs.SetControllerUI(on)
+    state.interfaceStyle = on and 1 or 0
 end
 
 function Stubs.SetCombat(inCombat)
@@ -872,7 +956,7 @@ function Stubs.InstallSettings()
         OpenToCategory = function(id) api.opened = id end,
     }
     _G.CreateSettingsListSectionHeaderInitializer = function(text, tooltip) return { header = text, tooltip = tooltip } end
-    _G.MinimalSliderWithSteppersMixin = { Label = { Right = 2 } }
+    _G.MinimalSliderWithSteppersMixin = { Label = { Right = 2 }, Event = { OnValueChanged = "OnValueChanged" } }
     return api
 end
 

@@ -31,10 +31,6 @@ local function headers(page, column)
     return texts
 end
 
-local function setting(api, key)
-    return api.settings["QoL_" .. key]
-end
-
 local function values(c)
     local list = {}
     for _, choice in ipairs(c.choices) do list[#list + 1] = choice.value end
@@ -56,7 +52,7 @@ local function radio(c, text)
 end
 
 describe("settings pages", function()
-    it("registers one AddOns category with Viewport, Action Bars and Minimap below it", function()
+    it("registers one AddOns category with Viewport, Action Bars and Minimap below it, all our own pages", function()
         local _, api = start()
         local main = api.registered
         T.eq(main.name, "Quality of Life")
@@ -64,7 +60,7 @@ describe("settings pages", function()
         T.eq(#api.categories, 4)
         T.eq(api.categories[2].name, "Viewport")
         T.eq(api.categories[2].parent, main)
-        T.eq(api.categories[2].frame, nil) -- the game's own list
+        T.truthy(api.categories[2].frame)
         T.eq(api.categories[3].name, "Action Bars")
         T.eq(api.categories[3].parent, main)
         T.truthy(api.categories[3].frame)
@@ -99,13 +95,10 @@ describe("settings pages", function()
                 found[c.key] = true
             end
         end
-        for variable, s in pairs(api.settings) do
-            local key = variable:gsub("^QoL_", "")
-            T.eq(found[key], nil, "one control for " .. key)
-            T.truthy(s.initializer, "control for " .. key)
-            T.eq(s.default, ns.Options:GetDefault(key), key)
-            found[key] = true
-        end
+        -- None in the game's own list: with the controller interface on, Forever stopped responding
+        -- when the settings closed after showing one.
+        T.eq(next(api.settings), nil, "no setting in the game's list")
+        T.eq(#api.controls, 0, "no control in the game's list")
         for key in pairs(ns.Options.DEFAULTS) do
             T.truthy(found[key], "control for " .. key)
         end
@@ -303,17 +296,80 @@ describe("settings pages", function()
         T.eq(ns.Options:Get("hideMicroMenu"), false)
     end)
 
-    it("keeps the viewport page as the game's list, its margins greyed out while off", function()
-        local _, api = start()
-        local slider = setting(api, "viewportTop")
-        T.eq(slider.category.name, "Viewport")
-        T.eq(slider.initializer.control, "slider")
-        T.eq(slider.initializer.parent, setting(api, "viewportEnabled").initializer)
-        T.falsy(slider.initializer.predicate())
-        T.eq(slider.initializer.options.maxValue, 600)
-        T.eq(slider.initializer.options.formatter(12.4), "12 px")
-        slider.set(30)
-        T.truthy(slider.get() == 30)
+    it("puts the viewport options in rows across the page, the margins greyed out while it's off", function()
+        local ns = start()
+        local page = pages(ns).viewport
+        show(page)
+        local keys, kinds = {}, {}
+        for _, c in ipairs(page.controls) do
+            keys[#keys + 1], kinds[#kinds + 1] = c.key, c.kind
+            T.eq(c.column, "wide", c.key)
+        end
+        T.same(keys, { "viewportEnabled", "viewportTop", "viewportBottom", "viewportLeft", "viewportRight",
+            "viewportColor" })
+        T.same(kinds, { "checkbox", "slider", "slider", "slider", "slider", "color" })
+        local top = control(ns, "viewportTop")
+        T.truthy(top.indent)
+        T.falsy(top.widget:IsEnabled())
+        T.eq(top.text.textColor[1], 0.5)
+        T.falsy(control(ns, "viewportColor").widget:IsEnabled())
+        control(ns, "viewportEnabled").widget:Click()
+        T.truthy(top.widget:IsEnabled())
+        T.truthy(control(ns, "viewportColor").widget:IsEnabled())
+    end)
+
+    it("sets a margin with its slider and its arrows, in whole pixels", function()
+        local ns = start({ viewportEnabled = true, viewportBottom = 278 })
+        local c, page = control(ns, "viewportBottom")
+        show(page)
+        T.eq(c.widget:GetValue(), 278)
+        T.eq(c.widget.RightText:GetText(), "278 px")
+        T.eq(c.widget.maxValue, 600)
+        c.widget:SetValue(30.4)
+        T.eq(ns.Options:Get("viewportBottom"), 30)
+        c.widget.Forward:Click()
+        T.eq(ns.Options:Get("viewportBottom"), 31)
+        c.widget.Back:Click()
+        c.widget.Back:Click()
+        T.eq(ns.Options:Get("viewportBottom"), 29)
+        T.eq(c.widget.RightText:GetText(), "29 px")
+        -- A change made elsewhere moves the slider, which doesn't write it back.
+        ns.Options:Set("viewportBottom", 120)
+        T.eq(c.widget:GetValue(), 120)
+        T.eq(ns.Options:Get("viewportBottom"), 120)
+    end)
+
+    it("picks the margin color in the game's color picker, and puts it back on cancel", function()
+        local ns = start({ viewportEnabled = true })
+        local c, page = control(ns, "viewportColor")
+        show(page)
+        T.same(c.widget.color, { 0, 0, 0 })
+        c.widget:Click()
+        T.truthy(ColorPickerFrame:IsShown())
+        T.same({ ColorPickerFrame.info.r, ColorPickerFrame.info.g, ColorPickerFrame.info.b }, { 0, 0, 0 })
+        Stubs.PickColor(1, 128 / 255, 0)
+        T.eq(ns.Options:Get("viewportColor"), "ffff8000")
+        T.same(c.widget.color, { 1, 128 / 255, 0 })
+        Stubs.CancelColor()
+        T.eq(ns.Options:Get("viewportColor"), "ff000000")
+        -- A click on the name opens it too, unless the option is greyed out.
+        ColorPickerFrame:Hide()
+        c.row:RunScript("OnMouseUp")
+        T.truthy(ColorPickerFrame:IsShown())
+        ColorPickerFrame:Hide()
+        ns.Options:Set("viewportEnabled", false)
+        c.row:RunScript("OnMouseUp")
+        T.falsy(ColorPickerFrame:IsShown())
+    end)
+
+    it("reads and writes colors as AARRGGBB", function()
+        local ns = start()
+        local Page = ns.SettingsPage
+        T.eq(Page.FormatColor(1, 0, 0.5), "ffff0080")
+        T.eq(Page.FormatColor(2, -1, 0), "ffff0000")
+        local r, g, b = Page.ParseColor("ff336699")
+        T.same({ r, g, b }, { 0x33 / 255, 0x66 / 255, 0x99 / 255 })
+        T.same({ Page.ParseColor("nope") }, { 0, 0, 0 })
     end)
 
     it("opens from the slash command", function()

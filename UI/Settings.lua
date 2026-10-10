@@ -3,39 +3,15 @@ local L = ns.L
 local Options = ns.Options
 
 -- Quality of Life's pages under Options > AddOns: the main page, plus Viewport, Action Bars and Minimap
--- as subcategories. The main, Action Bars and Minimap pages are our own two-column pages
--- (UI/SettingsPage.lua), so they fit without scrolling; Viewport, a short page with sliders and a
--- color, is the game's own list with proxy settings. Either way the pages only read and write
--- ns.Options, and the features react through Options:Watch. Without the Settings API the pages
--- are skipped.
+-- as subcategories. Every page is our own (UI/SettingsPage.lua), none is the game's own list of
+-- settings: on Forever, with the controller interface on, the game stopped responding when the
+-- settings closed after showing Viewport as the game's list, with its sliders and color swatch (see
+-- docs/DEVELOPMENT.md). The pages only read and write ns.Options, and the features react through
+-- Options:Watch. Without the Settings API the pages are skipped.
 local SettingsPanel = {}
 ns.SettingsPanel = SettingsPanel
 
 local VIEWPORT_MAX_MARGIN = 600
-
-local function varType(name)
-    return Settings.VarType and Settings.VarType[name] or name:lower()
-end
-
-local function register(category, key, kind, label)
-    return Settings.RegisterProxySetting(category, "QoL_" .. key, varType(kind), label,
-        Options:GetDefault(key),
-        function() return Options:Get(key) end,
-        function(value) Options:Set(key, value) end)
-end
-
-local function addCheckbox(category, key, label, tooltip)
-    local setting = register(category, key, "Boolean", label)
-    local create = Settings.CreateCheckbox or Settings.CreateCheckBox
-    return create(category, setting, tooltip)
-end
-
--- Greys out a control while the option it depends on is off.
-local function dependsOn(initializer, parentInitializer, parentKey)
-    if initializer and parentInitializer and initializer.SetParentInitializer then
-        initializer:SetParentInitializer(parentInitializer, function() return Options:Get(parentKey) end)
-    end
-end
 
 -- For the pages' enabled predicates.
 local function is(key)
@@ -169,36 +145,27 @@ local function buildActionBars(page)
     page:Checkbox("right", "hideButtonBorders", L.HIDE_BUTTON_BORDERS, L.HIDE_BUTTON_BORDERS_TIP)
 end
 
-local function addViewport(category)
-    local enabled = addCheckbox(category, "viewportEnabled", L.VIEWPORT_ENABLE, L.VIEWPORT_ENABLE_TIP)
-
-    local createSlider = Settings.CreateSlider
+-- Viewport page: rows across the page, as the sliders need the room.
+local function buildViewport(page)
+    page:Checkbox("wide", "viewportEnabled", L.VIEWPORT_ENABLE, L.VIEWPORT_ENABLE_TIP)
+    local enabled = { indent = true, enabled = is("viewportEnabled") }
     local margins = {
         { key = "viewportTop", label = L.VIEWPORT_TOP },
         { key = "viewportBottom", label = L.VIEWPORT_BOTTOM },
         { key = "viewportLeft", label = L.VIEWPORT_LEFT },
         { key = "viewportRight", label = L.VIEWPORT_RIGHT },
     }
+    local function pixels(value) return L.PIXELS:format(value) end
     for _, margin in ipairs(margins) do
-        local setting = register(category, margin.key, "Number", margin.label)
-        local options = Settings.CreateSliderOptions(0, VIEWPORT_MAX_MARGIN, 1)
-        if options.SetLabelFormatter and MinimalSliderWithSteppersMixin then
-            options:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right, function(value)
-                return L.PIXELS:format(math.floor(value + 0.5))
-            end)
-        end
-        dependsOn(createSlider(category, setting, options, L.VIEWPORT_MARGIN_TIP), enabled, "viewportEnabled")
+        page:Slider("wide", margin.key, margin.label, 0, VIEWPORT_MAX_MARGIN, pixels, L.VIEWPORT_MARGIN_TIP, enabled)
     end
-
-    if Settings.CreateColorSwatch then
-        local setting = register(category, "viewportColor", "String", L.VIEWPORT_COLOR)
-        dependsOn(Settings.CreateColorSwatch(category, setting, L.VIEWPORT_COLOR_TIP), enabled, "viewportEnabled")
+    if ColorPickerFrame and ColorPickerFrame.SetupColorPickerAndShow then
+        page:Color("wide", "viewportColor", L.VIEWPORT_COLOR, L.VIEWPORT_COLOR_TIP, enabled)
     end
 end
 
 function SettingsPanel:Init()
-    if not (Settings and Settings.RegisterCanvasLayoutCategory and Settings.RegisterVerticalLayoutSubcategory
-        and Settings.RegisterProxySetting) then
+    if not (Settings and Settings.RegisterCanvasLayoutCategory and Settings.RegisterCanvasLayoutSubcategory) then
         return
     end
     local Page = ns.SettingsPage
@@ -206,8 +173,9 @@ function SettingsPanel:Init()
     buildMain(main)
     local category = main:Register()
 
-    local viewport = Settings.RegisterVerticalLayoutSubcategory(category, L.CATEGORY_VIEWPORT)
-    addViewport(viewport)
+    local viewport = Page.New(L.CATEGORY_VIEWPORT)
+    buildViewport(viewport)
+    viewport:Register(category)
 
     local actionBars = Page.New(L.CATEGORY_ACTION_BARS)
     buildActionBars(actionBars)
@@ -219,7 +187,7 @@ function SettingsPanel:Init()
 
     Settings.RegisterAddOnCategory(category)
     self.category = category
-    self.pages = { main = main, actionBars = actionBars, minimap = minimap }
+    self.pages = { main = main, viewport = viewport, actionBars = actionBars, minimap = minimap }
 end
 
 function SettingsPanel:Open()

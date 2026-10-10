@@ -3,6 +3,8 @@ local Options = ns.Options
 
 -- Shrinks the area the 3D world is drawn in (WorldFrame) and fills the margins with a color, like
 -- the old viewport addons. Margins are set in screen pixels, so they don't change with UI scale.
+-- WorldFrame and the margins are anchored to the screen, the way the game anchors WorldFrame, and
+-- are only set again when the margins came out different.
 local Viewport = {}
 ns.Viewport = Viewport
 
@@ -74,19 +76,53 @@ local function restoreOriginalPoints()
             WorldFrame:SetPoint(p.point, p.relativeTo, p.relativePoint, p.x, p.y)
         end
     else
-        WorldFrame:SetAllPoints(UIParent)
+        WorldFrame:SetAllPoints()
     end
+end
+
+-- WorldFrame's anchors for these margins: to the screen, like the game's CinematicFrame sets them.
+local function worldPoints(top, bottom, left, right)
+    local function units(pixels) return pixelsToUnits(WorldFrame, pixels) end
+    return {
+        { "TOPLEFT", nil, "TOPLEFT", units(left), -units(top) },
+        { "BOTTOMRIGHT", nil, "BOTTOMRIGHT", -units(right), units(bottom) },
+    }
+end
+
+local function near(value, wanted)
+    return ns.IsUsable(value) and type(value) == "number" and math.abs(value - wanted) < 0.01
+end
+
+-- Whether WorldFrame has exactly these anchors already.
+local function hasPoints(points)
+    local count = WorldFrame:GetNumPoints()
+    if not ns.IsUsable(count) or count ~= #points then return false end
+    for _, wanted in ipairs(points) do
+        local found = false
+        for i = 1, count do
+            local point, relativeTo, relativePoint, x, y = WorldFrame:GetPoint(i)
+            if ns.IsUsable(point) and point == wanted[1] then
+                found = relativeTo == wanted[2] and relativePoint == wanted[3] and near(x, wanted[4])
+                    and near(y, wanted[5])
+                break
+            end
+        end
+        if not found then return false end
+    end
+    return true
 end
 
 -- The margins are four color textures along the screen edges. Their frame has no parent, so it
 -- stays visible when the interface is hidden (Alt+Z): the world doesn't grow back then either.
 local border
+-- The margins and color the border was last laid out for.
+local borderLayout
 
 local function createBorder()
     local frame = CreateFrame("Frame")
     frame:SetFrameStrata("BACKGROUND")
     frame:SetFrameLevel(0)
-    frame:SetAllPoints(UIParent)
+    frame:SetAllPoints()
     frame:EnableMouse(false)
     frame.edges = {}
     for _, side in ipairs({ "top", "bottom", "left", "right" }) do
@@ -99,6 +135,10 @@ end
 local function layoutBorder(top, bottom, left, right)
     local edges = border.edges
     local function units(pixels) return pixelsToUnits(border, pixels) end
+    local layout = string.format("%.3f %.3f %.3f %.3f %s", units(top), units(bottom), units(left), units(right),
+        tostring(Options:Get("viewportColor")))
+    if layout == borderLayout then return end
+    borderLayout = layout
 
     edges.top:ClearAllPoints()
     edges.top:SetPoint("TOPLEFT", border, "TOPLEFT")
@@ -176,14 +216,15 @@ function Viewport:Apply()
 
     saveOriginalPoints()
     local top, bottom, left, right = self:GetMarginPixels()
-    local function units(pixels) return pixelsToUnits(WorldFrame, pixels) end
-    WorldFrame:ClearAllPoints()
-    WorldFrame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", units(left), -units(top))
-    WorldFrame:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", -units(right), units(bottom))
+    local points = worldPoints(top, bottom, left, right)
+    if not hasPoints(points) then
+        WorldFrame:ClearAllPoints()
+        for _, p in ipairs(points) do WorldFrame:SetPoint(p[1], p[2], p[3], p[4], p[5]) end
+    end
 
     border = border or createBorder()
     layoutBorder(top, bottom, left, right)
-    border:Show()
+    if not border:IsShown() then border:Show() end
 end
 
 schedule = function()

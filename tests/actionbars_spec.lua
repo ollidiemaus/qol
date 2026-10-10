@@ -3,8 +3,9 @@ local Stubs = require("wow_stubs")
 local describe, it = T.describe, T.it
 
 -- Loads the addon with a main bar (and optionally more bars) in place, then logs in.
-local function start(savedOptions, bars)
+local function start(savedOptions, bars, controllerUI)
     local ns = Stubs.LoadAddon()
+    Stubs.SetControllerUI(controllerUI)
     local raws = {}
     bars = bars or { MainActionBar = { numRows = 2 } }
     for name, fields in pairs(bars) do
@@ -27,6 +28,20 @@ describe("action bar growth", function()
         Stubs.TriggerRegistry("EditMode.Exit")
         Stubs.RunTimers()
         T.eq(#state.layouts, 0)
+    end)
+
+    it("leaves every bar alone with the controller interface, which never shows them", function()
+        local ns, state = start({ flipVertical_MainActionBar = true }, nil, true)
+        Stubs.Fire("EDIT_MODE_LAYOUTS_UPDATED")
+        ns.Options:Set("flipHorizontal_MainActionBar", true)
+        Stubs.RunTimers()
+        T.eq(#state.layouts, 0)
+        -- Back to keyboard and mouse: the next wake-up applies what was chosen meanwhile.
+        Stubs.SetControllerUI(false)
+        Stubs.Fire("EDIT_MODE_LAYOUTS_UPDATED")
+        Stubs.RunTimers()
+        T.eq(#state.layouts, 1)
+        T.eq(lastLayout(state).layout.xMultiplier, -1)
     end)
 
     it("flips rows: a bar that grows up grows down from the top", function()

@@ -34,6 +34,17 @@ describe("bar paging keys", function()
         T.eq(override("SHIFT-MOUSEWHEELUP"), nil)
     end)
 
+    it("are left alone with the controller interface, whose bars don't page with them", function()
+        Stubs.LoadAddon()
+        Stubs.SetControllerUI(true)
+        Stubs.Login({ disableBarPaging = true })
+        T.eq(next(Stubs.state().overrides), nil)
+        -- The settings fire this when they close.
+        Stubs.Fire("UPDATE_BINDINGS")
+        Stubs.RunTimers()
+        T.eq(Stubs.state().overrideCalls, 0)
+    end)
+
     it("follow a bar addon that took over the plain key", function()
         Stubs.LoadAddon()
         Stubs.state().overrides["1"] = { owner = "BarAddon", command = "CLICK BarAddonButton1:Keybind" }
