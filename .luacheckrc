@@ -26,7 +26,7 @@ read_globals = {
     "GridLayoutUtil", "AnchorUtil", "TooltipDataProcessor",
     "MicroMenuContainer", "ContainerFrameCombinedBags", "BagItemAutoSortButton", "BagItemSearchBox",
     "BagsBar", "QuickJoinToastButton", "MinimapCluster", "Minimap", "MinimapZoneText", "MinimapCompassTexture",
-    "MinimapCompassTextureUnderlay", "HybridMinimap", "WorldMapFrame", "MapCanvasDataProviderMixin", "CreateFromMixins",
+    "MinimapCompassTextureUnderlay", "HybridMinimap", "TimeManagerClockButton", "GameTimeFrame", "AddonCompartmentFrame", "WorldMapFrame", "MapCanvasDataProviderMixin", "CreateFromMixins",
     "GameTooltip",
     "ChatFrame2", "ChatFrame2Tab", "ChatFrameMenuButton", "ChatFrameChannelButton", "ChatFrameToggleVoiceDeafenButton",
     "ChatFrameToggleVoiceMuteButton", "TextToSpeechButtonFrame",

@@ -29,10 +29,18 @@ local DEFAULTS = {
     hideCombatLog = false,
     chatClassColors = false,
 
-    hideMinimapCoords = false,
     squareMinimap = false,
+    squareMinimapBorder = "bronze", -- "bronze" or "black"
     minimapZoneText = "default", -- "default", "above" or "below"
     minimapZoneTextClassColor = false,
+    hideMinimapCoords = false,
+    -- Where the minimap's buttons go: "default", "hidden", or "topLeft", "top", "topRight",
+    -- "bottomLeft", "bottom", "bottomRight" (a row above or below the minimap).
+    minimapClock = "default",
+    minimapCompartment = "default",
+    minimapTracking = "default",
+    minimapDayNight = "default",
+    hideMinimapCalendar = false,
 
     mapDungeons = false,
     mapTravel = false,

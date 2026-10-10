@@ -2,8 +2,8 @@ local _, ns = ...
 local L = ns.L
 local Options = ns.Options
 
--- Forever QoL's pages under Options > AddOns: the main page, plus Viewport and Action Bars as
--- subcategories. Every setting is a proxy onto ns.Options, so the page never owns data and the
+-- Forever QoL's pages under Options > AddOns: the main page, plus Viewport, Action Bars and Minimap
+-- as subcategories. Every setting is a proxy onto ns.Options, so the page never owns data and the
 -- features react through Options:Watch. Without the Settings API the page is skipped.
 local SettingsPanel = {}
 ns.SettingsPanel = SettingsPanel
@@ -78,17 +78,6 @@ local function addMain(category, layout)
     addCheckbox(category, "hideCombatLog", L.HIDE_COMBAT_LOG, L.HIDE_COMBAT_LOG_TIP)
     addCheckbox(category, "chatClassColors", L.CHAT_CLASS_COLORS, L.CHAT_CLASS_COLORS_TIP)
 
-    addHeader(layout, L.SECTION_MINIMAP)
-    addCheckbox(category, "squareMinimap", L.SQUARE_MINIMAP, L.SQUARE_MINIMAP_TIP)
-    addDropdown(category, "minimapZoneText", L.MINIMAP_ZONE_TEXT, {
-        { value = "default", label = L.ZONE_TEXT_DEFAULT },
-        { value = "above", label = L.ZONE_TEXT_ABOVE },
-        { value = "below", label = L.ZONE_TEXT_BELOW },
-    }, L.MINIMAP_ZONE_TEXT_TIP)
-    addCheckbox(category, "minimapZoneTextClassColor", L.MINIMAP_ZONE_TEXT_CLASS_COLOR,
-        L.MINIMAP_ZONE_TEXT_CLASS_COLOR_TIP)
-    addCheckbox(category, "hideMinimapCoords", L.HIDE_MINIMAP_COORDS, L.HIDE_MINIMAP_COORDS_TIP)
-
     -- Only where there are pins to show: they are on Forever's maps.
     if ns.MapPins.IsAvailable() then
         addHeader(layout, L.SECTION_WORLD_MAP)
@@ -105,6 +94,39 @@ local function addMain(category, layout)
 
     addHeader(layout, L.SECTION_COMMANDS)
     addCheckbox(category, "reloadCommand", L.RELOAD_COMMAND, L.RELOAD_COMMAND_TIP)
+end
+
+local function addMinimap(category, layout)
+    addHeader(layout, L.SECTION_MINIMAP_SHAPE)
+    local square = addCheckbox(category, "squareMinimap", L.SQUARE_MINIMAP, L.SQUARE_MINIMAP_TIP)
+    dependsOn(addDropdown(category, "squareMinimapBorder", L.SQUARE_MINIMAP_BORDER, {
+        { value = "bronze", label = L.BORDER_BRONZE },
+        { value = "black", label = L.BORDER_BLACK },
+    }, L.SQUARE_MINIMAP_BORDER_TIP), square, "squareMinimap")
+
+    addHeader(layout, L.SECTION_MINIMAP_ZONE_TEXT)
+    addDropdown(category, "minimapZoneText", L.MINIMAP_ZONE_TEXT, {
+        { value = "default", label = L.POSITION_DEFAULT },
+        { value = "above", label = L.ZONE_TEXT_ABOVE },
+        { value = "below", label = L.ZONE_TEXT_BELOW },
+    }, L.MINIMAP_ZONE_TEXT_TIP)
+    addCheckbox(category, "minimapZoneTextClassColor", L.MINIMAP_ZONE_TEXT_CLASS_COLOR,
+        L.MINIMAP_ZONE_TEXT_CLASS_COLOR_TIP)
+    addCheckbox(category, "hideMinimapCoords", L.HIDE_MINIMAP_COORDS, L.HIDE_MINIMAP_COORDS_TIP)
+
+    addHeader(layout, L.SECTION_MINIMAP_BUTTONS, L.MINIMAP_POSITION_TIP)
+    local positions = {}
+    for _, value in ipairs(ns.MinimapLayout.POSITIONS) do
+        positions[#positions + 1] = { value = value, label = L["POSITION_" .. value:upper()] }
+    end
+    addDropdown(category, "minimapClock", L.MINIMAP_CLOCK, positions, L.MINIMAP_POSITION_TIP)
+    addDropdown(category, "minimapCompartment", L.MINIMAP_COMPARTMENT, positions, L.MINIMAP_POSITION_TIP)
+    addDropdown(category, "minimapTracking", L.MINIMAP_TRACKING, positions, L.MINIMAP_POSITION_TIP)
+    -- Only Forever has the day and night icon.
+    if ns.MinimapLayout.HasDayNight() then
+        addDropdown(category, "minimapDayNight", L.MINIMAP_DAY_NIGHT, positions, L.MINIMAP_POSITION_TIP)
+    end
+    addCheckbox(category, "hideMinimapCalendar", L.HIDE_MINIMAP_CALENDAR, L.HIDE_MINIMAP_CALENDAR_TIP)
 end
 
 local function addViewport(category)
@@ -158,6 +180,9 @@ function SettingsPanel:Init()
 
     local actionBars, actionBarsLayout = Settings.RegisterVerticalLayoutSubcategory(category, L.CATEGORY_ACTION_BARS)
     addActionBars(actionBars, actionBarsLayout)
+
+    local minimap, minimapLayout = Settings.RegisterVerticalLayoutSubcategory(category, L.CATEGORY_MINIMAP)
+    addMinimap(minimap, minimapLayout)
 
     Settings.RegisterAddOnCategory(category)
     self.category = category

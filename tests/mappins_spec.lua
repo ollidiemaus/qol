@@ -115,6 +115,15 @@ describe("map pins", function()
         T.truthy(pinFor(392))
     end)
 
+    it("draw zeppelins with our own icon", function()
+        start({ mapTravel = true })
+        Stubs.OpenWorldMap(1434)
+        local zeppelins = pinsOfType("zeppelin")
+        T.eq(#zeppelins, 2) -- to Orgrimmar and to Undercity
+        T.eq(zeppelins[1].button.icon.texture, "Interface\\AddOns\\ForeverQoL\\Media\\Zeppelin")
+        T.eq(pinsOfType("boat")[1].button.icon.atlas, "flightmasterferry")
+    end)
+
     it("name a place by its zone when the game has no name for the stop", function()
         start({ mapTravel = true })
         Stubs.OpenWorldMap(2521)

@@ -18,12 +18,15 @@ ns.MapPins = MapPins
 local DUNGEONS, TRAVEL = "mapDungeons", "mapTravel"
 local CONTINENT = Enum and Enum.UIMapType and Enum.UIMapType.Continent or 2
 
--- How each type looks (an atlas of the client and the size on screen), and which option shows it.
+-- How each type looks (an atlas of the client, or a texture of ours, and the size on screen), and
+-- which option shows it.
 MapPins.STYLES = {
     dungeon = { atlas = "dungeon", size = 24, option = DUNGEONS, label = "MAP_DUNGEON" },
     raid = { atlas = "raid", size = 24, option = DUNGEONS, label = "MAP_RAID" },
     boat = { atlas = "flightmasterferry", size = 20, option = TRAVEL, label = "MAP_BOAT" },
-    zeppelin = { atlas = "flightmasterferry", size = 20, option = TRAVEL, label = "MAP_ZEPPELIN" },
+    -- The client has no zeppelin icon; ours is drawn in the style of the boat's.
+    zeppelin = { texture = "Interface\\AddOns\\ForeverQoL\\Media\\Zeppelin", size = 22, option = TRAVEL,
+        label = "MAP_ZEPPELIN" },
     portal = { atlas = "mageportalalliance", size = 20, option = TRAVEL, label = "MAP_PORTAL" },
     tram = { atlas = "portalpurple", size = 20, option = TRAVEL, label = "MAP_TRAM" },
 }
@@ -224,7 +227,13 @@ function MapPins:Redraw()
         if shown(place.pin) then
             local button = acquire()
             button.pin = place.pin
-            button.icon:SetAtlas(self.STYLES[place.pin.type].atlas)
+            local style = self.STYLES[place.pin.type]
+            if style.texture then
+                button.icon:SetTexture(style.texture)
+                button.icon:SetTexCoord(0, 1, 0, 1) -- a pooled button may have shown an atlas
+            else
+                button.icon:SetAtlas(style.atlas)
+            end
             button:ClearAllPoints()
             button:SetPoint("CENTER", view.frame, "TOPLEFT", place.x * width, -place.y * height)
             sizeButton(button)

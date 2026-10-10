@@ -11,7 +11,7 @@ Notes for working on the addon. What it does for players is in the [README](../R
 | `Features/` | One file per feature: `Merchant`, `Quests`, `Tooltips`, `HideFrames` (also the chat buttons), `CombatLog`, `ChatClassColors`, `CombinedBagSort`, `ClassHealthBars`, `Minimap` (square shape and zone text), `MapPins`, `Viewport`, `ActionBars`, `ReloadCommand` |
 | `UI/Settings.lua` | The pages under Options > AddOns, all proxy settings onto `ns.Options` |
 | `Locales/` | English strings, German overrides |
-| `Media/` | `Icon.tga`, the addon list icon (the TOC's `IconTexture`, 128×128, 32-bit), and `Icon.svg`, its source (not packaged) |
+| `Media/` | `Icon.tga`, the addon list icon (the TOC's `IconTexture`, 128×128, 32-bit), and `Icon.svg`, its source (not packaged); `Zeppelin.tga` and `MinimapSquareBorder.tga` (see below) |
 | `tests/` | Specs run in plain Lua against `tests/wow_stubs.lua` |
 
 Features never talk to each other or to the settings page. The page writes `ns.Options`; a feature
@@ -63,11 +63,25 @@ takes no room and the next tab closes the gap.
 Names in chat in class color are the game's own setting: `chatClassColorOverride` "0" means always
 (see `ChatFrameUtil.ShouldColorChatByClass`). Turning the option off gives the setting its default.
 
+The square minimap's bronze border, `Media/MinimapSquareBorder.tga` (512×512), is Forever's own
+round frame (`ui-hud-minimap-frame-c60-2x`, file 8026708 of build 1.60.1.70291) unwrapped onto a
+square: each pixel of a band along the square's edges, with rounded corners, takes the ring's pixel
+at the same distance from the map's edge, walking around the ring as it walks around the square. The
+north triangle is left out and the two ends of the walk are cross-faded at the top. The texture
+reaches 9 units past each edge of the 198-unit map. `Media/Zeppelin.tga` (64×64) is drawn in the
+style and colors of the boat's atlas (`flightmasterferry`), for which the client has no zeppelin.
+Both were made with small numpy scripts, not kept in the repository.
+
 The square minimap replaces the minimap's mask and hides the round frame textures
 (`MinimapCompassTexture` and its underlay). Forever's minimap skin (`Blizzard_Minimap/Camelot/Skin.lua`)
 sets its round mask again when `rotateMinimap` changes, so a `CVAR_UPDATE` for it applies the square
 mask again; the hybrid minimap has a mask of its own (`HybridMinimap.CircleMask`). The zone text is
-the game's own `MinimapCluster.ZoneTextButton`, moved: it keeps its tooltip and click.
+the game's own `MinimapCluster.ZoneTextButton`, moved: it keeps its tooltip and click. The clock,
+addon compartment, tracking button and day and night icon are moved the same way, into a row above
+or below a frame of ours around what is drawn of the minimap (the square and its border, or the
+round frame with its north triangle). Positions are worked out in screen units, since Edit Mode
+scales the minimap but not its header. Forever's skin sets the day and night icon's center again
+whenever the minimap's scale is set; `Minimap.OnScaleUpdated` lays it out again after that.
 
 The world map pins are buttons on a frame of our own on the map's canvas, not pins from the map's
 pools. Their places are zone coordinates in percent (as `/way` reads them), from Forever's tables;
@@ -126,10 +140,15 @@ Things only the real client can confirm:
 - Names in class color in say, guild, party and channels; turning the option off brings back the
   per-channel setting.
 - The other chat buttons stay hidden after joining a voice channel and with text to speech on.
-- Square minimap: the border, minimap buttons of other addons (LibDBIcon) along the square, the
-  rotate minimap setting, a zone with the hybrid minimap, and Forever's day and night ornament.
-- Zone text above and below a round and a square minimap, with and without coordinates, after an
-  Edit Mode change of the minimap's size; class color after zone changes and in combat.
+- Square minimap: both borders (the bronze one lines up with the map's edge at every Edit Mode size),
+  minimap buttons of other addons (LibDBIcon) along the square, the rotate minimap setting, and a
+  zone with the hybrid minimap.
+- Zone text and the clock, addon compartment, tracking button and day and night icon in every
+  position, several in one spot, above and below a round and a square minimap, with and without
+  coordinates, after an Edit Mode change of the minimap's size, and after a `/reload`; the tracking
+  menu and the addon compartment's menu still open from their new places. Class color after zone
+  changes and in combat.
+- The zeppelin pins' icon next to the boats', on zone and continent maps.
 - World map pins: in the right places on the zone and continent maps (the entrance positions are
   the instance portals, like retail's encounter journal pins), the tooltips' names in German, and a
   click opening the destination's map. Open the map in combat too.

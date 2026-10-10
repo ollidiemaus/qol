@@ -362,7 +362,7 @@ local function install()
     cluster.BorderTop = newRegion("Frame", cluster)
     cluster.BorderTop:SetPoint("TOP", cluster, "TOP", 15, -4)
     cluster.ZoneTextButton = newRegion("Button", cluster)
-    cluster.ZoneTextButton:SetWidth(135)
+    cluster.ZoneTextButton:SetSize(135, 12)
     cluster.ZoneTextButton:SetPoint("LEFT", cluster.BorderTop, "LEFT", 4, 0)
     G.MinimapZoneText = newRegion("FontString", cluster.ZoneTextButton)
     G.MinimapZoneText:SetWidth(130)
@@ -378,6 +378,23 @@ local function install()
     G.MinimapCompassTextureUnderlay = newRegion("Texture", backdrop)
     minimapContainer.PlayerCoords = newRegion("Frame", minimapContainer)
     minimapContainer.PlayerCoords:SetPoint("BOTTOM", G.Minimap, "BOTTOM", 0, -18)
+    -- The buttons around it: tracking left of the header bar, clock and calendar on its right, the
+    -- addon compartment under the calendar, and Forever's day and night icon on the round frame.
+    cluster.Tracking = newRegion("Frame", cluster)
+    cluster.Tracking:SetSize(17, 17)
+    cluster.Tracking:SetPoint("RIGHT", cluster.BorderTop, "LEFT", -2, 0)
+    G.TimeManagerClockButton = newRegion("Button", cluster)
+    G.TimeManagerClockButton:SetSize(40, 16)
+    G.TimeManagerClockButton:SetPoint("TOPRIGHT", cluster.BorderTop, "TOPRIGHT", -4, 0)
+    G.GameTimeFrame = newRegion("Button", cluster)
+    G.GameTimeFrame:SetSize(19, 18)
+    G.GameTimeFrame:SetPoint("TOPLEFT", cluster.BorderTop, "TOPRIGHT", 1, 0)
+    G.AddonCompartmentFrame = newRegion("Button", cluster)
+    G.AddonCompartmentFrame:SetSize(16, 16)
+    G.AddonCompartmentFrame:SetPoint("TOPLEFT", G.GameTimeFrame, "BOTTOMLEFT", 0, 0)
+    cluster.DielFrame = newRegion("Frame", cluster)
+    cluster.DielFrame:SetSize(42, 42)
+    cluster.DielFrame:SetPoint("CENTER", cluster, "CENTER", 63, 72)
     G.C_Texture = {
         GetAtlasInfo = function(atlas) return state.atlases[atlas] end,
     }
@@ -512,7 +529,7 @@ local ADDON_GLOBALS = {
     "MultiBar5", "MultiBar6", "MultiBar7", "StanceBar", "PetActionBar",
     "SLASH_FOREVERQOL_RELOAD1", "hash_SlashCmdList", "IsSecureCmd", "SLASH_OTHERADDON1", "SLASH_RELOAD1",
     "HUD_EDIT_MODE_ACTION_BAR_LABEL", "HUD_EDIT_MODE_STANCE_BAR_LABEL", "HUD_EDIT_MODE_PET_ACTION_BAR_LABEL",
-    "GetMinimapShape", "HybridMinimap",
+    "GetMinimapShape", "HybridMinimap", "TimeManagerClockButton", "GameTimeFrame", "AddonCompartmentFrame",
 }
 
 function Stubs.Reset(options)

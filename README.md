@@ -52,11 +52,15 @@ Hold **Shift** while talking to an NPC to do everything yourself that time.
 
 ### Minimap
 
-- **Square minimap,** with a thin black border instead of the round frame. Addons that put buttons
-  around the minimap and ask for its shape place them along the square.
+- **Square minimap,** framed in the bronze of Forever's round minimap or with a thin black line.
+  Addons that put buttons around the minimap and ask for its shape place them along the square.
 - **Zone text above or below the minimap,** centered on the map's edge instead of in the bar at the
-  top. Below the minimap, the coordinates move under it.
+  top.
 - **Zone text in class color** instead of the color for friendly, hostile or contested territory.
+- **Clock, addon compartment, tracking button and Forever's day and night icon:** each can move to
+  a row above or below the minimap (left, center or right), or be hidden. Things in the same spot
+  sit side by side; with something below the minimap, the coordinates move under it.
+- **Hide the calendar button.**
 - **Hide the coordinates under the minimap.**
 
 ### World map
@@ -64,7 +68,8 @@ Hold **Shift** while talking to an NPC to do everything yourself that time.
 - **Dungeon and raid entrances:** marked on the zone and continent maps. Point at one to see its
   name. Blackrock Mountain's dungeons show on both Searing Gorge and the Burning Steppes.
 - **Boats, zeppelins and portals:** the harbors and zeppelin towers, the portal between Darnassus
-  and Rut'theran Village and the Deeprun Tram. Point at one to see where it goes; click it and the
+  and Rut'theran Village and the Deeprun Tram (zeppelins get an icon of their own in the style of
+  the boat's). Point at one to see where it goes; click it and the
   map of that place opens. Forever's new routes are there too: the boat from Stormwind Harbor, the
   stop at Southshore, the boat between Tanaris and the Riverglades and the airships to Zephras Isle.
 
@@ -103,8 +108,8 @@ bar in Edit Mode.
 
 ## Settings
 
-**Esc > Options > AddOns > Forever QoL**, or type `/fqol`. The Viewport and Action Bars pages are
-listed below Forever QoL. Changes apply right away; the few that touch protected parts of the
+**Esc > Options > AddOns > Forever QoL**, or type `/fqol`. The Viewport, Action Bars and Minimap
+pages are listed below Forever QoL. Changes apply right away; the few that touch protected parts of the
 interface (action bars, viewport, system bar) wait until you leave combat.
 
 Forever QoL is available in English and German.

@@ -14,17 +14,20 @@ local function setting(api, key)
 end
 
 describe("settings page", function()
-    it("registers one AddOns category with Viewport and Action Bars below it", function()
+    it("registers one AddOns category with Viewport, Action Bars and Minimap below it", function()
         local _, api = start()
         local main = api.registered
         T.eq(main.name, "Forever QoL")
-        T.eq(#api.categories, 3)
+        T.eq(#api.categories, 4)
         T.eq(api.categories[2].name, "Viewport")
         T.eq(api.categories[2].parent, main)
         T.eq(api.categories[3].name, "Action Bars")
         T.eq(api.categories[3].parent, main)
-        T.same(main.headers, { "Merchant", "Quests", "Tooltips", "Interface", "Chat", "Minimap", "World map",
+        T.eq(api.categories[4].name, "Minimap")
+        T.eq(api.categories[4].parent, main)
+        T.same(main.headers, { "Merchant", "Quests", "Tooltips", "Interface", "Chat", "World map",
             "Unit frames", "Chat commands" })
+        T.same(api.categories[4].headers, { "Shape", "Zone text", "Buttons" })
     end)
 
     it("has a control for every option", function()
@@ -79,10 +82,38 @@ describe("settings page", function()
         local api = Stubs.InstallSettings()
         Stubs.state().maps = {}
         Stubs.Login()
-        T.same(api.registered.headers, { "Merchant", "Quests", "Tooltips", "Interface", "Chat", "Minimap",
+        T.same(api.registered.headers, { "Merchant", "Quests", "Tooltips", "Interface", "Chat",
             "Unit frames", "Chat commands" })
         T.eq(setting(api, "mapDungeons"), nil)
         T.eq(setting(api, "mapTravel"), nil)
+    end)
+
+    it("offers every position for the minimap's buttons", function()
+        local _, api = start()
+        local clock = setting(api, "minimapClock")
+        T.eq(clock.category.name, "Minimap")
+        local values = {}
+        for _, choice in ipairs(clock.initializer.options()) do values[#values + 1] = choice.value end
+        T.same(values, { "default", "topLeft", "top", "topRight", "bottomLeft", "bottom", "bottomRight", "hidden" })
+        T.eq(clock.initializer.options()[2].label, "Above, left")
+        T.truthy(setting(api, "minimapDayNight"))
+    end)
+
+    it("greys out the border choice while the minimap is round", function()
+        local ns, api = start()
+        local borderChoice = setting(api, "squareMinimapBorder").initializer
+        T.eq(borderChoice.parent, setting(api, "squareMinimap").initializer)
+        T.falsy(borderChoice.predicate())
+        ns.Options:Set("squareMinimap", true)
+        T.truthy(borderChoice.predicate())
+    end)
+
+    it("offers the day and night icon only where the game has one", function()
+        Stubs.LoadAddon()
+        local api = Stubs.InstallSettings()
+        MinimapCluster.DielFrame = false -- this client has none
+        Stubs.Login()
+        T.eq(setting(api, "minimapDayNight"), nil)
     end)
 
     it("lists every bar twice on the action bar page", function()
