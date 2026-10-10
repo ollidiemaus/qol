@@ -1,0 +1,7 @@
+<Bindings>
+	<!-- The controller back buttons (Features/BackButtons.lua names them). -->
+	<Binding name="CLICK QoLBackButton1:LeftButton" header="QOL" category="ADDONS"/>
+	<Binding name="CLICK QoLBackButton2:LeftButton" category="ADDONS"/>
+	<Binding name="CLICK QoLBackButton3:LeftButton" category="ADDONS"/>
+	<Binding name="CLICK QoLBackButton4:LeftButton" category="ADDONS"/>
+</Bindings>

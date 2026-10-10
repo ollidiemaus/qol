@@ -47,6 +47,7 @@ Features\Viewport.lua
 Features\ActionBars.lua
 Features\ButtonBorders.lua
 Features\BarPaging.lua
+Features\BackButtons.lua
 Features\ReloadCommand.lua
 
 UI\SettingsPage.lua

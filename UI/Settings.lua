@@ -2,12 +2,13 @@ local _, ns = ...
 local L = ns.L
 local Options = ns.Options
 
--- Quality of Life's pages under Options > AddOns: the main page, plus Viewport, Action Bars and Minimap
--- as subcategories. Every page is our own (UI/SettingsPage.lua), none is the game's own list of
--- settings: on Forever, with the controller interface on, the game stopped responding when the
--- settings closed after showing Viewport as the game's list, with its sliders and color swatch (see
--- docs/DEVELOPMENT.md). The pages only read and write ns.Options, and the features react through
--- Options:Watch. Without the Settings API the pages are skipped.
+-- Quality of Life's pages under Options > AddOns: the main page, plus Viewport, Action Bars, Minimap
+-- and, on Forever (which has the controller action bar), Controller as subcategories. Every page is
+-- our own (UI/SettingsPage.lua), none is the game's own list of settings: on Forever, with the
+-- controller interface on, the game stopped responding when the settings closed after showing
+-- Viewport as the game's list, with its sliders and color swatch (see docs/DEVELOPMENT.md). The
+-- pages only read and write ns.Options, and the features react through Options:Watch. Without the
+-- Settings API the pages are skipped.
 local SettingsPanel = {}
 ns.SettingsPanel = SettingsPanel
 
@@ -145,6 +146,18 @@ local function buildActionBars(page)
     page:Checkbox("right", "hideButtonBorders", L.HIDE_BUTTON_BORDERS, L.HIDE_BUTTON_BORDERS_TIP)
 end
 
+-- Controller page: the back buttons and the bar whose slots they use.
+local function buildController(page)
+    page:Header("left", L.SECTION_BACK_BUTTONS)
+    page:Checkbox("left", "controllerBackButtons", L.BACK_BUTTONS, L.BACK_BUTTONS_TIP)
+    local bars = {}
+    for bar = 6, 8 do
+        bars[#bars + 1] = { value = bar, label = L.BACK_BUTTONS_BAR_CHOICE:format(bar) }
+    end
+    page:Dropdown("left", "controllerBackButtonsBar", L.BACK_BUTTONS_BAR, bars, L.BACK_BUTTONS_BAR_TIP,
+        { indent = true, enabled = is("controllerBackButtons") })
+end
+
 -- Viewport page: rows across the page, as the sliders need the room.
 local function buildViewport(page)
     page:Checkbox("wide", "viewportEnabled", L.VIEWPORT_ENABLE, L.VIEWPORT_ENABLE_TIP)
@@ -185,9 +198,16 @@ function SettingsPanel:Init()
     buildMinimap(minimap)
     minimap:Register(category)
 
+    self.pages = { main = main, viewport = viewport, actionBars = actionBars, minimap = minimap }
+    if GamepadMainActionBarFrame then
+        local controller = Page.New(L.CATEGORY_CONTROLLER)
+        buildController(controller)
+        controller:Register(category)
+        self.pages.controller = controller
+    end
+
     Settings.RegisterAddOnCategory(category)
     self.category = category
-    self.pages = { main = main, viewport = viewport, actionBars = actionBars, minimap = minimap }
 end
 
 function SettingsPanel:Open()
