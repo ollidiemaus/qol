@@ -31,6 +31,21 @@ local function addCheckbox(category, key, label, tooltip)
     return create(category, setting, tooltip)
 end
 
+-- choices: { { value = ..., label = ... }, ... } in the order the menu lists them.
+local function addDropdown(category, key, label, choices, tooltip)
+    local create = Settings.CreateDropdown or Settings.CreateDropDown
+    if not (create and Settings.CreateControlTextContainer) then return nil end
+    local setting = register(category, key, "String", label)
+    local function options()
+        local container = Settings.CreateControlTextContainer()
+        for _, choice in ipairs(choices) do
+            container:Add(choice.value, choice.label)
+        end
+        return container:GetData()
+    end
+    return create(category, setting, options, tooltip)
+end
+
 -- Greys out a control while the option it depends on is off.
 local function dependsOn(initializer, parentInitializer, parentKey)
     if initializer and parentInitializer and initializer.SetParentInitializer then
@@ -44,6 +59,10 @@ local function addMain(category, layout)
     local repair = addCheckbox(category, "autoRepair", L.AUTO_REPAIR, L.AUTO_REPAIR_TIP)
     dependsOn(addCheckbox(category, "guildRepair", L.GUILD_REPAIR, L.GUILD_REPAIR_TIP), repair, "autoRepair")
 
+    addHeader(layout, L.SECTION_QUESTS)
+    addCheckbox(category, "questAccept", L.QUEST_ACCEPT, L.QUEST_ACCEPT_TIP)
+    addCheckbox(category, "questTurnIn", L.QUEST_TURN_IN, L.QUEST_TURN_IN_TIP)
+
     addHeader(layout, L.SECTION_TOOLTIPS)
     addCheckbox(category, "tooltipIDs", L.TOOLTIP_IDS, L.TOOLTIP_IDS_TIP)
     addCheckbox(category, "tooltipSellPrice", L.TOOLTIP_SELL_PRICE, L.TOOLTIP_SELL_PRICE_TIP)
@@ -51,9 +70,28 @@ local function addMain(category, layout)
     addHeader(layout, L.SECTION_INTERFACE)
     addCheckbox(category, "hideMicroMenu", L.HIDE_MICRO_MENU, L.HIDE_MICRO_MENU_TIP)
     addCheckbox(category, "hideBagsBar", L.HIDE_BAGS_BAR, L.HIDE_BAGS_BAR_TIP)
-    addCheckbox(category, "hideMinimapCoords", L.HIDE_MINIMAP_COORDS, L.HIDE_MINIMAP_COORDS_TIP)
-    addCheckbox(category, "hideChatSocial", L.HIDE_CHAT_SOCIAL, L.HIDE_CHAT_SOCIAL_TIP)
     addCheckbox(category, "showCombinedBagSort", L.SHOW_COMBINED_BAG_SORT, L.SHOW_COMBINED_BAG_SORT_TIP)
+
+    addHeader(layout, L.SECTION_CHAT)
+    addCheckbox(category, "hideChatSocial", L.HIDE_CHAT_SOCIAL, L.HIDE_CHAT_SOCIAL_TIP)
+    addCheckbox(category, "hideChatButtons", L.HIDE_CHAT_BUTTONS, L.HIDE_CHAT_BUTTONS_TIP)
+    addCheckbox(category, "hideCombatLog", L.HIDE_COMBAT_LOG, L.HIDE_COMBAT_LOG_TIP)
+    addCheckbox(category, "chatClassColors", L.CHAT_CLASS_COLORS, L.CHAT_CLASS_COLORS_TIP)
+
+    addHeader(layout, L.SECTION_MINIMAP)
+    addCheckbox(category, "squareMinimap", L.SQUARE_MINIMAP, L.SQUARE_MINIMAP_TIP)
+    addDropdown(category, "minimapZoneText", L.MINIMAP_ZONE_TEXT, {
+        { value = "default", label = L.ZONE_TEXT_DEFAULT },
+        { value = "above", label = L.ZONE_TEXT_ABOVE },
+        { value = "below", label = L.ZONE_TEXT_BELOW },
+    }, L.MINIMAP_ZONE_TEXT_TIP)
+    addCheckbox(category, "minimapZoneTextClassColor", L.MINIMAP_ZONE_TEXT_CLASS_COLOR,
+        L.MINIMAP_ZONE_TEXT_CLASS_COLOR_TIP)
+    addCheckbox(category, "hideMinimapCoords", L.HIDE_MINIMAP_COORDS, L.HIDE_MINIMAP_COORDS_TIP)
+
+    addHeader(layout, L.SECTION_WORLD_MAP)
+    addCheckbox(category, "mapDungeons", L.MAP_DUNGEONS, L.MAP_DUNGEONS_TIP)
+    addCheckbox(category, "mapTravel", L.MAP_TRAVEL, L.MAP_TRAVEL_TIP)
 
     addHeader(layout, L.SECTION_UNIT_FRAMES)
     addCheckbox(category, "classColorPlayer", L.CLASS_COLOR_PLAYER, L.CLASS_COLOR_TIP)

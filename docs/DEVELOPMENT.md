@@ -7,7 +7,8 @@ Notes for working on the addon. What it does for players is in the [README](../R
 | Folder | What's in it |
 |---|---|
 | `Core/` | Namespace and printing (`Init`), the event frame (`Events`), saved options with defaults and change watchers (`Options`), deferred changes (`Later`), the hidden holder for hidden frames (`Hider`), `/fqol` (`Slash`) and startup (`Lifecycle`) |
-| `Features/` | One file per feature: `Merchant`, `Tooltips`, `HideFrames`, `CombinedBagSort`, `ClassHealthBars`, `Viewport`, `ActionBars`, `ReloadCommand` |
+| `Data/` | Static game data: `MapPins` (dungeon entrances, docks, portals; how it was made is at the top of the file) |
+| `Features/` | One file per feature: `Merchant`, `Quests`, `Tooltips`, `HideFrames` (also the chat buttons), `CombatLog`, `ChatClassColors`, `CombinedBagSort`, `ClassHealthBars`, `Minimap` (square shape and zone text), `MapPins`, `Viewport`, `ActionBars`, `ReloadCommand` |
 | `UI/Settings.lua` | The pages under Options > AddOns, all proxy settings onto `ns.Options` |
 | `Locales/` | English strings, German overrides |
 | `Media/` | `Icon.tga`, the addon list icon (the TOC's `IconTexture`, 128×128, 32-bit), and `Icon.svg`, its source (not packaged) |
@@ -31,6 +32,9 @@ hard way on the Forever beta. So:
   own `Show()` calls then change nothing.
 - Compare or compute with game values only after `ns.IsUsable(value)` (nil and secret values fail).
 - Register events through `ns.Events:On`; it skips events the client doesn't know.
+- The few calls into Blizzard code are listed here, each with why it's safe: the world map's
+  `AddDataProvider` (the map's own extension point; it calls each provider in a secure call of its
+  own) and `SetMapID` (only from a click on one of our own pins, like a click on a zone).
 - Leave `WorldFrame` alone while a cutscene plays. Blizzard's `CinematicFrame` re-anchors it for
   the black bars and resets it to full screen at the end; `MovieFrame` hides it. Two hands on
   `WorldFrame` during a cutscene is how viewport addons crash the game. The viewport waits until
@@ -49,6 +53,27 @@ focus target bars and never colors them itself, so a color stays until we change
 follows Blizzard's raid frames: `UnitIsPlayer` or `UnitTreatAsPlayerForDisplay`, with a known,
 non-secret class (`UnitClass` is secret while a unit's identity is restricted). The bar's own
 `unit` field says what it shows, so the player frame in a vehicle (`"vehicle"`) keeps its default.
+
+The combat log can't be closed in the default UI, and the dock's own functions (`FCF_Close`,
+`FCF_UnDockFrame`) write to the chat frames and the dock. So `ChatFrame2` goes to the hidden holder
+and its tab is scaled down to 0.001: the dock gives every tab its parent, width and anchor again on
+each update (each tab hangs on the right edge of the one before), but never its scale, so the tab
+takes no room and the next tab closes the gap.
+
+Names in chat in class color are the game's own setting: `chatClassColorOverride` "0" means always
+(see `ChatFrameUtil.ShouldColorChatByClass`). Turning the option off gives the setting its default.
+
+The square minimap replaces the minimap's mask and hides the round frame textures
+(`MinimapCompassTexture` and its underlay). Forever's minimap skin (`Blizzard_Minimap/Camelot/Skin.lua`)
+sets its round mask again when `rotateMinimap` changes, so a `CVAR_UPDATE` for it applies the square
+mask again; the hybrid minimap has a mask of its own (`HybridMinimap.CircleMask`). The zone text is
+the game's own `MinimapCluster.ZoneTextButton`, moved: it keeps its tooltip and click.
+
+The world map pins are buttons on a frame of our own on the map's canvas, not pins from the map's
+pools. Their places are zone coordinates in percent (as `/way` reads them), from Forever's tables;
+the continent maps get them through `C_Map.GetMapRectOnMap`. Names come from `C_Map.GetAreaInfo`, so
+they're in the player's language. Forever's UiMap IDs (1411 and up) don't exist on retail, so there
+the pins never show.
 
 ## Tests and lint
 
@@ -91,6 +116,22 @@ Things only the real client can confirm:
   "minus" one) shows the default green, switching targets in combat recolors at once, and turning
   an option off brings the green back without a `/reload`. Also on the target of target, focus and
   focus target.
+- Quests: accepting from a gossip NPC and from a quest greeting NPC (several quests in a row), a
+  shared quest, turning in with one reward and with none, a choice of rewards and a quest that costs
+  gold staying open, and Shift leaving everything to the player.
+- Hiding the combat log: the tabs after it close the gap, also after a whisper tab opens and with
+  the combat log selected when the option is turned on (the chat stays empty until another tab is
+  clicked). No "tainted by" error in combat afterwards.
+- Names in class color in say, guild, party and channels; turning the option off brings back the
+  per-channel setting.
+- The other chat buttons stay hidden after joining a voice channel and with text to speech on.
+- Square minimap: the border, minimap buttons of other addons (LibDBIcon) along the square, the
+  rotate minimap setting, a zone with the hybrid minimap, and Forever's day and night ornament.
+- Zone text above and below a round and a square minimap, with and without coordinates, after an
+  Edit Mode change of the minimap's size; class color after zone changes and in combat.
+- World map pins: in the right places on the zone and continent maps (the entrance positions are
+  the instance portals, like retail's encounter journal pins), the tooltips' names in German, and a
+  click opening the destination's map. Open the map in combat too.
 
 ### Cutscenes and the viewport
 

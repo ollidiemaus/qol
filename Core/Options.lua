@@ -6,21 +6,36 @@ local Options = { watchers = {} }
 ns.Options = Options
 
 -- Only junk selling, the vendor price and /rl (which only exists when nothing else has it) are on
--- by default. Repairs spend gold (yours or the guild's), IDs are clutter for most players, and
--- everything that changes the look of the interface waits for the player to opt in.
+-- by default. Repairs spend gold (yours or the guild's), IDs are clutter for most players, quest
+-- automation decides for the player, and everything that changes the look of the interface waits
+-- for the player to opt in.
 local DEFAULTS = {
     sellJunk = true,
     autoRepair = false,
     guildRepair = false,
+
+    questAccept = false,
+    questTurnIn = false,
 
     tooltipIDs = false,
     tooltipSellPrice = true,
 
     hideMicroMenu = false,
     hideBagsBar = false,
-    hideMinimapCoords = false,
-    hideChatSocial = false,
     showCombinedBagSort = false,
+
+    hideChatSocial = false,
+    hideChatButtons = false,
+    hideCombatLog = false,
+    chatClassColors = false,
+
+    hideMinimapCoords = false,
+    squareMinimap = false,
+    minimapZoneText = "default", -- "default", "above" or "below"
+    minimapZoneTextClassColor = false,
+
+    mapDungeons = false,
+    mapTravel = false,
 
     classColorPlayer = false,
     classColorTarget = false,

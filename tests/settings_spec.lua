@@ -23,7 +23,8 @@ describe("settings page", function()
         T.eq(api.categories[2].parent, main)
         T.eq(api.categories[3].name, "Action Bars")
         T.eq(api.categories[3].parent, main)
-        T.same(main.headers, { "Merchant", "Tooltips", "Interface", "Unit frames", "Chat commands" })
+        T.same(main.headers, { "Merchant", "Quests", "Tooltips", "Interface", "Chat", "Minimap", "World map",
+            "Unit frames", "Chat commands" })
     end)
 
     it("has a control for every option", function()
@@ -57,6 +58,20 @@ describe("settings page", function()
         T.falsy(slider.predicate())
         T.eq(slider.options.maxValue, 600)
         T.eq(slider.options.formatter(12.4), "12 px")
+    end)
+
+    it("offers the zone text positions in a dropdown", function()
+        local ns, api = start()
+        local s = setting(api, "minimapZoneText")
+        T.eq(s.initializer.control, "dropdown")
+        T.eq(s.varType, "string")
+        T.same(s.initializer.options(), {
+            { value = "default", label = "Default" },
+            { value = "above", label = "Above the minimap" },
+            { value = "below", label = "Below the minimap" },
+        })
+        s.set("below")
+        T.eq(ns.Options:Get("minimapZoneText"), "below")
     end)
 
     it("lists every bar twice on the action bar page", function()

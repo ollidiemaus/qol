@@ -4,8 +4,9 @@
 
 Forever QoL bundles the little things you'd otherwise install five addons for: a smaller 3D
 viewport, action bars that grow the other way, class-colored health bars, junk selling and repairs
-at merchants, IDs and vendor prices in tooltips, and switches to hide UI pieces you never click. Everything is set up in
-the game's own options window. There's no minimap button.
+at merchants, quests accepted and turned in for you, IDs and vendor prices in tooltips, a square
+minimap, dungeon entrances, boats and zeppelins on the world map, and switches to hide UI pieces
+you never click. Everything is set up in the game's own options window. There's no minimap button.
 
 It's made for WoW Forever and also runs on retail (Midnight).
 
@@ -19,6 +20,14 @@ It's made for WoW Forever and also runs on retail (Midnight).
 - **Use guild funds:** repairs come out of the guild bank first, as far as your guild lets you
   withdraw. If that doesn't cover everything, your own gold pays the rest.
 
+### Quests
+
+- **Accept quests automatically:** every quest an NPC offers, and every quest a group member shares.
+- **Turn in quests automatically:** finished quests are turned in when you talk to the quest giver.
+  A quest with rewards to choose from, or one that costs gold, stays open for you to decide.
+
+Hold **Shift** while talking to an NPC to do everything yourself that time.
+
 ### Tooltips
 
 - **IDs:** spell, item, buff and debuff, NPC, quest, currency and achievement IDs in their tooltips.
@@ -30,10 +39,36 @@ It's made for WoW Forever and also runs on retail (Midnight).
 - **Hide the system bar:** the micro menu (character, spellbook, ..., game menu). Your key
   bindings still open everything, and in a vehicle the buttons still show on the vehicle bar.
 - **Hide the bag bar:** the backpack and bag slots. Bag key bindings keep working.
-- **Hide the coordinates under the minimap.**
-- **Hide the social button** on top of the chat window.
 - **Show the sort button on combined bags:** adds the sort (clean up) button next to the search box
   of the combined bag.
+
+### Chat
+
+- **Hide the social button** on top of the chat window.
+- **Hide the other chat buttons:** the chat menu, channel, voice chat and text to speech buttons.
+- **Hide the combat log:** the Combat Log tab leaves the chat window. The combat log keeps running,
+  so addons that read it still work.
+- **Names in class color:** player names in chat take the color of their class, in every channel.
+
+### Minimap
+
+- **Square minimap,** with a thin black border instead of the round frame. Addons that put buttons
+  around the minimap and ask for its shape place them along the square.
+- **Zone text above or below the minimap,** centered on the map's edge instead of in the bar at the
+  top. Below the minimap, the coordinates move under it.
+- **Zone text in class color** instead of the color for friendly, hostile or contested territory.
+- **Hide the coordinates under the minimap.**
+
+### World map
+
+- **Dungeon and raid entrances:** marked on the zone and continent maps. Point at one to see its
+  name. Blackrock Mountain's dungeons show on both Searing Gorge and the Burning Steppes.
+- **Boats, zeppelins and portals:** the harbors and zeppelin towers, the portal between Darnassus
+  and Rut'theran Village and the Deeprun Tram. Point at one to see where it goes; click it and the
+  map of that place opens. Forever's new routes are there too: the boat from Stormwind Harbor, the
+  stop at Southshore, the boat between Tanaris and the Riverglades and the airships to Zephras Isle.
+
+The places come from Forever's own game data, so these pins only show on Forever's maps.
 
 ### Unit frames
 
@@ -83,3 +118,5 @@ Forever QoL is available in English and German.
   Viewport or Action Bar Button Growth Direction): both would move the same frames.
 - Other tooltip addons may show vendor prices too (Auctionator, for one); turn one of them off if
   you see the price twice.
+- The same goes for other quest automation and minimap addons (Leatrix Plus, SexyMap and the like):
+  use one of them for the same job.

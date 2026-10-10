@@ -72,7 +72,22 @@ local function newRegion(kind, parent)
     function region:GetWidth() return self.width end
     function region:GetHeight() return self.height end
     function region:GetEffectiveScale() return self.effectiveScale end
+    function region:SetScale(scale) self.scale = scale end
+    function region:GetScale() return self.scale or 1 end
+    function region:SetFrameLevel(level) self.frameLevel = level end
+    function region:GetFrameLevel() return self.frameLevel or 1 end
     function region:SetColorTexture(r, g, b, a) self.color = { r, g, b, a } end
+    function region:SetAtlas(atlas) self.atlas = atlas end
+    function region:SetTexture(texture) self.texture = texture end
+    function region:SetMaskTexture(mask) self.mask = mask end
+    function region:SetTextColor(r, g, b) self.textColor = { r, g, b } end
+    function region:GetTextColor()
+        local c = self.textColor or { 1, 1, 1 }
+        return c[1], c[2], c[3], 1
+    end
+    function region:SetMouseClickEnabled(enabled) self.mouseClickEnabled = enabled end
+    function region:SetJustifyH(justify) self.justifyH = justify end
+    function region:GetJustifyH() return self.justifyH or "CENTER" end
     function region:IsProtected() return self.protected == true end
     function region:CreateTexture()
         local texture = newRegion("Texture", self)
@@ -158,6 +173,70 @@ local function newHealthBar(unit)
     }), raw
 end
 
+-- The world map: its canvas (1000 x 667 at zoom 1), its data providers and the map it shows.
+-- Blizzard_WorldMap creates it; a test can drop it to load the map later (Stubs.LoadWorldMap).
+function Stubs.NewWorldMap()
+    local map = newRegion("Frame", _G.UIParent)
+    map:Hide()
+    map.providers = {}
+    map.canvas = newRegion("Frame", map)
+    map.canvas:SetSize(1000, 667)
+    map.canvasScale = 1
+    function map:AddDataProvider(provider)
+        table.insert(self.providers, provider)
+        provider:OnAdded(self)
+    end
+    function map:GetCanvas() return self.canvas end
+    function map:GetCanvasScale() return self.canvasScale end
+    function map:GetMapID() return self.mapID end
+    function map:SetMapID(mapID)
+        if self.mapID == mapID then return end
+        self.mapID = mapID
+        for _, provider in ipairs(self.providers) do provider:OnMapChanged() end
+    end
+    function map:GetPinFrameLevelsManager()
+        return { GetValidFrameLevel = function(_, name) return name == "PIN_FRAME_LEVEL_DUNGEON_ENTRANCE" and 500 or 2 end }
+    end
+    return map
+end
+
+-- Opens the world map at a map, the way the game refreshes every provider when it shows.
+function Stubs.OpenWorldMap(mapID)
+    local map = _G.WorldMapFrame
+    map.mapID = mapID
+    map:Show()
+    for _, provider in ipairs(map.providers) do provider:RefreshAllData(true) end
+end
+
+function Stubs.CloseWorldMap()
+    local map = _G.WorldMapFrame
+    map:Hide()
+    for _, provider in ipairs(map.providers) do provider:OnHide() end
+end
+
+function Stubs.ZoomWorldMap(scale)
+    local map = _G.WorldMapFrame
+    map.canvasScale = scale
+    for _, provider in ipairs(map.providers) do provider:OnCanvasScaleChanged() end
+end
+
+function Stubs.LoadWorldMap()
+    _G.WorldMapFrame = Stubs.NewWorldMap()
+    Stubs.Fire("ADDON_LOADED", "Blizzard_WorldMap")
+end
+
+-- The pins on the map: our buttons on the canvas that are shown, with where they are.
+function Stubs.MapPins()
+    local pins = {}
+    for _, region in ipairs(state.regions) do
+        if region.kind == "Button" and region.pin and region:IsVisible() then
+            local point = region.points[1]
+            pins[#pins + 1] = { pin = region.pin, button = region, x = point[4], y = point[5], size = region.width }
+        end
+    end
+    return pins
+end
+
 local function split(delimiter, text)
     local parts = {}
     for part in (text .. delimiter):gmatch("(.-)" .. delimiter:gsub("%p", "%%%0")) do
@@ -179,7 +258,7 @@ local function install()
     G.NUM_TOTAL_EQUIPPED_BAG_SLOTS = 5
     G.DEFAULT_CHAT_FRAME = { AddMessage = function(_, text) state.messages[#state.messages + 1] = text end }
 
-    G.CreateFrame = function(_, _, parent) return newRegion("Frame", parent) end
+    G.CreateFrame = function(kind, _, parent) return newRegion(kind or "Frame", parent) end
     G.UIParent = newRegion("Frame", nil)
     G.WorldFrame = newRegion("Frame", nil)
     G.WorldFrame.protected = true
@@ -266,9 +345,111 @@ local function install()
     G.BagItemSearchBox = newRegion("Frame", G.ContainerFrame1)
     G.BagItemAutoSortButton = newRegion("Frame", G.ContainerFrame1)
     G.BagItemAutoSortButton:Hide()
-    local minimapContainer = newRegion("Frame", G.UIParent)
+    -- Chat: the combat log window and its tab, and the buttons next to ChatFrame1.
+    G.ChatFrame2 = newRegion("Frame", G.UIParent)
+    G.ChatFrame2Tab = newRegion("Button", G.UIParent)
+    G.ChatFrame1ButtonFrame = newRegion("Frame", G.UIParent)
+    G.ChatFrameMenuButton = newRegion("Button", G.ChatFrame1ButtonFrame)
+    G.ChatFrameChannelButton = newRegion("Button", G.ChatFrame1ButtonFrame)
+    G.ChatFrameToggleVoiceDeafenButton = newRegion("Button", G.UIParent)
+    G.ChatFrameToggleVoiceMuteButton = newRegion("Button", G.UIParent)
+    G.TextToSpeechButtonFrame = newRegion("Frame", G.UIParent)
+
+    -- The minimap as Forever builds it: the cluster with its header bar and zone text button, the
+    -- container with the map, the round frame and the coordinates under the map.
+    G.MinimapCluster = newRegion("Frame", G.UIParent)
+    local cluster = G.MinimapCluster
+    cluster.BorderTop = newRegion("Frame", cluster)
+    cluster.BorderTop:SetPoint("TOP", cluster, "TOP", 15, -4)
+    cluster.ZoneTextButton = newRegion("Button", cluster)
+    cluster.ZoneTextButton:SetWidth(135)
+    cluster.ZoneTextButton:SetPoint("LEFT", cluster.BorderTop, "LEFT", 4, 0)
+    G.MinimapZoneText = newRegion("FontString", cluster.ZoneTextButton)
+    G.MinimapZoneText:SetWidth(130)
+    G.MinimapZoneText:SetJustifyH("LEFT")
+    G.MinimapZoneText:SetTextColor(1, 0.82, 0)
+    local minimapContainer = newRegion("Frame", cluster)
+    cluster.MinimapContainer = minimapContainer
+    G.Minimap = newRegion("Minimap", minimapContainer)
+    G.Minimap:SetSize(198, 198)
+    G.Minimap:SetMaskTexture("ui-hud-minimap-frame-generic-mask")
+    local backdrop = newRegion("Frame", G.Minimap)
+    G.MinimapCompassTexture = newRegion("Texture", backdrop)
+    G.MinimapCompassTextureUnderlay = newRegion("Texture", backdrop)
     minimapContainer.PlayerCoords = newRegion("Frame", minimapContainer)
-    G.MinimapCluster = { MinimapContainer = minimapContainer }
+    minimapContainer.PlayerCoords:SetPoint("BOTTOM", G.Minimap, "BOTTOM", 0, -18)
+    G.C_Texture = {
+        GetAtlasInfo = function(atlas) return state.atlases[atlas] end,
+    }
+
+    -- Settings the client keeps (C_CVar), as strings.
+    G.C_CVar = {
+        GetCVar = function(name) return state.cvars[name] end,
+        GetCVarDefault = function(name) return state.cvarDefaults[name] end,
+        SetCVar = function(name, value)
+            state.cvars[name] = tostring(value)
+            table.insert(state.cvarSets, name .. "=" .. tostring(value))
+        end,
+    }
+
+    -- Quest givers: state.quest holds what the NPC offers; every call the addon makes is recorded.
+    local quest = function() return state.quest end
+    local function record(call) table.insert(state.quest.calls, call) end
+    G.IsShiftKeyDown = function() return state.shift end
+    G.UnitGUID = function(unit) if unit == "npc" then return quest().npc end return nil end
+    G.C_GossipInfo = {
+        GetActiveQuests = function() return quest().gossipActive end,
+        GetAvailableQuests = function() return quest().gossipAvailable end,
+        SelectActiveQuest = function(questID) record("gossipActive:" .. questID) end,
+        SelectAvailableQuest = function(questID) record("gossipAvailable:" .. questID) end,
+    }
+    G.GetNumActiveQuests = function() return #quest().greetingActive end
+    G.GetActiveTitle = function(i) local q = quest().greetingActive[i] return q.title, q.isComplete end
+    G.GetActiveQuestID = function(i) return quest().greetingActive[i].questID end
+    G.SelectActiveQuest = function(i) record("greetingActive:" .. i) end
+    G.GetNumAvailableQuests = function() return #quest().greetingAvailable end
+    G.GetAvailableQuestInfo = function(i) return false, 0, false, false, quest().greetingAvailable[i].questID end
+    G.SelectAvailableQuest = function(i) record("greetingAvailable:" .. i) end
+    G.AcceptQuest = function() record("accept") end
+    G.QuestGetAutoAccept = function() return quest().autoAccept end
+    G.QuestIsFromAdventureMap = function() return false end
+    G.IsQuestCompletable = function() return quest().completable end
+    G.GetQuestMoneyToGet = function() return quest().money end
+    G.CompleteQuest = function() record("complete") end
+    G.GetNumQuestChoices = function() return quest().choices end
+    G.GetQuestReward = function(choice) record("reward:" .. choice) end
+
+    -- The world map: a MapCanvas with its data providers, at state.worldMap.
+    G.Enum.UIMapType = { Cosmic = 0, World = 1, Continent = 2, Zone = 3 }
+    G.CreateFromMixins = function(...)
+        local object = {}
+        for i = 1, select("#", ...) do
+            for key, value in pairs((select(i, ...))) do object[key] = value end
+        end
+        return object
+    end
+    G.MapCanvasDataProviderMixin = {
+        OnAdded = function(self, map) self.owningMap = map end,
+        GetMap = function(self) return self.owningMap end,
+        OnMapChanged = function(self) self:RefreshAllData() end,
+        RefreshAllData = noop, RemoveAllData = noop, OnShow = noop, OnHide = noop, OnCanvasScaleChanged = noop,
+    }
+    G.C_Map = {
+        GetMapInfo = function(mapID) return state.maps[mapID] end,
+        GetMapRectOnMap = function(mapID, topMapID)
+            local rect = state.mapRects[mapID .. ">" .. topMapID]
+            if not rect then return nil end
+            return rect[1], rect[2], rect[3], rect[4]
+        end,
+        GetAreaInfo = function(areaID) return state.areas[areaID] end,
+    }
+    G.WorldMapFrame = Stubs.NewWorldMap()
+    G.GameTooltip = { lines = {} }
+    function G.GameTooltip:SetOwner(owner) self.owner, self.lines, self.shown = owner, {}, false end
+    function G.GameTooltip:SetText(text) self.lines = { { text = text } } end
+    function G.GameTooltip:AddLine(text, r, g, b) table.insert(self.lines, { text = text, color = { r, g, b } }) end
+    function G.GameTooltip:Show() self.shown = true end
+    function G.GameTooltip:Hide() self.shown = false end
 
     -- Units: state.units[unit] = { isPlayer, treatAsPlayer, class }; a unit that isn't there doesn't exist.
     G.UnitIsPlayer = function(unit)
@@ -331,6 +512,7 @@ local ADDON_GLOBALS = {
     "MultiBar5", "MultiBar6", "MultiBar7", "StanceBar", "PetActionBar",
     "SLASH_FOREVERQOL_RELOAD1", "hash_SlashCmdList", "IsSecureCmd", "SLASH_OTHERADDON1", "SLASH_RELOAD1",
     "HUD_EDIT_MODE_ACTION_BAR_LABEL", "HUD_EDIT_MODE_STANCE_BAR_LABEL", "HUD_EDIT_MODE_PET_ACTION_BAR_LABEL",
+    "GetMinimapShape", "HybridMinimap",
 }
 
 function Stubs.Reset(options)
@@ -346,6 +528,12 @@ function Stubs.Reset(options)
         inGuild = false, guildCanRepair = false, guildLimit = 0, guildMoney = 0,
         layouts = {}, reloads = 0,
         units = { player = { isPlayer = true, class = "MAGE" } },
+        atlases = { ["ui-hud-minimap-frame-generic-mask"] = { width = 215, height = 226 } },
+        cvars = { chatClassColorOverride = "2" }, cvarDefaults = { chatClassColorOverride = "2" }, cvarSets = {},
+        shift = false,
+        quest = { npc = "Creature-0-1-0-1-3139-0001", gossipActive = {}, gossipAvailable = {}, greetingActive = {},
+            greetingAvailable = {}, autoAccept = false, completable = true, money = 0, choices = 0, calls = {} },
+        maps = {}, mapRects = {}, areas = {},
     }
     for _, name in ipairs(ADDON_GLOBALS) do _G[name] = nil end
     _G.SlashCmdList = {}
@@ -472,6 +660,15 @@ function Stubs.InstallSettings()
             return options
         end,
         CreateColorSwatch = function(_, setting, tooltip) return newInitializer(setting, "color", { tooltip = tooltip }) end,
+        CreateDropdown = function(_, setting, options, tooltip)
+            return newInitializer(setting, "dropdown", { options = options, tooltip = tooltip })
+        end,
+        CreateControlTextContainer = function()
+            local container = { data = {} }
+            function container:Add(value, label) table.insert(self.data, { value = value, label = label }) end
+            function container:GetData() return self.data end
+            return container
+        end,
         RegisterAddOnCategory = function(category) api.registered = category end,
         OpenToCategory = function(id) api.opened = id end,
     }
