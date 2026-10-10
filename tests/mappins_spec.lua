@@ -191,6 +191,15 @@ describe("map pins", function()
         T.eq(#WorldMapFrame.providers, 1)
     end)
 
+    it("stay off the world map on a client without Forever's maps", function()
+        local ns = Stubs.LoadAddon()
+        Stubs.state().maps = {}
+        Stubs.Login({ mapDungeons = true, mapTravel = true })
+        T.falsy(ns.MapPins.IsAvailable())
+        Stubs.OpenWorldMap(1413)
+        T.eq(#WorldMapFrame.providers, 0)
+    end)
+
     it("are added only once", function()
         local ns = start({ mapDungeons = true })
         ns.Options:Set("mapTravel", true)

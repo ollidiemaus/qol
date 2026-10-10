@@ -68,7 +68,8 @@ Hold **Shift** while talking to an NPC to do everything yourself that time.
   map of that place opens. Forever's new routes are there too: the boat from Stormwind Harbor, the
   stop at Southshore, the boat between Tanaris and the Riverglades and the airships to Zephras Isle.
 
-The places come from Forever's own game data, so these pins only show on Forever's maps.
+The places come from Forever's own game data, so these options only show on Forever. On retail,
+the default map marks dungeon entrances itself.
 
 ### Unit frames
 

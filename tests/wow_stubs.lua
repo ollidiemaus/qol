@@ -533,7 +533,10 @@ function Stubs.Reset(options)
         shift = false,
         quest = { npc = "Creature-0-1-0-1-3139-0001", gossipActive = {}, gossipAvailable = {}, greetingActive = {},
             greetingAvailable = {}, autoAccept = false, completable = true, money = 0, choices = 0, calls = {} },
-        maps = {}, mapRects = {}, areas = {},
+        -- A few of Forever's maps; a retail client has none of them (state.maps = {}).
+        maps = { [1413] = { name = "The Barrens", mapType = 3, parentMapID = 1414 },
+            [1414] = { name = "Kalimdor", mapType = 2, parentMapID = 947 } },
+        mapRects = {}, areas = {},
     }
     for _, name in ipairs(ADDON_GLOBALS) do _G[name] = nil end
     _G.SlashCmdList = {}

@@ -89,9 +89,12 @@ local function addMain(category, layout)
         L.MINIMAP_ZONE_TEXT_CLASS_COLOR_TIP)
     addCheckbox(category, "hideMinimapCoords", L.HIDE_MINIMAP_COORDS, L.HIDE_MINIMAP_COORDS_TIP)
 
-    addHeader(layout, L.SECTION_WORLD_MAP)
-    addCheckbox(category, "mapDungeons", L.MAP_DUNGEONS, L.MAP_DUNGEONS_TIP)
-    addCheckbox(category, "mapTravel", L.MAP_TRAVEL, L.MAP_TRAVEL_TIP)
+    -- Only where there are pins to show: they are on Forever's maps.
+    if ns.MapPins.IsAvailable() then
+        addHeader(layout, L.SECTION_WORLD_MAP)
+        addCheckbox(category, "mapDungeons", L.MAP_DUNGEONS, L.MAP_DUNGEONS_TIP)
+        addCheckbox(category, "mapTravel", L.MAP_TRAVEL, L.MAP_TRAVEL_TIP)
+    end
 
     addHeader(layout, L.SECTION_UNIT_FRAMES)
     addCheckbox(category, "classColorPlayer", L.CLASS_COLOR_PLAYER, L.CLASS_COLOR_TIP)

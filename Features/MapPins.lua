@@ -38,6 +38,15 @@ local function mapName(mapID)
     return info and info.name or nil
 end
 
+-- Whether this client has the maps the pins are on. Forever's UiMap IDs don't exist on retail, so
+-- there the options aren't offered and the world map is left alone.
+function MapPins.IsAvailable()
+    for _, pin in ipairs(ns.MapPinData) do
+        if mapInfo(pin.map) then return true end
+    end
+    return false
+end
+
 local function areaName(areaID)
     local name = areaID and C_Map and C_Map.GetAreaInfo and C_Map.GetAreaInfo(areaID)
     if type(name) == "string" and name ~= "" then return name end
@@ -288,6 +297,7 @@ local function schedule()
 end
 
 function MapPins:Init()
+    if not self.IsAvailable() then return end
     Options:Watch({ DUNGEONS, TRAVEL }, schedule)
     ns.Events:On("ADDON_LOADED", function(_, name)
         if name == "Blizzard_WorldMap" and anyShown() then schedule() end

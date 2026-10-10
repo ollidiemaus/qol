@@ -74,6 +74,17 @@ describe("settings page", function()
         T.eq(ns.Options:Get("minimapZoneText"), "below")
     end)
 
+    it("leaves out the world map options on a client without Forever's maps", function()
+        Stubs.LoadAddon()
+        local api = Stubs.InstallSettings()
+        Stubs.state().maps = {}
+        Stubs.Login()
+        T.same(api.registered.headers, { "Merchant", "Quests", "Tooltips", "Interface", "Chat", "Minimap",
+            "Unit frames", "Chat commands" })
+        T.eq(setting(api, "mapDungeons"), nil)
+        T.eq(setting(api, "mapTravel"), nil)
+    end)
+
     it("lists every bar twice on the action bar page", function()
         local ns, api = start()
         local page = api.categories[3]

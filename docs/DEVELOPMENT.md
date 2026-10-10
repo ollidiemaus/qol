@@ -73,7 +73,8 @@ The world map pins are buttons on a frame of our own on the map's canvas, not pi
 pools. Their places are zone coordinates in percent (as `/way` reads them), from Forever's tables;
 the continent maps get them through `C_Map.GetMapRectOnMap`. Names come from `C_Map.GetAreaInfo`, so
 they're in the player's language. Forever's UiMap IDs (1411 and up) don't exist on retail, so there
-the pins never show.
+`MapPins.IsAvailable()` is false: the settings page leaves the World map options out and the map is
+never touched.
 
 ## Tests and lint
 
