@@ -6,12 +6,12 @@ exclude_files = { ".git/", ".release/", ".lua/", ".luarocks/", ".install/" }
 
 -- Globals the addon defines.
 globals = {
-    "ForeverQoLAPI",
-    "ForeverQoLDB",
-    "SLASH_FOREVERQOL1",
-    "SLASH_FOREVERQOL2",
+    "QoLAPI",
+    "QoLDB",
+    "SLASH_QOL1",
+    "SLASH_QOL2",
     "SlashCmdList",
-    "SLASH_FOREVERQOL_RELOAD1",
+    "SLASH_QOL_RELOAD1",
     "hash_SlashCmdList",
     "GetMinimapShape", -- answers "SQUARE" while the minimap is square
 }

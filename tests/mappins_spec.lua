@@ -15,6 +15,8 @@ local MAPS = {
     [1427] = { name = "Searing Gorge", mapType = 3, parentMapID = 1415 },
     [1428] = { name = "Burning Steppes", mapType = 3, parentMapID = 1415 },
     [1451] = { name = "Silithus", mapType = 3, parentMapID = 1414 },
+    [1453] = { name = "Stormwind City", mapType = 3, parentMapID = 1415 },
+    [1455] = { name = "Ironforge", mapType = 3, parentMapID = 1415 },
     [2521] = { name = "Zephras Isle", mapType = 3, parentMapID = 947 },
 }
 local AREAS = {
@@ -120,8 +122,19 @@ describe("map pins", function()
         Stubs.OpenWorldMap(1434)
         local zeppelins = pinsOfType("zeppelin")
         T.eq(#zeppelins, 2) -- to Orgrimmar and to Undercity
-        T.eq(zeppelins[1].button.icon.texture, "Interface\\AddOns\\ForeverQoL\\Media\\Zeppelin")
+        T.eq(zeppelins[1].button.icon.texture, "Interface\\AddOns\\QoL\\Media\\Zeppelin")
         T.eq(pinsOfType("boat")[1].button.icon.atlas, "flightmasterferry")
+    end)
+
+    it("draw the Deeprun Tram with our own icon, in the zeppelin's size", function()
+        start({ mapTravel = true })
+        Stubs.OpenWorldMap(1453)
+        local trams = pinsOfType("tram")
+        T.eq(#trams, 1)
+        T.eq(trams[1].button.icon.texture, "Interface\\AddOns\\QoL\\Media\\Tram")
+        T.same(trams[1].button.icon.texCoord, { 0, 1, 0, 1 })
+        T.eq(trams[1].size, 22)
+        T.eq(trams[1].button.mouseClickEnabled, true)
     end)
 
     it("name a place by its zone when the game has no name for the stop", function()

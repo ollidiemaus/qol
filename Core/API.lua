@@ -39,4 +39,4 @@ function API.SetFeatureEnabled(feature, enabled)
     return true
 end
 
-_G.ForeverQoLAPI = API
+_G.QoLAPI = API

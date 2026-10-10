@@ -1,11 +1,11 @@
 ## Interface: 16001, 120100, 120105
-## Title: Forever QoL
-## Notes: Small quality of life features: viewport, action bar growth, class-colored health bars, junk selling, repairs, quest automation, tooltip IDs and vendor prices, square minimap, dungeons and travel on the world map, hiding UI clutter.
-## Notes-deDE: Kleine Komfortfunktionen: Ansichtsfenster, Wachstumsrichtung der Aktionsleisten, Gesundheitsleisten in Klassenfarbe, Müll verkaufen, Reparieren, Quests automatisch, IDs und Händlerpreise in Tooltips, eckige Minimap, Dungeons und Reisewege auf der Weltkarte, UI-Elemente ausblenden.
+## Title: Quality of Life
+## Notes: Small quality of life features: viewport, action bar growth, action buttons without borders, class-colored health bars, junk selling, repairs, quest automation, tooltip IDs and vendor prices, square minimap, dungeons and travel on the world map, hiding UI clutter.
+## Notes-deDE: Kleine Komfortfunktionen: Ansichtsfenster, Wachstumsrichtung der Aktionsleisten, Aktionsknöpfe ohne Rand, Gesundheitsleisten in Klassenfarbe, Müll verkaufen, Reparieren, Quests automatisch, IDs und Händlerpreise in Tooltips, eckige Minimap, Dungeons und Reisewege auf der Weltkarte, UI-Elemente ausblenden.
 ## Author: ollidiemaus
 ## Version: @project-version@
-## SavedVariables: ForeverQoLDB
-## IconTexture: Interface\AddOns\ForeverQoL\Media\Icon
+## SavedVariables: QoLDB
+## IconTexture: Interface\AddOns\QoL\Media\Icon
 ## Category: User Interface
 ## Category-deDE: Benutzerinterface
 ## Category-esES: Interfaz de usuario
@@ -45,6 +45,7 @@ Features\Minimap.lua
 Features\MapPins.lua
 Features\Viewport.lua
 Features\ActionBars.lua
+Features\ButtonBorders.lua
 Features\BarPaging.lua
 Features\ReloadCommand.lua
 

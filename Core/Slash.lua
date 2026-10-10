@@ -1,11 +1,11 @@
 local _, ns = ...
 local L = ns.L
 
--- /fqol (or /foreverqol) opens the settings; there's no minimap button.
-SLASH_FOREVERQOL1 = "/fqol"
-SLASH_FOREVERQOL2 = "/foreverqol"
+-- /qol (or /qualityoflife) opens the settings; there's no minimap button.
+SLASH_QOL1 = "/qol"
+SLASH_QOL2 = "/qualityoflife"
 
-SlashCmdList.FOREVERQOL = function(message)
+SlashCmdList.QOL = function(message)
     local command = strtrim(message or ""):lower()
     if command == "help" then
         ns.Print(L.SLASH_HELP)

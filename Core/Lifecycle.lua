@@ -4,10 +4,10 @@ local addonName, ns = ...
 -- (action bars, micro menu, minimap, chat) exists.
 ns.Events:On("ADDON_LOADED", function(_, loaded)
     if loaded ~= addonName or ns.db then return end
-    if type(ForeverQoLDB) ~= "table" then
-        ForeverQoLDB = {}
+    if type(QoLDB) ~= "table" then
+        QoLDB = {}
     end
-    ns.Options:Init(ForeverQoLDB)
+    ns.Options:Init(QoLDB)
     ns.SettingsPanel:Init()
 end)
 
@@ -24,6 +24,7 @@ ns.Events:On("PLAYER_LOGIN", function()
     ns.MapPins:Init()
     ns.Viewport:Init()
     ns.ActionBars:Init()
+    ns.ButtonBorders:Init()
     ns.BarPaging:Init()
     ns.ReloadCommand:Init()
 end)

@@ -32,7 +32,7 @@ local function headers(page, column)
 end
 
 local function setting(api, key)
-    return api.settings["ForeverQoL_" .. key]
+    return api.settings["QoL_" .. key]
 end
 
 local function values(c)
@@ -59,7 +59,7 @@ describe("settings pages", function()
     it("registers one AddOns category with Viewport, Action Bars and Minimap below it", function()
         local _, api = start()
         local main = api.registered
-        T.eq(main.name, "Forever QoL")
+        T.eq(main.name, "Quality of Life")
         T.truthy(main.frame, "the main page is our own")
         T.eq(#api.categories, 4)
         T.eq(api.categories[2].name, "Viewport")
@@ -100,7 +100,7 @@ describe("settings pages", function()
             end
         end
         for variable, s in pairs(api.settings) do
-            local key = variable:gsub("^ForeverQoL_", "")
+            local key = variable:gsub("^QoL_", "")
             T.eq(found[key], nil, "one control for " .. key)
             T.truthy(s.initializer, "control for " .. key)
             T.eq(s.default, ns.Options:GetDefault(key), key)
@@ -201,16 +201,35 @@ describe("settings pages", function()
         T.truthy(border.widget:IsEnabled())
     end)
 
-    it("greys out the class colors of a hidden clock or hidden coordinates", function()
+    it("offers font sizes for the zone text and the clock, the game's own first", function()
+        local ns = start()
+        for _, key in ipairs({ "minimapZoneTextSize", "minimapClockSize" }) do
+            local c = control(ns, key)
+            T.eq(c.kind, "dropdown")
+            T.eq(c.choices[1].value, 0)
+            T.eq(c.choices[1].label, "Default")
+            T.eq(c.choices[2].label, "9")
+            T.same(values(c), ns.MinimapLayout.FONT_SIZES)
+        end
+        local c = control(ns, "minimapClockSize")
+        T.eq(c.column, "right")
+        radio(c, "16").select()
+        T.eq(ns.Options:Get("minimapClockSize"), 16)
+    end)
+
+    it("greys out the class colors and size of a hidden clock, and the color of hidden coordinates", function()
         local ns = start()
         local clock, page = control(ns, "minimapClockClassColor")
+        local clockSize = control(ns, "minimapClockSize")
         local coords = control(ns, "minimapCoordsClassColor")
         show(page)
         T.truthy(clock.widget:IsEnabled())
+        T.truthy(clockSize.widget:IsEnabled())
         T.truthy(coords.widget:IsEnabled())
         ns.Options:Set("minimapClock", "hidden")
         ns.Options:Set("hideMinimapCoords", true)
         T.falsy(clock.widget:IsEnabled())
+        T.falsy(clockSize.widget:IsEnabled())
         T.falsy(coords.widget:IsEnabled())
     end)
 
@@ -232,11 +251,11 @@ describe("settings pages", function()
         T.eq(control(ns, "mapTravel"), nil)
     end)
 
-    it("lists every bar in both columns of the action bar page, side by side, and the paging keys", function()
+    it("lists every bar in both columns of the action bar page, side by side, then paging and buttons", function()
         local ns = start()
         local page = pages(ns).actionBars
         T.same(headers(page, "left"), { "Reverse vertical growth", "Paging" })
-        T.same(headers(page, "right"), { "Reverse horizontal growth" })
+        T.same(headers(page, "right"), { "Reverse horizontal growth", "Buttons" })
         for _, bar in ipairs(ns.ActionBars.BARS) do
             local vertical = control(ns, ns.ActionBars.VerticalKey(bar.frame))
             local horizontal = control(ns, ns.ActionBars.HorizontalKey(bar.frame))
@@ -245,6 +264,9 @@ describe("settings pages", function()
             T.eq(vertical.row:PointFor("TOPLEFT")[5], horizontal.row:PointFor("TOPLEFT")[5], bar.frame .. " side by side")
         end
         T.eq(control(ns, "disableBarPaging").column, "left")
+        T.eq(control(ns, "hideButtonBorders").column, "right")
+        T.eq(control(ns, "disableBarPaging").row:PointFor("TOPLEFT")[5],
+            control(ns, "hideButtonBorders").row:PointFor("TOPLEFT")[5], "paging and buttons side by side")
     end)
 
     it("resets a page to its defaults after a second click", function()
@@ -296,13 +318,13 @@ describe("settings pages", function()
 
     it("opens from the slash command", function()
         local _, api = start()
-        SlashCmdList.FOREVERQOL("")
+        SlashCmdList.QOL("")
         T.eq(api.opened, api.registered:GetID())
     end)
 
     it("is skipped without the Settings API", function()
         Stubs.LoadAddon()
         Stubs.Login()
-        SlashCmdList.FOREVERQOL("")
+        SlashCmdList.QOL("")
     end)
 end)
