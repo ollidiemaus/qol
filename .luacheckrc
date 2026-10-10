@@ -13,6 +13,7 @@ globals = {
     "SlashCmdList",
     "SLASH_FOREVERQOL_RELOAD1",
     "hash_SlashCmdList",
+    "GetMinimapShape", -- answers "SQUARE" while the minimap is square
 }
 
 -- WoW API the addon reads. Keep this list explicit: an unexpected global is usually a typo.
@@ -21,22 +22,36 @@ read_globals = {
     "issecretvalue", "strsplit", "strtrim",
     -- Frames and UI
     "CreateFrame", "UIParent", "WorldFrame", "DEFAULT_CHAT_FRAME", "EventRegistry",
-    "Settings", "CreateSettingsListSectionHeaderInitializer", "MinimalSliderWithSteppersMixin",
+    "Settings", "CreateSettingsListSectionHeaderInitializer", "MinimalSliderWithSteppersMixin", "SettingsTooltip",
+    "SETTINGS_DEFAULTS", "NORMAL_FONT_COLOR", "GRAY_FONT_COLOR", "PlaySound", "SOUNDKIT",
     "GridLayoutUtil", "AnchorUtil", "TooltipDataProcessor",
     "MicroMenuContainer", "ContainerFrameCombinedBags", "BagItemAutoSortButton", "BagItemSearchBox",
-    "BagsBar", "QuickJoinToastButton", "MinimapCluster",
+    "BagsBar", "QuickJoinToastButton", "MinimapCluster", "Minimap", "MinimapZoneText", "MinimapCompassTexture",
+    "MinimapCompassTextureUnderlay", "HybridMinimap", "TimeManagerClockButton",
+    "TimeManagerClockTicker", "GameTimeFrame", "AddonCompartmentFrame", "WorldMapFrame", "MapCanvasDataProviderMixin", "CreateFromMixins",
+    "GameTooltip",
+    "ChatFrame2", "ChatFrame2Tab", "ChatFrameMenuButton", "ChatFrameChannelButton", "ChatFrameToggleVoiceDeafenButton",
+    "ChatFrameToggleVoiceMuteButton", "TextToSpeechButtonFrame",
     "InCombatLockdown", "GetPhysicalScreenSize", "ReloadUI", "IsSecureCmd", "CinematicFrame", "MovieFrame",
+    "IsShiftKeyDown",
+    -- Key bindings
+    "GetBindingKey", "GetBindingAction", "SetOverrideBinding", "SetOverrideBindingClick", "ClearOverrideBindings",
     -- Strings and formatting
     "GetLocale", "GetMoneyString", "SELL_PRICE",
     -- Units
-    "UnitIsPlayer", "UnitTreatAsPlayerForDisplay", "UnitClass", "RAID_CLASS_COLORS",
+    "UnitIsPlayer", "UnitTreatAsPlayerForDisplay", "UnitClass", "UnitGUID", "RAID_CLASS_COLORS",
+    -- Quests
+    "AcceptQuest", "CompleteQuest", "GetQuestReward", "GetNumQuestChoices", "IsQuestCompletable", "GetQuestMoneyToGet",
+    "QuestGetAutoAccept", "QuestIsFromAdventureMap", "GetNumActiveQuests", "GetNumAvailableQuests", "GetActiveTitle",
+    "GetActiveQuestID", "GetAvailableQuestInfo", "SelectActiveQuest", "SelectAvailableQuest",
     -- Bags, items and merchants
     "NUM_BAG_SLOTS", "NUM_TOTAL_EQUIPPED_BAG_SLOTS",
     "CanMerchantRepair", "GetRepairAllCost", "RepairAllItems", "GetMoney",
     "IsInGuild", "CanGuildBankRepair", "GetGuildBankWithdrawMoney", "GetGuildBankMoney",
     "GetAddOnMetadata",
     -- Namespaces
-    "Enum", "C_AddOns", "C_Container", "C_EventUtils", "C_Item", "C_MerchantFrame", "C_Timer",
+    "Enum", "C_AddOns", "C_Container", "C_CVar", "C_EventUtils", "C_GossipInfo", "C_Item", "C_Map", "C_MerchantFrame",
+    "C_Texture", "C_Timer",
 }
 
 files["Locales/"] = { max_line_length = false }

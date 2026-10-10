@@ -2,9 +2,12 @@ local _, ns = ...
 local L = ns.L
 local Options = ns.Options
 
--- Forever QoL's pages under Options > AddOns: the main page, plus Viewport and Action Bars as
--- subcategories. Every setting is a proxy onto ns.Options, so the page never owns data and the
--- features react through Options:Watch. Without the Settings API the page is skipped.
+-- Forever QoL's pages under Options > AddOns: the main page, plus Viewport, Action Bars and Minimap
+-- as subcategories. The main, Action Bars and Minimap pages are our own two-column pages
+-- (UI/SettingsPage.lua), so they fit without scrolling; Viewport, a short page with sliders and a
+-- color, is the game's own list with proxy settings. Either way the pages only read and write
+-- ns.Options, and the features react through Options:Watch. Without the Settings API the pages
+-- are skipped.
 local SettingsPanel = {}
 ns.SettingsPanel = SettingsPanel
 
@@ -12,10 +15,6 @@ local VIEWPORT_MAX_MARGIN = 600
 
 local function varType(name)
     return Settings.VarType and Settings.VarType[name] or name:lower()
-end
-
-local function addHeader(layout, text, tooltip)
-    layout:AddInitializer(CreateSettingsListSectionHeaderInitializer(text, tooltip))
 end
 
 local function register(category, key, kind, label)
@@ -38,32 +37,120 @@ local function dependsOn(initializer, parentInitializer, parentKey)
     end
 end
 
-local function addMain(category, layout)
-    addHeader(layout, L.SECTION_MERCHANT)
-    addCheckbox(category, "sellJunk", L.SELL_JUNK, L.SELL_JUNK_TIP)
-    local repair = addCheckbox(category, "autoRepair", L.AUTO_REPAIR, L.AUTO_REPAIR_TIP)
-    dependsOn(addCheckbox(category, "guildRepair", L.GUILD_REPAIR, L.GUILD_REPAIR_TIP), repair, "autoRepair")
+-- For the pages' enabled predicates.
+local function is(key)
+    return function() return Options:Get(key) == true end
+end
 
-    addHeader(layout, L.SECTION_TOOLTIPS)
-    addCheckbox(category, "tooltipIDs", L.TOOLTIP_IDS, L.TOOLTIP_IDS_TIP)
-    addCheckbox(category, "tooltipSellPrice", L.TOOLTIP_SELL_PRICE, L.TOOLTIP_SELL_PRICE_TIP)
+local function isNot(key)
+    return function() return Options:Get(key) ~= true end
+end
 
-    addHeader(layout, L.SECTION_INTERFACE)
-    addCheckbox(category, "hideMicroMenu", L.HIDE_MICRO_MENU, L.HIDE_MICRO_MENU_TIP)
-    addCheckbox(category, "hideBagsBar", L.HIDE_BAGS_BAR, L.HIDE_BAGS_BAR_TIP)
-    addCheckbox(category, "hideMinimapCoords", L.HIDE_MINIMAP_COORDS, L.HIDE_MINIMAP_COORDS_TIP)
-    addCheckbox(category, "hideChatSocial", L.HIDE_CHAT_SOCIAL, L.HIDE_CHAT_SOCIAL_TIP)
-    addCheckbox(category, "showCombinedBagSort", L.SHOW_COMBINED_BAG_SORT, L.SHOW_COMBINED_BAG_SORT_TIP)
+-- Main page: two columns of about the same length.
+local function buildMain(page)
+    page:Header("left", L.SECTION_MERCHANT)
+    page:Checkbox("left", "sellJunk", L.SELL_JUNK, L.SELL_JUNK_TIP)
+    page:Checkbox("left", "autoRepair", L.AUTO_REPAIR, L.AUTO_REPAIR_TIP)
+    page:Checkbox("left", "guildRepair", L.GUILD_REPAIR, L.GUILD_REPAIR_TIP, { indent = true, enabled = is("autoRepair") })
 
-    addHeader(layout, L.SECTION_UNIT_FRAMES)
-    addCheckbox(category, "classColorPlayer", L.CLASS_COLOR_PLAYER, L.CLASS_COLOR_TIP)
-    addCheckbox(category, "classColorTarget", L.CLASS_COLOR_TARGET, L.CLASS_COLOR_TIP)
-    addCheckbox(category, "classColorTargetOfTarget", L.CLASS_COLOR_TARGET_OF_TARGET, L.CLASS_COLOR_TIP)
-    addCheckbox(category, "classColorFocus", L.CLASS_COLOR_FOCUS, L.CLASS_COLOR_TIP)
-    addCheckbox(category, "classColorFocusTarget", L.CLASS_COLOR_FOCUS_TARGET, L.CLASS_COLOR_TIP)
+    page:Header("left", L.SECTION_QUESTS)
+    page:Checkbox("left", "questAccept", L.QUEST_ACCEPT, L.QUEST_ACCEPT_TIP)
+    page:Checkbox("left", "questTurnIn", L.QUEST_TURN_IN, L.QUEST_TURN_IN_TIP)
 
-    addHeader(layout, L.SECTION_COMMANDS)
-    addCheckbox(category, "reloadCommand", L.RELOAD_COMMAND, L.RELOAD_COMMAND_TIP)
+    page:Header("left", L.SECTION_TOOLTIPS)
+    page:Checkbox("left", "tooltipIDs", L.TOOLTIP_IDS, L.TOOLTIP_IDS_TIP)
+    page:Checkbox("left", "tooltipSellPrice", L.TOOLTIP_SELL_PRICE, L.TOOLTIP_SELL_PRICE_TIP)
+
+    page:Header("left", L.SECTION_INTERFACE)
+    page:Checkbox("left", "hideMicroMenu", L.HIDE_MICRO_MENU, L.HIDE_MICRO_MENU_TIP)
+    page:Checkbox("left", "hideBagsBar", L.HIDE_BAGS_BAR, L.HIDE_BAGS_BAR_TIP)
+    page:Checkbox("left", "showCombinedBagSort", L.SHOW_COMBINED_BAG_SORT, L.SHOW_COMBINED_BAG_SORT_TIP)
+
+    page:Header("left", L.SECTION_COMMANDS)
+    page:Checkbox("left", "reloadCommand", L.RELOAD_COMMAND, L.RELOAD_COMMAND_TIP)
+
+    page:Header("right", L.SECTION_CHAT)
+    page:Checkbox("right", "hideChatSocial", L.HIDE_CHAT_SOCIAL, L.HIDE_CHAT_SOCIAL_TIP)
+    page:Checkbox("right", "hideChatButtons", L.HIDE_CHAT_BUTTONS, L.HIDE_CHAT_BUTTONS_TIP)
+    page:Checkbox("right", "hideCombatLog", L.HIDE_COMBAT_LOG, L.HIDE_COMBAT_LOG_TIP)
+    page:Checkbox("right", "chatClassColors", L.CHAT_CLASS_COLORS, L.CHAT_CLASS_COLORS_TIP)
+
+    -- Only where there are pins to show: they are on Forever's maps.
+    if ns.MapPins.IsAvailable() then
+        page:Header("right", L.SECTION_WORLD_MAP)
+        page:Checkbox("right", "mapDungeons", L.MAP_DUNGEONS, L.MAP_DUNGEONS_TIP)
+        page:Checkbox("right", "mapTravel", L.MAP_TRAVEL, L.MAP_TRAVEL_TIP)
+    end
+
+    page:Header("right", L.SECTION_UNIT_FRAMES)
+    page:Checkbox("right", "classColorPlayer", L.CLASS_COLOR_PLAYER, L.CLASS_COLOR_TIP)
+    page:Checkbox("right", "classColorTarget", L.CLASS_COLOR_TARGET, L.CLASS_COLOR_TIP)
+    page:Checkbox("right", "classColorTargetOfTarget", L.CLASS_COLOR_TARGET_OF_TARGET, L.CLASS_COLOR_TIP)
+    page:Checkbox("right", "classColorFocus", L.CLASS_COLOR_FOCUS, L.CLASS_COLOR_TIP)
+    page:Checkbox("right", "classColorFocusTarget", L.CLASS_COLOR_FOCUS_TARGET, L.CLASS_COLOR_TIP)
+end
+
+-- The places a minimap element can go, as dropdown choices.
+local function positions(key)
+    local choices = {}
+    for _, value in ipairs(ns.MinimapLayout.PositionsFor(key)) do
+        choices[#choices + 1] = { value = value, label = L["POSITION_" .. value:upper()] }
+    end
+    return choices
+end
+
+-- Minimap page: the map and the texts around it on the left, the buttons on the right.
+local function buildMinimap(page)
+    page:Header("left", L.SECTION_MINIMAP_SHAPE)
+    page:Checkbox("left", "squareMinimap", L.SQUARE_MINIMAP, L.SQUARE_MINIMAP_TIP)
+    page:Dropdown("left", "squareMinimapBorder", L.SQUARE_MINIMAP_BORDER, {
+        { value = "bronze", label = L.BORDER_BRONZE },
+        { value = "black", label = L.BORDER_BLACK },
+    }, L.SQUARE_MINIMAP_BORDER_TIP, { indent = true, enabled = is("squareMinimap") })
+
+    page:Header("left", L.SECTION_MINIMAP_ZONE_TEXT)
+    page:Dropdown("left", "minimapZoneText", L.MINIMAP_POSITION, {
+        { value = "default", label = L.POSITION_DEFAULT },
+        { value = "above", label = L.ZONE_TEXT_ABOVE },
+        { value = "below", label = L.ZONE_TEXT_BELOW },
+    }, L.MINIMAP_ZONE_TEXT_TIP)
+    page:Checkbox("left", "minimapZoneTextClassColor", L.MINIMAP_CLASS_COLOR, L.MINIMAP_ZONE_TEXT_CLASS_COLOR_TIP)
+
+    page:Header("left", L.SECTION_MINIMAP_COORDS)
+    page:Checkbox("left", "minimapCoordsClassColor", L.MINIMAP_CLASS_COLOR, L.MINIMAP_COORDS_CLASS_COLOR_TIP,
+        { enabled = isNot("hideMinimapCoords") })
+    page:Checkbox("left", "hideMinimapCoords", L.HIDE_MINIMAP_COORDS, L.HIDE_MINIMAP_COORDS_TIP)
+
+    page:Header("right", L.SECTION_MINIMAP_CLOCK)
+    page:Dropdown("right", "minimapClock", L.MINIMAP_POSITION, positions("minimapClock"), L.MINIMAP_POSITION_TIP)
+    page:Checkbox("right", "minimapClockClassColor", L.MINIMAP_CLASS_COLOR, L.MINIMAP_CLOCK_CLASS_COLOR_TIP,
+        { enabled = function() return Options:Get("minimapClock") ~= "hidden" end })
+
+    page:Header("right", L.SECTION_MINIMAP_BUTTONS)
+    page:Dropdown("right", "minimapCompartment", L.MINIMAP_COMPARTMENT, positions("minimapCompartment"),
+        L.MINIMAP_POSITION_TIP)
+    page:Dropdown("right", "minimapTracking", L.MINIMAP_TRACKING, positions("minimapTracking"),
+        L.MINIMAP_INSIDE_POSITION_TIP)
+    -- Only Forever has the day and night icon.
+    if ns.MinimapLayout.HasDayNight() then
+        page:Dropdown("right", "minimapDayNight", L.MINIMAP_DAY_NIGHT, positions("minimapDayNight"),
+            L.MINIMAP_INSIDE_POSITION_TIP)
+    end
+    page:Checkbox("right", "hideMinimapCalendar", L.HIDE_MINIMAP_CALENDAR, L.HIDE_MINIMAP_CALENDAR_TIP)
+end
+
+-- Action bar page: the two flips side by side for each bar, then the paging keys.
+local function buildActionBars(page)
+    local ActionBars = ns.ActionBars
+    page:Header("left", L.SECTION_FLIP_VERTICAL, L.FLIP_VERTICAL_TIP)
+    page:Header("right", L.SECTION_FLIP_HORIZONTAL, L.FLIP_HORIZONTAL_TIP)
+    for _, bar in ipairs(ActionBars.BARS) do
+        page:Checkbox("left", ActionBars.VerticalKey(bar.frame), bar.label(), L.FLIP_VERTICAL_TIP)
+        page:Checkbox("right", ActionBars.HorizontalKey(bar.frame), bar.label(), L.FLIP_HORIZONTAL_TIP)
+    end
+    page:Align()
+    page:Header("left", L.SECTION_BAR_PAGING)
+    page:Checkbox("left", "disableBarPaging", L.DISABLE_BAR_PAGING, L.DISABLE_BAR_PAGING_TIP)
 end
 
 local function addViewport(category)
@@ -93,33 +180,30 @@ local function addViewport(category)
     end
 end
 
-local function addActionBars(category, layout)
-    local ActionBars = ns.ActionBars
-    addHeader(layout, L.SECTION_FLIP_VERTICAL, L.FLIP_VERTICAL_TIP)
-    for _, bar in ipairs(ActionBars.BARS) do
-        addCheckbox(category, ActionBars.VerticalKey(bar.frame), bar.label(), L.FLIP_VERTICAL_TIP)
-    end
-    addHeader(layout, L.SECTION_FLIP_HORIZONTAL, L.FLIP_HORIZONTAL_TIP)
-    for _, bar in ipairs(ActionBars.BARS) do
-        addCheckbox(category, ActionBars.HorizontalKey(bar.frame), bar.label(), L.FLIP_HORIZONTAL_TIP)
-    end
-end
-
 function SettingsPanel:Init()
-    if not (Settings and Settings.RegisterVerticalLayoutCategory and Settings.RegisterProxySetting) then
+    if not (Settings and Settings.RegisterCanvasLayoutCategory and Settings.RegisterVerticalLayoutSubcategory
+        and Settings.RegisterProxySetting) then
         return
     end
-    local category, layout = Settings.RegisterVerticalLayoutCategory(L.ADDON_TITLE)
-    addMain(category, layout)
+    local Page = ns.SettingsPage
+    local main = Page.New(L.ADDON_TITLE)
+    buildMain(main)
+    local category = main:Register()
 
     local viewport = Settings.RegisterVerticalLayoutSubcategory(category, L.CATEGORY_VIEWPORT)
     addViewport(viewport)
 
-    local actionBars, actionBarsLayout = Settings.RegisterVerticalLayoutSubcategory(category, L.CATEGORY_ACTION_BARS)
-    addActionBars(actionBars, actionBarsLayout)
+    local actionBars = Page.New(L.CATEGORY_ACTION_BARS)
+    buildActionBars(actionBars)
+    actionBars:Register(category)
+
+    local minimap = Page.New(L.CATEGORY_MINIMAP)
+    buildMinimap(minimap)
+    minimap:Register(category)
 
     Settings.RegisterAddOnCategory(category)
     self.category = category
+    self.pages = { main = main, actionBars = actionBars, minimap = minimap }
 end
 
 function SettingsPanel:Open()

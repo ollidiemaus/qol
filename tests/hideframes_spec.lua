@@ -19,6 +19,8 @@ describe("hiding frames", function()
         T.eq(BagsBar:GetParent(), UIParent)
         T.eq(QuickJoinToastButton:GetParent(), UIParent)
         T.eq(coords():GetParent(), MinimapCluster.MinimapContainer)
+        T.eq(ChatFrameMenuButton:GetParent(), ChatFrame1ButtonFrame)
+        T.eq(TextToSpeechButtonFrame:GetParent(), UIParent)
     end)
 
     it("hides the chosen frames at login, even if the game shows them again", function()
@@ -50,6 +52,33 @@ describe("hiding frames", function()
         Stubs.SetCombat(false)
         Stubs.RunTimers()
         T.falsy(MicroMenuContainer:IsVisible())
+    end)
+
+    it("hides every other chat button with one option, and brings them back", function()
+        local ns = start()
+        local buttons = { ChatFrameMenuButton, ChatFrameChannelButton, ChatFrameToggleVoiceDeafenButton,
+            ChatFrameToggleVoiceMuteButton, TextToSpeechButtonFrame }
+        local parents = {}
+        for i, button in ipairs(buttons) do parents[i] = button:GetParent() end
+        ns.Options:Set("hideChatButtons", true)
+        Stubs.RunTimers()
+        for _, button in ipairs(buttons) do T.falsy(button:IsVisible()) end
+        T.truthy(QuickJoinToastButton:IsVisible(), "the social button has its own option")
+        -- Joining a voice channel shows the voice buttons.
+        ChatFrameToggleVoiceDeafenButton:Show()
+        T.falsy(ChatFrameToggleVoiceDeafenButton:IsVisible())
+        ns.Options:Set("hideChatButtons", false)
+        Stubs.RunTimers()
+        for i, button in ipairs(buttons) do T.eq(button:GetParent(), parents[i]) end
+    end)
+
+    it("hides the chat buttons this client has", function()
+        Stubs.LoadAddon()
+        _G.TextToSpeechButtonFrame = nil
+        _G.ChatFrameToggleVoiceMuteButton = nil
+        Stubs.Login({ hideChatButtons = true })
+        T.falsy(ChatFrameMenuButton:IsVisible())
+        T.falsy(ChatFrameToggleVoiceDeafenButton:IsVisible())
     end)
 
     it("copes with a client that lacks a frame", function()

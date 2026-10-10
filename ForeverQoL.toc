@@ -1,7 +1,7 @@
 ## Interface: 16001, 120100, 120105
 ## Title: Forever QoL
-## Notes: Small quality of life features: viewport, action bar growth, class-colored health bars, junk selling, repairs, tooltip IDs and vendor prices, hiding UI clutter.
-## Notes-deDE: Kleine Komfortfunktionen: Ansichtsfenster, Wachstumsrichtung der Aktionsleisten, Gesundheitsleisten in Klassenfarbe, Müll verkaufen, Reparieren, IDs und Händlerpreise in Tooltips, UI-Elemente ausblenden.
+## Notes: Small quality of life features: viewport, action bar growth, class-colored health bars, junk selling, repairs, quest automation, tooltip IDs and vendor prices, square minimap, dungeons and travel on the world map, hiding UI clutter.
+## Notes-deDE: Kleine Komfortfunktionen: Ansichtsfenster, Wachstumsrichtung der Aktionsleisten, Gesundheitsleisten in Klassenfarbe, Müll verkaufen, Reparieren, Quests automatisch, IDs und Händlerpreise in Tooltips, eckige Minimap, Dungeons und Reisewege auf der Weltkarte, UI-Elemente ausblenden.
 ## Author: ollidiemaus
 ## Version: @project-version@
 ## SavedVariables: ForeverQoLDB
@@ -19,7 +19,7 @@
 ## Category-zhTW: 使用者介面
 ## X-Curse-Project-ID: 1733916
 
-# Load order: Locales -> Core -> Features -> UI. Lifecycle.lua comes last and starts everything.
+# Load order: Locales -> Core -> Data -> Features -> UI. Lifecycle.lua comes last and starts everything.
 
 Locales\enUS.lua
 Locales\deDE.lua
@@ -31,15 +31,24 @@ Core\API.lua
 Core\Later.lua
 Core\Hider.lua
 
+Data\MapPins.lua
+
 Features\Merchant.lua
+Features\Quests.lua
 Features\Tooltips.lua
 Features\HideFrames.lua
+Features\CombatLog.lua
+Features\ChatClassColors.lua
 Features\CombinedBagSort.lua
 Features\ClassHealthBars.lua
+Features\Minimap.lua
+Features\MapPins.lua
 Features\Viewport.lua
 Features\ActionBars.lua
+Features\BarPaging.lua
 Features\ReloadCommand.lua
 
+UI\SettingsPage.lua
 UI\Settings.lua
 
 Core\Slash.lua

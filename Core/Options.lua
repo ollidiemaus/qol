@@ -6,21 +6,47 @@ local Options = { watchers = {} }
 ns.Options = Options
 
 -- Only junk selling, the vendor price and /rl (which only exists when nothing else has it) are on
--- by default. Repairs spend gold (yours or the guild's), IDs are clutter for most players, and
--- everything that changes the look of the interface waits for the player to opt in.
+-- by default. Repairs spend gold (yours or the guild's), IDs are clutter for most players, quest
+-- automation decides for the player, and everything that changes the look of the interface waits
+-- for the player to opt in.
 local DEFAULTS = {
     sellJunk = true,
     autoRepair = false,
     guildRepair = false,
+
+    questAccept = false,
+    questTurnIn = false,
 
     tooltipIDs = false,
     tooltipSellPrice = true,
 
     hideMicroMenu = false,
     hideBagsBar = false,
-    hideMinimapCoords = false,
-    hideChatSocial = false,
     showCombinedBagSort = false,
+
+    hideChatSocial = false,
+    hideChatButtons = false,
+    hideCombatLog = false,
+    chatClassColors = false,
+
+    squareMinimap = false,
+    squareMinimapBorder = "bronze", -- "bronze" or "black"
+    minimapZoneText = "default", -- "default", "above" or "below"
+    minimapZoneTextClassColor = false,
+    minimapCoordsClassColor = false,
+    hideMinimapCoords = false,
+    -- Where the minimap's buttons go: "default", "hidden", or "topLeft", "top", "topRight",
+    -- "bottomLeft", "bottom", "bottomRight" (a row above or below the minimap). The tracking button
+    -- and the day and night icon can also go inside the map: "insideTopLeft", "insideTop" and so on.
+    minimapClock = "default",
+    minimapClockClassColor = false,
+    minimapCompartment = "default",
+    minimapTracking = "default",
+    minimapDayNight = "default",
+    hideMinimapCalendar = false,
+
+    mapDungeons = false,
+    mapTravel = false,
 
     classColorPlayer = false,
     classColorTarget = false,
@@ -36,6 +62,8 @@ local DEFAULTS = {
     viewportLeft = 0,
     viewportRight = 0,
     viewportColor = "ff000000", -- AARRGGBB, the format the settings color swatch uses
+
+    disableBarPaging = false,
 }
 -- Action bar flips ("flipVertical_MainActionBar" and so on) default to false and are added by
 -- ActionBars.lua through Options:AddDefault, next to the list of bars they belong to.

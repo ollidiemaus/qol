@@ -7,10 +7,11 @@ Notes for working on the addon. What it does for players is in the [README](../R
 | Folder | What's in it |
 |---|---|
 | `Core/` | Namespace and printing (`Init`), the event frame (`Events`), saved options with defaults and change watchers (`Options`), deferred changes (`Later`), the hidden holder for hidden frames (`Hider`), `/fqol` (`Slash`) and startup (`Lifecycle`) |
-| `Features/` | One file per feature: `Merchant`, `Tooltips`, `HideFrames`, `CombinedBagSort`, `ClassHealthBars`, `Viewport`, `ActionBars`, `ReloadCommand` |
-| `UI/Settings.lua` | The pages under Options > AddOns, all proxy settings onto `ns.Options` |
+| `Data/` | Static game data: `MapPins` (dungeon entrances, docks, portals; how it was made is at the top of the file) |
+| `Features/` | One file per feature: `Merchant`, `Quests`, `Tooltips`, `HideFrames` (also the chat buttons), `CombatLog`, `ChatClassColors`, `CombinedBagSort`, `ClassHealthBars`, `Minimap` (shape, positions and class colors around the minimap), `MapPins`, `Viewport`, `ActionBars`, `BarPaging`, `ReloadCommand` |
+| `UI/` | `SettingsPage.lua`, our own two-column settings page; `Settings.lua`, the pages under Options > AddOns built with it (and the Viewport page as the game's list) |
 | `Locales/` | English strings, German overrides |
-| `Media/` | `Icon.tga`, the addon list icon (the TOC's `IconTexture`, 128×128, 32-bit), and `Icon.svg`, its source (not packaged) |
+| `Media/` | `Icon.tga`, the addon list icon (the TOC's `IconTexture`, 128×128, 32-bit), and `Icon.svg`, its source (not packaged); `Zeppelin.tga` and `MinimapSquareBorder.tga` (see below) |
 | `tests/` | Specs run in plain Lua against `tests/wow_stubs.lua` |
 
 Features never talk to each other or to the settings page. The page writes `ns.Options`; a feature
@@ -31,6 +32,9 @@ hard way on the Forever beta. So:
   own `Show()` calls then change nothing.
 - Compare or compute with game values only after `ns.IsUsable(value)` (nil and secret values fail).
 - Register events through `ns.Events:On`; it skips events the client doesn't know.
+- The few calls into Blizzard code are listed here, each with why it's safe: the world map's
+  `AddDataProvider` (the map's own extension point; it calls each provider in a secure call of its
+  own) and `SetMapID` (only from a click on one of our own pins, like a click on a zone).
 - Leave `WorldFrame` alone while a cutscene plays. Blizzard's `CinematicFrame` re-anchors it for
   the black bars and resets it to full screen at the end; `MovieFrame` hides it. Two hands on
   `WorldFrame` during a cutscene is how viewport addons crash the game. The viewport waits until
@@ -49,6 +53,66 @@ focus target bars and never colors them itself, so a color stays until we change
 follows Blizzard's raid frames: `UnitIsPlayer` or `UnitTreatAsPlayerForDisplay`, with a known,
 non-secret class (`UnitClass` is secret while a unit's identity is restricted). The bar's own
 `unit` field says what it shows, so the player frame in a vehicle (`"vehicle"`) keeps its default.
+
+The combat log can't be closed in the default UI, and the dock's own functions (`FCF_Close`,
+`FCF_UnDockFrame`) write to the chat frames and the dock. So `ChatFrame2` goes to the hidden holder
+and its tab is scaled down to 0.001: the dock gives every tab its parent, width and anchor again on
+each update (each tab hangs on the right edge of the one before), but never its scale, so the tab
+takes no room and the next tab closes the gap.
+
+Names in chat in class color are the game's own setting: `chatClassColorOverride` "0" means always
+(see `ChatFrameUtil.ShouldColorChatByClass`). Turning the option off gives the setting its default.
+
+The square minimap's bronze border, `Media/MinimapSquareBorder.tga` (512×512), is Forever's own
+round frame (`ui-hud-minimap-frame-c60-2x`, file 8026708 of build 1.60.1.70291) unwrapped onto a
+square: each pixel of a band along the square's edges, with rounded corners, takes the ring's pixel
+at the same distance from the map's edge, walking around the ring as it walks around the square. The
+north triangle is left out and the two ends of the walk are cross-faded at the top. The texture
+reaches 9 units past each edge of the 198-unit map. `Media/Zeppelin.tga` (64×64) is drawn in the
+style and colors of the boat's atlas (`flightmasterferry`), for which the client has no zeppelin.
+Both were made with small numpy scripts, not kept in the repository.
+
+The square minimap replaces the minimap's mask and hides the round frame textures
+(`MinimapCompassTexture` and its underlay). Forever's minimap skin (`Blizzard_Minimap/Camelot/Skin.lua`)
+sets its round mask again when `rotateMinimap` changes, so a `CVAR_UPDATE` for it applies the square
+mask again; the hybrid minimap has a mask of its own (`HybridMinimap.CircleMask`). The zone text is
+the game's own `MinimapCluster.ZoneTextButton`, moved: it keeps its tooltip and click. The clock,
+addon compartment, tracking button and day and night icon are moved the same way, into a row above
+or below a frame of ours around what is drawn of the minimap (the square and its border, or the
+round frame with its north triangle). The tracking button and the day and night icon can also go
+inside the map, anchored to its center: on a round map along the diagonal, clear of the round frame
+(which covers about 7% of the radius). Inside the map they're raised above its frame level (the
+cluster's buttons sit below the map) and get their level back when they leave. Positions are worked
+out in screen units, since Edit Mode scales the minimap but not its header. Forever's skin sets the
+day and night icon's center again whenever the minimap's scale is set; `Minimap.OnScaleUpdated` lays
+it out again after that. The clock's text (`TimeManagerClockTicker`) and the coordinates'
+(`PlayerCoords.CoordText`) keep their color once set; the zone text is colored again by the game on
+every zone change, so the class color is put back on the zone events.
+
+Bar paging: each key bound to `ACTIONPAGE1` to `ACTIONPAGE6` gets an override binding on a frame of
+ours that mirrors what the key without modifiers does (`GetBindingAction(base, true)`, so a bar
+addon's override counts), which is how the game treats a modified key without a binding of its own.
+The saved bindings are never changed. Our own overrides fire `UPDATE_BINDINGS` too; the update then
+finds nothing to change.
+
+## Settings pages
+
+The main, Action Bars and Minimap pages are canvases (`Settings.RegisterCanvasLayoutCategory`) built
+by `UI/SettingsPage.lua`: two columns of rows, each an option's name with a control from the game's
+own templates (`SettingsCheckboxTemplate`, `WowStyle2DropdownTemplate`), so they look like the game's
+pages and fit without scrolling (`SettingsPage.MAX_HEIGHT`, checked by the tests). All names use one
+font: the game's list draws dependent options smaller. A page refreshes on `OnRefresh` (the panel
+showing it) and through `Options:Watch`, and resets on `OnDefault` (the game's "all settings" reset)
+and its own Defaults button, which asks with a second click: the game's confirmation dialog would
+spread taint. The canvas pages don't show up in the settings search. Viewport stays the game's
+vertical list with proxy settings (sliders and a color swatch).
+
+The world map pins are buttons on a frame of our own on the map's canvas, not pins from the map's
+pools. Their places are zone coordinates in percent (as `/way` reads them), from Forever's tables;
+the continent maps get them through `C_Map.GetMapRectOnMap`. Names come from `C_Map.GetAreaInfo`, so
+they're in the player's language. Forever's UiMap IDs (1411 and up) don't exist on retail, so there
+`MapPins.IsAvailable()` is false: the settings page leaves the World map options out and the map is
+never touched.
 
 ## Tests and lint
 
@@ -91,6 +155,36 @@ Things only the real client can confirm:
   "minus" one) shows the default green, switching targets in combat recolors at once, and turning
   an option off brings the green back without a `/reload`. Also on the target of target, focus and
   focus target.
+- Quests: accepting from a gossip NPC and from a quest greeting NPC (several quests in a row), a
+  shared quest, turning in with one reward and with none, a choice of rewards and a quest that costs
+  gold staying open, and Shift leaving everything to the player.
+- Hiding the combat log: the tabs after it close the gap, also after a whisper tab opens and with
+  the combat log selected when the option is turned on (the chat stays empty until another tab is
+  clicked). No "tainted by" error in combat afterwards.
+- Names in class color in say, guild, party and channels; turning the option off brings back the
+  per-channel setting.
+- The other chat buttons stay hidden after joining a voice channel and with text to speech on.
+- Square minimap: both borders (the bronze one lines up with the map's edge at every Edit Mode size),
+  minimap buttons of other addons (LibDBIcon) along the square, the rotate minimap setting, and a
+  zone with the hybrid minimap.
+- Zone text and the clock, addon compartment, tracking button and day and night icon in every
+  position, several in one spot, above and below a round and a square minimap, with and without
+  coordinates, after an Edit Mode change of the minimap's size, and after a `/reload`; the tracking
+  menu and the addon compartment's menu still open from their new places. Class color after zone
+  changes and in combat, and on the clock and the coordinates.
+- The tracking button and the day and night icon inside the map: drawn above it, clear of the round
+  frame and the bronze border in every corner, clickable there, and the mail icon (anchored to the
+  tracking button by the game) still readable.
+- Bar paging off: Shift+1 to Shift+6 press the action buttons (a `[mod:shift]` macro sees Shift),
+  also with a bar addon that binds the number keys itself; turning it off pages again, and changing
+  a key binding in combat is picked up after combat.
+- The settings pages: two columns at the panel's default size in English and German (no name cut
+  off), checkboxes and dropdowns working, dependent options greyed out, and the Defaults button
+  asking first.
+- The zeppelin pins' icon next to the boats', on zone and continent maps.
+- World map pins: in the right places on the zone and continent maps (the entrance positions are
+  the instance portals, like retail's encounter journal pins), the tooltips' names in German, and a
+  click opening the destination's map. Open the map in combat too.
 
 ### Cutscenes and the viewport
 

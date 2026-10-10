@@ -4,8 +4,9 @@
 
 Forever QoL bundles the little things you'd otherwise install five addons for: a smaller 3D
 viewport, action bars that grow the other way, class-colored health bars, junk selling and repairs
-at merchants, IDs and vendor prices in tooltips, and switches to hide UI pieces you never click. Everything is set up in
-the game's own options window. There's no minimap button.
+at merchants, quests accepted and turned in for you, IDs and vendor prices in tooltips, a square
+minimap, dungeon entrances, boats and zeppelins on the world map, and switches to hide UI pieces
+you never click. Everything is set up in the game's own options window. There's no minimap button.
 
 It's made for WoW Forever and also runs on retail (Midnight).
 
@@ -19,6 +20,14 @@ It's made for WoW Forever and also runs on retail (Midnight).
 - **Use guild funds:** repairs come out of the guild bank first, as far as your guild lets you
   withdraw. If that doesn't cover everything, your own gold pays the rest.
 
+### Quests
+
+- **Accept quests automatically:** every quest an NPC offers, and every quest a group member shares.
+- **Turn in quests automatically:** finished quests are turned in when you talk to the quest giver.
+  A quest with rewards to choose from, or one that costs gold, stays open for you to decide.
+
+Hold **Shift** while talking to an NPC to do everything yourself that time.
+
 ### Tooltips
 
 - **IDs:** spell, item, buff and debuff, NPC, quest, currency and achievement IDs in their tooltips.
@@ -30,10 +39,45 @@ It's made for WoW Forever and also runs on retail (Midnight).
 - **Hide the system bar:** the micro menu (character, spellbook, ..., game menu). Your key
   bindings still open everything, and in a vehicle the buttons still show on the vehicle bar.
 - **Hide the bag bar:** the backpack and bag slots. Bag key bindings keep working.
-- **Hide the coordinates under the minimap.**
-- **Hide the social button** on top of the chat window.
 - **Show the sort button on combined bags:** adds the sort (clean up) button next to the search box
   of the combined bag.
+
+### Chat
+
+- **Hide the social button** on top of the chat window.
+- **Hide the other chat buttons:** the chat menu, channel, voice chat and text to speech buttons.
+- **Hide the combat log:** the Combat Log tab leaves the chat window. The combat log keeps running,
+  so addons that read it still work.
+- **Names in class color:** player names in chat take the color of their class, in every channel.
+
+### Minimap
+
+- **Square minimap,** framed in the bronze of Forever's round minimap or with a thin black line.
+  Addons that put buttons around the minimap and ask for its shape place them along the square.
+- **Zone text above or below the minimap,** centered on the map's edge instead of in the bar at the
+  top.
+- **Zone text, clock and coordinates in class color.** The zone text normally shows the color for
+  friendly, hostile or contested territory.
+- **Clock, addon compartment, tracking button and Forever's day and night icon:** each can move to
+  a row above or below the minimap (left, center or right), or be hidden. The tracking button and
+  the day and night icon can also sit inside the map: in a corner, or in the middle of its top or
+  bottom edge. Things in the same spot sit side by side; with something below the minimap, the
+  coordinates move under it.
+- **Hide the calendar button.**
+- **Hide the coordinates under the minimap.**
+
+### World map
+
+- **Dungeon and raid entrances:** marked on the zone and continent maps. Point at one to see its
+  name. Blackrock Mountain's dungeons show on both Searing Gorge and the Burning Steppes.
+- **Boats, zeppelins and portals:** the harbors and zeppelin towers, the portal between Darnassus
+  and Rut'theran Village and the Deeprun Tram (zeppelins get an icon of their own in the style of
+  the boat's). Point at one to see where it goes; click it and the
+  map of that place opens. Forever's new routes are there too: the boat from Stormwind Harbor, the
+  stop at Southshore, the boat between Tanaris and the Riverglades and the airships to Zephras Isle.
+
+The places come from Forever's own game data, so these options only show on Forever. On retail,
+the default map marks dungeon entrances itself.
 
 ### Unit frames
 
@@ -65,11 +109,17 @@ Reverse the direction buttons fill a bar, separately for every bar and both dire
 Works for action bars 1 to 8, the stance bar and the pet bar, and keeps working after you change a
 bar in Edit Mode.
 
+**No bar paging with Shift+1-6:** the keys that switch the main action bar to another page (Shift+1
+to Shift+6, or whatever you bound to them) act like the same key without Shift instead, so Shift+1
+presses action button 1 and macros can check for Shift with `[mod:shift]`. Your saved key bindings
+stay as they are; turn the option off and the keys page again.
+
 ## Settings
 
-**Esc > Options > AddOns > Forever QoL**, or type `/fqol`. The Viewport and Action Bars pages are
-listed below Forever QoL. Changes apply right away; the few that touch protected parts of the
-interface (action bars, viewport, system bar) wait until you leave combat.
+**Esc > Options > AddOns > Forever QoL**, or type `/fqol`. The Viewport, Action Bars and Minimap
+pages are listed below Forever QoL. The main, Action Bars and Minimap pages show their options in two
+columns, so they fit without scrolling. Changes apply right away; the few that touch protected parts
+of the interface (action bars, key bindings, viewport, system bar) wait until you leave combat.
 
 Forever QoL is available in English and German.
 
@@ -83,3 +133,5 @@ Forever QoL is available in English and German.
   Viewport or Action Bar Button Growth Direction): both would move the same frames.
 - Other tooltip addons may show vendor prices too (Auctionator, for one); turn one of them off if
   you see the price twice.
+- The same goes for other quest automation and minimap addons (Leatrix Plus, SexyMap and the like):
+  use one of them for the same job.
