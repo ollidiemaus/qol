@@ -45,8 +45,10 @@ Features\Minimap.lua
 Features\MapPins.lua
 Features\Viewport.lua
 Features\ActionBars.lua
+Features\BarPaging.lua
 Features\ReloadCommand.lua
 
+UI\SettingsPage.lua
 UI\Settings.lua
 
 Core\Slash.lua

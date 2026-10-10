@@ -19,9 +19,9 @@ local function permissive(object)
     })
 end
 
-local function newRegion(kind, parent)
-    local region = { kind = kind, parent = parent, shown = true, points = {}, width = 0, height = 0, events = {},
-        scripts = {}, effectiveScale = 1 }
+local function newRegion(kind, parent, template)
+    local region = { kind = kind, parent = parent, template = template, shown = true, points = {}, width = 0,
+        height = 0, events = {}, scripts = {}, hooks = {}, effectiveScale = 1, enabled = true }
     function region:SetParent(newParent)
         if state.combat and self.protected then
             error("ADDON_ACTION_BLOCKED: SetParent on a protected frame in combat")
@@ -86,6 +86,12 @@ local function newRegion(kind, parent)
         return c[1], c[2], c[3], 1
     end
     function region:SetMouseClickEnabled(enabled) self.mouseClickEnabled = enabled end
+    function region:EnableMouse(enabled) self.mouseEnabled = enabled end
+    function region:SetEnabled(enabled) self.enabled = enabled and true or false end
+    function region:IsEnabled() return self.enabled end
+    function region:SetText(text) self.text = text end
+    function region:GetText() return self.text end
+    function region:SetFontObject(font) self.font = font end
     function region:SetJustifyH(justify) self.justifyH = justify end
     function region:GetJustifyH() return self.justifyH or "CENTER" end
     function region:IsProtected() return self.protected == true end
@@ -93,11 +99,44 @@ local function newRegion(kind, parent)
         local texture = newRegion("Texture", self)
         return texture
     end
+    function region:CreateFontString(_, _, font)
+        local text = newRegion("FontString", self)
+        text.font = font
+        return text
+    end
     function region:RegisterEvent(event)
         if state.unknownEvents[event] then error("Attempt to register unknown event \"" .. event .. "\"") end
         self.events[event] = true
     end
     function region:SetScript(script, fn) self.scripts[script] = fn end
+    function region:GetScript(script) return self.scripts[script] end
+    function region:HookScript(script, fn) self.hooks[script] = fn end
+    -- Runs a script the way the game does: the handler, then the hooks.
+    function region:RunScript(script, ...)
+        if self.scripts[script] then self.scripts[script](self, ...) end
+        if self.hooks[script] then self.hooks[script](self, ...) end
+    end
+    function region:Click()
+        if self.kind == "CheckButton" then self.checked = not self.checked end
+        self:RunScript("OnClick", "LeftButton")
+    end
+    function region:SetChecked(checked) self.checked = checked and true or false end
+    function region:GetChecked() return self.checked == true end
+    -- A dropdown (DropdownButton): SetupMenu keeps the generator, GenerateMenu builds the menu as
+    -- a list of radios { text, isSelected, select } and shows the selected one's text.
+    function region:SetupMenu(generator) self.generator = generator end
+    function region:GenerateMenu()
+        local root = { radios = {} }
+        function root:CreateRadio(text, isSelected, select)
+            self.radios[#self.radios + 1] = { text = text, isSelected = isSelected, select = select }
+        end
+        self.generator(self, root)
+        self.menu = root.radios
+        self.text = nil
+        for _, radio in ipairs(root.radios) do
+            if radio.isSelected() then self.text = radio.text end
+        end
+    end
     state.regions[#state.regions + 1] = region
     return permissive(region)
 end
@@ -258,7 +297,11 @@ local function install()
     G.NUM_TOTAL_EQUIPPED_BAG_SLOTS = 5
     G.DEFAULT_CHAT_FRAME = { AddMessage = function(_, text) state.messages[#state.messages + 1] = text end }
 
-    G.CreateFrame = function(kind, _, parent) return newRegion(kind or "Frame", parent) end
+    G.CreateFrame = function(kind, name, parent, template)
+        local frame = newRegion(kind or "Frame", parent, template)
+        if name then G[name] = frame end
+        return frame
+    end
     G.UIParent = newRegion("Frame", nil)
     G.WorldFrame = newRegion("Frame", nil)
     G.WorldFrame.protected = true
@@ -378,6 +421,7 @@ local function install()
     G.MinimapCompassTextureUnderlay = newRegion("Texture", backdrop)
     minimapContainer.PlayerCoords = newRegion("Frame", minimapContainer)
     minimapContainer.PlayerCoords:SetPoint("BOTTOM", G.Minimap, "BOTTOM", 0, -18)
+    minimapContainer.PlayerCoords.CoordText = newRegion("FontString", minimapContainer.PlayerCoords)
     -- The buttons around it: tracking left of the header bar, clock and calendar on its right, the
     -- addon compartment under the calendar, and Forever's day and night icon on the round frame.
     cluster.Tracking = newRegion("Frame", cluster)
@@ -386,6 +430,7 @@ local function install()
     G.TimeManagerClockButton = newRegion("Button", cluster)
     G.TimeManagerClockButton:SetSize(40, 16)
     G.TimeManagerClockButton:SetPoint("TOPRIGHT", cluster.BorderTop, "TOPRIGHT", -4, 0)
+    G.TimeManagerClockTicker = newRegion("FontString", G.TimeManagerClockButton)
     G.GameTimeFrame = newRegion("Button", cluster)
     G.GameTimeFrame:SetSize(19, 18)
     G.GameTimeFrame:SetPoint("TOPLEFT", cluster.BorderTop, "TOPRIGHT", 1, 0)
@@ -398,6 +443,42 @@ local function install()
     G.C_Texture = {
         GetAtlasInfo = function(atlas) return state.atlases[atlas] end,
     }
+
+    -- Key bindings: state.bindings[key] = command (the saved ones), state.overrides[key] = { owner,
+    -- command } (override bindings). Changing bindings is blocked in combat.
+    local function sortedKeys(map)
+        local keys = {}
+        for key in pairs(map) do keys[#keys + 1] = key end
+        table.sort(keys)
+        return keys
+    end
+    G.GetBindingKey = function(command)
+        local keys = {}
+        for _, key in ipairs(sortedKeys(state.bindings)) do
+            if state.bindings[key] == command then keys[#keys + 1] = key end
+        end
+        return (unpack or table.unpack)(keys)
+    end
+    G.GetBindingAction = function(key, checkOverride)
+        local override = checkOverride and state.overrides[key]
+        if override then return override.command end
+        return state.bindings[key] or ""
+    end
+    local function override(owner, key, command)
+        if state.combat then error("ADDON_ACTION_BLOCKED: binding changed in combat") end
+        state.overrides[key] = command and { owner = owner, command = command } or nil
+        state.overrideCalls = state.overrideCalls + 1
+    end
+    G.SetOverrideBinding = function(owner, _, key, command) override(owner, key, command) end
+    G.SetOverrideBindingClick = function(owner, _, key, button, mouseButton)
+        override(owner, key, "CLICK " .. button .. ":" .. (mouseButton or "LeftButton"))
+    end
+    G.ClearOverrideBindings = function(owner)
+        if state.combat then error("ADDON_ACTION_BLOCKED: binding changed in combat") end
+        for _, key in ipairs(sortedKeys(state.overrides)) do
+            if state.overrides[key].owner == owner then state.overrides[key] = nil end
+        end
+    end
 
     -- Settings the client keeps (C_CVar), as strings.
     G.C_CVar = {
@@ -530,6 +611,7 @@ local ADDON_GLOBALS = {
     "SLASH_FOREVERQOL_RELOAD1", "hash_SlashCmdList", "IsSecureCmd", "SLASH_OTHERADDON1", "SLASH_RELOAD1",
     "HUD_EDIT_MODE_ACTION_BAR_LABEL", "HUD_EDIT_MODE_STANCE_BAR_LABEL", "HUD_EDIT_MODE_PET_ACTION_BAR_LABEL",
     "GetMinimapShape", "HybridMinimap", "TimeManagerClockButton", "GameTimeFrame", "AddonCompartmentFrame",
+    "TimeManagerClockTicker", "ForeverQoLNoAction",
 }
 
 function Stubs.Reset(options)
@@ -554,6 +636,15 @@ function Stubs.Reset(options)
         maps = { [1413] = { name = "The Barrens", mapType = 3, parentMapID = 1414 },
             [1414] = { name = "Kalimdor", mapType = 2, parentMapID = 947 } },
         mapRects = {}, areas = {},
+        -- The default bindings for the action bar's buttons and pages.
+        bindings = {
+            ["1"] = "ACTIONBUTTON1", ["2"] = "ACTIONBUTTON2", ["3"] = "ACTIONBUTTON3", ["4"] = "ACTIONBUTTON4",
+            ["5"] = "ACTIONBUTTON5", ["6"] = "ACTIONBUTTON6",
+            ["SHIFT-1"] = "ACTIONPAGE1", ["SHIFT-2"] = "ACTIONPAGE2", ["SHIFT-3"] = "ACTIONPAGE3",
+            ["SHIFT-4"] = "ACTIONPAGE4", ["SHIFT-5"] = "ACTIONPAGE5", ["SHIFT-6"] = "ACTIONPAGE6",
+            ["SHIFT-MOUSEWHEELUP"] = "PREVIOUSACTIONPAGE", ["SHIFT-MOUSEWHEELDOWN"] = "NEXTACTIONPAGE",
+        },
+        overrides = {}, overrideCalls = 0,
     }
     for _, name in ipairs(ADDON_GLOBALS) do _G[name] = nil end
     _G.SlashCmdList = {}
@@ -647,8 +738,8 @@ function Stubs.InstallSettings()
         return initializer
     end
 
-    local function newCategory(name, parent)
-        local category = { name = name, parent = parent, id = #api.categories + 100, headers = {} }
+    local function newCategory(name, parent, frame)
+        local category = { name = name, parent = parent, frame = frame, id = #api.categories + 100, headers = {} }
         function category:GetID() return self.id end
         local layout = {
             AddInitializer = function(_, initializer)
@@ -663,6 +754,8 @@ function Stubs.InstallSettings()
         VarType = { Boolean = "boolean", String = "string", Number = "number" },
         RegisterVerticalLayoutCategory = function(name) return newCategory(name) end,
         RegisterVerticalLayoutSubcategory = function(parent, name) return newCategory(name, parent) end,
+        RegisterCanvasLayoutCategory = function(frame, name) return newCategory(name, nil, frame) end,
+        RegisterCanvasLayoutSubcategory = function(parent, frame, name) return newCategory(name, parent, frame) end,
         RegisterProxySetting = function(category, variable, varType, name, default, get, set)
             assert(api.settings[variable] == nil, "setting registered twice: " .. variable)
             local setting = { category = category, variable = variable, varType = varType, name = name,

@@ -33,10 +33,13 @@ local DEFAULTS = {
     squareMinimapBorder = "bronze", -- "bronze" or "black"
     minimapZoneText = "default", -- "default", "above" or "below"
     minimapZoneTextClassColor = false,
+    minimapCoordsClassColor = false,
     hideMinimapCoords = false,
     -- Where the minimap's buttons go: "default", "hidden", or "topLeft", "top", "topRight",
-    -- "bottomLeft", "bottom", "bottomRight" (a row above or below the minimap).
+    -- "bottomLeft", "bottom", "bottomRight" (a row above or below the minimap). The tracking button
+    -- and the day and night icon can also go inside the map: "insideTopLeft", "insideTop" and so on.
     minimapClock = "default",
+    minimapClockClassColor = false,
     minimapCompartment = "default",
     minimapTracking = "default",
     minimapDayNight = "default",
@@ -59,6 +62,8 @@ local DEFAULTS = {
     viewportLeft = 0,
     viewportRight = 0,
     viewportColor = "ff000000", -- AARRGGBB, the format the settings color swatch uses
+
+    disableBarPaging = false,
 }
 -- Action bar flips ("flipVertical_MainActionBar" and so on) default to false and are added by
 -- ActionBars.lua through Options:AddDefault, next to the list of bars they belong to.

@@ -8,26 +8,38 @@ local Options = ns.Options
 --     buttons, for one) read to place their buttons.
 --   * Positions: the zone text, the clock, the addon compartment, the tracking button and Forever's
 --     day and night icon can each move to a row above or below the minimap (left, center or right),
---     or be hidden; the calendar button can be hidden. Things that share a spot sit side by side,
---     the zone text gets the room left in the middle, and the coordinates move under a row below.
---     The zone text leaves the header bar, which then goes to the hidden holder.
---   * Zone text in class color: the game colors the zone name by its PvP status each time the zone
---     changes; the class color is put back right after.
+--     or be hidden; the tracking button and the day and night icon can also go inside the map, in
+--     a corner or at the middle of the top or bottom edge. The calendar button can be hidden.
+--     Things that share a spot sit side by side, the zone text gets the room left in the middle,
+--     and the coordinates move under a row below. The zone text leaves the header bar, which then
+--     goes to the hidden holder.
+--   * Class colors for the zone text, the clock and the coordinates. The game colors the zone name
+--     by its PvP status each time the zone changes; the class color is put back right after.
 -- Only widget methods are called; the game's own minimap code is never called or hooked.
 local MinimapLayout = {}
 ns.MinimapLayout = MinimapLayout
 
 local SQUARE, BORDER = "squareMinimap", "squareMinimapBorder"
 local ZONE_TEXT, CLASS_COLOR = "minimapZoneText", "minimapZoneTextClassColor"
+local CLOCK_COLOR, COORDS_COLOR = "minimapClockClassColor", "minimapCoordsClassColor"
 local CALENDAR = "hideMinimapCalendar"
 
--- The choices for a moving element, in the order the settings list them. "default" leaves it where
--- the game puts it.
+-- The choices for a moving element, in the order the settings list them (PositionsFor). "default"
+-- leaves it where the game puts it.
 MinimapLayout.POSITIONS = { "default", "topLeft", "top", "topRight", "bottomLeft", "bottom", "bottomRight", "hidden" }
+-- Inside the map, offered for the small round buttons (elements marked inside).
+MinimapLayout.INSIDE_POSITIONS = { "insideTopLeft", "insideTop", "insideTopRight", "insideBottomLeft", "insideBottom",
+    "insideBottomRight" }
 local SLOTS = {
     topLeft = { row = "top", side = "left" }, top = { row = "top", side = "center" },
     topRight = { row = "top", side = "right" }, bottomLeft = { row = "bottom", side = "left" },
     bottom = { row = "bottom", side = "center" }, bottomRight = { row = "bottom", side = "right" },
+    insideTopLeft = { row = "top", side = "left", inside = true },
+    insideTop = { row = "top", side = "center", inside = true },
+    insideTopRight = { row = "top", side = "right", inside = true },
+    insideBottomLeft = { row = "bottom", side = "left", inside = true },
+    insideBottom = { row = "bottom", side = "center", inside = true },
+    insideBottomRight = { row = "bottom", side = "right", inside = true },
 }
 -- The zone text only goes to the middle of a row: "above" or "below".
 local ZONE_SLOTS = { above = "top", below = "bottom" }
@@ -35,14 +47,36 @@ local ZONE_SLOTS = { above = "top", below = "bottom" }
 -- The elements that move, in the order they sit side by side within a spot (the first one at the
 -- minimap's edge for left and right, the first one on the left in the middle).
 MinimapLayout.ELEMENTS = {
-    { key = "minimapTracking", frame = function() return MinimapCluster and MinimapCluster.Tracking end },
+    { key = "minimapTracking", inside = true,
+        frame = function() return MinimapCluster and MinimapCluster.Tracking end },
     { key = ZONE_TEXT, isZoneText = true,
         frame = function() return MinimapCluster and MinimapCluster.ZoneTextButton end },
     { key = "minimapClock", frame = function() return TimeManagerClockButton end },
     { key = "minimapCompartment", frame = function() return AddonCompartmentFrame end },
     -- Forever only: the day and night icon on the round frame.
-    { key = "minimapDayNight", frame = function() return MinimapCluster and MinimapCluster.DielFrame end },
+    { key = "minimapDayNight", inside = true,
+        frame = function() return MinimapCluster and MinimapCluster.DielFrame end },
 }
+
+local function elementFor(key)
+    for _, element in ipairs(MinimapLayout.ELEMENTS) do
+        if element.key == key then return element end
+    end
+    return nil
+end
+
+-- The positions an element can take, in the order the settings list them.
+function MinimapLayout.PositionsFor(key)
+    local element = elementFor(key)
+    local list = {}
+    for _, value in ipairs(MinimapLayout.POSITIONS) do
+        if value == "hidden" and element and element.inside then
+            for _, inside in ipairs(MinimapLayout.INSIDE_POSITIONS) do list[#list + 1] = inside end
+        end
+        list[#list + 1] = value
+    end
+    return list
+end
 
 local SQUARE_MASK = "Interface\\BUTTONS\\WHITE8X8"
 -- Forever's minimap skin masks the map with this atlas; other clients get the classic round mask.
@@ -65,6 +99,12 @@ local ROW_GAP = 3       -- between the drawn edge and a row
 local SPACING = 4       -- between elements side by side
 local COORDS_GAP = 2    -- between a row below and the coordinates
 local MIN_ZONE_WIDTH = 40
+-- Inside the map: the share of the radius the round frame covers at the map's edge (Forever's
+-- ring reaches 13 of the map's 198 texture pixels in), the gap to the drawn edge, and how far
+-- above the map a button inside it is drawn.
+local ROUND_COVER = 0.07
+local INSIDE_GAP = 4
+local INSIDE_LEVELS = 5
 
 function MinimapLayout.RoundMask()
     if C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo(ROUND_MASK_ATLAS) then
@@ -199,15 +239,23 @@ local originals = {}
 
 local function remember(frame, extra)
     if originals[frame] then return end
-    local saved = { points = savePoints(frame) }
+    local saved = { points = savePoints(frame), level = frame:GetFrameLevel() }
     if extra then extra(saved) end
     originals[frame] = saved
+end
+
+-- A button inside the map is drawn above it (the cluster's buttons sit below the map's level).
+local function setInside(frame, inside)
+    local level = originals[frame].level
+    if inside then level = math.max(level, Minimap:GetFrameLevel() + INSIDE_LEVELS) end
+    if frame:GetFrameLevel() ~= level then frame:SetFrameLevel(level) end
 end
 
 local function putBack(frame, extra)
     local saved = originals[frame]
     if not saved then return end
     restorePoints(frame, saved.points)
+    if frame:GetFrameLevel() ~= saved.level then frame:SetFrameLevel(saved.level) end
     if extra then extra(saved) end
     originals[frame] = nil
 end
@@ -232,7 +280,9 @@ local function positionOf(element)
         return row and { row = row, side = "center" } or "default"
     end
     if value == "hidden" then return "hidden" end
-    return SLOTS[value] or "default"
+    local slot = SLOTS[value]
+    if slot and (element.inside or not slot.inside) then return slot end
+    return "default"
 end
 
 -- An invisible frame of ours around what is drawn of the minimap; the rows sit just outside it.
@@ -314,13 +364,65 @@ local function layoutRow(row, which, anchor, edgeWidth)
     return height
 end
 
-function MinimapLayout:ApplyPositions()
-    local cluster = MinimapCluster
-    if not cluster then return end
-    local rows = {
+-- Puts the elements of a spot inside the map in place: in a corner (along the diagonal on a round
+-- map), the first one nearest the corner and the others next to it towards the middle, or
+-- centered at the top or bottom edge.
+local function layoutInside(row, which)
+    local mapScale = Minimap:GetEffectiveScale()
+    local halfWidth = Minimap:GetWidth() * mapScale / 2
+    local halfHeight = Minimap:GetHeight() * mapScale / 2
+    local round = not Options:Get(SQUARE)
+    local radius = halfHeight * (1 - ROUND_COVER)
+    local up = which == "top" and 1 or -1
+    local function place(item, x, y)
+        local scale = item.frame:GetEffectiveScale()
+        item.frame:ClearAllPoints()
+        item.frame:SetPoint("CENTER", Minimap, "CENTER", x / scale, y / scale)
+    end
+    for side, items in pairs(row) do
+        if #items > 0 then
+            local height = 0
+            for _, item in ipairs(items) do
+                height = math.max(height, screen(item.frame, item.frame:GetHeight()))
+            end
+            if side == "center" then
+                local y = up * ((round and radius or halfHeight) - INSIDE_GAP - height / 2)
+                local cursor = -sumWidths(items) / 2
+                for _, item in ipairs(items) do
+                    place(item, cursor + widthOf(item) / 2, y)
+                    cursor = cursor + widthOf(item) + SPACING
+                end
+            else
+                local out = side == "left" and -1 or 1
+                local first = widthOf(items[1])
+                local x, y
+                if round then
+                    local distance = (radius - INSIDE_GAP - math.max(first, height) / 2) * math.sqrt(0.5)
+                    x, y = out * distance, up * distance
+                else
+                    x = out * (halfWidth - INSIDE_GAP - first / 2)
+                    y = up * (halfHeight - INSIDE_GAP - height / 2)
+                end
+                for i, item in ipairs(items) do
+                    if i > 1 then x = x - out * (widthOf(items[i - 1]) / 2 + SPACING + widthOf(item) / 2) end
+                    place(item, x, y)
+                end
+            end
+        end
+    end
+end
+
+local function newRows()
+    return {
         top = { left = {}, center = {}, right = {} },
         bottom = { left = {}, center = {}, right = {} },
     }
+end
+
+function MinimapLayout:ApplyPositions()
+    local cluster = MinimapCluster
+    if not cluster then return end
+    local rows, inside = newRows(), newRows()
     local zoneTextMoved = false
     for _, element in ipairs(self.ELEMENTS) do
         local frame = element.frame()
@@ -329,7 +431,8 @@ function MinimapLayout:ApplyPositions()
             setHidden(position == "hidden", frame)
             if type(position) == "table" then
                 remember(frame, element.isZoneText and rememberZoneText or nil)
-                local side = rows[position.row][position.side]
+                setInside(frame, position.inside == true)
+                local side = (position.inside and inside or rows)[position.row][position.side]
                 side[#side + 1] = { element = element, frame = frame }
                 zoneTextMoved = zoneTextMoved or element.isZoneText == true
             else
@@ -344,6 +447,8 @@ function MinimapLayout:ApplyPositions()
     edgeWidth = screen(Minimap, edgeWidth)
     layoutRow(rows.top, "top", anchor, edgeWidth)
     local below = layoutRow(rows.bottom, "bottom", anchor, edgeWidth)
+    layoutInside(inside.top, "top")
+    layoutInside(inside.bottom, "bottom")
 
     local container = cluster.MinimapContainer
     local coords = container and container.PlayerCoords
@@ -367,7 +472,20 @@ function MinimapLayout:Apply()
 end
 
 ------------------------------------------------------------------------------------------------
--- Zone text color
+-- Class colors
+
+local function coordsText()
+    local container = MinimapCluster and MinimapCluster.MinimapContainer
+    local coords = container and container.PlayerCoords
+    return coords and coords.CoordText
+end
+
+-- The texts that can show in class color, with the option for each.
+MinimapLayout.COLORED = {
+    { key = CLASS_COLOR, text = function() return MinimapZoneText end },
+    { key = CLOCK_COLOR, text = function() return TimeManagerClockTicker end },
+    { key = COORDS_COLOR, text = coordsText },
+}
 
 local function classColor()
     local _, class = UnitClass("player")
@@ -380,23 +498,30 @@ local function isColor(color, r, g, b)
     return near(r, color.r) and near(g, color.g) and near(b, color.b)
 end
 
--- The color the game last gave the zone text, while we show the class color instead.
-local gameColor
+-- Per option: the color the text had (the zone text: the one the game last gave it) while we show
+-- the class color instead.
+local gameColors = {}
 
-function MinimapLayout:ApplyZoneColor()
-    local text = MinimapZoneText
-    if not text then return end
-    local color = classColor()
+local function applyColor(key, text, color)
     local r, g, b = text:GetTextColor()
-    if Options:Get(CLASS_COLOR) and color then
+    local gameColor = gameColors[key]
+    if Options:Get(key) and color then
         -- Anything but our own color is a new one from the game (a zone change) to go back to.
-        if not isColor(color, r, g, b) then gameColor = { r, g, b } end
+        if not isColor(color, r, g, b) then gameColors[key] = { r, g, b } end
         text:SetTextColor(color.r, color.g, color.b)
     elseif gameColor then
         if color and isColor(color, r, g, b) then
             text:SetTextColor(gameColor[1], gameColor[2], gameColor[3])
         end
-        gameColor = nil
+        gameColors[key] = nil
+    end
+end
+
+function MinimapLayout:ApplyColors()
+    local color = classColor()
+    for _, colored in ipairs(self.COLORED) do
+        local text = colored.text()
+        if text then applyColor(colored.key, text, color) end
     end
 end
 
@@ -417,7 +542,18 @@ end
 
 -- A color is allowed in combat, so a zone change in combat gets the class color at once.
 local function scheduleColor()
-    ns.Later("minimapZoneColor", function() MinimapLayout:ApplyZoneColor() end, true)
+    ns.Later("minimapColors", function() MinimapLayout:ApplyColors() end, true)
+end
+
+local COLOR_KEYS = {}
+for _, colored in ipairs(MinimapLayout.COLORED) do COLOR_KEYS[#COLOR_KEYS + 1] = colored.key end
+
+local function colorActive()
+    if next(gameColors) ~= nil then return true end
+    for _, key in ipairs(COLOR_KEYS) do
+        if Options:Get(key) then return true end
+    end
+    return false
 end
 
 local function layoutActive()
@@ -431,10 +567,13 @@ end
 
 function MinimapLayout:Init()
     Options:Watch(LAYOUT_KEYS, scheduleLayout)
-    Options:Watch({ CLASS_COLOR }, scheduleColor)
+    Options:Watch(COLOR_KEYS, scheduleColor)
 
     local function relayout()
         if layoutActive() then scheduleLayout() end
+    end
+    local function recolor()
+        if colorActive() then scheduleColor() end
     end
     -- Forever's minimap skin masks the map again when the rotate setting changes, and the hybrid
     -- minimap brings its own round mask when it loads. The clock loads on demand.
@@ -443,6 +582,7 @@ function MinimapLayout:Init()
     end)
     ns.Events:On("ADDON_LOADED", function(_, name)
         if name == "Blizzard_HybridMinimap" or name == "Blizzard_TimeManager" then relayout() end
+        if name == "Blizzard_TimeManager" then recolor() end
     end)
     -- Edit Mode resizes the minimap, and Forever's skin puts the day and night icon back in place
     -- whenever the minimap's scale is set.
@@ -452,9 +592,6 @@ function MinimapLayout:Init()
     end
 
     -- The game sets the zone text's color again on these.
-    local function recolor()
-        if Options:Get(CLASS_COLOR) then scheduleColor() end
-    end
     for _, event in ipairs({ "PLAYER_ENTERING_WORLD", "ZONE_CHANGED", "ZONE_CHANGED_INDOORS",
         "ZONE_CHANGED_NEW_AREA", "SETTINGS_LOADED" }) do
         ns.Events:On(event, recolor)

@@ -22,16 +22,20 @@ read_globals = {
     "issecretvalue", "strsplit", "strtrim",
     -- Frames and UI
     "CreateFrame", "UIParent", "WorldFrame", "DEFAULT_CHAT_FRAME", "EventRegistry",
-    "Settings", "CreateSettingsListSectionHeaderInitializer", "MinimalSliderWithSteppersMixin",
+    "Settings", "CreateSettingsListSectionHeaderInitializer", "MinimalSliderWithSteppersMixin", "SettingsTooltip",
+    "SETTINGS_DEFAULTS", "NORMAL_FONT_COLOR", "GRAY_FONT_COLOR", "PlaySound", "SOUNDKIT",
     "GridLayoutUtil", "AnchorUtil", "TooltipDataProcessor",
     "MicroMenuContainer", "ContainerFrameCombinedBags", "BagItemAutoSortButton", "BagItemSearchBox",
     "BagsBar", "QuickJoinToastButton", "MinimapCluster", "Minimap", "MinimapZoneText", "MinimapCompassTexture",
-    "MinimapCompassTextureUnderlay", "HybridMinimap", "TimeManagerClockButton", "GameTimeFrame", "AddonCompartmentFrame", "WorldMapFrame", "MapCanvasDataProviderMixin", "CreateFromMixins",
+    "MinimapCompassTextureUnderlay", "HybridMinimap", "TimeManagerClockButton",
+    "TimeManagerClockTicker", "GameTimeFrame", "AddonCompartmentFrame", "WorldMapFrame", "MapCanvasDataProviderMixin", "CreateFromMixins",
     "GameTooltip",
     "ChatFrame2", "ChatFrame2Tab", "ChatFrameMenuButton", "ChatFrameChannelButton", "ChatFrameToggleVoiceDeafenButton",
     "ChatFrameToggleVoiceMuteButton", "TextToSpeechButtonFrame",
     "InCombatLockdown", "GetPhysicalScreenSize", "ReloadUI", "IsSecureCmd", "CinematicFrame", "MovieFrame",
     "IsShiftKeyDown",
+    -- Key bindings
+    "GetBindingKey", "GetBindingAction", "SetOverrideBinding", "SetOverrideBindingClick", "ClearOverrideBindings",
     -- Strings and formatting
     "GetLocale", "GetMoneyString", "SELL_PRICE",
     -- Units

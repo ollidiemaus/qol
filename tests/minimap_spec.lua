@@ -273,6 +273,100 @@ describe("minimap buttons", function()
     end)
 end)
 
+describe("minimap buttons inside the map", function()
+    -- Centers relative to the map's center: the map is 198 across, buttons keep 4 from its edge.
+    local function inside(frame)
+        local point = frame:PointFor("CENTER")
+        T.truthy(point, "the element was moved")
+        T.eq(point[2], Minimap)
+        T.eq(point[3], "CENTER")
+        return { x = point[4], y = point[5] }
+    end
+
+    it("put the tracking button in a corner of the square map, drawn above the map", function()
+        start({ squareMinimap = true, minimapTracking = "insideTopLeft" })
+        local where = inside(MinimapCluster.Tracking)
+        near(where.x, -(99 - 4 - 17 / 2))
+        near(where.y, 99 - 4 - 17 / 2)
+        T.truthy(MinimapCluster.Tracking:GetFrameLevel() > Minimap:GetFrameLevel())
+    end)
+
+    it("follow the round frame along the diagonal", function()
+        start({ minimapDayNight = "insideBottomRight" })
+        -- The round frame covers 7% of the radius; the icon is 42 across.
+        local distance = (99 * 0.93 - 4 - 42 / 2) * math.sqrt(0.5)
+        local where = inside(MinimapCluster.DielFrame)
+        near(where.x, distance)
+        near(where.y, -distance)
+    end)
+
+    it("sit side by side in a corner, the first one nearest the corner", function()
+        start({ squareMinimap = true, minimapTracking = "insideBottomLeft", minimapDayNight = "insideBottomLeft" })
+        near(inside(MinimapCluster.Tracking).x, -(99 - 4 - 17 / 2))
+        near(inside(MinimapCluster.DielFrame).x, -(99 - 4 - 17 / 2) + 17 / 2 + 4 + 42 / 2)
+        -- As low as the highest of them allows.
+        near(inside(MinimapCluster.Tracking).y, -(99 - 4 - 42 / 2))
+    end)
+
+    it("center at the top edge together", function()
+        start({ squareMinimap = true, minimapTracking = "insideTop", minimapDayNight = "insideTop" })
+        local total = 17 + 4 + 42
+        near(inside(MinimapCluster.Tracking).x, -total / 2 + 17 / 2)
+        near(inside(MinimapCluster.DielFrame).x, -total / 2 + 17 + 4 + 42 / 2)
+        near(inside(MinimapCluster.DielFrame).y, 99 - 4 - 42 / 2)
+    end)
+
+    it("go back to their own level when they leave the map", function()
+        local ns = start({ minimapTracking = "insideTop" })
+        local level = Minimap:GetFrameLevel() + 5
+        T.eq(MinimapCluster.Tracking:GetFrameLevel(), level)
+        set(ns, "minimapTracking", "topLeft")
+        T.eq(MinimapCluster.Tracking:GetFrameLevel(), 1)
+        set(ns, "minimapTracking", "insideTop")
+        set(ns, "minimapTracking", "default")
+        T.eq(MinimapCluster.Tracking:GetFrameLevel(), 1)
+        T.eq(MinimapCluster.Tracking:PointFor("RIGHT")[2], MinimapCluster.BorderTop)
+    end)
+
+    it("aren't offered to the clock", function()
+        start({ minimapClock = "insideTop" })
+        T.eq(TimeManagerClockButton:PointFor("TOPRIGHT")[2], MinimapCluster.BorderTop)
+    end)
+end)
+
+describe("minimap clock and coordinates in class color", function()
+    it("color the clock, and give its own color back when turned off", function()
+        local ns = start({ minimapClockClassColor = true })
+        T.same(TimeManagerClockTicker.textColor, MAGE)
+        set(ns, "minimapClockClassColor", false)
+        T.same(TimeManagerClockTicker.textColor, { 1, 1, 1 })
+    end)
+
+    it("color the clock once it loads", function()
+        Stubs.LoadAddon()
+        local ticker = TimeManagerClockTicker
+        _G.TimeManagerClockTicker = nil
+        Stubs.Login({ minimapClockClassColor = true })
+        _G.TimeManagerClockTicker = ticker
+        Stubs.Fire("ADDON_LOADED", "Blizzard_TimeManager")
+        Stubs.RunTimers()
+        T.same(ticker.textColor, MAGE)
+    end)
+
+    it("color the coordinates", function()
+        local ns = start({ minimapCoordsClassColor = true })
+        T.same(coords().CoordText.textColor, MAGE)
+        set(ns, "minimapCoordsClassColor", false)
+        T.same(coords().CoordText.textColor, { 1, 1, 1 })
+    end)
+
+    it("leave both alone by default", function()
+        start()
+        T.eq(TimeManagerClockTicker.textColor, nil)
+        T.eq(coords().CoordText.textColor, nil)
+    end)
+end)
+
 describe("minimap zone text in class color", function()
     it("takes the class color, also after the game colors it for a new zone", function()
         start({ minimapZoneTextClassColor = true })

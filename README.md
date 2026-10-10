@@ -56,10 +56,13 @@ Hold **Shift** while talking to an NPC to do everything yourself that time.
   Addons that put buttons around the minimap and ask for its shape place them along the square.
 - **Zone text above or below the minimap,** centered on the map's edge instead of in the bar at the
   top.
-- **Zone text in class color** instead of the color for friendly, hostile or contested territory.
+- **Zone text, clock and coordinates in class color.** The zone text normally shows the color for
+  friendly, hostile or contested territory.
 - **Clock, addon compartment, tracking button and Forever's day and night icon:** each can move to
-  a row above or below the minimap (left, center or right), or be hidden. Things in the same spot
-  sit side by side; with something below the minimap, the coordinates move under it.
+  a row above or below the minimap (left, center or right), or be hidden. The tracking button and
+  the day and night icon can also sit inside the map: in a corner, or in the middle of its top or
+  bottom edge. Things in the same spot sit side by side; with something below the minimap, the
+  coordinates move under it.
 - **Hide the calendar button.**
 - **Hide the coordinates under the minimap.**
 
@@ -106,11 +109,17 @@ Reverse the direction buttons fill a bar, separately for every bar and both dire
 Works for action bars 1 to 8, the stance bar and the pet bar, and keeps working after you change a
 bar in Edit Mode.
 
+**No bar paging with Shift+1-6:** the keys that switch the main action bar to another page (Shift+1
+to Shift+6, or whatever you bound to them) act like the same key without Shift instead, so Shift+1
+presses action button 1 and macros can check for Shift with `[mod:shift]`. Your saved key bindings
+stay as they are; turn the option off and the keys page again.
+
 ## Settings
 
 **Esc > Options > AddOns > Forever QoL**, or type `/fqol`. The Viewport, Action Bars and Minimap
-pages are listed below Forever QoL. Changes apply right away; the few that touch protected parts of the
-interface (action bars, viewport, system bar) wait until you leave combat.
+pages are listed below Forever QoL. The main, Action Bars and Minimap pages show their options in two
+columns, so they fit without scrolling. Changes apply right away; the few that touch protected parts
+of the interface (action bars, key bindings, viewport, system bar) wait until you leave combat.
 
 Forever QoL is available in English and German.
 

@@ -8,8 +8,8 @@ Notes for working on the addon. What it does for players is in the [README](../R
 |---|---|
 | `Core/` | Namespace and printing (`Init`), the event frame (`Events`), saved options with defaults and change watchers (`Options`), deferred changes (`Later`), the hidden holder for hidden frames (`Hider`), `/fqol` (`Slash`) and startup (`Lifecycle`) |
 | `Data/` | Static game data: `MapPins` (dungeon entrances, docks, portals; how it was made is at the top of the file) |
-| `Features/` | One file per feature: `Merchant`, `Quests`, `Tooltips`, `HideFrames` (also the chat buttons), `CombatLog`, `ChatClassColors`, `CombinedBagSort`, `ClassHealthBars`, `Minimap` (square shape and zone text), `MapPins`, `Viewport`, `ActionBars`, `ReloadCommand` |
-| `UI/Settings.lua` | The pages under Options > AddOns, all proxy settings onto `ns.Options` |
+| `Features/` | One file per feature: `Merchant`, `Quests`, `Tooltips`, `HideFrames` (also the chat buttons), `CombatLog`, `ChatClassColors`, `CombinedBagSort`, `ClassHealthBars`, `Minimap` (shape, positions and class colors around the minimap), `MapPins`, `Viewport`, `ActionBars`, `BarPaging`, `ReloadCommand` |
+| `UI/` | `SettingsPage.lua`, our own two-column settings page; `Settings.lua`, the pages under Options > AddOns built with it (and the Viewport page as the game's list) |
 | `Locales/` | English strings, German overrides |
 | `Media/` | `Icon.tga`, the addon list icon (the TOC's `IconTexture`, 128×128, 32-bit), and `Icon.svg`, its source (not packaged); `Zeppelin.tga` and `MinimapSquareBorder.tga` (see below) |
 | `tests/` | Specs run in plain Lua against `tests/wow_stubs.lua` |
@@ -79,9 +79,33 @@ mask again; the hybrid minimap has a mask of its own (`HybridMinimap.CircleMask`
 the game's own `MinimapCluster.ZoneTextButton`, moved: it keeps its tooltip and click. The clock,
 addon compartment, tracking button and day and night icon are moved the same way, into a row above
 or below a frame of ours around what is drawn of the minimap (the square and its border, or the
-round frame with its north triangle). Positions are worked out in screen units, since Edit Mode
-scales the minimap but not its header. Forever's skin sets the day and night icon's center again
-whenever the minimap's scale is set; `Minimap.OnScaleUpdated` lays it out again after that.
+round frame with its north triangle). The tracking button and the day and night icon can also go
+inside the map, anchored to its center: on a round map along the diagonal, clear of the round frame
+(which covers about 7% of the radius). Inside the map they're raised above its frame level (the
+cluster's buttons sit below the map) and get their level back when they leave. Positions are worked
+out in screen units, since Edit Mode scales the minimap but not its header. Forever's skin sets the
+day and night icon's center again whenever the minimap's scale is set; `Minimap.OnScaleUpdated` lays
+it out again after that. The clock's text (`TimeManagerClockTicker`) and the coordinates'
+(`PlayerCoords.CoordText`) keep their color once set; the zone text is colored again by the game on
+every zone change, so the class color is put back on the zone events.
+
+Bar paging: each key bound to `ACTIONPAGE1` to `ACTIONPAGE6` gets an override binding on a frame of
+ours that mirrors what the key without modifiers does (`GetBindingAction(base, true)`, so a bar
+addon's override counts), which is how the game treats a modified key without a binding of its own.
+The saved bindings are never changed. Our own overrides fire `UPDATE_BINDINGS` too; the update then
+finds nothing to change.
+
+## Settings pages
+
+The main, Action Bars and Minimap pages are canvases (`Settings.RegisterCanvasLayoutCategory`) built
+by `UI/SettingsPage.lua`: two columns of rows, each an option's name with a control from the game's
+own templates (`SettingsCheckboxTemplate`, `WowStyle2DropdownTemplate`), so they look like the game's
+pages and fit without scrolling (`SettingsPage.MAX_HEIGHT`, checked by the tests). All names use one
+font: the game's list draws dependent options smaller. A page refreshes on `OnRefresh` (the panel
+showing it) and through `Options:Watch`, and resets on `OnDefault` (the game's "all settings" reset)
+and its own Defaults button, which asks with a second click: the game's confirmation dialog would
+spread taint. The canvas pages don't show up in the settings search. Viewport stays the game's
+vertical list with proxy settings (sliders and a color swatch).
 
 The world map pins are buttons on a frame of our own on the map's canvas, not pins from the map's
 pools. Their places are zone coordinates in percent (as `/way` reads them), from Forever's tables;
@@ -147,7 +171,16 @@ Things only the real client can confirm:
   position, several in one spot, above and below a round and a square minimap, with and without
   coordinates, after an Edit Mode change of the minimap's size, and after a `/reload`; the tracking
   menu and the addon compartment's menu still open from their new places. Class color after zone
-  changes and in combat.
+  changes and in combat, and on the clock and the coordinates.
+- The tracking button and the day and night icon inside the map: drawn above it, clear of the round
+  frame and the bronze border in every corner, clickable there, and the mail icon (anchored to the
+  tracking button by the game) still readable.
+- Bar paging off: Shift+1 to Shift+6 press the action buttons (a `[mod:shift]` macro sees Shift),
+  also with a bar addon that binds the number keys itself; turning it off pages again, and changing
+  a key binding in combat is picked up after combat.
+- The settings pages: two columns at the panel's default size in English and German (no name cut
+  off), checkboxes and dropdowns working, dependent options greyed out, and the Defaults button
+  asking first.
 - The zeppelin pins' icon next to the boats', on zone and continent maps.
 - World map pins: in the right places on the zone and continent maps (the entrance positions are
   the instance portals, like retail's encounter journal pins), the tooltips' names in German, and a
