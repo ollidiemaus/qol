@@ -2,9 +2,9 @@ local _, ns = ...
 local Options = ns.Options
 local L = ns.L
 
--- A ring of eight actions, like OPie's rings or Easy Controller's wheels, with two keys: hold one,
--- aim at an action, let go to use it. The mouse key opens the ring at the cursor and aims with the
--- mouse; the controller key opens it in the middle of the screen and aims with the right stick.
+-- A ring of eight actions with two keys: hold one, aim at an action, let go to use it. The mouse key
+-- opens the ring at the cursor and aims with the mouse; the controller key opens it in the middle of
+-- the screen and aims with the right stick.
 -- Let go in the middle (or with the stick at rest) and nothing happens.
 --
 -- The eight actions are buttons 1 to 8 of Action Bar 6, 7 or 8 (the player picks the bar), so they
@@ -455,7 +455,7 @@ function Ring:Update()
 end
 
 local function schedule()
-    ns.Later("ring", function() Ring:Update() end)
+    ns.LaterOutsideWindows("ring", function() Ring:Update() end)
 end
 
 local function scheduleRefresh()

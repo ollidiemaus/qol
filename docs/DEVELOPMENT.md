@@ -21,8 +21,8 @@ reads it with `Options:Get` and reacts to changes through `Options:Watch`.
 ## Rules for touching Blizzard frames
 
 Forever and retail 12.x hand out secret values, and taint that leaks into Blizzard code breaks
-unrelated frames ("tainted by 'QoL'"). Action Bar Button Growth Direction learned this the
-hard way on the Forever beta. So:
+unrelated frames ("tainted by 'QoL'"), as other action bar addons learned the hard way on the
+Forever beta. So:
 
 - Never write a field on a Blizzard frame, never call its layout or update methods, and never
   `hooksecurefunc` its methods. Read fields, call widget methods (`SetPoint`, `SetParent`).
@@ -33,6 +33,9 @@ hard way on the Forever beta. So:
   (nothing says when the game runs a `C_Timer.After(0)` started from a timer callback). A change the
   game allows in combat (the health bar colors) passes `true` as a third argument and runs in combat
   too.
+- The back buttons and the ring go through `ns.LaterOutsideWindows(key, fn)` instead: out of combat
+  too, and in Forever's controller interface also away from the game's windows that have the
+  controller (see Settings pages below).
 - Hide frames by parenting them to `ns.Hider`'s holder instead of `Hide()` plus hooks; Blizzard's
   own `Show()` calls then change nothing.
 - Compare or compute with game values only after `ns.IsUsable(value)` (nil and secret values fail).
@@ -56,7 +59,8 @@ hard way on the Forever beta. So:
   page. So the bar flips, the hidden button borders and the bar paging overrides stand aside while
   it's on: nothing of ours on those bars or key bindings. Closing the settings saves the bindings
   (`SaveBindings` in `SettingsPanel`'s OnHide), which fires `UPDATE_BINDINGS`; in controller mode
-  that does nothing in QoL.
+  the bar features ignore it, and the back buttons and the ring update only once the settings have
+  been closed for half a second (`ns.LaterOutsideWindows`).
 
 The action bar flip copies the grid math of `ActionBarMixin:UpdateGridLayout` and applies it to the
 bar's button containers only. Blizzard stores a new `oldGridSettings` table each time it lays a bar
@@ -144,8 +148,9 @@ exists at our `ADDON_LOADED`): they show, hide, scale and fade with the bar and 
 written on it. Their anchors are the bar's `PageUnit.LeftCenteredAnchor` and `RightCenteredAnchor`
 (the d-pad and face button groups), which only Edit Mode moves, out of combat, and which the compact
 layout moves too. A secure button makes its parents protected, so the holder is created, shown and
-hidden through `ns.Later` (out of combat), like the `type` and `action` attributes, which are set
-only when they change. The art is drawn on regions of our own, copied from the bar's buttons
+hidden through `ns.LaterOutsideWindows` (out of combat and away from the game's controller windows),
+like the `type` and `action` attributes, which are set only when they change. The art is drawn on
+regions of our own, copied from the bar's buttons
 (`gamepad-actionbar-circleslot-*` atlases, `CircleMask`, the round portrait mask for the empty slot
 and the cooldown swipe) and updated in combat (`ns.Later(..., true)`): icon, usability color, count
 (`GetActionDisplayCount`, maybe secret, only passed to `SetText`), cooldown
@@ -163,9 +168,10 @@ neither a saved binding nor one in the controller set (`C_KeyBindings.GetBinding
 Enum.BindingContext.GamepadModeInGameCore)`, in a `pcall`). A trigger held while a back button
 sends its key makes it a modified key; with nothing bound to that, the game uses the key without
 modifiers, so no modifier variants are needed. As with bar paging, the overrides fire
-`UPDATE_BINDINGS` and the next update finds nothing to change; they wait for the end of combat.
-Steam Input on the Steam Deck sends keyboard keys for the back buttons (as Easy Controller Forever's
-README says too), which is why a key binding, not a fixed key, is the way in.
+`UPDATE_BINDINGS` and the next update finds nothing to change; they wait for the end of combat
+and, in the controller interface, until no window of the game has the controller.
+Steam Input on the Steam Deck sends keyboard keys for the back buttons, which is why a key binding,
+not a fixed key, is the way in.
 
 The ring (`Features/Ring.lua`) picks an action in combat, so the choice is made by secure code:
 
@@ -206,7 +212,8 @@ The ring (`Features/Ring.lua`) picks an action in combat, so the choice is made 
   settings page, because hiding `SettingsPanel` from addon code taints its `Commit`.
 - The header, the buttons, their attributes and the override bindings (the keys bound to the two
   buttons, as for the back buttons, `ns.Buttons.NewOverrides`) are made and changed through
-  `ns.Later`, out of combat.
+  `ns.LaterOutsideWindows`, out of combat and away from the game's controller windows. The editor
+  is no such window (the controller manager doesn't know it), so the ring changes while it is open.
 
 The ring's textures come from Forever's own art (build 1.60.1.70291). `Media/Ring.tga` (512×512,
 drawn 343 units wide) is a dark disc, the radial menu's wheel (`gamepad-radial-menu-wheelbg`, file
@@ -241,6 +248,35 @@ that hangs wasn't found, so we stay off the list. On our canvas the controller c
 slider's arrows (one pixel a click) and the swatch; a slider set from `Options` (a refresh) doesn't
 write itself back.
 
+The game's dropdown menu froze it the same way: with the controller interface on, opening one of
+our dropdowns (the back buttons' bar on the Controller page), picking a choice and closing the
+settings stopped the game. In that interface the menu (`Blizzard_Menu`) brings the same kind of
+wiring as the list's slider: `MenuProxyMixin:SetupGamepad` creates a prompted binding footer whose
+binding groups take the face buttons while it's open, and `GamepadFrameControlsManager` suspends
+the settings panel's focus for it (`MenuProxy.OnShow`) and never unsuspends it on close. Which of
+these hangs isn't known (the game's own pages open the same menu), but it is the one thing of the
+game's controller wiring our pages used, and it was the step that turned closing into a freeze. So with the
+controller interface on (`ns.IsControllerUI()`, checked on each click so switching interfaces needs
+no reload), our dropdowns never open the menu: `Page:Dropdown` replaces `OpenMenu` on our own
+dropdown with a step to the next choice, wrapping around, for the controller cursor's press, the
+mouse and the touch screen alike. The mouse wheel's step (`Rotate`) opens no menu either and stays.
+With keyboard and mouse the menu opens as usual.
+
+Without the menu the game still froze now and then on closing the settings after the back buttons'
+bar had been changed (not reproduced reliably, and with no error). Our change then ran while the
+settings were open: new `action` attributes on our secure buttons and new override bindings, set
+while `GamepadFrameControlsManager` had the settings as its window, and again on the
+`UPDATE_BINDINGS` that closing fires. So the back buttons and the ring, the only features that set
+bindings or secure attributes in the controller interface, change nothing while a window of the
+game has the controller: they go through `ns.LaterOutsideWindows` (`Core/Later.lua`), which holds
+their updates while `ns.ControllerWindowOpen()` (`GamepadMode.FrameControlsManager:GetActiveFrame()`,
+if shown: the settings, the game menu, the bags...). Bindings already set stay while a window is
+open (they aren't priority overrides, so the window's own win); only changes are held back. A
+`C_Timer.After` check every half second lets them go once one check found no window and the one
+before found none either, so they run at least half a second after the window closed, from our
+OnUpdate, whatever order the game closes it in. Without the controller interface they run on the
+next frame as before. With this the freeze hasn't come back (2026-10, Steam Deck).
+
 The world map pins are buttons on a frame of our own on the map's canvas, not pins from the map's
 pools. Their places are zone coordinates in percent (as `/way` reads them), from Forever's tables;
 the continent maps get them through `C_Map.GetMapRectOnMap`. Names come from `C_Map.GetAreaInfo`, so
@@ -263,8 +299,8 @@ lua tests/run.lua
 luacheck .
 ```
 
-CI runs both on Lua 5.1.5 on every push and pull request (same setup as Wayscribe: Lua 5.1 and
-luacheck from `~/.lua51`, built with hererocks).
+CI runs both on Lua 5.1.5 on every push and pull request (locally: Lua 5.1 and luacheck from
+`~/.lua51`, built with hererocks).
 
 The stubs make action bars read-only (a write to a bar field fails the test), and protected frames
 fail on `SetPoint`/`SetParent` (and `Show`/`Hide`) in combat, so the taint rules above are checked,
@@ -284,8 +320,11 @@ Things only the real client can confirm:
 - The viewport margins line up with the world at your resolution and UI scale, and stay with Alt+Z.
 - With Forever's controller interface on (Options > Controller), the viewport and the Action Bars
   options on: open the settings, look at every page (Viewport included: step a margin with its
-  arrows, open the color picker), go to another page, and close the settings with B and with Esc.
-  The game must not freeze, and the viewport stays. The game's own controller action
+  arrows, open the color picker; on the Controller page turn on the back buttons and press the bar
+  dropdown a few times, with A and with the touch screen), go to another page, and close the
+  settings with B and with Esc. The dropdowns step through their choices without opening a list.
+  The game must not freeze, and the viewport stays. The back buttons (and the ring, with its bar
+  changed) take the new bar only after the settings and the game menu are closed, within a second. The game's own controller action
   bars show; the flips and borders come back after switching to keyboard and mouse.
 - Cutscenes with the viewport on (margins on all four sides), see below.
 - Flipped bars stay flipped after Edit Mode changes, a `/reload`, shapeshifting (stance bar) and
@@ -309,7 +348,7 @@ Things only the real client can confirm:
   per-channel setting.
 - The other chat buttons stay hidden after joining a voice channel and with text to speech on.
 - Square minimap: both borders (the bronze one lines up with the map's edge at every Edit Mode size),
-  minimap buttons of other addons (LibDBIcon) along the square, the rotate minimap setting, and a
+  minimap buttons of other addons along the square, the rotate minimap setting, and a
   zone with the hybrid minimap.
 - Zone text and the clock, addon compartment, tracking button and day and night icon in every
   position, several in one spot, above and below a round and a square minimap, with and without
@@ -392,6 +431,6 @@ on, that report is what to look at.
 ## Releasing
 
 `.github/workflows/release.yml` runs the [BigWigsMods packager](https://github.com/BigWigsMods/packager)
-on every pushed tag, like Wayscribe: it replaces `@project-version@` with the tag, leaves out `docs/`,
+on every pushed tag: it replaces `@project-version@` with the tag, leaves out `docs/`,
 `tests/`, `README.md` and `Media/Icon.svg`, and creates the GitHub release. For CurseForge uploads, add
 `## X-Curse-Project-ID` to the TOC and the `CF_API_KEY` repository secret.

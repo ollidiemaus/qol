@@ -168,8 +168,14 @@ local function newRegion(kind, parent, template)
     function region:SetChecked(checked) self.checked = checked and true or false end
     function region:GetChecked() return self.checked == true end
     -- A dropdown (DropdownButton): SetupMenu keeps the generator, GenerateMenu builds the menu as
-    -- a list of radios { text, isSelected, select } and shows the selected one's text.
+    -- a list of radios { text, isSelected, select } and shows the selected one's text. A click
+    -- calls OpenMenu, which counts the menus opened in menusOpened.
     function region:SetupMenu(generator) self.generator = generator end
+    function region:OpenMenu()
+        if not self:IsEnabled() then return end
+        self:GenerateMenu()
+        self.menusOpened = (self.menusOpened or 0) + 1
+    end
     function region:GenerateMenu()
         local root = { radios = {} }
         function root:CreateRadio(text, isSelected, select)
@@ -504,6 +510,9 @@ local function install()
     }
     -- The interface style: Stubs.SetControllerUI switches to the controller interface.
     G.C_InputInterfaceStyle = { GetCurrentStyle = function() return state.interfaceStyle end }
+    -- Forever's manager of the windows that have the controller: Stubs.SetControllerWindow sets the
+    -- one it has.
+    G.GamepadMode = { FrameControlsManager = { GetActiveFrame = function() return state.controllerWindow end } }
     G.C_EventUtils = { IsEventValid = function(event) return not state.unknownEvents[event] end }
     G.EventRegistry = {
         RegisterCallback = function(_, event, fn, owner)
@@ -984,6 +993,11 @@ end
 
 function Stubs.SetControllerUI(on)
     state.interfaceStyle = on and 1 or 0
+end
+
+-- A window of the game with the controller (shown), or none with nil.
+function Stubs.SetControllerWindow(window)
+    state.controllerWindow = window
 end
 
 -- Forever's controller action bar, with the anchors of its page unit: the middle of the d-pad

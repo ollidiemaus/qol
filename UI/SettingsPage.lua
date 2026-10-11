@@ -272,7 +272,22 @@ function Page:Checkbox(column, key, label, tooltip, options)
     return control
 end
 
+-- The choice after the option's value, back to the first after the last.
+local function nextChoice(key, choices)
+    local value = Options:Get(key)
+    for index, choice in ipairs(choices) do
+        if choice.value == value then
+            return choices[index % #choices + 1]
+        end
+    end
+    return choices[1]
+end
+
 -- choices: { { value = ..., label = ... }, ... } in the order the menu lists them.
+-- With Forever's controller interface on, a click steps to the next choice instead of opening the
+-- game's menu: in that interface the menu brings controller wiring of its own (a prompted binding
+-- footer, binding groups, suspending the settings panel's focus), and the game stopped responding
+-- when the settings closed after one was opened from our page (see docs/DEVELOPMENT.md).
 function Page:Dropdown(column, key, label, choices, tooltip, options)
     local control = optionRow(self, column, "dropdown", key, label, tooltip, options)
     control.choices = choices
@@ -286,6 +301,11 @@ function Page:Dropdown(column, key, label, choices, tooltip, options)
                 function() Options:Set(key, choice.value) end)
         end
     end)
+    local openMenu = dropdown.OpenMenu
+    function dropdown:OpenMenu(...)
+        if not ns.IsControllerUI() then return openMenu(self, ...) end
+        if self:IsEnabled() then Options:Set(key, nextChoice(key, choices).value) end
+    end
     dropdown:HookScript("OnEnter", control.enter)
     dropdown:HookScript("OnLeave", control.leave)
     place(control, dropdown)

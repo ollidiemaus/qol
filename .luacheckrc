@@ -35,7 +35,7 @@ read_globals = {
     "ChatFrame2", "ChatFrame2Tab", "ChatFrameMenuButton", "ChatFrameChannelButton", "ChatFrameToggleVoiceDeafenButton",
     "ChatFrameToggleVoiceMuteButton", "TextToSpeechButtonFrame",
     "InCombatLockdown", "GetPhysicalScreenSize", "ReloadUI", "IsSecureCmd", "CinematicFrame", "MovieFrame",
-    "IsShiftKeyDown", "GamepadMainActionBarFrame", "UISpecialFrames", "GetCursorPosition", "GetCursorInfo",
+    "IsShiftKeyDown", "GamepadMainActionBarFrame", "GamepadMode", "UISpecialFrames", "GetCursorPosition", "GetCursorInfo",
     "SecureHandlerWrapScript",
     -- Key bindings
     "GetBindingKey", "GetBindingAction", "SetOverrideBinding", "SetOverrideBindingClick", "ClearOverrideBindings",
