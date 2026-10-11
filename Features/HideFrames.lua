@@ -2,8 +2,8 @@ local _, ns = ...
 local Options = ns.Options
 
 -- Hides pieces of the default UI the player doesn't want: the system bar (micro menu), the bag
--- bar, the coordinates under the minimap, the social button above the chat, the other buttons
--- next to the chat and the tooltips the controller interface shows for new buffs.
+-- bar, the coordinates under the minimap, the social button above the chat and the other buttons
+-- next to the chat.
 local HideFrames = {}
 ns.HideFrames = HideFrames
 
@@ -25,10 +25,6 @@ HideFrames.TARGETS = {
         return ChatFrameMenuButton, ChatFrameChannelButton, ChatFrameToggleVoiceDeafenButton,
             ChatFrameToggleVoiceMuteButton, TextToSpeechButtonFrame
     end,
-    -- In the controller interface the buff frame shows the tooltip of each buff or debuff the
-    -- player gains or refreshes for a few seconds (BuffFrameMixin:ShowNextAuraForTooltip). Only
-    -- that does so in BuffFrameTooltip; pointing at a buff or selecting it uses GameTooltip.
-    hideBuffTooltips = function() return BuffFrameTooltip end,
 }
 
 local KEYS = {}

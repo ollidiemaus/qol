@@ -8,7 +8,7 @@ Notes for working on the addon. What it does for players is in the [README](../R
 |---|---|
 | `Core/` | Namespace and printing (`Init`), the event frame (`Events`), saved options with defaults and change watchers (`Options`), deferred changes (`Later`), the hidden holder for hidden frames (`Hider`), what the back buttons and the ring share (`Buttons`: an action slot's look, override bindings), `/qol` (`Slash`) and startup (`Lifecycle`) |
 | `Data/` | Static game data: `MapPins` (dungeon entrances, docks, portals; how it was made is at the top of the file) |
-| `Features/` | One file per feature: `Merchant`, `Quests`, `Tooltips`, `HideFrames` (also the chat buttons and the controller interface's buff tooltips), `CombatLog`, `ChatClassColors`, `CombinedBagSort`, `ClassHealthBars`, `Minimap` (shape, positions, class colors and font sizes around the minimap), `MapPins`, `Viewport`, `ActionBars`, `ButtonBorders`, `BarPaging`, `BackButtons` (the controller back buttons, Forever only), `Ring`, `ReloadCommand` |
+| `Features/` | One file per feature: `Merchant`, `Quests`, `Tooltips`, `HideFrames` (also the chat buttons), `BuffTooltips` (the controller interface's tooltips for new buffs), `CombatLog`, `ChatClassColors`, `CombinedBagSort`, `ClassHealthBars`, `Minimap` (shape, positions, class colors and font sizes around the minimap), `MapPins`, `Viewport`, `ActionBars`, `ButtonBorders`, `BarPaging`, `BackButtons` (the controller back buttons, Forever only), `Ring`, `ReloadCommand` |
 | `UI/` | `SettingsPage.lua`, our own settings page (two columns, or rows across the page, and key binding rows); `Settings.lua`, the pages under Options > AddOns built with it |
 | `Locales/` | English strings, German overrides |
 | `Media/` | `Icon.tga`, the addon list icon (the TOC's `IconTexture`, 128×128, 32-bit), and `Icon.svg`, its source (not packaged); `Zeppelin.tga`, `Tram.tga`, `MinimapSquareBorder.tga` and the ring's `Ring.tga`, `RingSelected.tga` and `RingSlot.tga` (see below) |
@@ -102,9 +102,14 @@ takes no room and the next tab closes the gap.
 The tooltips Forever's controller interface shows for new buffs come from the buff frame
 (`BuffFrameMixin:Update` queues each aura gained or refreshed, `ShowNextAuraForTooltip` shows it
 for 4 seconds) in `BuffFrameTooltip`, which nothing else uses: pointing at a buff or selecting it
-with the controller shows `GameTooltip`. So the option sends `BuffFrameTooltip` to the hidden
-holder, and Blizzard's own `SetOwner`, `Show` and `Hide` on it change nothing. Turned on in the
-settings, that happens after they close (see Settings pages). The game has a
+with the controller shows `GameTooltip`. So the option makes `BuffFrameTooltip` transparent
+(`SetAlpha(0)`, again from an `OnShow` hook each time it shows), the way the game's controller
+action bar editor hides its own tooltip (`GamepadActionBarEditFrameMixin`): the tooltip still shows
+and hides as the game wants, only unseen. It first went to the hidden holder like the frames above,
+where it never showed at all; on the Steam Deck, pointing at a buff then showed no tooltip either,
+and after the game menu closed the cursor jumped to the middle as usual but stayed in sight
+(2026-10, cause not found in the UI code, gone or not with the alpha: to be confirmed). Turned on in
+the settings, the change happens after they close (see Settings pages). The game has a
 setting for it too, `GamepadShowAutoAuraTooltip`, which isn't in its options. It's left alone:
 `CVarCallbackRegistry` caches it and the buff frame reads it on every aura change, and a
 `SetCVar` from our code would fire `CVAR_UPDATE`, whose handler writes that cache without the
@@ -457,8 +462,9 @@ Things only the real client can confirm:
 - Hide new buff tooltips (Options > Controller), in the controller interface: turning it on and
   closing the settings (and the game menu) must not freeze the game, then gaining or refreshing a
   buff (a food buff, a flask, a party member's buff) and a debuff shows no tooltip; selecting a buff
-  through the buff frame (the radial's Buffs) and pointing at one with the mouse still do. Turning it
-  off brings the pop-ups back without a reload. Right-clicking a buff away in combat still works.
+  through the buff frame (the radial's Buffs) and pointing at one with the mouse still do. After the
+  game menu closes, the cursor goes to the middle and hides. Turning it off brings the pop-ups back
+  without a reload. Right-clicking a buff away in combat still works.
 - In the controller interface, change an option on each page (main, Viewport, Action Bars, Minimap,
   Controller), close the settings and the game menu: no freeze, and each change shows up about a
   second after the game menu closed.
