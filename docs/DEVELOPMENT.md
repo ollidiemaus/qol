@@ -324,12 +324,14 @@ there's nothing for it to change.
 The Controller page also has the back buttons' key bindings (`Page:Binding`, rows across the page):
 the same `CLICK QoLBackButtonN:LeftButton` commands as Key Bindings > AddOns, each row named by its
 slot on the chosen bar (the label is a function, asked again on each refresh, so it follows the
-Slots dropdown). Each row has two buttons from the game's own `KeyBindingFrameBindingButtonTemplate`
-and works like a row of the game's Key Bindings, with code of our own rather than the game's
-`KeybindListener` (a Blizzard frame: starting it writes its fields, which the rules above
-forbid): a click on a button shows a parentless frame of ours at `FULLSCREEN_DIALOG` strata with an
-`OnKeyDown`, which takes the keyboard until a key comes (modifiers alone wait for the rest, through
-`IsKeyPressIgnoredForBinding` and `CreateKeyChordStringUsingMetaKeyState`), Escape comes, the
+Slots dropdown). The Ring page has the ring's two (`CLICK QoLRingMouse:LeftButton` and
+`CLICK QoLRingStick:LeftButton`), named as in Key Bindings. Each row has two buttons from the
+game's own `KeyBindingFrameBindingButtonTemplate` and works like a row of the game's Key Bindings,
+with code of our own rather than the game's `KeybindListener` (a Blizzard frame: starting it writes
+its fields, which the rules above forbid): a click on a button shows a parentless frame of ours at
+`FULLSCREEN_DIALOG` strata with an `OnKeyDown`, which takes the keyboard until a key comes
+(modifiers alone wait for the rest, through `IsKeyPressIgnoredForBinding` and
+`CreateKeyChordStringUsingMetaKeyState`), Escape comes, the
 button is clicked again, the page hides, the row is greyed out or combat starts. The key is set as
 the game's `KeybindListener:ProcessInput` sets it: both old keys cleared, the new key taken from
 whatever had it (`SetBinding(key, nil, context)`), the keys bound again in their slots, in the
@@ -337,7 +339,7 @@ action's context (`C_KeyBindings.GetBindingContextForAction`). A right-click cle
 buttons are not listened for: the controller cursor needs A (a second press on the button stops
 waiting) and B, and the Steam Deck's back buttons send keyboard keys anyway; a paddle needs no key.
 Nothing calls `SaveBindings`: the settings panel saves the bindings when it closes, which fires
-`UPDATE_BINDINGS`, and the back buttons' override bindings follow from there through
+`UPDATE_BINDINGS`, and the back buttons' and the ring's override bindings follow from there through
 `ns.LaterOutsideWindows`, after the settings closed. So the only thing done while the settings are
 open is `SetBinding`, which the game's own Key Bindings page does there too. All frames (the
 buttons and the listener) are created when the pages are built at login, not while a controller

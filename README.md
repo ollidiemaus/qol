@@ -134,10 +134,12 @@ Eight actions on a ring, drawn in the bronze of Forever's minimap. Hold the
 ring's key, point at an action and let go to use it; let go in the middle and nothing happens. It
 works in combat, shows cooldowns and charges, and names the action you point at in the middle.
 
-- **Two keys:** Esc > Options > Key Bindings > AddOns > Quality of Life lists **Ring (aim with the
-  mouse)**, which opens the ring at the mouse cursor, and **Ring (aim with the right stick)**, which
-  opens it in the middle of the screen for a controller's right stick (the camera stays still while
-  you aim). Both open the same ring, also in Forever's controller interface.
+- **Two keys:** the Ring page lists them under **Keys**: **Ring (aim with the mouse)**, which opens
+  the ring at the mouse cursor, and **Ring (aim with the right stick)**, which opens it in the
+  middle of the screen for a controller's right stick (the camera stays still while you aim). Click
+  a box, then press the key; a right-click clears it. The same bindings are under Esc > Options >
+  Key Bindings > AddOns > Quality of Life. Both open the same ring, also in Forever's controller
+  interface.
 - **Filling it:** type `/qol ring` and drag spells, items or macros onto the ring, or off it to take
   them away. With a controller, click a slot to pick up or put down what's on it. The ring's actions
   are the first eight buttons of Action Bar 8 (or 6 or 7, picked under **Slots**), so what's there
