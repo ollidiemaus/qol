@@ -58,6 +58,11 @@ function BackButtons.Slot(bar, index)
     return (PAGES[bar] or PAGES[8]) * 12 - 12 + FIRST + index
 end
 
+-- Which of its bar's buttons a back button is (9 to 12).
+function BackButtons.BarButton(index)
+    return FIRST + index
+end
+
 -- Names in the Key Bindings window.
 BINDING_HEADER_QOL = L.ADDON_TITLE
 for index, info in ipairs(BUTTONS) do
@@ -177,7 +182,7 @@ local function onEnter(button)
         GameTooltip:SetAction(button.slot)
     else
         GameTooltip:SetText(L["BACK_BUTTON_" .. button.info.label])
-        GameTooltip:AddLine(L.SLOT_EMPTY:format(Options:Get(BAR_KEY), FIRST + button.index), 1, 1, 1, true)
+        GameTooltip:AddLine(L.SLOT_EMPTY:format(Options:Get(BAR_KEY), BackButtons.BarButton(button.index)), 1, 1, 1, true)
     end
     GameTooltip:Show()
 end

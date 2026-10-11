@@ -154,8 +154,11 @@ local function buildActionBars(page)
     page:Dropdown("left", "ringBar", L.RING_BAR, bars, L.RING_BAR_TIP, { indent = true, enabled = is("ring") })
 end
 
--- Controller page: the back buttons and the bar whose slots they use.
+-- Controller page: the back buttons and the bar whose slots they use, then their keys across the
+-- page (as in Key Bindings > AddOns), each named by its slot on that bar.
 local function buildController(page)
+    local BackButtons = ns.BackButtons
+    local enabled = is("controllerBackButtons")
     page:Header("left", L.SECTION_BACK_BUTTONS)
     page:Checkbox("left", "controllerBackButtons", L.BACK_BUTTONS, L.BACK_BUTTONS_TIP)
     local bars = {}
@@ -163,7 +166,18 @@ local function buildController(page)
         bars[#bars + 1] = { value = bar, label = L.BACK_BUTTONS_BAR_CHOICE:format(bar) }
     end
     page:Dropdown("left", "controllerBackButtonsBar", L.BACK_BUTTONS_BAR, bars, L.BACK_BUTTONS_BAR_TIP,
-        { indent = true, enabled = is("controllerBackButtons") })
+        { indent = true, enabled = enabled })
+
+    page:Header("wide", L.SECTION_BACK_BUTTON_KEYS)
+    for index, info in ipairs(BackButtons.BUTTONS) do
+        local function label()
+            return L.BACK_BUTTON_KEY:format(info.label, Options:Get("controllerBackButtonsBar"),
+                BackButtons.BarButton(index))
+        end
+        page:Binding("wide", BackButtons.Command(index), label, L.BACK_BUTTON_KEY_TIP,
+            { title = L["BACK_BUTTON_" .. info.label], enabled = enabled })
+    end
+    page:Note("wide", L.BINDING_HINT)
 end
 
 -- Viewport page: rows across the page, as the sliders need the room.

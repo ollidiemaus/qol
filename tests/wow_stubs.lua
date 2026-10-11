@@ -472,6 +472,10 @@ local function install()
             function frame:GetAttribute(attribute) return self.attributes[attribute] end
             function frame:RegisterForClicks(...) self.clicks = { ... } end
         end
+        -- The game's key binding button: SetSelected lights it while it waits for a key.
+        if template == "KeyBindingFrameBindingButtonTemplate" then
+            function frame:SetSelected(selected) self.selected = selected end
+        end
         if kind == "Cooldown" then
             function frame:SetCooldownFromDurationObject(duration) self.duration = duration end
             function frame:Clear() self.duration = nil end
@@ -658,6 +662,17 @@ local function install()
         if override then return override.command end
         return state.bindings[key] or ""
     end
+    G.SetBinding = function(key, command)
+        if state.combat then error("ADDON_ACTION_BLOCKED: binding changed in combat") end
+        state.bindings[key] = command
+        return true
+    end
+    G.GetBindingText = function(key) return key end
+    G.GetBindingName = function(command) return G["BINDING_NAME_" .. command] or command end
+    G.NOT_BOUND = "Not Bound"
+    local metaKeys = { LSHIFT = true, RSHIFT = true, LCTRL = true, RCTRL = true, LALT = true, RALT = true }
+    G.IsKeyPressIgnoredForBinding = function(key) return metaKeys[key] == true end
+    G.CreateKeyChordStringUsingMetaKeyState = function(key) return (state.shift and "SHIFT-" or "") .. key end
     local function override(owner, key, command)
         if state.combat then error("ADDON_ACTION_BLOCKED: binding changed in combat") end
         state.overrides[key] = command and { owner = owner, command = command } or nil
@@ -677,6 +692,7 @@ local function install()
     -- The controller interface's own bindings: state.gamepadBindings[key] = command.
     G.Enum.BindingContext = { None = 0, GamepadModeInGameCore = 1 }
     G.C_KeyBindings = {
+        GetBindingContextForAction = function() return G.Enum.BindingContext.None end,
         GetBindingByKey = function(key, context)
             if context == G.Enum.BindingContext.GamepadModeInGameCore then return state.gamepadBindings[key] end
             return state.bindings[key]
@@ -988,6 +1004,13 @@ function Stubs.RunTimers()
         Stubs.NextFrame()
         guard = guard + 1
         assert(guard < 100, "the addon keeps scheduling work, frame after frame")
+    end
+end
+
+-- A key typed on the keyboard, taken by every shown frame with an OnKeyDown.
+function Stubs.TypeKey(key)
+    for _, region in ipairs(state.regions) do
+        if region.scripts.OnKeyDown and region:IsVisible() then region.scripts.OnKeyDown(region, key) end
     end
 end
 

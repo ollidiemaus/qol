@@ -39,7 +39,8 @@ read_globals = {
     "SecureHandlerWrapScript",
     -- Key bindings
     "GetBindingKey", "GetBindingAction", "SetOverrideBinding", "SetOverrideBindingClick", "ClearOverrideBindings",
-    "IsModifiedClick",
+    "IsModifiedClick", "SetBinding", "GetBindingText", "GetBindingName", "IsKeyPressIgnoredForBinding",
+    "CreateKeyChordStringUsingMetaKeyState", "NOT_BOUND",
     -- Action slots
     "PickupAction", "PlaceAction",
     -- Strings and formatting

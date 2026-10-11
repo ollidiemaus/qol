@@ -25,6 +25,22 @@ local function control(ns, key)
     return nil
 end
 
+-- The key binding row of back button index on the Controller page.
+local function keyRow(ns, index)
+    for _, c in ipairs(pages(ns).controller.controls) do
+        if c.command == "CLICK QoLBackButton" .. index .. ":LeftButton" then return c end
+    end
+    error("no key binding row for back button " .. index)
+end
+
+-- The frame that takes the keyboard while a key binding button waits for a key.
+local function waitingForKey()
+    for _, region in ipairs(Stubs.state().regions) do
+        if region.scripts.OnKeyDown and region:IsShown() then return true end
+    end
+    return false
+end
+
 local function headers(page, column)
     local texts = {}
     for _, header in ipairs(page.headers) do
@@ -77,11 +93,26 @@ describe("settings pages", function()
         T.eq(api.categories[5].name, "Controller")
         T.eq(api.categories[5].parent, api.registered)
         T.same(headers(pages(ns).controller, "left"), { "Back buttons" })
+        T.same(headers(pages(ns).controller, "wide"), { "Keys" })
         local c = control(ns, "controllerBackButtonsBar")
         T.same(values(c), { 6, 7, 8 })
         T.falsy(c.enabled(), "the bar waits for the back buttons")
         ns.Options:Set("controllerBackButtons", true)
         T.truthy(c.enabled(), "enabled with the back buttons")
+    end)
+
+    it("names each back button's keys by its slot on the chosen bar", function()
+        local ns = start(nil, true)
+        local page = pages(ns).controller
+        show(page)
+        T.eq(keyRow(ns, 1).text.text, "L4: Action Bar 8, button 9")
+        T.eq(keyRow(ns, 4).text.text, "R5: Action Bar 8, button 12")
+        ns.Options:Set("controllerBackButtons", true)
+        ns.Options:Set("controllerBackButtonsBar", 6)
+        T.eq(keyRow(ns, 1).text.text, "L4: Action Bar 6, button 9")
+        T.eq(keyRow(ns, 3).text.text, "R4: Action Bar 6, button 11")
+        keyRow(ns, 1).row:RunScript("OnEnter")
+        T.eq(GameTooltip.lines[1].text, "Back button L4 (upper left)")
     end)
 
     it("puts the main page's sections in two columns", function()
@@ -106,8 +137,11 @@ describe("settings pages", function()
         local found = {}
         for _, page in pairs(pages(ns)) do
             for _, c in ipairs(page.controls) do
-                T.eq(found[c.key], nil, "one control for " .. c.key)
-                found[c.key] = true
+                -- Key binding rows have no option.
+                if c.key then
+                    T.eq(found[c.key], nil, "one control for " .. c.key)
+                    found[c.key] = true
+                end
             end
         end
         -- None in the game's own list: with the controller interface on, Forever stopped responding
@@ -203,6 +237,95 @@ describe("settings pages", function()
         c.widget:OpenMenu()
         T.eq(ns.Options:Get("controllerBackButtonsBar"), 7)
         T.eq(c.widget.menusOpened, nil, "no menu opened")
+    end)
+
+    it("binds a back button's key from the Controller page, as in Key Bindings", function()
+        local ns = start({ controllerBackButtons = true }, true)
+        local page = pages(ns).controller
+        show(page)
+        local row = keyRow(ns, 1)
+        local first, second = row.buttons[1], row.buttons[2]
+        T.eq(first.text, "|cff808080Not Bound|r")
+        T.eq(page.note.text, "Click a box, then press the key. A right-click clears a key.")
+
+        first:Click()
+        T.truthy(waitingForKey())
+        T.truthy(first.selected)
+        T.eq(page.note.text, "Press the key for Back button L4 (upper left). Escape or another click on the box cancels.")
+        -- A modifier alone waits for the key that goes with it.
+        Stubs.TypeKey("LSHIFT")
+        T.truthy(waitingForKey())
+        Stubs.TypeKey("F13")
+        T.falsy(waitingForKey())
+        T.falsy(first.selected)
+        T.eq(GetBindingAction("F13"), "CLICK QoLBackButton1:LeftButton")
+        T.eq(first.text, "F13")
+        T.eq(page.note.text, "F13 is now the key for Back button L4 (upper left).")
+
+        -- The second box adds a key, a key taken from another binding says so.
+        second:Click()
+        Stubs.TypeKey("1")
+        T.same({ GetBindingKey("CLICK QoLBackButton1:LeftButton") }, { "1", "F13" })
+        T.eq(GetBindingKey("ACTIONBUTTON1"), nil)
+        T.eq(page.note.text, "1 is now the key for Back button L4 (upper left), no longer for ACTIONBUTTON1.")
+
+        -- A right-click clears a key.
+        first:RunScript("OnClick", "RightButton")
+        T.same({ GetBindingKey("CLICK QoLBackButton1:LeftButton") }, { "F13" })
+
+        -- The back button presses with it once the settings have closed (closing them saves the bindings).
+        Stubs.Fire("UPDATE_BINDINGS")
+        Stubs.RunTimers()
+        T.eq(Stubs.state().overrides.F13.command, "CLICK QoLBackButton1:LeftButton")
+    end)
+
+    it("stops waiting for a key on Escape, a second click, leaving the page and combat", function()
+        local ns = start({ controllerBackButtons = true }, true)
+        local page = pages(ns).controller
+        show(page)
+        local button = keyRow(ns, 2).buttons[1]
+        local hint = "Click a box, then press the key. A right-click clears a key."
+
+        button:Click()
+        Stubs.TypeKey("ESCAPE")
+        T.falsy(waitingForKey())
+        T.eq(page.note.text, hint)
+        button:Click()
+        button:Click()
+        T.falsy(waitingForKey())
+        button:Click()
+        page.frame:RunScript("OnHide")
+        T.falsy(waitingForKey())
+        T.eq(page.note.text, hint)
+        T.eq(GetBindingKey("CLICK QoLBackButton2:LeftButton"), nil, "nothing bound")
+
+        show(page)
+        button:Click()
+        Stubs.Fire("PLAYER_REGEN_DISABLED")
+        Stubs.SetCombat(true)
+        T.falsy(waitingForKey())
+        T.eq(page.note.text, "Key bindings can't be changed in combat.")
+        button:Click()
+        T.falsy(waitingForKey(), "no waiting in combat")
+        button:RunScript("OnClick", "RightButton")
+        Stubs.SetCombat(false)
+    end)
+
+    it("greys out the back buttons' keys while the back buttons are off", function()
+        local ns = start(nil, true)
+        local page = pages(ns).controller
+        show(page)
+        local row = keyRow(ns, 1)
+        T.falsy(row.buttons[1]:IsEnabled())
+        T.falsy(row.buttons[2]:IsEnabled())
+        ns.Options:Set("controllerBackButtons", true)
+        T.truthy(row.buttons[1]:IsEnabled())
+        -- Turning them off while a box waits for a key stops waiting.
+        row.buttons[1]:Click()
+        ns.Options:Set("controllerBackButtons", false)
+        T.falsy(waitingForKey())
+        T.falsy(row.buttons[1].selected)
+        T.eq(page.note.text, "Click a box, then press the key. A right-click clears a key.")
     end)
 
     it("offers the inside of the map only to the tracking button and the day and night icon", function()

@@ -5,9 +5,9 @@ local Options = ns.Options
 -- A settings page of our own (a canvas in the Settings API) with the options in two columns, so a
 -- page fits without scrolling, or in rows across the whole page ("wide", for sliders). It looks
 -- like the game's own pages: the title with a Defaults button, section headers, and each option as
--- its name with a checkbox, a dropdown, a slider or a color swatch, from the game's own templates.
--- Every name uses the same font; an option that belongs to another one sits indented below it and
--- is greyed out while it can't apply.
+-- its name with a checkbox, a dropdown, a slider or a color swatch, from the game's own templates,
+-- or a key binding's two keys, as in the game's Key Bindings. Every name uses the same font; an
+-- option that belongs to another one sits indented below it and is greyed out while it can't apply.
 --
 -- Every control reads and writes ns.Options, and the page follows Options:Watch, so it also shows
 -- changes made elsewhere. All frames are ours: the settings panel only parents and shows the page,
@@ -28,9 +28,14 @@ local DROPDOWN_WIDTH = 160
 local SLIDER_WIDTH = 250
 local SLIDER_VALUE_ROOM = 50 -- right of a slider in a column, for its value
 local WIDE_CONTROL_X = -80   -- in a wide row the control starts there from the middle, as on the game's list
+local KEY_WIDTH, KEY_HEIGHT = 160, 22 -- a key binding's buttons, as in the game's Key Bindings
 local CONFIRM_SECONDS = 3
 -- The room the settings panel gives a page (its default size), checked by the tests.
 Page.MAX_HEIGHT = 600
+
+-- Key binding rows: the frame of ours that takes the keyboard while a button waits for a key, and
+-- { control, slot } of that button.
+local listener, waiting
 
 local function fontColor(color, r, g, b)
     if color and color.GetRGB then return { color:GetRGB() } end
@@ -84,6 +89,11 @@ function Page.New(title)
     -- The settings panel calls these: when it shows the page, and when the player resets all settings.
     function frame.OnRefresh() page:Refresh() end
     function frame.OnDefault() page:SetDefaults() end
+    -- Leaving the page (or closing the settings) stops waiting for a key.
+    frame:HookScript("OnHide", function()
+        if waiting and waiting.control.page == page then page:StopWaiting() end
+        page:Say(nil)
+    end)
     Options:Watch(function(key) return page.keys[key] ~= nil end, function()
         if frame:IsShown() then page:Refresh() end
     end)
@@ -137,6 +147,7 @@ function Page:Refresh()
     for _, control in ipairs(self.controls) do
         local enabled = control.enabled == nil or control.enabled() == true
         local color = enabled and normal or grey
+        control.text:SetText(control.name())
         control.text:SetTextColor(color[1], color[2], color[3])
         control.widget:SetEnabled(enabled)
         if control.kind == "checkbox" then
@@ -148,6 +159,8 @@ function Page:Refresh()
         elseif control.kind == "color" then
             control.widget:SetColorRGB(Page.ParseColor(Options:Get(control.key)))
             control.widget:SetAlpha(enabled and 1 or 0.5)
+        elseif control.kind == "binding" then
+            control.refreshKeys(enabled)
         else
             control.widget:GenerateMenu()
         end
@@ -208,8 +221,10 @@ function Page:Header(column, text, tooltip)
     self.headers[#self.headers + 1] = { column = column, text = text }
 end
 
--- A row with an option's name, a hover highlight and its tooltip. options: indent (below the option
--- it belongs to), enabled (a function; the control is greyed out while it returns false).
+-- A row with an option's name, a hover highlight and its tooltip. label: the name, or a function
+-- giving it (asked again on each refresh). options: indent (below the option it belongs to), enabled
+-- (a function; the control is greyed out while it returns false), title (the tooltip's, instead of
+-- the name). key: the option, nil for a key binding.
 local function optionRow(page, column, kind, key, label, tooltip, options)
     options = options or {}
     local row = newRow(page, column, ROW_HEIGHT)
@@ -218,17 +233,22 @@ local function optionRow(page, column, kind, key, label, tooltip, options)
     highlight:SetColorTexture(1, 1, 1, 0.1)
     highlight:Hide()
 
+    local function name()
+        if type(label) == "function" then return label() end
+        return label
+    end
     local text = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     text:SetPoint("LEFT", row, "LEFT", LABEL_X + (options.indent and INDENT or 0), 0)
     text:SetJustifyH("LEFT")
     text:SetWordWrap(false)
-    text:SetText(label)
+    text:SetText(name())
 
-    local control = { kind = kind, key = key, label = label, tooltip = tooltip, column = column, row = row,
-        text = text, indent = options.indent == true, enabled = options.enabled }
+    local control = { kind = kind, key = key, name = name, tooltip = tooltip, column = column, row = row,
+        text = text, indent = options.indent == true, enabled = options.enabled, page = page }
+    function control.title() return options.title or name() end
     function control.enter()
         highlight:Show()
-        showTooltip(row, label, tooltip)
+        showTooltip(row, control.title(), tooltip)
     end
     function control.leave()
         highlight:Hide()
@@ -238,7 +258,7 @@ local function optionRow(page, column, kind, key, label, tooltip, options)
     row:SetScript("OnEnter", control.enter)
     row:SetScript("OnLeave", control.leave)
     page.controls[#page.controls + 1] = control
-    page.keys[key] = true
+    if key then page.keys[key] = true end
     return control
 end
 
@@ -370,6 +390,171 @@ function Page:Color(column, key, label, tooltip, options)
     end)
     place(control, swatch)
     return control
+end
+
+------------------------------------------------------------------------------------------------
+-- Key bindings
+--
+-- A row works like one in the game's Key Bindings: two buttons with the command's keys. A click on
+-- one waits for a key (a click on it again, or Escape, stops waiting), a right-click clears it.
+-- While a button waits, a frame of ours above the settings takes the keyboard, as the game's own
+-- KeybindListener does. Gamepad buttons stay with the controller cursor, which needs them (in
+-- Forever's controller interface A on the button again stops waiting, B closes the settings); the
+-- Steam Deck's back buttons send keys anyway. A key is taken from whatever had it, as in Key
+-- Bindings, and the settings panel saves the bindings when it closes. Not in combat.
+
+-- The binding's context, as the game's Key Bindings pass it to GetBindingKey and SetBinding.
+local function contextFor(command)
+    local lookup = C_KeyBindings and C_KeyBindings.GetBindingContextForAction
+    if lookup then return lookup(command) end
+end
+
+-- Puts key in the command's first or second slot, keeping its other key, like the game's
+-- KeybindListener. Returns the command that had the key, if another one.
+local function bind(command, slot, key)
+    local context = contextFor(command)
+    local key1, key2 = GetBindingKey(command, nil, context)
+    local keys = { key1, key2 }
+    for index = 1, 2 do
+        if keys[index] then SetBinding(keys[index], nil, context) end
+    end
+    local previous = GetBindingAction(key, nil, context)
+    SetBinding(key, nil, context)
+    keys[slot] = key
+    for index = 1, 2 do
+        if keys[index] then SetBinding(keys[index], command, context) end
+    end
+    if previous ~= "" and previous ~= command then return previous end
+end
+
+local function unbind(command, slot)
+    local context = contextFor(command)
+    local key = select(slot, GetBindingKey(command, nil, context))
+    if key then SetBinding(key, nil, context) end
+end
+
+function Page:StopWaiting()
+    waiting = nil
+    listener:Hide()
+    self:Refresh()
+end
+
+local function keyPressed(key)
+    if not waiting then return end
+    local control, slot = waiting.control, waiting.slot
+    local page = control.page
+    if key == "ESCAPE" then
+        page:StopWaiting()
+        page:Say(nil)
+        return
+    end
+    -- A modifier alone: wait for the key that goes with it.
+    if IsKeyPressIgnoredForBinding(key) then return end
+    local chord = CreateKeyChordStringUsingMetaKeyState(key)
+    local previous = bind(control.command, slot, chord)
+    page:StopWaiting()
+    if previous then
+        page:Say(L.BINDING_MOVED:format(GetBindingText(chord), control.title(), GetBindingName(previous)))
+    else
+        page:Say(L.BINDING_SET:format(GetBindingText(chord), control.title()))
+    end
+end
+
+local function newListener()
+    local frame = CreateFrame("Frame")
+    frame:Hide()
+    frame:SetFrameStrata("FULLSCREEN_DIALOG")
+    frame:EnableKeyboard(true)
+    frame:SetScript("OnKeyDown", function(_, key) keyPressed(key) end)
+    ns.Events:On("PLAYER_REGEN_DISABLED", function()
+        if not waiting then return end
+        local page = waiting.control.page
+        page:StopWaiting()
+        page:Say(L.BINDING_COMBAT)
+    end)
+    return frame
+end
+
+local function bindingClicked(control, slot, mouseButton)
+    local page = control.page
+    if InCombatLockdown() then
+        page:Say(L.BINDING_COMBAT)
+        return
+    end
+    if mouseButton == "RightButton" then
+        unbind(control.command, slot)
+        page:StopWaiting()
+        page:Say(nil)
+    elseif mouseButton == "LeftButton" then
+        local again = waiting and waiting.control == control and waiting.slot == slot
+        if again then
+            page:StopWaiting()
+            page:Say(nil)
+            return
+        end
+        waiting = { control = control, slot = slot }
+        listener:Show()
+        page:Refresh()
+        page:Say(L.BINDING_WAIT:format(control.title()))
+    end
+end
+
+-- The key in a binding button, or "Not Bound" in grey, as the game's Key Bindings show them.
+local function showKey(button, key)
+    if key then
+        button:SetText(GetBindingText(key))
+        button:SetAlpha(1)
+    else
+        button:SetText("|cff808080" .. (NOT_BOUND or L.NOT_BOUND) .. "|r")
+        button:SetAlpha(0.8)
+    end
+end
+
+-- A binding command's two keys (command as Bindings.xml names it). label may be a function, for a
+-- name that follows an option; options.title then names the binding in its tooltip and the note.
+function Page:Binding(column, command, label, tooltip, options)
+    local control = optionRow(self, column, "binding", nil, label, tooltip, options)
+    control.command, control.buttons = command, {}
+    listener = listener or newListener()
+    for slot = 1, 2 do
+        local button = CreateFrame("Button", nil, control.row, "KeyBindingFrameBindingButtonTemplate")
+        button:SetSize(KEY_WIDTH, KEY_HEIGHT)
+        button:SetScript("OnClick", function(_, mouseButton) bindingClicked(control, slot, mouseButton) end)
+        button:SetScript("OnEnter", control.enter)
+        button:SetScript("OnLeave", control.leave)
+        control.buttons[slot] = button
+    end
+    control.buttons[2]:SetPoint("LEFT", control.buttons[1], "RIGHT", 0, 0)
+    function control.refreshKeys(enabled)
+        if not enabled and waiting and waiting.control == control then
+            waiting = nil
+            listener:Hide()
+            control.page:Say(nil)
+        end
+        local keys = { GetBindingKey(command, nil, contextFor(command)) }
+        for slot, button in ipairs(control.buttons) do
+            button:SetEnabled(enabled)
+            showKey(button, keys[slot])
+            button:SetSelected(waiting ~= nil and waiting.control == control and waiting.slot == slot)
+        end
+    end
+    place(control, control.buttons[1], KEY_WIDTH)
+    return control
+end
+
+-- A line of small text below the key bindings: hint while nothing happens, else what they report.
+function Page:Note(column, hint)
+    local row = newRow(self, column, ROW_HEIGHT)
+    local text = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    text:SetPoint("LEFT", row, "LEFT", LABEL_X, 0)
+    text:SetPoint("RIGHT", row, "RIGHT")
+    text:SetJustifyH("LEFT")
+    self.note, self.hint = text, hint
+    self:Say(nil)
+end
+
+function Page:Say(message)
+    if self.note then self.note:SetText(message or self.hint) end
 end
 
 -- The page's category in Options > AddOns, below parent when given.
