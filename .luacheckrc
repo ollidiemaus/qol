@@ -43,7 +43,8 @@ read_globals = {
     "CreateKeyChordStringUsingMetaKeyState", "NOT_BOUND",
     -- Action slots, and what goes on a ring
     "PickupAction", "PlaceAction", "ClearCursor", "PlayerHasToy", "GetMacroInfo", "GetMacroIndexByName",
-    "GetMacroSpell", "GetMacroItem", "PickupMacro",
+    "GetMacroSpell", "GetMacroItem", "PickupMacro", "GetNumMacros", "MAX_ACCOUNT_MACROS", "GetInventoryItemID",
+    "GetFlyoutInfo", "GetFlyoutSlotInfo", "SPELLBOOK_FONT_COLOR",
     -- Strings and formatting
     "GetLocale", "GetMoneyString", "SELL_PRICE",
     -- Units

@@ -3,10 +3,14 @@ local L = ns.L
 local Options = ns.Options
 local Ring = ns.Ring
 local Entries = ns.RingEntries
+local Picker = ns.RingPicker
 
--- The rings' editor (/qol ring, or the Ring page's button), out of combat: one ring at a time in the
--- middle of the screen, with arrows to the others and buttons for a new ring and for deleting this
--- one. The ring shows what this character can use, plus an empty slot to add one more:
+-- The rings' editor (/qol ring, or the Ring page's button), out of combat: a window in the game's
+-- portrait frame (bronze on Forever) with a spell book page in it, moved by its title bar. On the
+-- left one ring at a time, with arrows to the others in the page's top bar and buttons for a new
+-- ring and for deleting this one; on the right what this character has to put on it (RingPicker):
+-- click one to put it on the ring, or to take it off again. The ring shows what this character can
+-- use, plus an empty slot to add one more:
 -- - drag a spell, item, toy, mount or macro onto a slot to put it there (the ones from there on
 --   move one slot on), or onto the empty slot to add it at the end; one already on the ring moves;
 -- - drag one off, or click it, to take it off (onto the cursor); a right-click just removes it.
@@ -20,12 +24,24 @@ local Entries = ns.RingEntries
 local Editor = {}
 ns.RingEditor = Editor
 
+local WIDTH, HEIGHT = 860, 640
 -- Room for the biggest ring.
 local SIZE = math.ceil(2 * Ring.RIM * Ring.Scale(Ring.MAX)) + 16
+local LIST_WIDTH = 396
+-- Between the parchment's edge and the list (its tabs stand on that edge).
+local LIST_GAP = 10
 local KEY_WIDTH, KEY_HEIGHT = 160, 22
 local BUTTON_WIDTH, BUTTON_HEIGHT = 130, 22
-local ARROW_WIDTH = 28
 local CONFIRM_SECONDS = 3
+
+-- Forever's spell book page (a single one, the condensed spell book's): its dark top bar and the
+-- parchment's rims, as shares of its size (measured from interface/spellbook of client 1.60.1).
+-- Without it, the same bar over plain parchment.
+local PAGE = "spellbook-page-condensed-c60"
+local BAR = 0.081
+local RIMS = { top = 0.094, bottom = 0.026, left = 0.03, right = 0.026 }
+local BAR_COLOR = { 0.11, 0.08, 0.05 }
+local PAPER, PAPER_EDGE = { 0.94, 0.88, 0.74 }, { 0.78, 0.68, 0.50 }
 
 local editor, listener
 -- The ring shown, by its place in the list; the box waiting for a key ("mouse" or "stick").
@@ -91,6 +107,7 @@ local function render()
         showKey(box, ring()[aim])
         box:SetSelected(waiting == aim)
     end
+    Picker.Draw()
 end
 
 -- The rings changed: show it, and let the ring follow.
@@ -136,6 +153,35 @@ local function take(position, toCursor)
     if not index then return end
     local entry = table.remove(ring().entries, index)
     if toCursor then Entries.Pickup(entry) end
+    changed()
+    say(nil)
+end
+
+-- Whether an entry is on the ring shown.
+local function onRing(entry)
+    for _, other in ipairs(ring().entries) do
+        if Entries.Same(other, entry) then return true end
+    end
+    return false
+end
+
+-- Puts an entry from the list on the ring, at the end, or takes it off when it's there already.
+local function toggle(entry)
+    if InCombatLockdown() or not entry then return end
+    local list = ring().entries
+    for index, other in ipairs(list) do
+        if Entries.Same(other, entry) then
+            table.remove(list, index)
+            changed()
+            say(nil)
+            return
+        end
+    end
+    if #editor.indexes >= Ring.MAX then
+        say(L.RING_FULL:format(Ring.MAX))
+        return
+    end
+    list[#list + 1] = entry
     changed()
     say(nil)
 end
@@ -307,32 +353,82 @@ end
 -- Editor
 ---------------------------------------------------------------------------------------------------
 
-local function newButton(text, width, onClick)
-    local button = CreateFrame("Button", nil, editor, "UIPanelButtonTemplate")
+local function newButton(parent, text, width, onClick)
+    local button = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
     button:SetSize(width, BUTTON_HEIGHT)
     button:SetText(text)
     button:SetScript("OnClick", onClick)
     return button
 end
 
-local function create()
-    editor = CreateFrame("Frame", "QoLRingEditor", UIParent)
-    editor:SetSize(SIZE, SIZE)
+local function fill(parent, color, layer)
+    local texture = parent:CreateTexture(nil, layer)
+    texture:SetColorTexture(color[1], color[2], color[3])
+    return texture
+end
+
+-- The spell book page inside the frame's border. Returns it and where its parchment lies, in pixels
+-- from its edges (bar: the top bar's height).
+local function newPage()
+    local page = CreateFrame("Frame", nil, editor)
+    page:SetPoint("TOPLEFT", 2, -21)
+    page:SetPoint("BOTTOMRIGHT", -2, 2)
+    local width, height = WIDTH - 4, HEIGHT - 23
+    local edges = {
+        bar = math.floor(height * BAR + 0.5),
+        top = math.floor(height * RIMS.top + 0.5), bottom = math.floor(height * RIMS.bottom + 0.5),
+        left = math.floor(width * RIMS.left + 0.5), right = math.floor(width * RIMS.right + 0.5),
+    }
+    local art = page:CreateTexture(nil, "BACKGROUND")
+    art:SetAllPoints()
+    if not Picker.Atlas(art, PAGE) then
+        art:SetColorTexture(PAPER_EDGE[1], PAPER_EDGE[2], PAPER_EDGE[3])
+        local paper = fill(page, PAPER, "BORDER")
+        paper:SetPoint("TOPLEFT", edges.left, -edges.top)
+        paper:SetPoint("BOTTOMRIGHT", -edges.right, edges.bottom)
+        local bar = fill(page, BAR_COLOR, "BORDER")
+        bar:SetPoint("TOPLEFT")
+        bar:SetPoint("TOPRIGHT")
+        bar:SetHeight(edges.bar)
+    end
+    return page, edges
+end
+
+-- The window: the game's portrait frame, with the addon's icon and a title bar to move it by. Its
+-- close button hides it directly (the template's would go through the game's panel code).
+local function newWindow()
+    editor = CreateFrame("Frame", "QoLRingEditor", UIParent, "PortraitFrameTemplate")
+    editor:SetSize(WIDTH, HEIGHT)
     editor:SetPoint("CENTER")
     editor:SetFrameStrata("DIALOG")
+    editor:SetToplevel(true)
+    editor:SetMovable(true)
+    editor:SetClampedToScreen(true)
+    editor:SetDontSavePosition(true)
     editor:EnableMouse(true)
     editor:Hide()
-    -- Escape closes it, and the other keys go on to the game. Not through UISpecialFrames: the game
-    -- closes those whenever one of its windows opens in the middle of the screen, the spell book too.
-    editor:EnableKeyboard(true)
-    editor:SetScript("OnKeyDown", function(_, key)
-        if key ~= "ESCAPE" or InCombatLockdown() or gameWindowOpen() then return end
-        editor:SetPropagateKeyboardInput(false)
-        editor:Hide()
-    end)
-    editor:SetScript("OnHide", stopWaiting)
+    editor:SetTitle(L.RING_EDITOR)
+    editor:SetPortraitToAsset("Interface\\AddOns\\QoL\\Media\\Icon")
+    editor.CloseButton:SetScript("OnClick", function() editor:Hide() end)
+    -- A drag, not a mouse down: the controller's cursor would stop on a frame with OnMouseDown.
+    local titleBar = CreateFrame("Frame", nil, editor)
+    titleBar:SetPoint("TOPLEFT", 58, 0)
+    titleBar:SetPoint("TOPRIGHT", -24, 0)
+    titleBar:SetHeight(21)
+    titleBar:EnableMouse(true)
+    titleBar:RegisterForDrag("LeftButton")
+    titleBar:SetScript("OnDragStart", function() editor:StartMoving() end)
+    titleBar:SetScript("OnDragStop", function() editor:StopMovingOrSizing() end)
+end
 
-    editor.art = Ring.NewArt(editor, "Button")
+-- The ring, which one it is with arrows to the others in the bar above it, and the actions on it.
+-- All of it on the page: the page is a child of the window, so it covers the window's own text,
+-- and the window's other children at its frame level have their layers drawn among its parchment.
+local function newRingColumn(page, edges)
+    local holder = CreateFrame("Frame", nil, page)
+    holder:SetSize(SIZE, SIZE)
+    holder:SetPoint("TOPLEFT", edges.left, -(edges.top + 4))
+    editor.art = Ring.NewArt(holder, "Button")
     for _, slot in ipairs(editor.art.slots) do
         slot:RegisterForClicks("LeftButtonUp", "RightButtonUp")
         slot:RegisterForDrag("LeftButton")
@@ -345,61 +441,99 @@ local function create()
         slot.plus:SetPoint("CENTER")
         slot.plus:SetText("+")
     end
-    local close = CreateFrame("Button", nil, editor, "UIPanelCloseButton")
-    close:SetPoint("TOPRIGHT")
 
-    -- Above the ring: which one it is, with arrows to the others.
-    editor.title = editor:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    editor.title:SetPoint("BOTTOM", editor, "TOP", 0, 8)
-    editor.previous = newButton("<", ARROW_WIDTH, function() switch(-1) end)
-    editor.previous:SetPoint("RIGHT", editor.title, "LEFT", -12, 0)
-    editor.next = newButton(">", ARROW_WIDTH, function() switch(1) end)
-    editor.next:SetPoint("LEFT", editor.title, "RIGHT", 12, 0)
+    editor.title = page:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    editor.title:SetPoint("CENTER", page, "TOPLEFT", edges.left + SIZE / 2, -edges.bar / 2)
+    editor.previous = Picker.PageButton(page, "Prev", function() switch(-1) end)
+    editor.previous:SetPoint("RIGHT", editor.title, "LEFT", -8, 0)
+    editor.next = Picker.PageButton(page, "Next", function() switch(1) end)
+    editor.next:SetPoint("LEFT", editor.title, "RIGHT", 8, 0)
 
     -- Below it: its keys, a row each with the name left of the box.
     editor.keys = {}
-    local above = editor
+    local above
     for _, aim in ipairs(Ring.AIMS) do
-        local box = CreateFrame("Button", nil, editor, "KeyBindingFrameBindingButtonTemplate")
+        local box = CreateFrame("Button", nil, page, "KeyBindingFrameBindingButtonTemplate")
         box.aim = aim
         box:SetSize(KEY_WIDTH, KEY_HEIGHT)
         box:RegisterForClicks("LeftButtonUp", "RightButtonUp")
         box:SetScript("OnClick", onKeyClick)
-        if above == editor then
-            box:SetPoint("TOPLEFT", editor, "BOTTOM", 8, -4)
-        else
+        if above then
             box:SetPoint("TOPLEFT", above, "BOTTOMLEFT", 0, -4)
+        else
+            box:SetPoint("TOPLEFT", holder, "BOTTOM", 8, 0)
         end
-        local label = editor:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        local label = page:CreateFontString(nil, "OVERLAY", "GameFontNormal")
         label:SetPoint("RIGHT", box, "LEFT", -8, 0)
         label:SetText(aim == "mouse" and L.RING_AIM_MOUSE or L.RING_AIM_STICK)
+        Picker.Ink(label)
         editor.keys[aim] = box
         above = box
     end
 
-    local new = newButton(L.RING_NEW, BUTTON_WIDTH, onNew)
-    new:SetPoint("TOPRIGHT", editor, "BOTTOM", -4, -(2 * KEY_HEIGHT + 20))
-    local delete = newButton(L.RING_DELETE, BUTTON_WIDTH, onDelete)
-    delete:SetPoint("TOPLEFT", editor, "BOTTOM", 4, -(2 * KEY_HEIGHT + 20))
+    local below = 2 * KEY_HEIGHT + 12
+    local new = newButton(page, L.RING_NEW, BUTTON_WIDTH, onNew)
+    new:SetPoint("TOPRIGHT", holder, "BOTTOM", -4, -below)
+    local delete = newButton(page, L.RING_DELETE, BUTTON_WIDTH, onDelete)
+    delete:SetPoint("TOPLEFT", holder, "BOTTOM", 4, -below)
 
-    editor.note = editor:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    editor.note:SetPoint("TOP", editor, "BOTTOM", 0, -(2 * KEY_HEIGHT + BUTTON_HEIGHT + 30))
-    editor.note:SetWidth(SIZE + 60)
-    editor.others = editor:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    editor.note = page:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    editor.note:SetPoint("TOP", holder, "BOTTOM", 0, -(below + BUTTON_HEIGHT + 8))
+    editor.note:SetWidth(SIZE - 16)
+    Picker.Ink(editor.note)
+    editor.others = page:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     editor.others:SetPoint("TOP", editor.note, "BOTTOM", 0, -4)
-    editor.others:SetWidth(SIZE + 60)
+    editor.others:SetWidth(SIZE - 16)
+    Picker.Ink(editor.others, true)
+end
 
-    -- Nothing changes in combat, and the ring's actions may change while it's open.
+-- What this character has, to put on the ring, on the right of the page.
+local function newListColumn(page, edges)
+    local column = CreateFrame("Frame", nil, page)
+    column:SetSize(LIST_WIDTH, HEIGHT - 23 - edges.top - edges.bottom - 2 * LIST_GAP)
+    column:SetPoint("TOPRIGHT", -(edges.right + 12), -(edges.top + LIST_GAP))
+    Picker.Create(column, LIST_GAP, { has = onRing, toggle = toggle })
+    editor.list = column
+end
+
+local function create()
+    newWindow()
+    -- Escape closes it, and the other keys go on to the game. Not through UISpecialFrames: the game
+    -- closes those whenever one of its windows opens in the middle of the screen, the spell book too.
+    editor:EnableKeyboard(true)
+    editor:SetScript("OnKeyDown", function(_, key)
+        if key ~= "ESCAPE" or InCombatLockdown() or gameWindowOpen() then return end
+        editor:SetPropagateKeyboardInput(false)
+        editor:Hide()
+    end)
+    editor:SetScript("OnHide", function()
+        stopWaiting()
+        Picker.Hide()
+    end)
+    local page, edges = newPage()
+    editor.page = page
+    newRingColumn(page, edges)
+    newListColumn(page, edges)
+
+    -- Nothing changes in combat, and the ring's actions, and what this character has, may change
+    -- while it's open.
     ns.Events:On("PLAYER_REGEN_DISABLED", function() editor:Hide() end)
-    local function refresh()
+    local function later(key, fn)
         if editor:IsShown() and not InCombatLockdown() then
-            ns.Later("ringEditor", function()
-                if editor:IsShown() then render() end
+            ns.Later(key, function()
+                if editor:IsShown() then fn() end
             end)
         end
     end
-    for _, event in ipairs(Ring.KNOWN_EVENTS) do ns.Events:On(event, refresh) end
-    for _, event in ipairs(Ring.REFRESH_EVENTS) do ns.Events:On(event, refresh) end
+    for _, event in ipairs(Ring.KNOWN_EVENTS) do
+        ns.Events:On(event, function()
+            later("ringEditor", render)
+            later("ringEditorList", Picker.Fill)
+        end)
+    end
+    for _, event in ipairs(Ring.REFRESH_EVENTS) do
+        ns.Events:On(event, function() later("ringEditor", render) end)
+    end
 end
 
 function Editor:Open()
@@ -411,6 +545,7 @@ function Editor:Open()
     -- Restricted in combat; the editor is only open out of it.
     editor:SetPropagateKeyboardInput(true)
     render()
+    Picker.Fill()
     say(nil)
     editor:Show()
 end

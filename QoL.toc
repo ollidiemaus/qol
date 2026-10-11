@@ -52,6 +52,7 @@ Features\BarPaging.lua
 Features\BackButtons.lua
 Features\RingEntries.lua
 Features\Ring.lua
+Features\RingPicker.lua
 Features\RingEditor.lua
 Features\ReloadCommand.lua
 
