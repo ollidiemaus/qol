@@ -9,7 +9,7 @@ Notes for working on the addon. What it does for players is in the [README](../R
 | `Core/` | Namespace and printing (`Init`), the event frame (`Events`), saved options with defaults and change watchers (`Options`), deferred changes (`Later`), the hidden holder for hidden frames (`Hider`), what the back buttons and the ring share (`Buttons`: an action slot's look, override bindings), `/qol` (`Slash`) and startup (`Lifecycle`) |
 | `Data/` | Static game data: `MapPins` (dungeon entrances, docks, portals; how it was made is at the top of the file) |
 | `Features/` | One file per feature: `Merchant`, `Quests`, `Tooltips`, `HideFrames` (also the chat buttons), `CombatLog`, `ChatClassColors`, `CombinedBagSort`, `ClassHealthBars`, `Minimap` (shape, positions, class colors and font sizes around the minimap), `MapPins`, `Viewport`, `ActionBars`, `ButtonBorders`, `BarPaging`, `BackButtons` (the controller back buttons, Forever only), `Ring`, `ReloadCommand` |
-| `UI/` | `SettingsPage.lua`, our own settings page (two columns, or rows across the page); `Settings.lua`, the pages under Options > AddOns built with it |
+| `UI/` | `SettingsPage.lua`, our own settings page (two columns, or rows across the page, and key binding rows); `Settings.lua`, the pages under Options > AddOns built with it |
 | `Locales/` | English strings, German overrides |
 | `Media/` | `Icon.tga`, the addon list icon (the TOC's `IconTexture`, 128×128, 32-bit), and `Icon.svg`, its source (not packaged); `Zeppelin.tga`, `Tram.tga`, `MinimapSquareBorder.tga` and the ring's `Ring.tga`, `RingSelected.tga` and `RingSlot.tga` (see below) |
 | `tests/` | Specs run in plain Lua against `tests/wow_stubs.lua` |
@@ -287,6 +287,28 @@ never touched.
 The Controller page is registered only when `GamepadMainActionBarFrame` exists (Forever); on retail
 there's nothing for it to change.
 
+The Controller page also has the back buttons' key bindings (`Page:Binding`, rows across the page):
+the same `CLICK QoLBackButtonN:LeftButton` commands as Key Bindings > AddOns, each row named by its
+slot on the chosen bar (the label is a function, asked again on each refresh, so it follows the
+Slots dropdown). Each row has two buttons from the game's own `KeyBindingFrameBindingButtonTemplate`
+and works like a row of the game's Key Bindings, with code of our own rather than the game's
+`KeybindListener` (a Blizzard frame: starting it writes its fields, which the rules above
+forbid): a click on a button shows a parentless frame of ours at `FULLSCREEN_DIALOG` strata with an
+`OnKeyDown`, which takes the keyboard until a key comes (modifiers alone wait for the rest, through
+`IsKeyPressIgnoredForBinding` and `CreateKeyChordStringUsingMetaKeyState`), Escape comes, the
+button is clicked again, the page hides, the row is greyed out or combat starts. The key is set as
+the game's `KeybindListener:ProcessInput` sets it: both old keys cleared, the new key taken from
+whatever had it (`SetBinding(key, nil, context)`), the keys bound again in their slots, in the
+action's context (`C_KeyBindings.GetBindingContextForAction`). A right-click clears a slot. Gamepad
+buttons are not listened for: the controller cursor needs A (a second press on the button stops
+waiting) and B, and the Steam Deck's back buttons send keyboard keys anyway; a paddle needs no key.
+Nothing calls `SaveBindings`: the settings panel saves the bindings when it closes, which fires
+`UPDATE_BINDINGS`, and the back buttons' override bindings follow from there through
+`ns.LaterOutsideWindows`, after the settings closed. So the only thing done while the settings are
+open is `SetBinding`, which the game's own Key Bindings page does there too. All frames (the
+buttons and the listener) are created when the pages are built at login, not while a controller
+window is open, so SmartNavigation's `CreateFrame` hook rebuilds no window for them.
+
 ## Tests and lint
 
 Tests and lint need only Lua 5.1 (what WoW runs); newer Lua works for the tests too.
@@ -320,9 +342,9 @@ Things only the real client can confirm:
 - The viewport margins line up with the world at your resolution and UI scale, and stay with Alt+Z.
 - With Forever's controller interface on (Options > Controller), the viewport and the Action Bars
   options on: open the settings, look at every page (Viewport included: step a margin with its
-  arrows, open the color picker; on the Controller page turn on the back buttons and press the bar
-  dropdown a few times, with A and with the touch screen), go to another page, and close the
-  settings with B and with Esc. The dropdowns step through their choices without opening a list.
+  arrows, open the color picker; on the Controller page turn on the back buttons, press the bar
+  dropdown a few times, with A and with the touch screen, and bind a back button's key: A on a key
+  box, then the back button), go to another page, and close the settings with B and with Esc. The dropdowns step through their choices without opening a list.
   The game must not freeze, and the viewport stays. The back buttons (and the ring, with its bar
   changed) take the new bar only after the settings and the game menu are closed, within a second. The game's own controller action
   bars show; the flips and borders come back after switching to keyboard and mouse.

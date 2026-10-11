@@ -154,12 +154,15 @@ or paddles, like the Steam Deck: L4 and L5 left of the d-pad buttons, R4 and R5 
 buttons. They work on their own, without holding a trigger, and show icons, cooldowns and charges
 like the bar's other buttons.
 
-- **Binding them:** Esc > Options > Key Bindings > AddOns > Quality of Life lists the four buttons.
-  Bind each to the key your back button sends. On the Steam Deck the game doesn't see the back
-  buttons by themselves: give them keys in Steam Input first (keys you don't use otherwise, like F13
-  to F16, or numpad keys), then bind those here. A controller whose paddles the game sees directly
-  needs nothing: a back button with no key of its own uses its paddle, as long as nothing else is
-  bound to it.
+- **Binding them:** the Controller page lists the four buttons under **Keys**, each named by its slot
+  on the bar you picked (L4: Action Bar 8, button 9, and so on), with two key boxes like the game's
+  Key Bindings: click a box, then press the back button (or the key). Escape or another click on
+  the box cancels, a right-click clears a key. The same bindings are under Esc > Options > Key
+  Bindings > AddOns > Quality of Life. On the Steam Deck the game doesn't see the back buttons by
+  themselves: give them keys in Steam Input first (keys you don't use otherwise, like F13 to F16,
+  or numpad keys), then bind those here. A controller whose paddles the game sees directly needs
+  nothing: a back button with no key of its own uses its paddle, as long as nothing else is bound
+  to it.
 - **Putting spells on them:** drag a spell onto one, as onto any action button (out of combat; with
   the action bars locked, hold Shift). Each back button is one of the last four buttons of Action Bar
   8 (or 6 or 7, picked under **Slots**), so what you put there shows on the back button too. Pick a
