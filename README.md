@@ -43,6 +43,9 @@ Hold **Shift** while talking to an NPC to do everything yourself that time.
 - **Hide the bag bar:** the backpack and bag slots. Bag key bindings keep working.
 - **Show the sort button on combined bags:** adds the sort (clean up) button next to the search box
   of the combined bag.
+- **Start combined bags at the top left:** the combined bag shows the backpack's first slot in the
+  top left corner and your last bag at the bottom, so sorting puts the hearthstone top left instead
+  of bottom right. With keyboard and mouse only; the controller interface already does this.
 
 ### Chat
 
