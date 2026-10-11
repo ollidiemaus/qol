@@ -517,11 +517,6 @@ local function install()
     -- Forever's manager of the windows that have the controller: Stubs.SetControllerWindow sets the
     -- one it has.
     G.GamepadMode = { FrameControlsManager = { GetActiveFrame = function() return state.controllerWindow end } }
-    -- The game's settings and game menu, closed.
-    G.SettingsPanel = newRegion("Frame", G.UIParent)
-    G.SettingsPanel:Hide()
-    G.GameMenuFrame = newRegion("Frame", G.UIParent)
-    G.GameMenuFrame:Hide()
     G.C_EventUtils = { IsEventValid = function(event) return not state.unknownEvents[event] end }
     G.EventRegistry = {
         RegisterCallback = function(_, event, fn, owner)

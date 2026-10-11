@@ -186,9 +186,12 @@ arrows next to a viewport margin move it one pixel per press. In Forever's contr
 dropdown doesn't open its list: each press (or click) switches it to the next choice, as the game
 froze when the settings closed after one of its lists had been opened there. Changes apply right away; the few that
 touch protected parts of the interface (action bars, key bindings, viewport, system bar) wait until
-you leave combat. In Forever's controller interface every change waits until the settings and the
-game menu are closed (a second at most after that): the game froze on closing the settings after
-changes had been applied while they were open.
+you leave combat. In Forever's controller interface the back buttons and the ring also wait until
+the settings and the game menu are closed (a second at most).
+
+Forever's beta can freeze when you close its settings after changing something with the controller
+interface on, after its own options too (Invert X Axis did it). Change settings with the controller
+interface off to be safe.
 
 Quality of Life is available in English and German.
 

@@ -32,8 +32,7 @@ Forever beta. So:
   the game fire an event asking for it again can't spin inside one frame and freeze the game
   (nothing says when the game runs a `C_Timer.After(0)` started from a timer callback). A change the
   game allows in combat (the health bar colors) passes `true` as a third argument and runs in combat
-  too. In Forever's controller interface it also waits while the game's settings or game menu are
-  open (see Settings pages below), so a change made in the settings applies once they're closed.
+  too.
 - The back buttons and the ring go through `ns.LaterOutsideWindows(key, fn)` instead: out of combat
   too, and in Forever's controller interface also away from the game's windows that have the
   controller (see Settings pages below).
@@ -108,8 +107,7 @@ action bar editor hides its own tooltip (`GamepadActionBarEditFrameMixin`): the 
 and hides as the game wants, only unseen. It first went to the hidden holder like the frames above,
 where it never showed at all; on the Steam Deck, pointing at a buff then showed no tooltip either,
 and after the game menu closed the cursor jumped to the middle as usual but stayed in sight
-(2026-10, cause not found in the UI code, gone or not with the alpha: to be confirmed). Turned on in
-the settings, the change happens after they close (see Settings pages). The game has a
+(2026-10, cause not found in the UI code, gone or not with the alpha: to be confirmed). The game has a
 setting for it too, `GamepadShowAutoAuraTooltip`, which isn't in its options. It's left alone:
 `CVarCallbackRegistry` caches it and the buff frame reads it on every aura change, and a
 `SetCVar` from our code would fire `CVAR_UPDATE`, whose handler writes that cache without the
@@ -295,19 +293,15 @@ before found none either, so they run at least half a second after the window cl
 OnUpdate, whatever order the game closes it in. Without the controller interface they run on the
 next frame as before. With this the back buttons froze it no more (2026-10, Steam Deck).
 
-Then turning on the buff tooltips' option and closing the settings froze it again, every time
-(2026-10, Steam Deck). That change was a single `SetParent` of `BuffFrameTooltip`, made through
-`ns.Later` while the settings were open. Nothing in the game's code that closing the settings runs
-(`SettingsPanelMixin:OnHide` with `SaveBindings`, `HideUIPanel` and `GamepadFrameControlsManager:FrameHidden`,
-`ToggleGameMenu` with the Escape handlers, SmartNavigation's panel stack) was found to depend on that
-tooltip, and the line that hangs is still unknown. What all four freezes share is a change made while
-the settings had the controller. So in the controller interface `ns.Later` holds every request while
-`ns.ControllerSettingsOpen()` (`SettingsPanel` or `GameMenuFrame` shown, as closing the settings
-goes back to the game menu) and lets it go the way `ns.LaterOutsideWindows` does, half a second at
-least after no window has the controller. Other windows don't hold it: the map pins update with the
-map open, the health bars with the bags open. Easy Controller does the same: its window waits until
-the settings and the game menu are closed. In the settings themselves only our own page frames
-change, plus `SetBinding` from the key boxes, as on the game's Key Bindings page.
+Then it froze again after the buff tooltips' option was turned on (a `SetParent` of
+`BuffFrameTooltip` while the settings were open). Holding every `ns.Later` request while the settings
+or the game menu were open didn't stop it: toggling that checkbox off and on and closing froze it
+with nothing of ours changed, and so did toggling the game's own Invert X Axis checkbox on its
+Controller page (2026-10-11, Steam Deck). So the freeze is most likely Forever's own, on closing the
+settings after a change in the controller interface, and no rule of ours prevents it; the hold was
+dropped again, as it only took away live changes. The workarounds above (canvas pages, dropdowns
+that step, the back buttons waiting for windows) stay since they cost nothing, but they probably
+weren't the cause either. Not yet tried: the same with all addons off, which would rule out taint.
 
 The world map pins are buttons on a frame of our own on the map's canvas, not pins from the map's
 pools. Their places are zone coordinates in percent (as `/way` reads them), from Forever's tables;
@@ -459,15 +453,11 @@ Things only the real client can confirm:
   - `/qol ring`: dragging on, off and between slots, clicking with the controller cursor, the
     tooltip, Escape and the close button, closing when combat starts.
   - No "tainted by" error in combat after using it.
-- Hide new buff tooltips (Options > Controller), in the controller interface: turning it on and
-  closing the settings (and the game menu) must not freeze the game, then gaining or refreshing a
+- Hide new buff tooltips (Options > Controller), in the controller interface: gaining or refreshing a
   buff (a food buff, a flask, a party member's buff) and a debuff shows no tooltip; selecting a buff
   through the buff frame (the radial's Buffs) and pointing at one with the mouse still do. After the
   game menu closes, the cursor goes to the middle and hides. Turning it off brings the pop-ups back
   without a reload. Right-clicking a buff away in combat still works.
-- In the controller interface, change an option on each page (main, Viewport, Action Bars, Minimap,
-  Controller), close the settings and the game menu: no freeze, and each change shows up about a
-  second after the game menu closed.
 
 ### Cutscenes and the viewport
 
