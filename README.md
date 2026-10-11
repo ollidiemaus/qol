@@ -7,7 +7,8 @@ viewport, action bars that grow the other way, square action buttons without bor
 health bars, junk selling and repairs at merchants, quests accepted and turned in for you, IDs and
 vendor prices in tooltips, a square minimap, dungeon entrances, boats and zeppelins on the world
 map, a ring of actions for mouse and controller, back buttons for the Steam Deck on Forever's
-controller bar, and switches to hide UI pieces you never click. Everything is set up in the game's own options window. There's no minimap button.
+controller bar, and switches to hide UI pieces you never click (also the buff tooltips that pop up
+in the controller interface). Everything is set up in the game's own options window. There's no minimap button.
 
 It's made for WoW Forever and also runs on retail (Midnight).
 
@@ -147,7 +148,9 @@ Turn it on under Action Bars > **Ring**.
 
 ### Controller
 
-Only on WoW Forever, for its controller interface.
+Only on WoW Forever, and only while its controller interface is on: with keyboard and mouse the
+back buttons hide and their keys press nothing, and the buff tooltips show as usual. Turning the
+controller interface on or off switches them right away.
 
 **Back buttons:** four more buttons on the controller action bar for controllers with back buttons
 or paddles, like the Steam Deck: L4 and L5 left of the d-pad buttons, R4 and R5 right of the face
@@ -171,6 +174,10 @@ like the bar's other buttons.
 The buttons show and hide with the controller action bar, follow it when you move or scale it in
 Edit Mode, and keep their place in its compact layout.
 
+**Buff tooltips:** the controller interface shows the tooltip of every buff or debuff you gain or
+refresh for a few seconds. **Hide new buff tooltips** keeps those away; a buff you select or point
+at still shows its tooltip.
+
 ## Settings
 
 **Esc > Options > AddOns > Quality of Life**, or type `/qol` (or `/qualityoflife`). The Viewport,
@@ -182,8 +189,11 @@ dropdown doesn't open its list: each press (or click) switches it to the next ch
 froze when the settings closed after one of its lists had been opened there. Changes apply right away; the few that
 touch protected parts of the interface (action bars, key bindings, viewport, system bar) wait until
 you leave combat. In Forever's controller interface the back buttons and the ring also wait until
-the settings and the game menu are closed (a second at most): the game sometimes froze on closing
-the settings after they had been changed there.
+the settings and the game menu are closed (a second at most).
+
+Forever's beta can freeze when you close its settings after changing something with the controller
+interface on, after its own options too (Invert X Axis did it). Change settings with the controller
+interface off to be safe.
 
 Quality of Life is available in English and German.
 

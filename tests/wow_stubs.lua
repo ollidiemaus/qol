@@ -593,6 +593,8 @@ local function install()
     G.ChatFrameToggleVoiceDeafenButton = newRegion("Button", G.UIParent)
     G.ChatFrameToggleVoiceMuteButton = newRegion("Button", G.UIParent)
     G.TextToSpeechButtonFrame = newRegion("Frame", G.UIParent)
+    -- The tooltip the controller interface shows for new buffs.
+    G.BuffFrameTooltip = newRegion("Frame", G.UIParent)
 
     -- The minimap as Forever builds it: the cluster with its header bar and zone text button, the
     -- container with the map, the round frame and the coordinates under the map.

@@ -38,6 +38,7 @@ Features\Merchant.lua
 Features\Quests.lua
 Features\Tooltips.lua
 Features\HideFrames.lua
+Features\BuffTooltips.lua
 Features\CombatLog.lua
 Features\ChatClassColors.lua
 Features\CombinedBagSort.lua

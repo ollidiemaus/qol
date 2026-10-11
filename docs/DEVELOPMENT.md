@@ -8,7 +8,7 @@ Notes for working on the addon. What it does for players is in the [README](../R
 |---|---|
 | `Core/` | Namespace and printing (`Init`), the event frame (`Events`), saved options with defaults and change watchers (`Options`), deferred changes (`Later`), the hidden holder for hidden frames (`Hider`), what the back buttons and the ring share (`Buttons`: an action slot's look, override bindings), `/qol` (`Slash`) and startup (`Lifecycle`) |
 | `Data/` | Static game data: `MapPins` (dungeon entrances, docks, portals; how it was made is at the top of the file) |
-| `Features/` | One file per feature: `Merchant`, `Quests`, `Tooltips`, `HideFrames` (also the chat buttons), `CombatLog`, `ChatClassColors`, `CombinedBagSort`, `ClassHealthBars`, `Minimap` (shape, positions, class colors and font sizes around the minimap), `MapPins`, `Viewport`, `ActionBars`, `ButtonBorders`, `BarPaging`, `BackButtons` (the controller back buttons, Forever only), `Ring`, `ReloadCommand` |
+| `Features/` | One file per feature: `Merchant`, `Quests`, `Tooltips`, `HideFrames` (also the chat buttons), `BuffTooltips` (the controller interface's tooltips for new buffs), `CombatLog`, `ChatClassColors`, `CombinedBagSort`, `ClassHealthBars`, `Minimap` (shape, positions, class colors and font sizes around the minimap), `MapPins`, `Viewport`, `ActionBars`, `ButtonBorders`, `BarPaging`, `BackButtons` (the controller back buttons, Forever only), `Ring`, `ReloadCommand` |
 | `UI/` | `SettingsPage.lua`, our own settings page (two columns, or rows across the page, and key binding rows); `Settings.lua`, the pages under Options > AddOns built with it |
 | `Locales/` | English strings, German overrides |
 | `Media/` | `Icon.tga`, the addon list icon (the TOC's `IconTexture`, 128×128, 32-bit), and `Icon.svg`, its source (not packaged); `Zeppelin.tga`, `Tram.tga`, `MinimapSquareBorder.tga` and the ring's `Ring.tga`, `RingSelected.tga` and `RingSlot.tga` (see below) |
@@ -61,6 +61,13 @@ Forever beta. So:
   (`SaveBindings` in `SettingsPanel`'s OnHide), which fires `UPDATE_BINDINGS`; in controller mode
   the bar features ignore it, and the back buttons and the ring update only once the settings have
   been closed for half a second (`ns.LaterOutsideWindows`).
+- The other way round, the controller features (the back buttons and the buff tooltips, the
+  Controller page) act only while the controller interface is on: with keyboard and mouse the back
+  buttons hide, lose their `type` attribute (so their keys, saved bindings included, press nothing)
+  and their override bindings, and the buff tooltip keeps its alpha. The game switches interfaces
+  without a reload and fires `INPUT_DEVICE_INTERFACE_TRANSITION`; `ns.OnControllerUIChange` runs
+  the features' updates on it (the bar paging overrides go and come back with it too). The ring
+  isn't one of them: it has a mouse key and a stick key and works in both.
 
 The action bar flip copies the grid math of `ActionBarMixin:UpdateGridLayout` and applies it to the
 bar's button containers only. Blizzard stores a new `oldGridSettings` table each time it lays a bar
@@ -97,6 +104,22 @@ The combat log can't be closed in the default UI, and the dock's own functions (
 and its tab is scaled down to 0.001: the dock gives every tab its parent, width and anchor again on
 each update (each tab hangs on the right edge of the one before), but never its scale, so the tab
 takes no room and the next tab closes the gap.
+
+The tooltips Forever's controller interface shows for new buffs come from the buff frame
+(`BuffFrameMixin:Update` queues each aura gained or refreshed, `ShowNextAuraForTooltip` shows it
+for 4 seconds) in `BuffFrameTooltip`, which nothing else uses: pointing at a buff or selecting it
+with the controller shows `GameTooltip`. So the option makes `BuffFrameTooltip` transparent
+(`SetAlpha(0)`, again from an `OnShow` hook each time it shows), the way the game's controller
+action bar editor hides its own tooltip (`GamepadActionBarEditFrameMixin`): the tooltip still shows
+and hides as the game wants, only unseen. It first went to the hidden holder like the frames above,
+where it never showed at all; on the Steam Deck, pointing at a buff then showed no tooltip either,
+and after the game menu closed the cursor jumped to the middle as usual but stayed in sight
+(2026-10, cause not found in the UI code; both gone with the alpha, confirmed 2026-10-11). The game has a
+setting for it too, `GamepadShowAutoAuraTooltip`, which isn't in its options. It's left alone:
+`CVarCallbackRegistry` caches it and the buff frame reads it on every aura change, and a
+`SetCVar` from our code would fire `CVAR_UPDATE`, whose handler writes that cache without the
+`issecure()` check its reads have. If that handler runs with our taint, every later read would taint
+the buff frame's update, where right-clicking a buff calls `CancelUnitBuff`.
 
 Names in chat in class color are the game's own setting: `chatClassColorOverride` "0" means always
 (see `ChatFrameUtil.ShouldColorChatByClass`). Turning the option off gives the setting its default.
@@ -275,7 +298,17 @@ open (they aren't priority overrides, so the window's own win); only changes are
 `C_Timer.After` check every half second lets them go once one check found no window and the one
 before found none either, so they run at least half a second after the window closed, from our
 OnUpdate, whatever order the game closes it in. Without the controller interface they run on the
-next frame as before. With this the freeze hasn't come back (2026-10, Steam Deck).
+next frame as before. With this the back buttons froze it no more (2026-10, Steam Deck).
+
+Then it froze again after the buff tooltips' option was turned on (a `SetParent` of
+`BuffFrameTooltip` while the settings were open). Holding every `ns.Later` request while the settings
+or the game menu were open didn't stop it: toggling that checkbox off and on and closing froze it
+with nothing of ours changed, and so did toggling the game's own Invert X Axis checkbox on its
+Controller page (2026-10-11, Steam Deck). So the freeze is most likely Forever's own, on closing the
+settings after a change in the controller interface, and no rule of ours prevents it; the hold was
+dropped again, as it only took away live changes. The workarounds above (canvas pages, dropdowns
+that step, the back buttons waiting for windows) stay since they cost nothing, but they probably
+weren't the cause either. Not yet tried: the same with all addons off, which would rule out taint.
 
 The world map pins are buttons on a frame of our own on the map's canvas, not pins from the map's
 pools. Their places are zone coordinates in percent (as `/way` reads them), from Forever's tables;
@@ -409,6 +442,8 @@ Things only the real client can confirm:
   - The buttons sit clear of the d-pad and face buttons in the normal and the compact layout, at
     several Edit Mode sizes, and the labels don't overlap anything; they hide with the bar (keyboard
     and mouse, vehicles, cutscenes).
+  - Switching to keyboard and mouse without a reload: the keys press nothing (try F13 to F16 on
+    the keyboard's bars); switching back, they press the buttons again.
   - Icons, counts, cooldowns (also in combat: the cooldown call on our Cooldown), out-of-mana and
     unusable colors, the auto attack rim; dragging a spell on and off, with the action bars locked
     (Shift) and unlocked; the tooltip.
@@ -427,6 +462,12 @@ Things only the real client can confirm:
   - `/qol ring`: dragging on, off and between slots, clicking with the controller cursor, the
     tooltip, Escape and the close button, closing when combat starts.
   - No "tainted by" error in combat after using it.
+- Hide new buff tooltips (Options > Controller), in the controller interface: gaining or refreshing a
+  buff (a food buff, a flask, a party member's buff) and a debuff shows no tooltip; selecting a buff
+  through the buff frame (the radial's Buffs) and pointing at one with the mouse still do. After the
+  game menu closes, the cursor goes to the middle and hides (these three confirmed 2026-10-11, Steam
+  Deck). Turning it off brings the pop-ups back without a reload. Right-clicking a buff away in
+  combat still works.
 
 ### Cutscenes and the viewport
 

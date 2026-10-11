@@ -72,6 +72,7 @@ local DEFAULTS = {
 
     controllerBackButtons = false,
     controllerBackButtonsBar = 8, -- Action Bar 6, 7 or 8, whose buttons 9 to 12 the back buttons use
+    hideBuffTooltips = false,
 }
 -- Action bar flips ("flipVertical_MainActionBar" and so on) default to false and are added by
 -- ActionBars.lua through Options:AddDefault, next to the list of bars they belong to.

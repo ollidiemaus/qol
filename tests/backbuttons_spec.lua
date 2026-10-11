@@ -2,18 +2,33 @@ local T = require("testlib")
 local Stubs = require("wow_stubs")
 local describe, it = T.describe, T.it
 
--- Forever, with its controller action bar.
+-- The next frames, and the check for the controller's windows that lets the buttons' changes go.
+local function settle()
+    Stubs.RunTimers()
+    Stubs.AdvanceTime()
+end
+
+-- Forever, with its controller action bar and the controller interface on.
 local function start(savedOptions, setup)
     local ns = Stubs.LoadAddon()
     local bar = Stubs.NewGamepadBar()
+    Stubs.SetControllerUI(true)
     if setup then setup(Stubs.state()) end
     Stubs.Login(savedOptions)
+    Stubs.AdvanceTime()
     return ns, bar
 end
 
 local function set(ns, key, value)
     ns.Options:Set(key, value)
-    Stubs.RunTimers()
+    settle()
+end
+
+-- The player turns the controller interface on or off.
+local function switch(on)
+    Stubs.SetControllerUI(on)
+    Stubs.Fire("INPUT_DEVICE_INTERFACE_TRANSITION")
+    settle()
 end
 
 local function override(key)
@@ -102,12 +117,37 @@ describe("controller back buttons", function()
         set(ns, "controllerBackButtons", true)
         T.eq(QoLBackButton1, nil)
         Stubs.SetCombat(false)
-        Stubs.RunTimers()
+        settle()
         T.eq(QoLBackButton1:GetAttribute("type"), "action")
     end)
 
+    it("do nothing with keyboard and mouse", function()
+        start(on(), function(state)
+            Stubs.SetControllerUI(false)
+            state.bindings["F13"] = "CLICK QoLBackButton1:LeftButton"
+        end)
+        T.eq(QoLBackButton1, nil)
+        T.eq(next(Stubs.state().overrides), nil)
+        -- Logged in like that, they appear once the controller interface is turned on.
+        switch(true)
+        T.eq(QoLBackButton1:GetAttribute("type"), "action")
+        T.eq(override("F13"), "CLICK QoLBackButton1:LeftButton")
+    end)
+
+    it("hide and stop acting when the controller interface is turned off, and come back", function()
+        start(on(), function(state) state.bindings["F13"] = "CLICK QoLBackButton1:LeftButton" end)
+        switch(false)
+        T.falsy(QoLBackButton1:IsVisible(), "hidden")
+        T.eq(QoLBackButton1:GetAttribute("type"), nil)
+        T.eq(next(Stubs.state().overrides), nil)
+        switch(true)
+        T.truthy(QoLBackButton1:IsVisible(), "shown")
+        T.eq(QoLBackButton1:GetAttribute("type"), "action")
+        T.eq(override("F13"), "CLICK QoLBackButton1:LeftButton")
+    end)
+
     describe("bindings", function()
-        it("press a button with the keys bound to it, in the controller interface too", function()
+        it("press a button with the keys bound to it", function()
             start(on(), function(state)
                 state.bindings["F13"] = "CLICK QoLBackButton1:LeftButton"
                 state.bindings["F14"] = "CLICK QoLBackButton3:LeftButton"
@@ -134,13 +174,13 @@ describe("controller back buttons", function()
             start(on())
             Stubs.state().bindings["F15"] = "CLICK QoLBackButton2:LeftButton"
             Stubs.Fire("UPDATE_BINDINGS")
-            Stubs.RunTimers()
+            settle()
             T.eq(override("F15"), "CLICK QoLBackButton2:LeftButton")
             T.eq(override("PADPADDLE4"), nil)
             -- Setting our overrides fires UPDATE_BINDINGS again; nothing changes then.
             local calls = Stubs.state().overrideCalls
             Stubs.Fire("UPDATE_BINDINGS")
-            Stubs.RunTimers()
+            settle()
             T.eq(Stubs.state().overrideCalls, calls)
         end)
 
@@ -152,13 +192,12 @@ describe("controller back buttons", function()
             Stubs.RunTimers()
             T.eq(override("F16"), nil)
             Stubs.SetCombat(false)
-            Stubs.RunTimers()
+            settle()
             T.eq(override("F16"), "CLICK QoLBackButton4:LeftButton")
         end)
 
         it("wait in the controller interface until the settings are closed, with the bar change", function()
             local ns = start(on())
-            Stubs.SetControllerUI(true)
             local settings = CreateFrame("Frame", nil, UIParent)
             settings:Show()
             Stubs.SetControllerWindow(settings)

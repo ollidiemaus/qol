@@ -45,6 +45,18 @@ describe("bar paging keys", function()
         T.eq(Stubs.state().overrideCalls, 0)
     end)
 
+    it("go when the controller interface is turned on, and come back when it's turned off", function()
+        start({ disableBarPaging = true })
+        Stubs.SetControllerUI(true)
+        Stubs.Fire("INPUT_DEVICE_INTERFACE_TRANSITION")
+        Stubs.RunTimers()
+        T.eq(next(Stubs.state().overrides), nil)
+        Stubs.SetControllerUI(false)
+        Stubs.Fire("INPUT_DEVICE_INTERFACE_TRANSITION")
+        Stubs.RunTimers()
+        T.eq(override("SHIFT-1"), "ACTIONBUTTON1")
+    end)
+
     it("follow a bar addon that took over the plain key", function()
         Stubs.LoadAddon()
         Stubs.state().overrides["1"] = { owner = "BarAddon", command = "CLICK BarAddonButton1:Keybind" }
