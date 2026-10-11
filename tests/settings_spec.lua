@@ -70,24 +70,25 @@ local function radio(c, text)
 end
 
 describe("settings pages", function()
-    it("registers one AddOns category with Viewport, Action Bars, Ring and Minimap below it, all our own pages", function()
-        local _, api = start()
+    it("registers the information page as the AddOns category, with a page for each part of the game below it", function()
+        local ns, api = start()
         local main = api.registered
         T.eq(main.name, "Quality of Life")
-        T.truthy(main.frame, "the main page is our own")
-        T.eq(#api.categories, 5)
-        for index, name in ipairs({ "Viewport", "Action Bars", "Ring", "Minimap" }) do
-            T.eq(api.categories[index + 1].name, name)
-            T.eq(api.categories[index + 1].parent, main)
-            T.truthy(api.categories[index + 1].frame)
+        T.eq(main.frame, ns.SettingsPanel.info.frame, "the information page is our own")
+        local names = {}
+        for index = 2, #api.categories do
+            T.eq(api.categories[index].parent, main)
+            T.truthy(api.categories[index].frame)
+            names[#names + 1] = api.categories[index].name
         end
+        T.same(names, { "Automation", "Interface", "Chat", "Action Bars", "Minimap", "World map", "Viewport", "Ring" })
     end)
 
     it("adds a Controller page on Forever, for the controller action bar", function()
         local ns, api = start(nil, true)
-        T.eq(#api.categories, 6)
-        T.eq(api.categories[6].name, "Controller")
-        T.eq(api.categories[6].parent, api.registered)
+        T.eq(#api.categories, 10)
+        T.eq(api.categories[10].name, "Controller")
+        T.eq(api.categories[10].parent, api.registered)
         T.same(headers(pages(ns).controller, "left"), { "Back buttons" })
         T.same(headers(pages(ns).controller, "right"), { "Buffs" })
         T.same(headers(pages(ns).controller, "wide"), { "Keys" })
@@ -113,11 +114,14 @@ describe("settings pages", function()
         T.eq(GameTooltip.lines[1].text, "Back button L4 (upper left)")
     end)
 
-    it("puts the main page's sections in two columns", function()
+    it("puts each page's sections in two columns", function()
         local ns = start()
-        local main = pages(ns).main
-        T.same(headers(main, "left"), { "Merchant", "Quests", "Tooltips", "Interface", "Chat commands" })
-        T.same(headers(main, "right"), { "Chat", "World map", "Health bars in class color" })
+        T.same(headers(pages(ns).automation, "left"), { "Merchant" })
+        T.same(headers(pages(ns).automation, "right"), { "Quests" })
+        T.same(headers(pages(ns).interface, "left"), { "Hide", "Combined bags" })
+        T.same(headers(pages(ns).interface, "right"), { "Tooltips", "Health bars in class color" })
+        T.same(headers(pages(ns).chat, "left"), { "Chat window" })
+        T.same(headers(pages(ns).chat, "right"), { "Chat commands" })
         local minimap = pages(ns).minimap
         T.same(headers(minimap, "left"), { "Shape", "Zone text", "Coordinates" })
         T.same(headers(minimap, "right"), { "Clock", "Buttons" })
@@ -392,14 +396,24 @@ describe("settings pages", function()
         T.eq(control(ns, "minimapDayNight"), nil)
     end)
 
-    it("leaves out the world map options on a client without Forever's maps", function()
-        local ns = Stubs.LoadAddon()
-        Stubs.InstallSettings()
+    it("puts what's marked on the world map in rows across its page", function()
+        local ns = start()
+        local page = pages(ns).worldMap
+        T.eq(#page.controls, 2)
+        T.eq(page.controls[1].key, "mapDungeons")
+        T.eq(page.controls[2].key, "mapTravel")
+        T.eq(page.controls[1].column, "wide")
+    end)
+
+    it("leaves out the world map page on a client without Forever's maps", function()
+        local ns, api = Stubs.LoadAddon(), Stubs.InstallSettings()
         Stubs.state().maps = {}
         Stubs.Login()
-        T.same(headers(pages(ns).main, "right"), { "Chat", "Health bars in class color" })
+        T.eq(pages(ns).worldMap, nil)
         T.eq(control(ns, "mapDungeons"), nil)
-        T.eq(control(ns, "mapTravel"), nil)
+        for _, category in ipairs(api.categories) do
+            T.truthy(category.name ~= "World map", "no World map page")
+        end
     end)
 
     it("lists every bar in both columns of the action bar page, side by side, then paging and buttons", function()
@@ -468,7 +482,7 @@ describe("settings pages", function()
 
     it("resets with the game's reset of all settings", function()
         local ns = start({ hideMicroMenu = true })
-        pages(ns).main.frame:OnDefault()
+        pages(ns).interface.frame:OnDefault()
         T.eq(ns.Options:Get("hideMicroMenu"), false)
     end)
 
@@ -546,6 +560,50 @@ describe("settings pages", function()
         local r, g, b = Page.ParseColor("ff336699")
         T.same({ r, g, b }, { 0x33 / 255, 0x66 / 255, 0x99 / 255 })
         T.same({ Page.ParseColor("nope") }, { 0, 0, 0 })
+    end)
+
+    it("shows the chat commands and the other addons on the information page", function()
+        local ns = start()
+        local info = ns.SettingsPanel.info
+        T.same(info.sections, { "Commands", "More addons by ollidiemaus" })
+        local commands = {}
+        for _, entry in ipairs(info.entries) do commands[#commands + 1] = entry.label:GetText() end
+        T.same(commands, { "/qol", "/qol ring", "/rl" })
+        T.eq(info.defaultsButton, nil, "nothing on it to reset")
+    end)
+
+    it("marks the other addons that are loaded as installed, each time the information page shows", function()
+        local ns = start()
+        local info = ns.SettingsPanel.info
+        Stubs.state().loadedAddons.AutoPotion = true
+        info.frame:Show()
+        T.truthy(info.installed.AutoPotion:IsShown())
+        T.falsy(info.installed.AutoSetup:IsShown())
+        T.falsy(info.installed.Wayscribe:IsShown())
+        info.frame:Hide()
+        Stubs.state().loadedAddons.Wayscribe = true
+        info.frame:Show()
+        T.truthy(info.installed.Wayscribe:IsShown())
+    end)
+
+    it("keeps an addon's link as it is when typed into, ready to be copied", function()
+        local ns = start()
+        local box = ns.SettingsPanel.info.links.AutoPotion
+        T.eq(box:GetText(), "https://www.curseforge.com/wow/addons/auto-potion")
+        box:SetText("https://example.com")
+        box:RunScript("OnTextChanged", true)
+        T.eq(box:GetText(), "https://www.curseforge.com/wow/addons/auto-potion")
+    end)
+
+    it("shows the version of a packaged addon next to the title, none in a checkout", function()
+        local ns = Stubs.LoadAddon({ version = "1.4.0" })
+        Stubs.InstallSettings()
+        Stubs.Login()
+        T.eq(ns.SettingsPanel.info.versionText:GetText(), "Version 1.4.0")
+        ns = Stubs.LoadAddon({ version = "@project-version@" })
+        Stubs.InstallSettings()
+        Stubs.Login()
+        T.eq(ns.SettingsPanel.info.versionText, nil)
     end)
 
     it("opens from the slash command", function()

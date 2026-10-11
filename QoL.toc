@@ -58,6 +58,7 @@ Features\RingEditor.lua
 Features\ReloadCommand.lua
 
 UI\SettingsPage.lua
+UI\InfoPage.lua
 UI\Settings.lua
 
 Core\Slash.lua

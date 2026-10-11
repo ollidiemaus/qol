@@ -203,10 +203,16 @@ at still shows its tooltip.
 
 ## Settings
 
-**Esc > Options > AddOns > Quality of Life**, or type `/qol` (or `/qualityoflife`). The Viewport,
-Action Bars, Ring and Minimap pages (and on Forever the Controller page) are listed below Quality of
-Life. Every page fits without scrolling;
-the main, Action Bars and Minimap pages show their options in two columns. With a controller, the
+**Esc > Options > AddOns > Quality of Life**, or type `/qol` (or `/qualityoflife`). That opens an
+information page with the chat commands and the author's other addons, with links to copy. The options are on the pages listed below it:
+
+- **Automation:** junk selling, repairs, quests.
+- **Interface:** hiding the system and bag bars, the combined bags, tooltips, health bars in class color.
+- **Chat:** the chat buttons, the combat log, names in class color, `/rl`.
+- **Action Bars**, **Minimap**, **World map** (on Forever), **Viewport**, **Ring** and **Controller**
+  (on Forever).
+
+Every options page fits without scrolling, most in two columns. With a controller, the
 arrows next to a viewport margin move it one pixel per press. In Forever's controller interface a
 dropdown doesn't open its list: each press (or click) switches it to the next choice, as the game
 froze when the settings closed after one of its lists had been opened there. Changes apply right away; the few that

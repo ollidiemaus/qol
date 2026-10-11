@@ -5,9 +5,9 @@ local describe, it = T.describe, T.it
 -- Strings that are the same in both languages.
 local SAME = {
     ADDON_TITLE = true, SECTION_TOOLTIPS = true, PIXELS = true, CATEGORY_VIEWPORT = true,
-    SECTION_QUESTS = true, SECTION_CHAT = true, CATEGORY_MINIMAP = true, MINIMAP_POSITION = true, BORDER_BRONZE = true,
+    SECTION_QUESTS = true, CATEGORY_CHAT = true, CATEGORY_MINIMAP = true, MINIMAP_POSITION = true, BORDER_BRONZE = true,
     MAP_DUNGEON = true, MAP_ZEPPELIN = true, MAP_PORTAL = true, MAP_PLACE_IN_ZONE = true, CATEGORY_CONTROLLER = true,
-    CATEGORY_RING = true, SECTION_BUFFS = true,
+    CATEGORY_RING = true, SECTION_BUFFS = true, INFO_VERSION = true,
 }
 
 local function strings(locale)
