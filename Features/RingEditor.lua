@@ -353,8 +353,8 @@ end
 -- Editor
 ---------------------------------------------------------------------------------------------------
 
-local function newButton(text, width, onClick)
-    local button = CreateFrame("Button", nil, editor, "UIPanelButtonTemplate")
+local function newButton(parent, text, width, onClick)
+    local button = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
     button:SetSize(width, BUTTON_HEIGHT)
     button:SetText(text)
     button:SetScript("OnClick", onClick)
@@ -422,6 +422,8 @@ local function newWindow()
 end
 
 -- The ring, which one it is with arrows to the others in the bar above it, and the actions on it.
+-- All of it on the page: the page is a child of the window, so it covers the window's own text,
+-- and the window's other children at its frame level have their layers drawn among its parchment.
 local function newRingColumn(page, edges)
     local holder = CreateFrame("Frame", nil, page)
     holder:SetSize(SIZE, SIZE)
@@ -451,7 +453,7 @@ local function newRingColumn(page, edges)
     editor.keys = {}
     local above
     for _, aim in ipairs(Ring.AIMS) do
-        local box = CreateFrame("Button", nil, editor, "KeyBindingFrameBindingButtonTemplate")
+        local box = CreateFrame("Button", nil, page, "KeyBindingFrameBindingButtonTemplate")
         box.aim = aim
         box:SetSize(KEY_WIDTH, KEY_HEIGHT)
         box:RegisterForClicks("LeftButtonUp", "RightButtonUp")
@@ -461,7 +463,7 @@ local function newRingColumn(page, edges)
         else
             box:SetPoint("TOPLEFT", holder, "BOTTOM", 8, 0)
         end
-        local label = editor:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        local label = page:CreateFontString(nil, "OVERLAY", "GameFontNormal")
         label:SetPoint("RIGHT", box, "LEFT", -8, 0)
         label:SetText(aim == "mouse" and L.RING_AIM_MOUSE or L.RING_AIM_STICK)
         Picker.Ink(label)
@@ -470,16 +472,16 @@ local function newRingColumn(page, edges)
     end
 
     local below = 2 * KEY_HEIGHT + 12
-    local new = newButton(L.RING_NEW, BUTTON_WIDTH, onNew)
+    local new = newButton(page, L.RING_NEW, BUTTON_WIDTH, onNew)
     new:SetPoint("TOPRIGHT", holder, "BOTTOM", -4, -below)
-    local delete = newButton(L.RING_DELETE, BUTTON_WIDTH, onDelete)
+    local delete = newButton(page, L.RING_DELETE, BUTTON_WIDTH, onDelete)
     delete:SetPoint("TOPLEFT", holder, "BOTTOM", 4, -below)
 
-    editor.note = editor:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    editor.note = page:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     editor.note:SetPoint("TOP", holder, "BOTTOM", 0, -(below + BUTTON_HEIGHT + 8))
     editor.note:SetWidth(SIZE - 16)
     Picker.Ink(editor.note)
-    editor.others = editor:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    editor.others = page:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     editor.others:SetPoint("TOP", editor.note, "BOTTOM", 0, -4)
     editor.others:SetWidth(SIZE - 16)
     Picker.Ink(editor.others, true)
@@ -509,6 +511,7 @@ local function create()
         Picker.Hide()
     end)
     local page, edges = newPage()
+    editor.page = page
     newRingColumn(page, edges)
     newListColumn(page, edges)
 

@@ -512,8 +512,8 @@ describe("ring", function()
             T.falsy(QoLRingEditor.next:IsEnabled(), "no next ring")
             local new, delete
             for _, region in ipairs(Stubs.state().regions) do
-                if region.parent == QoLRingEditor and region.text == "New ring" then new = region end
-                if region.parent == QoLRingEditor and region.text == "Delete ring" then delete = region end
+                if region.parent == QoLRingEditor.page and region.text == "New ring" then new = region end
+                if region.parent == QoLRingEditor.page and region.text == "Delete ring" then delete = region end
             end
             new:Click()
             T.eq(#QoLDB.rings, 2)
@@ -677,6 +677,25 @@ describe("ring", function()
             T.falsy(QoLRingEditor.moving, "put down")
             QoLRingEditor.CloseButton:Click()
             T.falsy(QoLRingEditor:IsShown(), "closed")
+        end)
+
+        it("puts its keys' names, buttons and texts on the page, which would cover the window's own", function()
+            start()
+            SlashCmdList.QOL("ring")
+            local page = QoLRingEditor.page
+            T.truthy(page, "a page")
+            local texts = { ["Aim with the mouse"] = 0, ["Aim with the right stick"] = 0, ["New ring"] = 0,
+                ["Delete ring"] = 0 }
+            for _, region in ipairs(Stubs.state().regions) do
+                if region.text and texts[region.text] then
+                    T.eq(region.parent, page, region.text .. " on the page")
+                    texts[region.text] = texts[region.text] + 1
+                end
+            end
+            for text, found in pairs(texts) do T.eq(found, 1, text) end
+            for _, box in pairs(QoLRingEditor.keys) do T.eq(box:GetParent(), page, "key box on the page") end
+            T.eq(QoLRingEditor.note:GetParent(), page, "the note")
+            T.eq(QoLRingEditor.others:GetParent(), page, "the count of other characters' entries")
         end)
 
         describe("list", function()

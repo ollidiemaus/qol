@@ -263,7 +263,11 @@ the cursor and how to read it off the cursor. A character's ring is the entries 
   (bottom), 3% (left) and 2.6% (right), measured from the texture of client 1.60.1. Without that
   atlas (retail) it's a dark bar over plain parchment colors. Text on the paper is ink:
   `SPELLBOOK_FONT_COLOR` (or Forever 1.60.1's value) without the font's shadow
-  (`RingPicker.Ink`).
+  (`RingPicker.Ink`). Everything on the parchment is the page's (its font strings and child
+  frames): the page is a child of the window, so it draws over the window's own regions, and the
+  window's other children at the page's frame level have their layers drawn among the page's. Built
+  on the window, the keys' names and the note vanished under the parchment and the buttons kept
+  only their text (seen in game, 2026-10).
 - The editor's left half holds the ring (the same art, with Buttons for slots, plus one empty slot
   to add to), with "Ring 1 of 3" and the spell book's page buttons (`UI-SpellbookIcon-*Page-*`) in
   the page's top bar. It shows the ring as this character sees it and maps a slot to its place in the saved
