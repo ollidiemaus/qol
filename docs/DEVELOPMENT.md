@@ -9,9 +9,9 @@ Notes for working on the addon. What it does for players is in the [README](../R
 | `Core/` | Namespace and printing (`Init`), the event frame (`Events`), saved options with defaults and change watchers (`Options`), deferred changes (`Later`), the hidden holder for hidden frames (`Hider`), what the back buttons and the rings share (`Buttons`: an action slot's look, override bindings), `/qol` (`Slash`) and startup (`Lifecycle`) |
 | `Data/` | Static game data: `MapPins` (dungeon entrances, docks, portals; how it was made is at the top of the file) |
 | `Features/` | One file per feature: `Merchant`, `Quests`, `Tooltips`, `HideFrames` (also the chat buttons), `BuffTooltips` (the controller interface's tooltips for new buffs), `CombatLog`, `ChatClassColors`, `CombinedBagSort`, `CombinedBagLayout`, `ClassHealthBars`, `Minimap` (shape, positions, class colors and font sizes around the minimap), `MapPins`, `Viewport`, `ActionBars`, `ButtonBorders`, `BarPaging`, `BackButtons` (the controller back buttons, Forever only), `RingEntries` (what can go on a ring, and what a character has of it), `Ring`, `RingPicker` (the editor's list), `RingEditor` (`/qol ring`), `ReloadCommand` |
-| `UI/` | `SettingsPage.lua`, our own settings page (two columns, or rows across the page, and key binding rows); `Settings.lua`, the pages under Options > AddOns built with it |
+| `UI/` | `SettingsPage.lua`, our own settings page (two columns, or rows across the page, and key binding rows); `InfoPage.lua`, the information page that `/qol` opens; `Settings.lua`, the pages under Options > AddOns built with them, in the list's order |
 | `Locales/` | English strings, German overrides |
-| `Media/` | `Icon.tga`, the addon list icon (the TOC's `IconTexture`, 128×128, 32-bit), and `Icon.svg`, its source (not packaged); `Zeppelin.tga`, `Tram.tga`, `MinimapSquareBorder.tga` and the rings' `Ring.tga`, `RingSpoke.tga`, `RingLit1.tga` to `RingLit12.tga` and `RingSlot.tga` (see below) |
+| `Media/` | `Icon.tga`, the addon list icon (the TOC's `IconTexture`, 128×128, 32-bit), and `Icon.svg`, its source (not packaged); `Zeppelin.tga`, `Tram.tga`, `MinimapSquareBorder.tga` and the rings' `Ring.tga`, `RingSpoke.tga`, `RingLit1.tga` to `RingLit12.tga` and `RingSlot.tga` (see below); `AutoPotion.tga`, `AutoSetup.tga` and `Wayscribe.tga`, copies of the other addons' icons for the information page |
 | `tests/` | Specs run in plain Lua against `tests/wow_stubs.lua` |
 | `Bindings.xml` | The back buttons' entries under Key Bindings > AddOns (the client loads it from the addon's folder, not the TOC) |
 
@@ -361,9 +361,23 @@ remapped and laid over each other with small Pillow and numpy scripts, not kept 
 
 ## Settings pages
 
-Every page is a canvas (`Settings.RegisterCanvasLayoutCategory`) built by `UI/SettingsPage.lua`:
+The AddOns entry, Quality of Life, is an information page (`UI/InfoPage.lua`), as AutoPotion's
+is: a short introduction, the chat commands, and the author's other addons with their icon (copies
+in `Media/`), an Installed label while one is loaded (checked on each showing, as addons that load
+after us aren't loaded when the page is made) and their link in a read-only edit box to copy, as the
+game can't open web pages. It has no options, so no Defaults button. Unlike AutoPotion's it doesn't
+scroll: it's about 500 high, within `SettingsPage.MAX_HEIGHT`, with two lines of text per addon (the
+tests can't measure wrapped text, so this one isn't checked). Its frames are made at login like the
+other pages', so SmartNavigation's `CreateFrame` hook rebuilds no window for them. Not yet tried in
+Forever's controller interface: what a press on a link box does (an `EditBox` takes the keyboard
+focus).
+
+Below it, the options are grouped by part of the game: Automation (merchant and quests), Interface
+(the bars to hide, the combined bags, tooltips, health bars), Chat (the chat window, `/rl`), Action
+Bars, Minimap, World map (only where `MapPins.IsAvailable()`), Viewport, Ring and Controller (only
+on Forever). Every page is a canvas (`Settings.RegisterCanvasLayoutCategory`) built by `UI/SettingsPage.lua`:
 two columns of rows, or rows across the page (`"wide"`, the Viewport page, as its sliders need the
-room, and the Ring page, with one option and a note), each an option's name with a
+room, the Ring page, with one option and a note, and the World map page, with two), each an option's name with a
 control from the game's own templates (`SettingsCheckboxTemplate`, `WowStyle2DropdownTemplate`,
 `MinimalSliderWithSteppersTemplate`, `ColorSwatchTemplate` opening `ColorPickerFrame`), so they look
 like the game's pages and fit without scrolling (`SettingsPage.MAX_HEIGHT`, checked by the tests).
@@ -426,8 +440,8 @@ The world map pins are buttons on a frame of our own on the map's canvas, not pi
 pools. Their places are zone coordinates in percent (as `/way` reads them), from Forever's tables;
 the continent maps get them through `C_Map.GetMapRectOnMap`. Names come from `C_Map.GetAreaInfo`, so
 they're in the player's language. Forever's UiMap IDs (1411 and up) don't exist on retail, so there
-`MapPins.IsAvailable()` is false: the settings page leaves the World map options out and the map is
-never touched.
+`MapPins.IsAvailable()` is false: the settings leave the World map page out and the map is never
+touched.
 
 The Controller page is registered only when `GamepadMainActionBarFrame` exists (Forever); on retail
 there's nothing for it to change.

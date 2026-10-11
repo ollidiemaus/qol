@@ -546,6 +546,15 @@ local function install()
 
     G.InCombatLockdown = function() return state.combat end
     G.ReloadUI = function() state.reloads = state.reloads + 1 end
+    -- Other addons that are loaded (state.loadedAddons, by folder), and our TOC's version
+    -- (Stubs.LoadAddon({ version = ... }), else none, as in an unpackaged checkout).
+    G.C_AddOns = {
+        IsAddOnLoaded = function(name) return state.loadedAddons[name] == true end,
+        GetAddOnMetadata = function(_, field)
+            if field == "Version" then return state.version end
+            return nil
+        end,
+    }
     -- C_Timer.After(0) runs on the next RunTimers; a real delay waits for AdvanceTime.
     G.C_Timer = {
         After = function(seconds, fn)
@@ -1081,6 +1090,7 @@ function Stubs.Reset(options)
     options = options or {}
     state = {
         locale = options.locale or "enUS",
+        version = options.version, loadedAddons = {},
         regions = {}, timers = {}, delayed = {}, messages = {}, registry = {}, postCalls = {}, linePreCalls = {},
         unknownEvents = options.unknownEvents or {},
         combat = false,

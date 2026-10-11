@@ -2,13 +2,14 @@ local _, ns = ...
 local L = ns.L
 local Options = ns.Options
 
--- Quality of Life's pages under Options > AddOns: the main page, plus Viewport, Action Bars, Ring,
--- Minimap and, on Forever (which has the controller action bar), Controller as subcategories. Every
--- page is our own (UI/SettingsPage.lua), none is the game's own list of settings: on Forever, with
--- the controller interface on, the game stopped responding when the settings closed after showing
--- Viewport as the game's list, with its sliders and color swatch (see docs/DEVELOPMENT.md). The
--- pages only read and write ns.Options, and the features react through Options:Watch. Without the
--- Settings API the pages are skipped.
+-- Quality of Life's pages under Options > AddOns: the information page (UI/InfoPage.lua), which /qol
+-- opens, and below it a page for each part of the game: Automation, Interface, Chat, Action Bars,
+-- Minimap, World map (on Forever's maps), Viewport, Ring and, on Forever (which has the controller
+-- action bar), Controller. Every page is our own (UI/SettingsPage.lua), none is the game's own list
+-- of settings: on Forever, with the controller interface on, the game stopped responding when the
+-- settings closed after showing Viewport as the game's list, with its sliders and color swatch (see
+-- docs/DEVELOPMENT.md). The pages only read and write ns.Options, and the features react through
+-- Options:Watch. Without the Settings API the pages are skipped.
 local SettingsPanel = {}
 ns.SettingsPanel = SettingsPanel
 
@@ -23,42 +24,32 @@ local function isNot(key)
     return function() return Options:Get(key) ~= true end
 end
 
--- Main page: two columns of about the same length.
-local function buildMain(page)
+-- Automation page: what's done for you at merchants and quest givers.
+local function buildAutomation(page)
     page:Header("left", L.SECTION_MERCHANT)
     page:Checkbox("left", "sellJunk", L.SELL_JUNK, L.SELL_JUNK_TIP)
     page:Checkbox("left", "autoRepair", L.AUTO_REPAIR, L.AUTO_REPAIR_TIP)
     page:Checkbox("left", "guildRepair", L.GUILD_REPAIR, L.GUILD_REPAIR_TIP, { indent = true, enabled = is("autoRepair") })
 
-    page:Header("left", L.SECTION_QUESTS)
-    page:Checkbox("left", "questAccept", L.QUEST_ACCEPT, L.QUEST_ACCEPT_TIP)
-    page:Checkbox("left", "questTurnIn", L.QUEST_TURN_IN, L.QUEST_TURN_IN_TIP)
+    page:Header("right", L.SECTION_QUESTS)
+    page:Checkbox("right", "questAccept", L.QUEST_ACCEPT, L.QUEST_ACCEPT_TIP)
+    page:Checkbox("right", "questTurnIn", L.QUEST_TURN_IN, L.QUEST_TURN_IN_TIP)
+end
 
-    page:Header("left", L.SECTION_TOOLTIPS)
-    page:Checkbox("left", "tooltipIDs", L.TOOLTIP_IDS, L.TOOLTIP_IDS_TIP)
-    page:Checkbox("left", "tooltipSellPrice", L.TOOLTIP_SELL_PRICE, L.TOOLTIP_SELL_PRICE_TIP)
-
-    page:Header("left", L.SECTION_INTERFACE)
+-- Interface page: the bars to hide and the combined bags on the left, tooltips and health bars on
+-- the right.
+local function buildInterface(page)
+    page:Header("left", L.SECTION_HIDE)
     page:Checkbox("left", "hideMicroMenu", L.HIDE_MICRO_MENU, L.HIDE_MICRO_MENU_TIP)
     page:Checkbox("left", "hideBagsBar", L.HIDE_BAGS_BAR, L.HIDE_BAGS_BAR_TIP)
+
+    page:Header("left", L.SECTION_COMBINED_BAGS)
     page:Checkbox("left", "showCombinedBagSort", L.SHOW_COMBINED_BAG_SORT, L.SHOW_COMBINED_BAG_SORT_TIP)
     page:Checkbox("left", "combinedBagTopLeft", L.COMBINED_BAG_TOP_LEFT, L.COMBINED_BAG_TOP_LEFT_TIP)
 
-    page:Header("left", L.SECTION_COMMANDS)
-    page:Checkbox("left", "reloadCommand", L.RELOAD_COMMAND, L.RELOAD_COMMAND_TIP)
-
-    page:Header("right", L.SECTION_CHAT)
-    page:Checkbox("right", "hideChatSocial", L.HIDE_CHAT_SOCIAL, L.HIDE_CHAT_SOCIAL_TIP)
-    page:Checkbox("right", "hideChatButtons", L.HIDE_CHAT_BUTTONS, L.HIDE_CHAT_BUTTONS_TIP)
-    page:Checkbox("right", "hideCombatLog", L.HIDE_COMBAT_LOG, L.HIDE_COMBAT_LOG_TIP)
-    page:Checkbox("right", "chatClassColors", L.CHAT_CLASS_COLORS, L.CHAT_CLASS_COLORS_TIP)
-
-    -- Only where there are pins to show: they are on Forever's maps.
-    if ns.MapPins.IsAvailable() then
-        page:Header("right", L.SECTION_WORLD_MAP)
-        page:Checkbox("right", "mapDungeons", L.MAP_DUNGEONS, L.MAP_DUNGEONS_TIP)
-        page:Checkbox("right", "mapTravel", L.MAP_TRAVEL, L.MAP_TRAVEL_TIP)
-    end
+    page:Header("right", L.SECTION_TOOLTIPS)
+    page:Checkbox("right", "tooltipIDs", L.TOOLTIP_IDS, L.TOOLTIP_IDS_TIP)
+    page:Checkbox("right", "tooltipSellPrice", L.TOOLTIP_SELL_PRICE, L.TOOLTIP_SELL_PRICE_TIP)
 
     page:Header("right", L.SECTION_UNIT_FRAMES)
     page:Checkbox("right", "classColorPlayer", L.CLASS_COLOR_PLAYER, L.CLASS_COLOR_TIP)
@@ -66,6 +57,24 @@ local function buildMain(page)
     page:Checkbox("right", "classColorTargetOfTarget", L.CLASS_COLOR_TARGET_OF_TARGET, L.CLASS_COLOR_TIP)
     page:Checkbox("right", "classColorFocus", L.CLASS_COLOR_FOCUS, L.CLASS_COLOR_TIP)
     page:Checkbox("right", "classColorFocusTarget", L.CLASS_COLOR_FOCUS_TARGET, L.CLASS_COLOR_TIP)
+end
+
+-- Chat page: the chat window on the left, the chat commands on the right.
+local function buildChat(page)
+    page:Header("left", L.SECTION_CHAT_WINDOW)
+    page:Checkbox("left", "hideChatSocial", L.HIDE_CHAT_SOCIAL, L.HIDE_CHAT_SOCIAL_TIP)
+    page:Checkbox("left", "hideChatButtons", L.HIDE_CHAT_BUTTONS, L.HIDE_CHAT_BUTTONS_TIP)
+    page:Checkbox("left", "hideCombatLog", L.HIDE_COMBAT_LOG, L.HIDE_COMBAT_LOG_TIP)
+    page:Checkbox("left", "chatClassColors", L.CHAT_CLASS_COLORS, L.CHAT_CLASS_COLORS_TIP)
+
+    page:Header("right", L.SECTION_COMMANDS)
+    page:Checkbox("right", "reloadCommand", L.RELOAD_COMMAND, L.RELOAD_COMMAND_TIP)
+end
+
+-- World map page: what's marked on the map, in rows across the page.
+local function buildWorldMap(page)
+    page:Checkbox("wide", "mapDungeons", L.MAP_DUNGEONS, L.MAP_DUNGEONS_TIP)
+    page:Checkbox("wide", "mapTravel", L.MAP_TRAVEL, L.MAP_TRAVEL_TIP)
 end
 
 -- The places a minimap element can go, as dropdown choices.
@@ -202,37 +211,41 @@ local function buildViewport(page)
     end
 end
 
+-- The pages below the information page, in the order of the list on the left. available: whether the
+-- page has anything to change on this client.
+local PAGES = {
+    { key = "automation", title = L.CATEGORY_AUTOMATION, build = buildAutomation },
+    { key = "interface", title = L.CATEGORY_INTERFACE, build = buildInterface },
+    { key = "chat", title = L.CATEGORY_CHAT, build = buildChat },
+    { key = "actionBars", title = L.CATEGORY_ACTION_BARS, build = buildActionBars },
+    { key = "minimap", title = L.CATEGORY_MINIMAP, build = buildMinimap },
+    -- Only where there are pins to show: they are on Forever's maps.
+    { key = "worldMap", title = L.CATEGORY_WORLD_MAP, build = buildWorldMap,
+        available = function() return ns.MapPins.IsAvailable() end },
+    { key = "viewport", title = L.CATEGORY_VIEWPORT, build = buildViewport },
+    { key = "ring", title = L.CATEGORY_RING, build = buildRing },
+    -- Only Forever has the controller action bar; on retail there's nothing for it to change.
+    { key = "controller", title = L.CATEGORY_CONTROLLER, build = buildController,
+        available = function() return GamepadMainActionBarFrame ~= nil end },
+}
+
 function SettingsPanel:Init()
     if not (Settings and Settings.RegisterCanvasLayoutCategory and Settings.RegisterCanvasLayoutSubcategory) then
         return
     end
-    local Page = ns.SettingsPage
-    local main = Page.New(L.ADDON_TITLE)
-    buildMain(main)
-    local category = main:Register()
+    local shown = {}
+    for _, info in ipairs(PAGES) do
+        if not info.available or info.available() then shown[#shown + 1] = info end
+    end
 
-    local viewport = Page.New(L.CATEGORY_VIEWPORT)
-    buildViewport(viewport)
-    viewport:Register(category)
-
-    local actionBars = Page.New(L.CATEGORY_ACTION_BARS)
-    buildActionBars(actionBars)
-    actionBars:Register(category)
-
-    local ring = Page.New(L.CATEGORY_RING)
-    buildRing(ring)
-    ring:Register(category)
-
-    local minimap = Page.New(L.CATEGORY_MINIMAP)
-    buildMinimap(minimap)
-    minimap:Register(category)
-
-    self.pages = { main = main, viewport = viewport, actionBars = actionBars, ring = ring, minimap = minimap }
-    if GamepadMainActionBarFrame then
-        local controller = Page.New(L.CATEGORY_CONTROLLER)
-        buildController(controller)
-        controller:Register(category)
-        self.pages.controller = controller
+    self.info = ns.InfoPage.New()
+    local category = self.info:Register()
+    self.pages = {}
+    for _, info in ipairs(shown) do
+        local page = ns.SettingsPage.New(info.title)
+        info.build(page)
+        page:Register(category)
+        self.pages[info.key] = page
     end
 
     Settings.RegisterAddOnCategory(category)
