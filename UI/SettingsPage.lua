@@ -6,8 +6,9 @@ local Options = ns.Options
 -- page fits without scrolling, or in rows across the whole page ("wide", for sliders). It looks
 -- like the game's own pages: the title with a Defaults button, section headers, and each option as
 -- its name with a checkbox, a dropdown, a slider or a color swatch, from the game's own templates,
--- or a key binding's two keys, as in the game's Key Bindings. Every name uses the same font; an
--- option that belongs to another one sits indented below it and is greyed out while it can't apply.
+-- a key binding's two keys, as in the game's Key Bindings, or a button that opens something. Every
+-- name uses the same font; an option that belongs to another one sits indented below it and is
+-- greyed out while it can't apply.
 --
 -- Every control reads and writes ns.Options, and the page follows Options:Watch, so it also shows
 -- changes made elsewhere. All frames are ours: the settings panel only parents and shows the page,
@@ -29,6 +30,7 @@ local SLIDER_WIDTH = 250
 local SLIDER_VALUE_ROOM = 50 -- right of a slider in a column, for its value
 local WIDE_CONTROL_X = -80   -- in a wide row the control starts there from the middle, as on the game's list
 local KEY_WIDTH, KEY_HEIGHT = 160, 22 -- a key binding's buttons, as in the game's Key Bindings
+local BUTTON_WIDTH, BUTTON_HEIGHT = 160, 22
 local CONFIRM_SECONDS = 3
 -- The room the settings panel gives a page (its default size), checked by the tests.
 Page.MAX_HEIGHT = 600
@@ -161,7 +163,7 @@ function Page:Refresh()
             control.widget:SetAlpha(enabled and 1 or 0.5)
         elseif control.kind == "binding" then
             control.refreshKeys(enabled)
-        else
+        elseif control.kind == "dropdown" then
             control.widget:GenerateMenu()
         end
     end
@@ -539,6 +541,19 @@ function Page:Binding(column, command, label, tooltip, options)
         end
     end
     place(control, control.buttons[1], KEY_WIDTH)
+    return control
+end
+
+-- A button named text, for something that isn't an option (onClick does it).
+function Page:Button(column, label, text, tooltip, onClick, options)
+    local control = optionRow(self, column, "button", nil, label, tooltip, options)
+    local button = CreateFrame("Button", nil, control.row, "UIPanelButtonTemplate")
+    button:SetSize(BUTTON_WIDTH, BUTTON_HEIGHT)
+    button:SetText(text)
+    button:SetScript("OnClick", onClick)
+    button:SetScript("OnEnter", control.enter)
+    button:SetScript("OnLeave", control.leave)
+    place(control, button)
     return control
 end
 

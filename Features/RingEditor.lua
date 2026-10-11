@@ -4,9 +4,9 @@ local Options = ns.Options
 local Ring = ns.Ring
 local Entries = ns.RingEntries
 
--- The rings' editor (/qol ring), out of combat: one ring at a time in the middle of the screen,
--- with arrows to the others and buttons for a new ring and for deleting this one. The ring shows
--- what this character can use, plus an empty slot to add one more:
+-- The rings' editor (/qol ring, or the Ring page's button), out of combat: one ring at a time in the
+-- middle of the screen, with arrows to the others and buttons for a new ring and for deleting this
+-- one. The ring shows what this character can use, plus an empty slot to add one more:
 -- - drag a spell, item, toy, mount or macro onto a slot to put it there (the ones from there on
 --   move one slot on), or onto the empty slot to add it at the end; one already on the ring moves;
 -- - drag one off, or click it, to take it off (onto the cursor); a right-click just removes it.
@@ -15,6 +15,8 @@ local Entries = ns.RingEntries
 -- key or a controller button; Escape or another click cancels, a right-click clears. A key is
 -- taken from the ring that had it. The keys are the ring's own, not the game's bindings, so they
 -- are the same on every character and only take the key while the ring is on.
+-- Escape closes it; every other key goes on to the game, and opening the game's windows leaves it
+-- open (the spell book, to drag from).
 local Editor = {}
 ns.RingEditor = Editor
 
@@ -32,6 +34,11 @@ local waiting
 
 local function rings() return Ring.List() end
 local function ring() return rings()[current] end
+
+-- The settings and the game menu take Escape before the editor, which the Ring page opens over them.
+local function gameWindowOpen()
+    return (SettingsPanel and SettingsPanel:IsShown()) or (GameMenuFrame and GameMenuFrame:IsShown())
+end
 
 local function keyName(index, aim)
     return (aim == "mouse" and L.RING_KEY_MOUSE or L.RING_KEY_STICK):format(index)
@@ -315,8 +322,14 @@ local function create()
     editor:SetFrameStrata("DIALOG")
     editor:EnableMouse(true)
     editor:Hide()
-    -- Escape closes it.
-    table.insert(UISpecialFrames, "QoLRingEditor")
+    -- Escape closes it, and the other keys go on to the game. Not through UISpecialFrames: the game
+    -- closes those whenever one of its windows opens in the middle of the screen, the spell book too.
+    editor:EnableKeyboard(true)
+    editor:SetScript("OnKeyDown", function(_, key)
+        if key ~= "ESCAPE" or InCombatLockdown() or gameWindowOpen() then return end
+        editor:SetPropagateKeyboardInput(false)
+        editor:Hide()
+    end)
     editor:SetScript("OnHide", stopWaiting)
 
     editor.art = Ring.NewArt(editor, "Button")
@@ -389,17 +402,23 @@ local function create()
     for _, event in ipairs(Ring.REFRESH_EVENTS) do ns.Events:On(event, refresh) end
 end
 
-function Editor:Toggle()
-    if editor and editor:IsShown() then
-        editor:Hide()
-        return
-    end
+function Editor:Open()
     if InCombatLockdown() then
         ns.Print(L.RING_EDITOR_COMBAT)
         return
     end
     if not editor then create() end
+    -- Restricted in combat; the editor is only open out of it.
+    editor:SetPropagateKeyboardInput(true)
     render()
     say(nil)
     editor:Show()
+end
+
+function Editor:Toggle()
+    if editor and editor:IsShown() then
+        editor:Hide()
+        return
+    end
+    self:Open()
 end
