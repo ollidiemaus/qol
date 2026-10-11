@@ -6,14 +6,14 @@ Notes for working on the addon. What it does for players is in the [README](../R
 
 | Folder | What's in it |
 |---|---|
-| `Core/` | Namespace and printing (`Init`), the event frame (`Events`), saved options with defaults and change watchers (`Options`), deferred changes (`Later`), the hidden holder for hidden frames (`Hider`), `/qol` (`Slash`) and startup (`Lifecycle`) |
+| `Core/` | Namespace and printing (`Init`), the event frame (`Events`), saved options with defaults and change watchers (`Options`), deferred changes (`Later`), the hidden holder for hidden frames (`Hider`), what the back buttons and the ring share (`Buttons`: an action slot's look, override bindings), `/qol` (`Slash`) and startup (`Lifecycle`) |
 | `Data/` | Static game data: `MapPins` (dungeon entrances, docks, portals; how it was made is at the top of the file) |
-| `Features/` | One file per feature: `Merchant`, `Quests`, `Tooltips`, `HideFrames` (also the chat buttons), `CombatLog`, `ChatClassColors`, `CombinedBagSort`, `ClassHealthBars`, `Minimap` (shape, positions, class colors and font sizes around the minimap), `MapPins`, `Viewport`, `ActionBars`, `ButtonBorders`, `BarPaging`, `BackButtons` (the controller back buttons, Forever only), `ReloadCommand` |
+| `Features/` | One file per feature: `Merchant`, `Quests`, `Tooltips`, `HideFrames` (also the chat buttons), `CombatLog`, `ChatClassColors`, `CombinedBagSort`, `ClassHealthBars`, `Minimap` (shape, positions, class colors and font sizes around the minimap), `MapPins`, `Viewport`, `ActionBars`, `ButtonBorders`, `BarPaging`, `BackButtons` (the controller back buttons, Forever only), `Ring`, `ReloadCommand` |
 | `UI/` | `SettingsPage.lua`, our own settings page (two columns, or rows across the page); `Settings.lua`, the pages under Options > AddOns built with it |
 | `Locales/` | English strings, German overrides |
-| `Media/` | `Icon.tga`, the addon list icon (the TOC's `IconTexture`, 128×128, 32-bit), and `Icon.svg`, its source (not packaged); `Zeppelin.tga`, `Tram.tga` and `MinimapSquareBorder.tga` (see below) |
+| `Media/` | `Icon.tga`, the addon list icon (the TOC's `IconTexture`, 128×128, 32-bit), and `Icon.svg`, its source (not packaged); `Zeppelin.tga`, `Tram.tga`, `MinimapSquareBorder.tga` and the ring's `Ring.tga`, `RingSelected.tga` and `RingSlot.tga` (see below) |
 | `tests/` | Specs run in plain Lua against `tests/wow_stubs.lua` |
-| `Bindings.xml` | The back buttons' entries under Key Bindings > AddOns (the client loads it from the addon's folder, not the TOC) |
+| `Bindings.xml` | The ring's and the back buttons' entries under Key Bindings > AddOns (the client loads it from the addon's folder, not the TOC) |
 
 Features never talk to each other or to the settings page. The page writes `ns.Options`; a feature
 reads it with `Options:Get` and reacts to changes through `Options:Watch`.
@@ -167,6 +167,57 @@ modifiers, so no modifier variants are needed. As with bar paging, the overrides
 Steam Input on the Steam Deck sends keyboard keys for the back buttons (as Easy Controller Forever's
 README says too), which is why a key binding, not a fixed key, is the way in.
 
+The ring (`Features/Ring.lua`) picks an action in combat, so the choice is made by secure code:
+
+- A secure header (`SecureHandlerBaseTemplate`, `QoLRing`, hidden, DIALOG strata) and two
+  `SecureActionButtonTemplate` buttons of ours, `QoLRingMouse` and `QoLRingStick` (children of
+  UIParent, no size). Each has `*type-s1` to `*type-s8` "action" and `*action-sN` set to buttons 1 to
+  8 of Action Bar 6, 7 or 8 (slots 145-152, 157-164, 169-176), and `useOnKeyDown` false, so its action
+  happens when the key is let go. Their OnClick is wrapped by the header
+  (`SecureHandlerWrapScript(opener, "OnClick", header, Ring.CLICK)`).
+- The snippet, on the key going down: anchor the header at the cursor (`"$cursor"`, a fixed point
+  on the screen) or the middle of UIParent, note which key in its `qol-aim` attribute, show it,
+  return false (no action). On the key going up: hide it, read the aim and return the aimed slot's
+  button, `"s1"` to `"s8"`; `SecureButton_GetButtonSuffix` makes that the `-sN` suffix of the
+  attributes above. Aim with the mouse: `owner:GetMousePosition()`, which is 0 to 1 across the header
+  and nil outside it, hence the header's 8192 units; less than 20 units from the middle is none.
+  Aim with the stick: `GetGamePadState().sticks[i]` (the restricted environment's
+  `C_GamePad.GetDeviceMappedState`), `i` the stick `C_GamePad.StickIndexToConfigName` calls
+  "Camera" (counted from 0 there, from 1 in `sticks`, found out of combat into the header's
+  `qol-stick`); `len` under 0.5 is none. The angle is `math.atan2(x, y)` (the global `atan2` works
+  in degrees), slot 1 at the top, clockwise. The header's `qol-on` attribute is false while the ring
+  is turned off, as a key saved in Key Bindings still clicks its button then.
+- Our code only draws. The art is a plain frame under the header, so it shows and hides with it
+  without being protected. Its OnShow refreshes the slots (`ns.Buttons.RefreshAction`, as on the
+  back buttons) and its OnUpdate works out the aimed slot with the same sums (`Ring.SlotAt`, cursor
+  from `GetCursorPosition()` over the effective scale against `GetCenter()`), lights its wedge
+  (only on a slot with an action) and puts the action's name in the middle:
+  `C_TooltipInfo.GetAction(slot).lines[1].leftText`, maybe secret, only passed to `SetText`.
+- While the stick ring is open, a plain frame of ours has `EnableGamePadStick(true)` and an
+  `OnGamePadStick` that returns true for the "Left" and "Movement" stick (passed on to the game, so
+  the player can walk) and nothing for the others (kept from the camera), as `Blizzard_RadialWheel`
+  does. It keeps the stick after the ring closes until the stick is at rest (`len` under 0.1) or for
+  half a second, like `InputAxisBinding`'s `waitForCentering`, so letting go of the key with the
+  stick out doesn't swing the camera.
+- `/qol ring` opens the editor: a plain frame, `QoLRingEditor` (in `UISpecialFrames` for Escape;
+  the game reads that list in `securecall("CloseSpecialWindows")`, so our entry's taint stays there),
+  with the same art and Buttons for slots: dragging and clicking call `PickupAction` and
+  `PlaceAction`, out of combat only, and combat closes it. It's a slash command, not a button on the
+  settings page, because hiding `SettingsPanel` from addon code taints its `Commit`.
+- The header, the buttons, their attributes and the override bindings (the keys bound to the two
+  buttons, as for the back buttons, `ns.Buttons.NewOverrides`) are made and changed through
+  `ns.Later`, out of combat.
+
+The ring's textures come from Forever's own art (build 1.60.1.70291). `Media/Ring.tga` (512×512,
+drawn 343 units wide) is a dark disc, the radial menu's wheel (`gamepad-radial-menu-wheelbg`, file
+6227249) and the minimap's bronze ring (`ui-hud-minimap-frame-circle-c60-2x`, file 8026708) scaled
+over the wheel's rim, which ends 150 units out. `Media/RingSelected.tga` (256×256, 150 units) is the
+radial menu's lit wedge (`gamepad-radial-menu-selected`) turned to point up; it is drawn 95 units out
+and turned with `SetRotation(-angle)` (counterclockwise in radians). `Media/RingSlot.tga` (128×128,
+58 units around a 40-unit icon) is the minimap's day and night rim
+(`ui-hud-minimap-frame-cycle-c60-2x`). They were cropped, scaled and laid over each other with small
+Pillow and numpy scripts, not kept in the repository.
+
 ## Settings pages
 
 Every page is a canvas (`Settings.RegisterCanvasLayoutCategory`) built by `UI/SettingsPage.lua`:
@@ -302,6 +353,19 @@ Things only the real client can confirm:
     (Shift) and unlocked; the tooltip.
   - The keys still work after opening and closing a gamepad window (bags, map, the settings), and
     no "tainted by" error shows up in combat afterwards.
+- The ring (Action Bars > Ring), with both keys bound under Key Bindings > AddOns > Quality of Life:
+  - Mouse key: the ring opens at the cursor, the wedge and name follow the mouse, letting go uses
+    that action (also in combat, a spell, an item and a macro), and letting go in the middle or on an
+    empty slot does nothing. Near a screen edge, and at several UI scales.
+  - Controller key, in the controller interface and with keyboard and mouse: the ring opens in the
+    middle, the right stick aims, the camera stays still while aiming and doesn't swing when the key
+    is let go with the stick out, and the left stick still moves the character. If the camera stick
+    isn't the second in `GetGamePadState().sticks`, the aim is wrong or none: check `qol-stick`.
+  - The art: wheel, bronze rim and slot rims line up, the lit wedge sits on the aimed slot in all
+    eight directions, cooldowns and counts show, long names wrap in the middle.
+  - `/qol ring`: dragging on, off and between slots, clicking with the controller cursor, the
+    tooltip, Escape and the close button, closing when combat starts.
+  - No "tainted by" error in combat after using it.
 
 ### Cutscenes and the viewport
 

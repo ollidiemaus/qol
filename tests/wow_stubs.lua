@@ -77,6 +77,14 @@ local function newRegion(kind, parent, template)
     function region:GetWidth() return self.width end
     function region:GetHeight() return self.height end
     function region:GetEffectiveScale() return self.effectiveScale end
+    -- Where the middle is: set by secure code's SetPoint (Stubs' frame handles), else the parent's.
+    function region:GetCenter()
+        if self.center then return self.center[1], self.center[2] end
+        if self.parent then return self.parent:GetCenter() end
+        return nil
+    end
+    function region:SetRotation(radians) self.rotation = radians end
+    function region:EnableGamePadStick(enabled) self.gamePadStick = enabled end
     function region:SetScale(scale) self.scale = scale end
     function region:GetScale() return self.scale or 1 end
     function region:SetFrameLevel(level) self.frameLevel = level end
@@ -442,9 +450,9 @@ local function install()
         if template == "ColorSwatchTemplate" then
             function frame:SetColorRGB(r, g, b) self.color = { r, g, b } end
         end
-        -- A secure button is protected, and so are the frames it is a child of: their attributes,
-        -- points and visibility can't change in combat.
-        if template and template:find("SecureActionButtonTemplate") then
+        -- A secure button or handler is protected, and so are the frames it is a child of: their
+        -- attributes, points and visibility can't change in combat.
+        if template and (template:find("SecureActionButtonTemplate") or template:find("SecureHandler")) then
             local node = frame
             while node do
                 node.protected = true
@@ -474,6 +482,7 @@ local function install()
     function G.ColorPickerFrame:GetColorRGB() return self.picked[1], self.picked[2], self.picked[3] end
     function G.ColorPickerFrame:GetPreviousValues() return self.info.r, self.info.g, self.info.b end
     G.UIParent = newRegion("Frame", nil)
+    G.UIParent.center = { 960, 540 }
     G.WorldFrame = newRegion("Frame", nil)
     G.WorldFrame.protected = true
     G.WorldFrame:SetAllPoints(nil)
@@ -687,6 +696,32 @@ local function install()
     G.IsModifiedClick = function(name) return state.modifiedClicks[name] == true end
     G.PickupAction = function(slot) state.cursor = action(slot) and slot end
     G.PlaceAction = function(slot) state.placed[#state.placed + 1] = slot end
+    G.GetCursorInfo = function()
+        if state.cursor then return "action", state.cursor end
+        return nil
+    end
+    -- An action's tooltip: its name (state.actions[slot].name) on the first line.
+    G.C_TooltipInfo = {
+        GetAction = function(slot)
+            local a = action(slot)
+            return a and { lines = { { leftText = a.name } } } or nil
+        end,
+    }
+
+    G.GetCursorPosition = function() return state.cursorX, state.cursorY end
+    -- Two sticks, as the controller settings name them.
+    G.C_GamePad = {
+        GetDeviceMappedState = function() return state.gamepad end,
+        StickIndexToConfigName = function(index) return ({ [0] = "Movement", [1] = "Camera" })[index] end,
+    }
+    G.UISpecialFrames = {}
+    -- The game's Lua 5.1 has math.atan2; newer Lua only math.atan(y, x).
+    G.math.atan2 = G.math.atan2 or function(y, x) return math.atan(y, x) end
+    -- Secure handlers: the wrapped snippets, which Stubs.SecureClick runs.
+    G.SecureHandlerWrapScript = function(frame, script, header, preBody, postBody)
+        frame.wraps = frame.wraps or {}
+        frame.wraps[script] = { header = header, pre = preBody, post = postBody }
+    end
 
     -- Settings the client keeps (C_CVar), as strings.
     G.C_CVar = {
@@ -823,6 +858,8 @@ local ADDON_GLOBALS = {
     "GetMinimapShape", "HybridMinimap", "TimeManagerClockButton", "GameTimeFrame", "AddonCompartmentFrame",
     "TimeManagerClockTicker", "QoLNoAction", "ColorPickerFrame",
     "GamepadMainActionBarFrame", "BINDING_HEADER_QOL",
+    "QoLRing", "QoLRingMouse", "QoLRingStick", "QoLRingEditor",
+    "BINDING_NAME_CLICK QoLRingMouse:LeftButton", "BINDING_NAME_CLICK QoLRingStick:LeftButton",
 }
 for index = 1, 4 do
     ADDON_GLOBALS[#ADDON_GLOBALS + 1] = "QoLBackButton" .. index
@@ -864,6 +901,9 @@ function Stubs.Reset(options)
         },
         overrides = {}, overrideCalls = 0, gamepadBindings = {},
         actions = {}, modifiedClicks = {}, placed = {}, settingValues = {},
+        -- The cursor in UI units, the controller's sticks (nil: no controller) and the actions
+        -- secure buttons used.
+        cursorX = 500, cursorY = 400, gamepad = nil, usedActions = {},
     }
     for _, name in ipairs(ADDON_GLOBALS) do _G[name] = nil end
     _G.SlashCmdList = {}
@@ -954,6 +994,126 @@ function Stubs.NewGamepadBar()
     bar.PageUnit.LeftCenteredAnchor = _G.CreateFrame("Frame", nil, bar.PageUnit)
     bar.PageUnit.RightCenteredAnchor = _G.CreateFrame("Frame", nil, bar.PageUnit)
     return bar
+end
+
+-- Secure code: frame handles that may do what restricted snippets may, in combat too.
+local function descendants(region)
+    local list = {}
+    for _, other in ipairs(state.regions) do
+        local node = other
+        while node and node ~= region do node = node.parent end
+        if node then list[#list + 1] = other end
+    end
+    return list
+end
+
+-- Shows or hides a frame and runs OnShow or OnHide of every frame under it that appears or goes.
+local function setShownSecurely(region, shown)
+    local list = descendants(region)
+    local was = {}
+    for index, other in ipairs(list) do was[index] = other:IsVisible() end
+    region.shown = shown
+    for index, other in ipairs(list) do
+        local now = other:IsVisible()
+        local script = now ~= was[index] and other.scripts[now and "OnShow" or "OnHide"]
+        if script then script(other) end
+    end
+end
+
+local function frameHandle(region)
+    local handle = {}
+    function handle:GetAttribute(name) return region.attributes[name] end
+    function handle:SetAttribute(name, value) region.attributes[name] = value end
+    function handle:Show() setShownSecurely(region, true) end
+    function handle:Hide() setShownSecurely(region, false) end
+    function handle:IsShown() return region.shown end
+    function handle:GetWidth() return region.width end
+    function handle:ClearAllPoints() region.points, region.center = {}, nil end
+    -- Points are kept as the frame's middle, for GetCenter and GetMousePosition.
+    function handle:SetPoint(point, relativeTo, relativePoint, x, y)
+        assert(point == "CENTER", "only CENTER points")
+        if relativeTo == "$cursor" then
+            region.center = { state.cursorX, state.cursorY }
+        else
+            assert(relativeTo == "$parent" and relativePoint == "CENTER", "$cursor or the parent's CENTER")
+            local parentX, parentY = region.parent:GetCenter()
+            region.center = { parentX + (x or 0), parentY + (y or 0) }
+        end
+        region.points[#region.points + 1] = { point, relativeTo, relativePoint, x or 0, y or 0 }
+    end
+    -- The cursor relative to the frame, 0 to 1 across it, or nil outside it.
+    function handle:GetMousePosition()
+        local x = (state.cursorX - region.center[1]) / region.width + 0.5
+        local y = (state.cursorY - region.center[2]) / region.height + 0.5
+        if x < 0 or x > 1 or y < 0 or y > 1 then return nil end
+        return x, y
+    end
+    return handle
+end
+
+local function compile(body, env)
+    if setfenv then return setfenv(assert(loadstring(body)), env) end
+    return assert(load(body, "snippet", "t", env))
+end
+
+-- The restricted environment, one per header as in the game, with owner its handle.
+local function runSnippet(header, frame, body, ...)
+    header.snippetEnv = header.snippetEnv or {
+        owner = frameHandle(header), math = math, string = string, tostring = tostring,
+        GetGamePadState = function() return state.gamepad end,
+    }
+    local chunk = compile("local self, button, down = ...\n" .. body, header.snippetEnv)
+    return chunk(frameHandle(frame), ...)
+end
+
+-- A secure attribute as SecureButton_GetModifiedAttribute finds it without modifiers held.
+local function modifiedAttribute(button, name, suffix)
+    local attributes = button.attributes
+    for _, key in ipairs({ name .. suffix, "*" .. name .. suffix, name .. "*", "*" .. name .. "*", name }) do
+        if attributes[key] ~= nil then return attributes[key] end
+    end
+    return nil
+end
+
+-- One half of a click on a secure action button, as a CLICK binding sends it (key down, then up):
+-- the wrapped OnClick snippet, then the action, on the half useOnKeyDown picks (the game's default
+-- is the key going down). Actions used go to state.usedActions.
+function Stubs.SecureClick(button, down)
+    local mouseButton = "LeftButton"
+    local wrap = button.wraps and button.wraps.OnClick
+    if wrap then
+        local result = runSnippet(wrap.header, button, wrap.pre, mouseButton, down)
+        if result == false then return end
+        if result ~= nil then mouseButton = tostring(result) end
+    end
+    local onDown = button.attributes.useOnKeyDown ~= false
+    if onDown ~= (down == true) then return end
+    local suffix = mouseButton == "LeftButton" and "1" or ("-" .. mouseButton)
+    if modifiedAttribute(button, "type", suffix) == "action" then
+        state.usedActions[#state.usedActions + 1] = modifiedAttribute(button, "action", suffix)
+    end
+end
+
+-- A key bound to a secure button, pressed and let go.
+function Stubs.PressKey(button)
+    Stubs.SecureClick(button, true)
+    Stubs.SecureClick(button, false)
+end
+
+function Stubs.SetCursor(x, y)
+    state.cursorX, state.cursorY = x, y
+end
+
+-- A controller with its camera stick (the second) at x, y; nil for no controller.
+function Stubs.SetStick(x, y)
+    if x == nil then
+        state.gamepad = nil
+        return
+    end
+    state.gamepad = { stickCount = 2, sticks = {
+        { x = 0, y = 0, len = 0 },
+        { x = x, y = y, len = math.sqrt(x * x + y * y) },
+    } }
 end
 
 function Stubs.SetCombat(inCombat)

@@ -6,8 +6,8 @@ Quality of Life bundles the little things you'd otherwise install five addons fo
 viewport, action bars that grow the other way, square action buttons without borders, class-colored
 health bars, junk selling and repairs at merchants, quests accepted and turned in for you, IDs and
 vendor prices in tooltips, a square minimap, dungeon entrances, boats and zeppelins on the world
-map, back buttons for the Steam Deck on Forever's controller bar, and switches to hide UI pieces
-you never click. Everything is set up in the game's own options window. There's no minimap button.
+map, a ring of actions for mouse and controller, back buttons for the Steam Deck on Forever's
+controller bar, and switches to hide UI pieces you never click. Everything is set up in the game's own options window. There's no minimap button.
 
 It's made for WoW Forever and also runs on retail (Midnight).
 
@@ -125,7 +125,25 @@ casting animation on the buttons is left out, since it is drawn for the round fr
 without the dark edge some of them have, use an icon pack like Clean Icons - Mechagnome Edition.
 
 With Forever's controller interface on, the game shows its own action bars instead of these, so
-the options on this page wait until you switch back to keyboard and mouse.
+the options above wait until you switch back to keyboard and mouse. The ring works in both.
+
+### Ring
+
+Eight actions on a ring, like OPie's rings, drawn in the bronze of Forever's minimap. Hold the
+ring's key, point at an action and let go to use it; let go in the middle and nothing happens. It
+works in combat, shows cooldowns and charges, and names the action you point at in the middle.
+
+- **Two keys:** Esc > Options > Key Bindings > AddOns > Quality of Life lists **Ring (aim with the
+  mouse)**, which opens the ring at the mouse cursor, and **Ring (aim with the right stick)**, which
+  opens it in the middle of the screen for a controller's right stick (the camera stays still while
+  you aim). Both open the same ring, also in Forever's controller interface.
+- **Filling it:** type `/qol ring` and drag spells, items or macros onto the ring, or off it to take
+  them away. With a controller, click a slot to pick up or put down what's on it. The ring's actions
+  are the first eight buttons of Action Bar 8 (or 6 or 7, picked under **Slots**), so what's there
+  is on the ring too. Pick a bar you don't use otherwise; the back buttons below use buttons 9 to 12,
+  so both can share one.
+
+Turn it on under Action Bars > **Ring**.
 
 ### Controller
 

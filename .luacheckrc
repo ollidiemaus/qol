@@ -14,7 +14,7 @@ globals = {
     "SLASH_QOL_RELOAD1",
     "hash_SlashCmdList",
     "GetMinimapShape", -- answers "SQUARE" while the minimap is square
-    "BINDING_HEADER_QOL", -- Bindings.xml's header; BackButtons.lua also names its bindings through _G
+    "BINDING_HEADER_QOL", -- Bindings.xml's header; BackButtons.lua and Ring.lua name their bindings through _G
 }
 
 -- WoW API the addon reads. Keep this list explicit: an unexpected global is usually a typo.
@@ -35,7 +35,8 @@ read_globals = {
     "ChatFrame2", "ChatFrame2Tab", "ChatFrameMenuButton", "ChatFrameChannelButton", "ChatFrameToggleVoiceDeafenButton",
     "ChatFrameToggleVoiceMuteButton", "TextToSpeechButtonFrame",
     "InCombatLockdown", "GetPhysicalScreenSize", "ReloadUI", "IsSecureCmd", "CinematicFrame", "MovieFrame",
-    "IsShiftKeyDown", "GamepadMainActionBarFrame",
+    "IsShiftKeyDown", "GamepadMainActionBarFrame", "UISpecialFrames", "GetCursorPosition", "GetCursorInfo",
+    "SecureHandlerWrapScript",
     -- Key bindings
     "GetBindingKey", "GetBindingAction", "SetOverrideBinding", "SetOverrideBindingClick", "ClearOverrideBindings",
     "IsModifiedClick",
@@ -57,6 +58,7 @@ read_globals = {
     -- Namespaces
     "Enum", "C_ActionBar", "C_AddOns", "C_Container", "C_CVar", "C_EventUtils", "C_GossipInfo", "C_Item", "C_Map", "C_MerchantFrame",
     "C_InputInterfaceStyle", "C_KeyBindings", "C_Texture", "C_Timer",
+    "C_GamePad", "C_TooltipInfo",
 }
 
 files["Locales/"] = { max_line_length = false }

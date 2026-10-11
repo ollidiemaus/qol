@@ -51,7 +51,7 @@ end
 
 -- The binding command of a button, as Bindings.xml names it.
 function BackButtons.Command(index)
-    return "CLICK " .. BackButtons.Name(index) .. ":LeftButton"
+    return ns.Buttons.Command(BackButtons.Name(index))
 end
 
 function BackButtons.Slot(bar, index)
@@ -145,37 +145,11 @@ local function decorate(button, info)
     name:SetText(info.label)
 end
 
--- Icon, usability, count, cooldown and the selected rim of a button's slot, as the game's own
--- action buttons show them.
+-- The slot's art, and the selected rim while its action is current or repeating.
 local function refreshButton(button)
-    local slot, actions = button.slot, C_ActionBar
-    if not (slot and actions and actions.HasAction(slot)) then
-        button.icon:Hide()
-        button.count:SetText("")
-        button.cooldown:Clear()
-        button.selectedRim:Hide()
-        return
-    end
-    button.icon:SetTexture(actions.GetActionTexture(slot))
-    button.icon:Show()
-    local usable, noMana = actions.IsUsableAction(slot)
-    if ns.IsUsable(usable) and usable then
-        button.icon:SetVertexColor(1, 1, 1)
-    elseif ns.IsUsable(noMana) and noMana then
-        button.icon:SetVertexColor(0.5, 0.5, 1)
-    else
-        button.icon:SetVertexColor(0.4, 0.4, 0.4)
-    end
-    if actions.GetActionDisplayCount then
-        button.count:SetText(actions.GetActionDisplayCount(slot, 9999))
-    end
-    local duration = actions.GetActionCooldownDuration and actions.GetActionCooldownDuration(slot)
-    if duration then
-        button.cooldown:SetCooldownFromDurationObject(duration)
-    else
-        button.cooldown:Clear()
-    end
-    local current = actions.IsCurrentAction(slot) or actions.IsAutoRepeatAction(slot)
+    local slot = button.slot
+    local current = ns.Buttons.RefreshAction(button, slot)
+        and (C_ActionBar.IsCurrentAction(slot) or C_ActionBar.IsAutoRepeatAction(slot))
     button.selectedRim:SetShown(ns.IsUsable(current) and current == true)
 end
 
@@ -203,7 +177,7 @@ local function onEnter(button)
         GameTooltip:SetAction(button.slot)
     else
         GameTooltip:SetText(L["BACK_BUTTON_" .. button.info.label])
-        GameTooltip:AddLine(L.BACK_BUTTON_EMPTY:format(Options:Get(BAR_KEY), FIRST + button.index), 1, 1, 1, true)
+        GameTooltip:AddLine(L.SLOT_EMPTY:format(Options:Get(BAR_KEY), FIRST + button.index), 1, 1, 1, true)
     end
     GameTooltip:Show()
 end
@@ -288,30 +262,7 @@ function BackButtons.Overrides()
     return overrides
 end
 
-local function same(a, b)
-    for key, value in pairs(a) do
-        if b[key] ~= value then return false end
-    end
-    for key in pairs(b) do
-        if a[key] == nil then return false end
-    end
-    return true
-end
-
-local owner
--- The overrides in place, as Overrides() returned them.
-local applied = {}
-
-local function updateBindings(on)
-    local wanted = on and BackButtons.Overrides() or {}
-    if same(wanted, applied) then return end
-    owner = owner or CreateFrame("Frame")
-    ClearOverrideBindings(owner)
-    for key, name in pairs(wanted) do
-        SetOverrideBindingClick(owner, false, key, name, "LeftButton")
-    end
-    applied = wanted
-end
+local bindings = ns.Buttons.NewOverrides()
 
 ---------------------------------------------------------------------------------------------------
 -- Updates
@@ -331,7 +282,7 @@ function BackButtons:Update()
         end
         if holder:IsShown() ~= on then holder:SetShown(on) end
     end
-    updateBindings(on)
+    bindings:Set(on and BackButtons.Overrides() or {})
     self:Refresh()
 end
 
@@ -345,23 +296,15 @@ local function scheduleRefresh()
     end
 end
 
--- What changes a button's icon, count, usability, cooldown or selected rim.
-local REFRESH_EVENTS = {
-    "ACTIONBAR_SLOT_CHANGED", "ACTIONBAR_UPDATE_STATE", "ACTIONBAR_UPDATE_USABLE", "ACTIONBAR_UPDATE_COOLDOWN",
-    "SPELL_UPDATE_CHARGES", "SPELL_UPDATE_USABLE", "SPELL_UPDATE_COOLDOWN", "PLAYER_EQUIPMENT_CHANGED",
-    "BAG_UPDATE_DELAYED", "UPDATE_SHAPESHIFT_FORM", "START_AUTOREPEAT_SPELL", "STOP_AUTOREPEAT_SPELL",
-    "PLAYER_ENTERING_WORLD",
-}
-
 function BackButtons:Init()
     if not GamepadMainActionBarFrame then return end
     Options:Watch({ KEY, BAR_KEY }, schedule)
     -- The player changed a binding, or another addon its overrides (setting ours fires this too;
     -- Update then finds nothing to change).
     ns.Events:On("UPDATE_BINDINGS", function()
-        if isOn() or next(applied) ~= nil then schedule() end
+        if isOn() or bindings:Any() then schedule() end
     end)
-    for _, event in ipairs(REFRESH_EVENTS) do
+    for _, event in ipairs(ns.Buttons.REFRESH_EVENTS) do
         ns.Events:On(event, scheduleRefresh)
     end
     if isOn() then schedule() end
