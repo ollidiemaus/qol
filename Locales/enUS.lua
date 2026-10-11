@@ -167,7 +167,13 @@ L.HIDE_BUTTON_BORDERS = "Hide button borders"
 L.HIDE_BUTTON_BORDERS_TIP = "Takes the frame off the buttons of every action bar, the stance bar and the pet bar, so "
     .. "the icons are square. Buttons you point at, press or that are active light up as squares, like classic "
     .. "buttons. The casting animation on the buttons is left out."
-L.SECTION_RING = "Ring"
+-- Used only when the game doesn't provide its own Edit Mode names.
+L.ACTION_BAR = "Action Bar %d"
+L.STANCE_BAR = "Stance Bar"
+L.PET_BAR = "Pet Bar"
+
+-- Settings: ring page
+L.CATEGORY_RING = "Ring"
 L.RING = "Ring of eight actions"
 L.RING_TIP = "Hold a key, point at an action and let go to use it. Bind the keys under Key Bindings > AddOns > "
     .. "Quality of Life: one opens the ring at the mouse cursor and aims with the mouse, the other opens it in the "
@@ -181,10 +187,6 @@ L.RING_MOUSE = "Ring (aim with the mouse)"
 L.RING_STICK = "Ring (aim with the right stick)"
 L.RING_EDITOR_HINT = "Drag spells, items or macros onto the ring, or off it to take them away. Escape closes it."
 L.RING_EDITOR_COMBAT = "The ring can't be changed in combat."
--- Used only when the game doesn't provide its own Edit Mode names.
-L.ACTION_BAR = "Action Bar %d"
-L.STANCE_BAR = "Stance Bar"
-L.PET_BAR = "Pet Bar"
 
 -- Settings: controller page
 L.CATEGORY_CONTROLLER = "Controller"

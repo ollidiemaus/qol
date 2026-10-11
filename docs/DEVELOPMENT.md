@@ -252,14 +252,15 @@ Pillow and numpy scripts, not kept in the repository.
 
 Every page is a canvas (`Settings.RegisterCanvasLayoutCategory`) built by `UI/SettingsPage.lua`:
 two columns of rows, or rows across the page (`"wide"`, the Viewport page, as its sliders need the
-room), each an option's name with a control from the game's own templates
-(`SettingsCheckboxTemplate`, `WowStyle2DropdownTemplate`, `MinimalSliderWithSteppersTemplate`,
-`ColorSwatchTemplate` opening `ColorPickerFrame`), so they look like the game's pages and fit without
-scrolling (`SettingsPage.MAX_HEIGHT`, checked by the tests). All names use one font: the game's list
-draws dependent options smaller. A page refreshes on `OnRefresh` (the panel showing it) and through
-`Options:Watch`, and resets on `OnDefault` (the game's "all settings" reset) and its own Defaults
-button, which asks with a second click: the game's confirmation dialog would spread taint. The
-canvas pages don't show up in the settings search.
+room, and the Ring page, with too few options for two columns), each an option's name with a
+control from the game's own templates (`SettingsCheckboxTemplate`, `WowStyle2DropdownTemplate`,
+`MinimalSliderWithSteppersTemplate`, `ColorSwatchTemplate` opening `ColorPickerFrame`), so they look
+like the game's pages and fit without scrolling (`SettingsPage.MAX_HEIGHT`, checked by the tests).
+All names use one font: the game's list draws dependent options smaller. A page refreshes on
+`OnRefresh` (the panel showing it) and through `Options:Watch`, and resets on `OnDefault` (the
+game's "all settings" reset) and its own Defaults button, which asks with a second click: the
+game's confirmation dialog would spread taint. The canvas pages don't show up in the settings
+search.
 
 No page is the game's vertical list (`RegisterVerticalLayoutSubcategory` with proxy settings).
 Viewport was one, with sliders and a color swatch, and on Forever with the controller interface on
@@ -449,7 +450,7 @@ Things only the real client can confirm:
     (Shift) and unlocked; the tooltip.
   - The keys still work after opening and closing a gamepad window (bags, map, the settings), and
     no "tainted by" error shows up in combat afterwards.
-- The ring (Action Bars > Ring), with both keys bound under Key Bindings > AddOns > Quality of Life:
+- The ring (the Ring page), with both keys bound under Key Bindings > AddOns > Quality of Life:
   - Mouse key: the ring opens at the cursor, the wedge and name follow the mouse, letting go uses
     that action (also in combat, a spell, an item and a macro), and letting go in the middle or on an
     empty slot does nothing. Near a screen edge, and at several UI scales.

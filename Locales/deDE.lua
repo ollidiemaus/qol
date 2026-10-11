@@ -168,7 +168,12 @@ L.HIDE_BUTTON_BORDERS = "Knopfränder ausblenden"
 L.HIDE_BUTTON_BORDERS_TIP = "Nimmt den Knöpfen aller Aktionsleisten, der Haltungsleiste und der Begleiterleiste den "
     .. "Rahmen, so dass die Symbole eckig sind. Knöpfe unter der Maus, gedrückte und aktive Knöpfe leuchten eckig auf, "
     .. "wie klassische Knöpfe. Die Zauberanimation auf den Knöpfen entfällt."
-L.SECTION_RING = "Ring"
+L.ACTION_BAR = "Aktionsleiste %d"
+L.STANCE_BAR = "Haltungsleiste"
+L.PET_BAR = "Begleiterleiste"
+
+-- Settings: ring page
+L.CATEGORY_RING = "Ring"
 L.RING = "Ring mit acht Aktionen"
 L.RING_TIP = "Halte eine Taste, zeig auf eine Aktion und lass los, um sie zu nutzen. Belege die Tasten unter "
     .. "Tastaturbelegung > AddOns > Quality of Life: Die eine öffnet den Ring am Mauszeiger und zielt mit der Maus, die "
@@ -183,9 +188,6 @@ L.RING_STICK = "Ring (mit dem rechten Stick zielen)"
 L.RING_EDITOR_HINT = "Zieh Zauber, Gegenstände oder Makros auf den Ring, oder herunter, um sie zu entfernen. Escape "
     .. "schließt ihn."
 L.RING_EDITOR_COMBAT = "Der Ring lässt sich im Kampf nicht ändern."
-L.ACTION_BAR = "Aktionsleiste %d"
-L.STANCE_BAR = "Haltungsleiste"
-L.PET_BAR = "Begleiterleiste"
 
 -- Settings: controller page
 L.CATEGORY_CONTROLLER = "Controller"

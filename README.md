@@ -144,7 +144,7 @@ works in combat, shows cooldowns and charges, and names the action you point at 
   is on the ring too. Pick a bar you don't use otherwise; the back buttons below use buttons 9 to 12,
   so both can share one.
 
-Turn it on under Action Bars > **Ring**.
+Turn it on in the settings, on the Ring page.
 
 ### Controller
 
@@ -181,7 +181,7 @@ at still shows its tooltip.
 ## Settings
 
 **Esc > Options > AddOns > Quality of Life**, or type `/qol` (or `/qualityoflife`). The Viewport,
-Action Bars and Minimap pages (and on Forever the Controller page) are listed below Quality of
+Action Bars, Ring and Minimap pages (and on Forever the Controller page) are listed below Quality of
 Life. Every page fits without scrolling;
 the main, Action Bars and Minimap pages show their options in two columns. With a controller, the
 arrows next to a viewport margin move it one pixel per press. In Forever's controller interface a

@@ -356,7 +356,7 @@ local function onEditorEnter(slot)
     if C_ActionBar.HasAction(slot.slot) then
         GameTooltip:SetAction(slot.slot)
     else
-        GameTooltip:SetText(L.SECTION_RING)
+        GameTooltip:SetText(L.CATEGORY_RING)
         GameTooltip:AddLine(L.SLOT_EMPTY:format(Options:Get(BAR_KEY), slot.index), 1, 1, 1, true)
     end
     GameTooltip:Show()
