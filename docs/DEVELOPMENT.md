@@ -252,14 +252,15 @@ Pillow and numpy scripts, not kept in the repository.
 
 Every page is a canvas (`Settings.RegisterCanvasLayoutCategory`) built by `UI/SettingsPage.lua`:
 two columns of rows, or rows across the page (`"wide"`, the Viewport page, as its sliders need the
-room), each an option's name with a control from the game's own templates
-(`SettingsCheckboxTemplate`, `WowStyle2DropdownTemplate`, `MinimalSliderWithSteppersTemplate`,
-`ColorSwatchTemplate` opening `ColorPickerFrame`), so they look like the game's pages and fit without
-scrolling (`SettingsPage.MAX_HEIGHT`, checked by the tests). All names use one font: the game's list
-draws dependent options smaller. A page refreshes on `OnRefresh` (the panel showing it) and through
-`Options:Watch`, and resets on `OnDefault` (the game's "all settings" reset) and its own Defaults
-button, which asks with a second click: the game's confirmation dialog would spread taint. The
-canvas pages don't show up in the settings search.
+room, and the Ring page, with too few options for two columns), each an option's name with a
+control from the game's own templates (`SettingsCheckboxTemplate`, `WowStyle2DropdownTemplate`,
+`MinimalSliderWithSteppersTemplate`, `ColorSwatchTemplate` opening `ColorPickerFrame`), so they look
+like the game's pages and fit without scrolling (`SettingsPage.MAX_HEIGHT`, checked by the tests).
+All names use one font: the game's list draws dependent options smaller. A page refreshes on
+`OnRefresh` (the panel showing it) and through `Options:Watch`, and resets on `OnDefault` (the
+game's "all settings" reset) and its own Defaults button, which asks with a second click: the
+game's confirmation dialog would spread taint. The canvas pages don't show up in the settings
+search.
 
 No page is the game's vertical list (`RegisterVerticalLayoutSubcategory` with proxy settings).
 Viewport was one, with sliders and a color swatch, and on Forever with the controller interface on
@@ -323,12 +324,14 @@ there's nothing for it to change.
 The Controller page also has the back buttons' key bindings (`Page:Binding`, rows across the page):
 the same `CLICK QoLBackButtonN:LeftButton` commands as Key Bindings > AddOns, each row named by its
 slot on the chosen bar (the label is a function, asked again on each refresh, so it follows the
-Slots dropdown). Each row has two buttons from the game's own `KeyBindingFrameBindingButtonTemplate`
-and works like a row of the game's Key Bindings, with code of our own rather than the game's
-`KeybindListener` (a Blizzard frame: starting it writes its fields, which the rules above
-forbid): a click on a button shows a parentless frame of ours at `FULLSCREEN_DIALOG` strata with an
-`OnKeyDown`, which takes the keyboard until a key comes (modifiers alone wait for the rest, through
-`IsKeyPressIgnoredForBinding` and `CreateKeyChordStringUsingMetaKeyState`), Escape comes, the
+Slots dropdown). The Ring page has the ring's two (`CLICK QoLRingMouse:LeftButton` and
+`CLICK QoLRingStick:LeftButton`), named as in Key Bindings. Each row has two buttons from the
+game's own `KeyBindingFrameBindingButtonTemplate` and works like a row of the game's Key Bindings,
+with code of our own rather than the game's `KeybindListener` (a Blizzard frame: starting it writes
+its fields, which the rules above forbid): a click on a button shows a parentless frame of ours at
+`FULLSCREEN_DIALOG` strata with an `OnKeyDown`, which takes the keyboard until a key comes
+(modifiers alone wait for the rest, through `IsKeyPressIgnoredForBinding` and
+`CreateKeyChordStringUsingMetaKeyState`), Escape comes, the
 button is clicked again, the page hides, the row is greyed out or combat starts. The key is set as
 the game's `KeybindListener:ProcessInput` sets it: both old keys cleared, the new key taken from
 whatever had it (`SetBinding(key, nil, context)`), the keys bound again in their slots, in the
@@ -336,7 +339,7 @@ action's context (`C_KeyBindings.GetBindingContextForAction`). A right-click cle
 buttons are not listened for: the controller cursor needs A (a second press on the button stops
 waiting) and B, and the Steam Deck's back buttons send keyboard keys anyway; a paddle needs no key.
 Nothing calls `SaveBindings`: the settings panel saves the bindings when it closes, which fires
-`UPDATE_BINDINGS`, and the back buttons' override bindings follow from there through
+`UPDATE_BINDINGS`, and the back buttons' and the ring's override bindings follow from there through
 `ns.LaterOutsideWindows`, after the settings closed. So the only thing done while the settings are
 open is `SetBinding`, which the game's own Key Bindings page does there too. All frames (the
 buttons and the listener) are created when the pages are built at login, not while a controller
@@ -449,7 +452,7 @@ Things only the real client can confirm:
     (Shift) and unlocked; the tooltip.
   - The keys still work after opening and closing a gamepad window (bags, map, the settings), and
     no "tainted by" error shows up in combat afterwards.
-- The ring (Action Bars > Ring), with both keys bound under Key Bindings > AddOns > Quality of Life:
+- The ring (the Ring page), with both keys bound under Key Bindings > AddOns > Quality of Life:
   - Mouse key: the ring opens at the cursor, the wedge and name follow the mouse, letting go uses
     that action (also in combat, a spell, an item and a macro), and letting go in the middle or on an
     empty slot does nothing. Near a screen edge, and at several UI scales.

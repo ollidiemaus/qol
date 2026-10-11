@@ -134,17 +134,19 @@ Eight actions on a ring, drawn in the bronze of Forever's minimap. Hold the
 ring's key, point at an action and let go to use it; let go in the middle and nothing happens. It
 works in combat, shows cooldowns and charges, and names the action you point at in the middle.
 
-- **Two keys:** Esc > Options > Key Bindings > AddOns > Quality of Life lists **Ring (aim with the
-  mouse)**, which opens the ring at the mouse cursor, and **Ring (aim with the right stick)**, which
-  opens it in the middle of the screen for a controller's right stick (the camera stays still while
-  you aim). Both open the same ring, also in Forever's controller interface.
+- **Two keys:** the Ring page lists them under **Keys**: **Ring (aim with the mouse)**, which opens
+  the ring at the mouse cursor, and **Ring (aim with the right stick)**, which opens it in the
+  middle of the screen for a controller's right stick (the camera stays still while you aim). Click
+  a box, then press the key; a right-click clears it. The same bindings are under Esc > Options >
+  Key Bindings > AddOns > Quality of Life. Both open the same ring, also in Forever's controller
+  interface.
 - **Filling it:** type `/qol ring` and drag spells, items or macros onto the ring, or off it to take
   them away. With a controller, click a slot to pick up or put down what's on it. The ring's actions
   are the first eight buttons of Action Bar 8 (or 6 or 7, picked under **Slots**), so what's there
   is on the ring too. Pick a bar you don't use otherwise; the back buttons below use buttons 9 to 12,
   so both can share one.
 
-Turn it on under Action Bars > **Ring**.
+Turn it on in the settings, on the Ring page.
 
 ### Controller
 
@@ -181,7 +183,7 @@ at still shows its tooltip.
 ## Settings
 
 **Esc > Options > AddOns > Quality of Life**, or type `/qol` (or `/qualityoflife`). The Viewport,
-Action Bars and Minimap pages (and on Forever the Controller page) are listed below Quality of
+Action Bars, Ring and Minimap pages (and on Forever the Controller page) are listed below Quality of
 Life. Every page fits without scrolling;
 the main, Action Bars and Minimap pages show their options in two columns. With a controller, the
 arrows next to a viewport margin move it one pixel per press. In Forever's controller interface a

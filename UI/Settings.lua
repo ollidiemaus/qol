@@ -2,10 +2,10 @@ local _, ns = ...
 local L = ns.L
 local Options = ns.Options
 
--- Quality of Life's pages under Options > AddOns: the main page, plus Viewport, Action Bars, Minimap
--- and, on Forever (which has the controller action bar), Controller as subcategories. Every page is
--- our own (UI/SettingsPage.lua), none is the game's own list of settings: on Forever, with the
--- controller interface on, the game stopped responding when the settings closed after showing
+-- Quality of Life's pages under Options > AddOns: the main page, plus Viewport, Action Bars, Ring,
+-- Minimap and, on Forever (which has the controller action bar), Controller as subcategories. Every
+-- page is our own (UI/SettingsPage.lua), none is the game's own list of settings: on Forever, with
+-- the controller interface on, the game stopped responding when the settings closed after showing
 -- Viewport as the game's list, with its sliders and color swatch (see docs/DEVELOPMENT.md). The
 -- pages only read and write ns.Options, and the features react through Options:Watch. Without the
 -- Settings API the pages are skipped.
@@ -129,8 +129,8 @@ local function buildMinimap(page)
     page:Checkbox("right", "hideMinimapCalendar", L.HIDE_MINIMAP_CALENDAR, L.HIDE_MINIMAP_CALENDAR_TIP)
 end
 
--- Action bar page: the two flips side by side for each bar, then the paging keys, the buttons'
--- look and the ring.
+-- Action bar page: the two flips side by side for each bar, then the paging keys and the buttons'
+-- look.
 local function buildActionBars(page)
     local ActionBars = ns.ActionBars
     page:Header("left", L.SECTION_FLIP_VERTICAL, L.FLIP_VERTICAL_TIP)
@@ -144,14 +144,25 @@ local function buildActionBars(page)
     page:Checkbox("left", "disableBarPaging", L.DISABLE_BAR_PAGING, L.DISABLE_BAR_PAGING_TIP)
     page:Header("right", L.SECTION_BUTTONS)
     page:Checkbox("right", "hideButtonBorders", L.HIDE_BUTTON_BORDERS, L.HIDE_BUTTON_BORDERS_TIP)
-    page:Align()
-    page:Header("left", L.SECTION_RING)
-    page:Checkbox("left", "ring", L.RING, L.RING_TIP)
+end
+
+-- Ring page: rows across the page, as on the Viewport page, then the ring's two keys (as in Key
+-- Bindings > AddOns).
+local function buildRing(page)
+    local enabled = is("ring")
+    page:Checkbox("wide", "ring", L.RING, L.RING_TIP)
     local bars = {}
     for bar = 6, 8 do
         bars[#bars + 1] = { value = bar, label = L.RING_BAR_CHOICE:format(bar) }
     end
-    page:Dropdown("left", "ringBar", L.RING_BAR, bars, L.RING_BAR_TIP, { indent = true, enabled = is("ring") })
+    page:Dropdown("wide", "ringBar", L.RING_BAR, bars, L.RING_BAR_TIP, { indent = true, enabled = enabled })
+
+    page:Header("wide", L.SECTION_KEYS)
+    for _, info in ipairs(ns.Ring.OPENERS) do
+        page:Binding("wide", ns.Buttons.Command(info.name), info.label, L["RING_" .. info.aim:upper() .. "_TIP"],
+            { enabled = enabled })
+    end
+    page:Note("wide", L.BINDING_HINT)
 end
 
 -- Controller page: the back buttons and the bar whose slots they use next to the buff tooltips,
@@ -171,7 +182,7 @@ local function buildController(page)
     page:Header("right", L.SECTION_BUFFS)
     page:Checkbox("right", "hideBuffTooltips", L.HIDE_BUFF_TOOLTIPS, L.HIDE_BUFF_TOOLTIPS_TIP)
 
-    page:Header("wide", L.SECTION_BACK_BUTTON_KEYS)
+    page:Header("wide", L.SECTION_KEYS)
     for index, info in ipairs(BackButtons.BUTTONS) do
         local function label()
             return L.BACK_BUTTON_KEY:format(info.label, Options:Get("controllerBackButtonsBar"),
@@ -219,11 +230,15 @@ function SettingsPanel:Init()
     buildActionBars(actionBars)
     actionBars:Register(category)
 
+    local ring = Page.New(L.CATEGORY_RING)
+    buildRing(ring)
+    ring:Register(category)
+
     local minimap = Page.New(L.CATEGORY_MINIMAP)
     buildMinimap(minimap)
     minimap:Register(category)
 
-    self.pages = { main = main, viewport = viewport, actionBars = actionBars, minimap = minimap }
+    self.pages = { main = main, viewport = viewport, actionBars = actionBars, ring = ring, minimap = minimap }
     if GamepadMainActionBarFrame then
         local controller = Page.New(L.CATEGORY_CONTROLLER)
         buildController(controller)

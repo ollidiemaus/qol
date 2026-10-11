@@ -70,28 +70,24 @@ local function radio(c, text)
 end
 
 describe("settings pages", function()
-    it("registers one AddOns category with Viewport, Action Bars and Minimap below it, all our own pages", function()
+    it("registers one AddOns category with Viewport, Action Bars, Ring and Minimap below it, all our own pages", function()
         local _, api = start()
         local main = api.registered
         T.eq(main.name, "Quality of Life")
         T.truthy(main.frame, "the main page is our own")
-        T.eq(#api.categories, 4)
-        T.eq(api.categories[2].name, "Viewport")
-        T.eq(api.categories[2].parent, main)
-        T.truthy(api.categories[2].frame)
-        T.eq(api.categories[3].name, "Action Bars")
-        T.eq(api.categories[3].parent, main)
-        T.truthy(api.categories[3].frame)
-        T.eq(api.categories[4].name, "Minimap")
-        T.eq(api.categories[4].parent, main)
-        T.truthy(api.categories[4].frame)
+        T.eq(#api.categories, 5)
+        for index, name in ipairs({ "Viewport", "Action Bars", "Ring", "Minimap" }) do
+            T.eq(api.categories[index + 1].name, name)
+            T.eq(api.categories[index + 1].parent, main)
+            T.truthy(api.categories[index + 1].frame)
+        end
     end)
 
     it("adds a Controller page on Forever, for the controller action bar", function()
         local ns, api = start(nil, true)
-        T.eq(#api.categories, 5)
-        T.eq(api.categories[5].name, "Controller")
-        T.eq(api.categories[5].parent, api.registered)
+        T.eq(#api.categories, 6)
+        T.eq(api.categories[6].name, "Controller")
+        T.eq(api.categories[6].parent, api.registered)
         T.same(headers(pages(ns).controller, "left"), { "Back buttons" })
         T.same(headers(pages(ns).controller, "right"), { "Buffs" })
         T.same(headers(pages(ns).controller, "wide"), { "Keys" })
@@ -406,10 +402,10 @@ describe("settings pages", function()
         T.eq(control(ns, "mapTravel"), nil)
     end)
 
-    it("lists every bar in both columns of the action bar page, side by side, then paging, buttons and the ring", function()
+    it("lists every bar in both columns of the action bar page, side by side, then paging and buttons", function()
         local ns = start()
         local page = pages(ns).actionBars
-        T.same(headers(page, "left"), { "Reverse vertical growth", "Paging", "Ring" })
+        T.same(headers(page, "left"), { "Reverse vertical growth", "Paging" })
         T.same(headers(page, "right"), { "Reverse horizontal growth", "Buttons" })
         for _, bar in ipairs(ns.ActionBars.BARS) do
             local vertical = control(ns, ns.ActionBars.VerticalKey(bar.frame))
@@ -422,10 +418,49 @@ describe("settings pages", function()
         T.eq(control(ns, "hideButtonBorders").column, "right")
         T.eq(control(ns, "disableBarPaging").row:PointFor("TOPLEFT")[5],
             control(ns, "hideButtonBorders").row:PointFor("TOPLEFT")[5], "paging and buttons side by side")
-        T.eq(control(ns, "ring").column, "left")
-        T.eq(control(ns, "ringBar").column, "left")
-        T.truthy(control(ns, "ring").row:PointFor("TOPLEFT")[5] < control(ns, "hideButtonBorders").row:PointFor("TOPLEFT")[5],
-            "the ring below paging and buttons")
+    end)
+
+    it("puts the ring on a page of its own, in rows across it, the slots and keys greyed out while it's off", function()
+        local ns = start()
+        local page = pages(ns).ring
+        show(page)
+        local kinds = {}
+        for _, c in ipairs(page.controls) do
+            kinds[#kinds + 1] = c.kind
+            T.eq(c.column, "wide", c.key or c.command)
+        end
+        T.same(kinds, { "checkbox", "dropdown", "binding", "binding" })
+        T.same(headers(page, "wide"), { "Keys" })
+        local bar = control(ns, "ringBar")
+        T.same(values(bar), { 6, 7, 8 })
+        T.truthy(bar.indent)
+        T.falsy(bar.widget:IsEnabled())
+        local mouse = page.controls[3]
+        T.eq(mouse.command, "CLICK QoLRingMouse:LeftButton")
+        T.eq(mouse.text.text, "Ring (aim with the mouse)")
+        T.eq(page.controls[4].command, "CLICK QoLRingStick:LeftButton")
+        T.falsy(mouse.buttons[1]:IsEnabled())
+        control(ns, "ring").widget:Click()
+        T.truthy(bar.widget:IsEnabled())
+        T.truthy(mouse.buttons[1]:IsEnabled())
+    end)
+
+    it("binds the ring's keys from the Ring page, as in Key Bindings", function()
+        local ns = start({ ring = true })
+        local page = pages(ns).ring
+        show(page)
+        local stick = page.controls[4]
+        stick.buttons[1]:Click()
+        T.eq(page.note.text, "Press the key for Ring (aim with the right stick). Escape or another click on the box cancels.")
+        Stubs.TypeKey("F14")
+        T.eq(GetBindingAction("F14"), "CLICK QoLRingStick:LeftButton")
+        T.eq(stick.buttons[1].text, "F14")
+        T.eq(page.note.text, "F14 is now the key for Ring (aim with the right stick).")
+        -- The ring opens with it once the settings have closed (closing them saves the bindings).
+        Stubs.Fire("UPDATE_BINDINGS")
+        Stubs.RunTimers()
+        Stubs.AdvanceTime()
+        T.eq(Stubs.state().overrides.F14.command, "CLICK QoLRingStick:LeftButton")
     end)
 
     it("resets a page to its defaults after a second click", function()
