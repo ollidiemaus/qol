@@ -129,8 +129,8 @@ local function buildMinimap(page)
     page:Checkbox("right", "hideMinimapCalendar", L.HIDE_MINIMAP_CALENDAR, L.HIDE_MINIMAP_CALENDAR_TIP)
 end
 
--- Action bar page: the two flips side by side for each bar, then the paging keys and the buttons'
--- look.
+-- Action bar page: the two flips side by side for each bar, then the paging keys, the buttons'
+-- look and the ring.
 local function buildActionBars(page)
     local ActionBars = ns.ActionBars
     page:Header("left", L.SECTION_FLIP_VERTICAL, L.FLIP_VERTICAL_TIP)
@@ -144,6 +144,14 @@ local function buildActionBars(page)
     page:Checkbox("left", "disableBarPaging", L.DISABLE_BAR_PAGING, L.DISABLE_BAR_PAGING_TIP)
     page:Header("right", L.SECTION_BUTTONS)
     page:Checkbox("right", "hideButtonBorders", L.HIDE_BUTTON_BORDERS, L.HIDE_BUTTON_BORDERS_TIP)
+    page:Align()
+    page:Header("left", L.SECTION_RING)
+    page:Checkbox("left", "ring", L.RING, L.RING_TIP)
+    local bars = {}
+    for bar = 6, 8 do
+        bars[#bars + 1] = { value = bar, label = L.RING_BAR_CHOICE:format(bar) }
+    end
+    page:Dropdown("left", "ringBar", L.RING_BAR, bars, L.RING_BAR_TIP, { indent = true, enabled = is("ring") })
 end
 
 -- Controller page: the back buttons and the bar whose slots they use.

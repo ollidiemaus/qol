@@ -6,7 +6,7 @@ local L = setmetatable({}, { __index = function(_, key) return key end })
 ns.L = L
 
 L.ADDON_TITLE = "Quality of Life"
-L.SLASH_HELP = "/qol opens the settings."
+L.SLASH_HELP = "/qol opens the settings, /qol ring the ring's editor."
 -- Used only when the game doesn't provide its own SETTINGS_DEFAULTS text.
 L.DEFAULTS = "Defaults"
 L.DEFAULTS_CONFIRM = "Sure?"
@@ -167,6 +167,20 @@ L.HIDE_BUTTON_BORDERS = "Hide button borders"
 L.HIDE_BUTTON_BORDERS_TIP = "Takes the frame off the buttons of every action bar, the stance bar and the pet bar, so "
     .. "the icons are square. Buttons you point at, press or that are active light up as squares, like classic "
     .. "buttons. The casting animation on the buttons is left out."
+L.SECTION_RING = "Ring"
+L.RING = "Ring of eight actions"
+L.RING_TIP = "Hold a key, point at an action and let go to use it. Bind the keys under Key Bindings > AddOns > "
+    .. "Quality of Life: one opens the ring at the mouse cursor and aims with the mouse, the other opens it in the "
+    .. "middle of the screen and aims with a controller's right stick. Let go in the middle to use nothing. Type "
+    .. "/qol ring to put spells, items and macros on the ring."
+L.RING_BAR = "Slots"
+L.RING_BAR_TIP = "The ring's actions are the first eight buttons of this action bar: what's on one is on the other. "
+    .. "Pick a bar you don't use otherwise."
+L.RING_BAR_CHOICE = "Action Bar %d, buttons 1-8"
+L.RING_MOUSE = "Ring (aim with the mouse)"
+L.RING_STICK = "Ring (aim with the right stick)"
+L.RING_EDITOR_HINT = "Drag spells, items or macros onto the ring, or off it to take them away. Escape closes it."
+L.RING_EDITOR_COMBAT = "The ring can't be changed in combat."
 -- Used only when the game doesn't provide its own Edit Mode names.
 L.ACTION_BAR = "Action Bar %d"
 L.STANCE_BAR = "Stance Bar"
@@ -188,7 +202,7 @@ L.BACK_BUTTON_L4 = "Back button L4 (upper left)"
 L.BACK_BUTTON_L5 = "Back button L5 (lower left)"
 L.BACK_BUTTON_R4 = "Back button R4 (upper right)"
 L.BACK_BUTTON_R5 = "Back button R5 (lower right)"
-L.BACK_BUTTON_EMPTY = "Empty. Drag a spell here, or onto Action Bar %d, button %d."
+L.SLOT_EMPTY = "Empty. Drag a spell here, or onto Action Bar %d, button %d."
 
 -- Chat messages
 L.SOLD_JUNK = "Sold %d junk |4item:items; for %s."

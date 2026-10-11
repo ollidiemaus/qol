@@ -7,6 +7,7 @@ local SAME = {
     ADDON_TITLE = true, SECTION_TOOLTIPS = true, PIXELS = true, CATEGORY_VIEWPORT = true,
     SECTION_QUESTS = true, SECTION_CHAT = true, CATEGORY_MINIMAP = true, MINIMAP_POSITION = true, BORDER_BRONZE = true,
     MAP_DUNGEON = true, MAP_ZEPPELIN = true, MAP_PORTAL = true, MAP_PLACE_IN_ZONE = true, CATEGORY_CONTROLLER = true,
+    SECTION_RING = true,
 }
 
 local function strings(locale)

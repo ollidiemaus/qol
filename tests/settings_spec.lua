@@ -259,10 +259,10 @@ describe("settings pages", function()
         T.eq(control(ns, "mapTravel"), nil)
     end)
 
-    it("lists every bar in both columns of the action bar page, side by side, then paging and buttons", function()
+    it("lists every bar in both columns of the action bar page, side by side, then paging, buttons and the ring", function()
         local ns = start()
         local page = pages(ns).actionBars
-        T.same(headers(page, "left"), { "Reverse vertical growth", "Paging" })
+        T.same(headers(page, "left"), { "Reverse vertical growth", "Paging", "Ring" })
         T.same(headers(page, "right"), { "Reverse horizontal growth", "Buttons" })
         for _, bar in ipairs(ns.ActionBars.BARS) do
             local vertical = control(ns, ns.ActionBars.VerticalKey(bar.frame))
@@ -275,6 +275,10 @@ describe("settings pages", function()
         T.eq(control(ns, "hideButtonBorders").column, "right")
         T.eq(control(ns, "disableBarPaging").row:PointFor("TOPLEFT")[5],
             control(ns, "hideButtonBorders").row:PointFor("TOPLEFT")[5], "paging and buttons side by side")
+        T.eq(control(ns, "ring").column, "left")
+        T.eq(control(ns, "ringBar").column, "left")
+        T.truthy(control(ns, "ring").row:PointFor("TOPLEFT")[5] < control(ns, "hideButtonBorders").row:PointFor("TOPLEFT")[5],
+            "the ring below paging and buttons")
     end)
 
     it("resets a page to its defaults after a second click", function()

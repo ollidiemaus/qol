@@ -67,6 +67,8 @@ local DEFAULTS = {
 
     disableBarPaging = false,
     hideButtonBorders = false,
+    ring = false,
+    ringBar = 8, -- Action Bar 6, 7 or 8, whose buttons 1 to 8 are the ring's actions (the back buttons take 9 to 12)
 
     controllerBackButtons = false,
     controllerBackButtonsBar = 8, -- Action Bar 6, 7 or 8, whose buttons 9 to 12 the back buttons use
