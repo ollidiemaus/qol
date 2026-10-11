@@ -8,11 +8,12 @@ Notes for working on the addon. What it does for players is in the [README](../R
 |---|---|
 | `Core/` | Namespace and printing (`Init`), the event frame (`Events`), saved options with defaults and change watchers (`Options`), deferred changes (`Later`), the hidden holder for hidden frames (`Hider`), `/qol` (`Slash`) and startup (`Lifecycle`) |
 | `Data/` | Static game data: `MapPins` (dungeon entrances, docks, portals; how it was made is at the top of the file) |
-| `Features/` | One file per feature: `Merchant`, `Quests`, `Tooltips`, `HideFrames` (also the chat buttons), `CombatLog`, `ChatClassColors`, `CombinedBagSort`, `ClassHealthBars`, `Minimap` (shape, positions, class colors and font sizes around the minimap), `MapPins`, `Viewport`, `ActionBars`, `ButtonBorders`, `BarPaging`, `ReloadCommand` |
+| `Features/` | One file per feature: `Merchant`, `Quests`, `Tooltips`, `HideFrames` (also the chat buttons), `CombatLog`, `ChatClassColors`, `CombinedBagSort`, `ClassHealthBars`, `Minimap` (shape, positions, class colors and font sizes around the minimap), `MapPins`, `Viewport`, `ActionBars`, `ButtonBorders`, `BarPaging`, `BackButtons` (the controller back buttons, Forever only), `ReloadCommand` |
 | `UI/` | `SettingsPage.lua`, our own settings page (two columns, or rows across the page); `Settings.lua`, the pages under Options > AddOns built with it |
 | `Locales/` | English strings, German overrides |
 | `Media/` | `Icon.tga`, the addon list icon (the TOC's `IconTexture`, 128×128, 32-bit), and `Icon.svg`, its source (not packaged); `Zeppelin.tga`, `Tram.tga` and `MinimapSquareBorder.tga` (see below) |
 | `tests/` | Specs run in plain Lua against `tests/wow_stubs.lua` |
+| `Bindings.xml` | The back buttons' entries under Key Bindings > AddOns (the client loads it from the addon's folder, not the TOC) |
 
 Features never talk to each other or to the settings page. The page writes `ns.Options`; a feature
 reads it with `Options:Get` and reacts to changes through `Options:Watch`.
@@ -134,6 +135,38 @@ addon's override counts), which is how the game treats a modified key without a 
 The saved bindings are never changed. Our own overrides fire `UPDATE_BINDINGS` too; the update then
 finds nothing to change.
 
+The controller back buttons are four `SecureActionButtonTemplate` buttons of ours (`QoLBackButton1`
+to `4`, `type` "action") on the last four slots of Action Bar 6, 7 or 8 (slots 153-156, 165-168,
+177-180), so the controller bar's own slots and its paging are left alone and a spell can also be
+put there from the standard bar. They hang off a plain frame of ours whose parent is
+`GamepadMainActionBarFrame` (Blizzard_GamepadActionBars, loaded with the game on Forever, so it
+exists at our `ADDON_LOADED`): they show, hide, scale and fade with the bar and nothing is hooked or
+written on it. Their anchors are the bar's `PageUnit.LeftCenteredAnchor` and `RightCenteredAnchor`
+(the d-pad and face button groups), which only Edit Mode moves, out of combat, and which the compact
+layout moves too. A secure button makes its parents protected, so the holder is created, shown and
+hidden through `ns.Later` (out of combat), like the `type` and `action` attributes, which are set
+only when they change. The art is drawn on regions of our own, copied from the bar's buttons
+(`gamepad-actionbar-circleslot-*` atlases, `CircleMask`, the round portrait mask for the empty slot
+and the cooldown swipe) and updated in combat (`ns.Later(..., true)`): icon, usability color, count
+(`GetActionDisplayCount`, maybe secret, only passed to `SetText`), cooldown
+(`C_ActionBar.GetActionCooldownDuration` into `SetCooldownFromDurationObject` on our own Cooldown)
+and the selected rim. Dragging calls `PickupAction`/`PlaceAction` only out of combat, and with
+`lockActionBars` on only with the `PICKUPACTION` modifier, as the game's bars do.
+
+Bindings: `Bindings.xml` adds `CLICK QoLBackButtonN:LeftButton` under Key Bindings > AddOns, named
+by `BINDING_HEADER_QOL` and `BINDING_NAME_...` globals set when `BackButtons.lua` loads. Whether keys
+saved there fire in the controller interface wasn't sure, so every key bound to a button also gets
+an override binding on a frame of ours (`SetOverrideBindingClick`, not priority: Blizzard's gamepad
+windows set priority overrides of their own and win while they're open). A button with no key gets
+its paddle key (`PADPADDLE1` to `4`, SDL numbering: 2 and 4 left, 1 and 3 right) when the paddle has
+neither a saved binding nor one in the controller set (`C_KeyBindings.GetBindingByKey(key,
+Enum.BindingContext.GamepadModeInGameCore)`, in a `pcall`). A trigger held while a back button
+sends its key makes it a modified key; with nothing bound to that, the game uses the key without
+modifiers, so no modifier variants are needed. As with bar paging, the overrides fire
+`UPDATE_BINDINGS` and the next update finds nothing to change; they wait for the end of combat.
+Steam Input on the Steam Deck sends keyboard keys for the back buttons (as Easy Controller Forever's
+README says too), which is why a key binding, not a fixed key, is the way in.
+
 ## Settings pages
 
 Every page is a canvas (`Settings.RegisterCanvasLayoutCategory`) built by `UI/SettingsPage.lua`:
@@ -164,6 +197,9 @@ they're in the player's language. Forever's UiMap IDs (1411 and up) don't exist 
 `MapPins.IsAvailable()` is false: the settings page leaves the World map options out and the map is
 never touched.
 
+The Controller page is registered only when `GamepadMainActionBarFrame` exists (Forever); on retail
+there's nothing for it to change.
+
 ## Tests and lint
 
 Tests and lint need only Lua 5.1 (what WoW runs); newer Lua works for the tests too.
@@ -180,8 +216,10 @@ CI runs both on Lua 5.1.5 on every push and pull request (same setup as Wayscrib
 luacheck from `~/.lua51`, built with hererocks).
 
 The stubs make action bars read-only (a write to a bar field fails the test), and protected frames
-fail on `SetPoint`/`SetParent` in combat, so the taint rules above are checked, not just written
-down.
+fail on `SetPoint`/`SetParent` (and `Show`/`Hide`) in combat, so the taint rules above are checked,
+not just written down. A frame made from `SecureActionButtonTemplate` marks itself and its parents
+protected and fails on `SetAttribute` in combat; `Stubs.NewGamepadBar()` (between `LoadAddon` and
+`Login`) makes Forever's controller bar with its `PageUnit` anchors.
 
 ## Trying it in game
 
@@ -247,6 +285,23 @@ Things only the real client can confirm:
 - World map pins: in the right places on the zone and continent maps (the entrance positions are
   the instance portals, like retail's encounter journal pins), the tooltips' names in German, and a
   click opening the destination's map. Open the map in combat too.
+- Controller back buttons (Options > Controller), on a Steam Deck with F13 to F16 (or other free
+  keys) given to L4, L5, R4 and R5 in Steam Input, bound under Key Bindings > AddOns > Quality of
+  Life:
+  - The keys press the buttons in the controller interface, alone and with LT, RT or both held, and
+    the button looks pressed while held. If they don't, the saved bindings or the overrides don't
+    reach the controller interface; that's the first thing to find out. Does the client see F13
+    and up from Steam Input at all (try binding them to something else)?
+  - A controller with paddles the game sees (Xbox Elite, DualSense Edge) without anything bound:
+    which paddle presses which button (the PADPADDLE numbering is SDL's, not checked in game).
+  - The buttons sit clear of the d-pad and face buttons in the normal and the compact layout, at
+    several Edit Mode sizes, and the labels don't overlap anything; they hide with the bar (keyboard
+    and mouse, vehicles, cutscenes).
+  - Icons, counts, cooldowns (also in combat: the cooldown call on our Cooldown), out-of-mana and
+    unusable colors, the auto attack rim; dragging a spell on and off, with the action bars locked
+    (Shift) and unlocked; the tooltip.
+  - The keys still work after opening and closing a gamepad window (bags, map, the settings), and
+    no "tainted by" error shows up in combat afterwards.
 
 ### Cutscenes and the viewport
 

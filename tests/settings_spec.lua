@@ -2,8 +2,10 @@ local T = require("testlib")
 local Stubs = require("wow_stubs")
 local describe, it = T.describe, T.it
 
-local function start(savedOptions)
+-- forever: with Forever's controller action bar, which brings the Controller page.
+local function start(savedOptions, forever)
     local ns = Stubs.LoadAddon()
+    if forever then Stubs.NewGamepadBar() end
     local api = Stubs.InstallSettings()
     Stubs.Login(savedOptions)
     return ns, api
@@ -69,6 +71,19 @@ describe("settings pages", function()
         T.truthy(api.categories[4].frame)
     end)
 
+    it("adds a Controller page on Forever, for the controller action bar", function()
+        local ns, api = start(nil, true)
+        T.eq(#api.categories, 5)
+        T.eq(api.categories[5].name, "Controller")
+        T.eq(api.categories[5].parent, api.registered)
+        T.same(headers(pages(ns).controller, "left"), { "Back buttons" })
+        local c = control(ns, "controllerBackButtonsBar")
+        T.same(values(c), { 6, 7, 8 })
+        T.falsy(c.enabled(), "the bar waits for the back buttons")
+        ns.Options:Set("controllerBackButtons", true)
+        T.truthy(c.enabled(), "enabled with the back buttons")
+    end)
+
     it("puts the main page's sections in two columns", function()
         local ns = start()
         local main = pages(ns).main
@@ -80,14 +95,14 @@ describe("settings pages", function()
     end)
 
     it("fits every page without scrolling", function()
-        local ns = start()
+        local ns = start(nil, true)
         for name, page in pairs(pages(ns)) do
             T.truthy(page:Height() <= ns.SettingsPage.MAX_HEIGHT, name .. " is " .. page:Height() .. " high")
         end
     end)
 
     it("has one control for every option", function()
-        local ns, api = start()
+        local ns, api = start(nil, true)
         local found = {}
         for _, page in pairs(pages(ns)) do
             for _, c in ipairs(page.controls) do

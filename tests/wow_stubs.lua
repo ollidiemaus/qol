@@ -29,9 +29,14 @@ local function newRegion(kind, parent, template)
         self.parent = newParent
     end
     function region:GetParent() return self.parent end
-    function region:Show() self.shown = true end
-    function region:Hide() self.shown = false end
-    function region:SetShown(shown) self.shown = shown and true or false end
+    local function checkShow(self)
+        if state.combat and self.protected then
+            error("ADDON_ACTION_BLOCKED: Show or Hide on a protected frame in combat")
+        end
+    end
+    function region:Show() checkShow(self) self.shown = true end
+    function region:Hide() checkShow(self) self.shown = false end
+    function region:SetShown(shown) checkShow(self) self.shown = shown and true or false end
     function region:IsShown() return self.shown end
     function region:IsVisible()
         local node = self
@@ -77,6 +82,7 @@ local function newRegion(kind, parent, template)
     function region:SetFrameLevel(level) self.frameLevel = level end
     function region:GetFrameLevel() return self.frameLevel or 1 end
     function region:SetColorTexture(r, g, b, a) self.color = { r, g, b, a } end
+    function region:SetVertexColor(r, g, b, a) self.vertexColor = { r, g, b, a } end
     function region:SetAtlas(atlas) self.atlas = atlas end
     function region:GetAtlas() return self.atlas end
     -- A file replaces an atlas (GetAtlas is nil afterwards) but not its texture coordinates.
@@ -126,6 +132,9 @@ local function newRegion(kind, parent, template)
     function region:CreateTexture()
         local texture = newRegion("Texture", self)
         return texture
+    end
+    function region:CreateMaskTexture()
+        return newRegion("MaskTexture", self)
     end
     function region:CreateFontString(_, _, font)
         local text = newRegion("FontString", self)
@@ -433,6 +442,26 @@ local function install()
         if template == "ColorSwatchTemplate" then
             function frame:SetColorRGB(r, g, b) self.color = { r, g, b } end
         end
+        -- A secure button is protected, and so are the frames it is a child of: their attributes,
+        -- points and visibility can't change in combat.
+        if template and template:find("SecureActionButtonTemplate") then
+            local node = frame
+            while node do
+                node.protected = true
+                node = node.parent
+            end
+            frame.attributes = {}
+            function frame:SetAttribute(attribute, value)
+                if state.combat then error("ADDON_ACTION_BLOCKED: SetAttribute on a protected frame in combat") end
+                self.attributes[attribute] = value
+            end
+            function frame:GetAttribute(attribute) return self.attributes[attribute] end
+            function frame:RegisterForClicks(...) self.clicks = { ... } end
+        end
+        if kind == "Cooldown" then
+            function frame:SetCooldownFromDurationObject(duration) self.duration = duration end
+            function frame:Clear() self.duration = nil end
+        end
         return frame
     end
     -- The game's color picker: SetupColorPickerAndShow keeps the info; Stubs.PickColor picks a color.
@@ -627,6 +656,38 @@ local function install()
         end
     end
 
+    -- The controller interface's own bindings: state.gamepadBindings[key] = command.
+    G.Enum.BindingContext = { None = 0, GamepadModeInGameCore = 1 }
+    G.C_KeyBindings = {
+        GetBindingByKey = function(key, context)
+            if context == G.Enum.BindingContext.GamepadModeInGameCore then return state.gamepadBindings[key] end
+            return state.bindings[key]
+        end,
+    }
+
+    -- Action slots: state.actions[slot] = { texture, usable (default true), noMana, count, cooldown,
+    -- current, autoRepeat }. state.cursor is what PickupAction took; PlaceAction records the slot.
+    local function action(slot)
+        assert(type(slot) == "number" and slot >= 1 and slot <= 180, "valid action slot")
+        return state.actions[slot]
+    end
+    G.C_ActionBar = {
+        HasAction = function(slot) return action(slot) ~= nil end,
+        GetActionTexture = function(slot) return (action(slot) or {}).texture end,
+        IsUsableAction = function(slot)
+            local a = action(slot)
+            if not a then return false, false end
+            return a.usable ~= false, a.noMana == true
+        end,
+        GetActionDisplayCount = function(slot) return (action(slot) or {}).count or "" end,
+        GetActionCooldownDuration = function(slot) return (action(slot) or {}).cooldown or { seconds = 0 } end,
+        IsCurrentAction = function(slot) return (action(slot) or {}).current == true end,
+        IsAutoRepeatAction = function(slot) return (action(slot) or {}).autoRepeat == true end,
+    }
+    G.IsModifiedClick = function(name) return state.modifiedClicks[name] == true end
+    G.PickupAction = function(slot) state.cursor = action(slot) and slot end
+    G.PlaceAction = function(slot) state.placed[#state.placed + 1] = slot end
+
     -- Settings the client keeps (C_CVar), as strings.
     G.C_CVar = {
         GetCVar = function(name) return state.cvars[name] end,
@@ -693,6 +754,8 @@ local function install()
     function G.GameTooltip:SetOwner(owner) self.owner, self.lines, self.shown = owner, {}, false end
     function G.GameTooltip:SetText(text) self.lines = { { text = text } } end
     function G.GameTooltip:AddLine(text, r, g, b) table.insert(self.lines, { text = text, color = { r, g, b } }) end
+    function G.GameTooltip:SetAction(slot) self.action, self.lines = slot, {} end
+    function G.GameTooltip:IsOwned(owner) return self.owner == owner end
     function G.GameTooltip:Show() self.shown = true end
     function G.GameTooltip:Hide() self.shown = false end
 
@@ -759,7 +822,12 @@ local ADDON_GLOBALS = {
     "HUD_EDIT_MODE_ACTION_BAR_LABEL", "HUD_EDIT_MODE_STANCE_BAR_LABEL", "HUD_EDIT_MODE_PET_ACTION_BAR_LABEL",
     "GetMinimapShape", "HybridMinimap", "TimeManagerClockButton", "GameTimeFrame", "AddonCompartmentFrame",
     "TimeManagerClockTicker", "QoLNoAction", "ColorPickerFrame",
+    "GamepadMainActionBarFrame", "BINDING_HEADER_QOL",
 }
+for index = 1, 4 do
+    ADDON_GLOBALS[#ADDON_GLOBALS + 1] = "QoLBackButton" .. index
+    ADDON_GLOBALS[#ADDON_GLOBALS + 1] = "BINDING_NAME_CLICK QoLBackButton" .. index .. ":LeftButton"
+end
 
 function Stubs.Reset(options)
     options = options or {}
@@ -794,7 +862,8 @@ function Stubs.Reset(options)
             ["SHIFT-4"] = "ACTIONPAGE4", ["SHIFT-5"] = "ACTIONPAGE5", ["SHIFT-6"] = "ACTIONPAGE6",
             ["SHIFT-MOUSEWHEELUP"] = "PREVIOUSACTIONPAGE", ["SHIFT-MOUSEWHEELDOWN"] = "NEXTACTIONPAGE",
         },
-        overrides = {}, overrideCalls = 0,
+        overrides = {}, overrideCalls = 0, gamepadBindings = {},
+        actions = {}, modifiedClicks = {}, placed = {}, settingValues = {},
     }
     for _, name in ipairs(ADDON_GLOBALS) do _G[name] = nil end
     _G.SlashCmdList = {}
@@ -877,6 +946,16 @@ function Stubs.SetControllerUI(on)
     state.interfaceStyle = on and 1 or 0
 end
 
+-- Forever's controller action bar, with the anchors of its page unit: the middle of the d-pad
+-- buttons (left) and of the face buttons (right). Call between LoadAddon and Login.
+function Stubs.NewGamepadBar()
+    local bar = _G.CreateFrame("Frame", "GamepadMainActionBarFrame", _G.UIParent)
+    bar.PageUnit = _G.CreateFrame("Frame", nil, bar)
+    bar.PageUnit.LeftCenteredAnchor = _G.CreateFrame("Frame", nil, bar.PageUnit)
+    bar.PageUnit.RightCenteredAnchor = _G.CreateFrame("Frame", nil, bar.PageUnit)
+    return bar
+end
+
 function Stubs.SetCombat(inCombat)
     state.combat = inCombat
     if not inCombat then
@@ -922,6 +1001,8 @@ function Stubs.InstallSettings()
 
     _G.Settings = {
         VarType = { Boolean = "boolean", String = "string", Number = "number" },
+        -- The game's own settings, by variable: state.settingValues.
+        GetValue = function(variable) return state.settingValues[variable] end,
         RegisterVerticalLayoutCategory = function(name) return newCategory(name) end,
         RegisterVerticalLayoutSubcategory = function(parent, name) return newCategory(name, parent) end,
         RegisterCanvasLayoutCategory = function(frame, name) return newCategory(name, nil, frame) end,

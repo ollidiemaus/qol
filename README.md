@@ -6,7 +6,8 @@ Quality of Life bundles the little things you'd otherwise install five addons fo
 viewport, action bars that grow the other way, square action buttons without borders, class-colored
 health bars, junk selling and repairs at merchants, quests accepted and turned in for you, IDs and
 vendor prices in tooltips, a square minimap, dungeon entrances, boats and zeppelins on the world
-map, and switches to hide UI pieces you never click. Everything is set up in the game's own options window. There's no minimap button.
+map, back buttons for the Steam Deck on Forever's controller bar, and switches to hide UI pieces
+you never click. Everything is set up in the game's own options window. There's no minimap button.
 
 It's made for WoW Forever and also runs on retail (Midnight).
 
@@ -126,10 +127,34 @@ without the dark edge some of them have, use an icon pack like Clean Icons - Mec
 With Forever's controller interface on, the game shows its own action bars instead of these, so
 the options on this page wait until you switch back to keyboard and mouse.
 
+### Controller
+
+Only on WoW Forever, for its controller interface.
+
+**Back buttons:** four more buttons on the controller action bar for controllers with back buttons
+or paddles, like the Steam Deck: L4 and L5 left of the d-pad buttons, R4 and R5 right of the face
+buttons. They work on their own, without holding a trigger, and show icons, cooldowns and charges
+like the bar's other buttons.
+
+- **Binding them:** Esc > Options > Key Bindings > AddOns > Quality of Life lists the four buttons.
+  Bind each to the key your back button sends. On the Steam Deck the game doesn't see the back
+  buttons by themselves: give them keys in Steam Input first (keys you don't use otherwise, like F13
+  to F16, or numpad keys), then bind those here. A controller whose paddles the game sees directly
+  needs nothing: a back button with no key of its own uses its paddle, as long as nothing else is
+  bound to it.
+- **Putting spells on them:** drag a spell onto one, as onto any action button (out of combat; with
+  the action bars locked, hold Shift). Each back button is one of the last four buttons of Action Bar
+  8 (or 6 or 7, picked under **Slots**), so what you put there shows on the back button too. Pick a
+  bar you don't use otherwise.
+
+The buttons show and hide with the controller action bar, follow it when you move or scale it in
+Edit Mode, and keep their place in its compact layout.
+
 ## Settings
 
 **Esc > Options > AddOns > Quality of Life**, or type `/qol` (or `/qualityoflife`). The Viewport,
-Action Bars and Minimap pages are listed below Quality of Life. Every page fits without scrolling;
+Action Bars and Minimap pages (and on Forever the Controller page) are listed below Quality of
+Life. Every page fits without scrolling;
 the main, Action Bars and Minimap pages show their options in two columns. With a controller, the
 arrows next to a viewport margin move it one pixel per press. Changes apply right away; the few that
 touch protected parts of the interface (action bars, key bindings, viewport, system bar) wait until
@@ -151,3 +176,6 @@ Quality of Life is available in English and German.
   you see the price twice.
 - The same goes for other quest automation and minimap addons (Leatrix Plus, SexyMap and the like):
   use one of them for the same job.
+- Easy Controller Forever has back paddle buttons of its own around the controller action bar. Use
+  its paddles or these back buttons, not both: they would sit in the same place and want the same
+  keys.
