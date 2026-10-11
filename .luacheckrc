@@ -33,9 +33,9 @@ read_globals = {
     "TimeManagerClockTicker", "GameTimeFrame", "AddonCompartmentFrame", "WorldMapFrame", "MapCanvasDataProviderMixin", "CreateFromMixins",
     "GameTooltip",
     "ChatFrame2", "ChatFrame2Tab", "ChatFrameMenuButton", "ChatFrameChannelButton", "ChatFrameToggleVoiceDeafenButton",
-    "ChatFrameToggleVoiceMuteButton", "TextToSpeechButtonFrame",
+    "ChatFrameToggleVoiceMuteButton", "TextToSpeechButtonFrame", "BuffFrameTooltip",
     "InCombatLockdown", "GetPhysicalScreenSize", "ReloadUI", "IsSecureCmd", "CinematicFrame", "MovieFrame",
-    "IsShiftKeyDown", "GamepadMainActionBarFrame", "GamepadMode", "UISpecialFrames", "GetCursorPosition", "GetCursorInfo",
+    "IsShiftKeyDown", "GamepadMainActionBarFrame", "GamepadMode", "SettingsPanel", "GameMenuFrame", "UISpecialFrames", "GetCursorPosition", "GetCursorInfo",
     "SecureHandlerWrapScript",
     -- Key bindings
     "GetBindingKey", "GetBindingAction", "SetOverrideBinding", "SetOverrideBindingClick", "ClearOverrideBindings",

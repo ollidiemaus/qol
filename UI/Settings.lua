@@ -154,8 +154,9 @@ local function buildActionBars(page)
     page:Dropdown("left", "ringBar", L.RING_BAR, bars, L.RING_BAR_TIP, { indent = true, enabled = is("ring") })
 end
 
--- Controller page: the back buttons and the bar whose slots they use, then their keys across the
--- page (as in Key Bindings > AddOns), each named by its slot on that bar.
+-- Controller page: the back buttons and the bar whose slots they use next to the buff tooltips,
+-- then the back buttons' keys across the page (as in Key Bindings > AddOns), each named by its slot
+-- on that bar.
 local function buildController(page)
     local BackButtons = ns.BackButtons
     local enabled = is("controllerBackButtons")
@@ -167,6 +168,8 @@ local function buildController(page)
     end
     page:Dropdown("left", "controllerBackButtonsBar", L.BACK_BUTTONS_BAR, bars, L.BACK_BUTTONS_BAR_TIP,
         { indent = true, enabled = enabled })
+    page:Header("right", L.SECTION_BUFFS)
+    page:Checkbox("right", "hideBuffTooltips", L.HIDE_BUFF_TOOLTIPS, L.HIDE_BUFF_TOOLTIPS_TIP)
 
     page:Header("wide", L.SECTION_BACK_BUTTON_KEYS)
     for index, info in ipairs(BackButtons.BUTTONS) do

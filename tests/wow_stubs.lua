@@ -517,6 +517,11 @@ local function install()
     -- Forever's manager of the windows that have the controller: Stubs.SetControllerWindow sets the
     -- one it has.
     G.GamepadMode = { FrameControlsManager = { GetActiveFrame = function() return state.controllerWindow end } }
+    -- The game's settings and game menu, closed.
+    G.SettingsPanel = newRegion("Frame", G.UIParent)
+    G.SettingsPanel:Hide()
+    G.GameMenuFrame = newRegion("Frame", G.UIParent)
+    G.GameMenuFrame:Hide()
     G.C_EventUtils = { IsEventValid = function(event) return not state.unknownEvents[event] end }
     G.EventRegistry = {
         RegisterCallback = function(_, event, fn, owner)
@@ -593,6 +598,8 @@ local function install()
     G.ChatFrameToggleVoiceDeafenButton = newRegion("Button", G.UIParent)
     G.ChatFrameToggleVoiceMuteButton = newRegion("Button", G.UIParent)
     G.TextToSpeechButtonFrame = newRegion("Frame", G.UIParent)
+    -- The tooltip the controller interface shows for new buffs.
+    G.BuffFrameTooltip = newRegion("Frame", G.UIParent)
 
     -- The minimap as Forever builds it: the cluster with its header bar and zone text button, the
     -- container with the map, the round frame and the coordinates under the map.

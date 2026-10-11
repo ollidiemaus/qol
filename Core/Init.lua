@@ -42,14 +42,23 @@ function ns.IsControllerUI()
     return getStyle() == styles.Gamepad
 end
 
+local function shown(frame)
+    return type(frame) == "table" and type(frame.IsShown) == "function" and frame:IsShown() == true
+end
+
 -- In the controller interface, a window of the game that has the controller (the settings, the
 -- game menu, bags...): Forever's GamepadFrameControlsManager keeps it as its active frame while it
 -- is open. A hidden one left behind doesn't count.
 function ns.ControllerWindowOpen()
     if not ns.IsControllerUI() then return false end
     local manager = GamepadMode and GamepadMode.FrameControlsManager
-    local frame = manager and manager.GetActiveFrame and manager:GetActiveFrame()
-    return type(frame) == "table" and type(frame.IsShown) == "function" and frame:IsShown() == true
+    return shown(manager and manager.GetActiveFrame and manager:GetActiveFrame())
+end
+
+-- In the controller interface, the game's settings, or the game menu that closing them goes back to.
+function ns.ControllerSettingsOpen()
+    if not ns.IsControllerUI() then return false end
+    return shown(SettingsPanel) or shown(GameMenuFrame)
 end
 
 function ns.FormatMoney(copper)

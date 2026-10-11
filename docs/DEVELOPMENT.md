@@ -8,7 +8,7 @@ Notes for working on the addon. What it does for players is in the [README](../R
 |---|---|
 | `Core/` | Namespace and printing (`Init`), the event frame (`Events`), saved options with defaults and change watchers (`Options`), deferred changes (`Later`), the hidden holder for hidden frames (`Hider`), what the back buttons and the ring share (`Buttons`: an action slot's look, override bindings), `/qol` (`Slash`) and startup (`Lifecycle`) |
 | `Data/` | Static game data: `MapPins` (dungeon entrances, docks, portals; how it was made is at the top of the file) |
-| `Features/` | One file per feature: `Merchant`, `Quests`, `Tooltips`, `HideFrames` (also the chat buttons), `CombatLog`, `ChatClassColors`, `CombinedBagSort`, `ClassHealthBars`, `Minimap` (shape, positions, class colors and font sizes around the minimap), `MapPins`, `Viewport`, `ActionBars`, `ButtonBorders`, `BarPaging`, `BackButtons` (the controller back buttons, Forever only), `Ring`, `ReloadCommand` |
+| `Features/` | One file per feature: `Merchant`, `Quests`, `Tooltips`, `HideFrames` (also the chat buttons and the controller interface's buff tooltips), `CombatLog`, `ChatClassColors`, `CombinedBagSort`, `ClassHealthBars`, `Minimap` (shape, positions, class colors and font sizes around the minimap), `MapPins`, `Viewport`, `ActionBars`, `ButtonBorders`, `BarPaging`, `BackButtons` (the controller back buttons, Forever only), `Ring`, `ReloadCommand` |
 | `UI/` | `SettingsPage.lua`, our own settings page (two columns, or rows across the page, and key binding rows); `Settings.lua`, the pages under Options > AddOns built with it |
 | `Locales/` | English strings, German overrides |
 | `Media/` | `Icon.tga`, the addon list icon (the TOC's `IconTexture`, 128×128, 32-bit), and `Icon.svg`, its source (not packaged); `Zeppelin.tga`, `Tram.tga`, `MinimapSquareBorder.tga` and the ring's `Ring.tga`, `RingSelected.tga` and `RingSlot.tga` (see below) |
@@ -32,7 +32,8 @@ Forever beta. So:
   the game fire an event asking for it again can't spin inside one frame and freeze the game
   (nothing says when the game runs a `C_Timer.After(0)` started from a timer callback). A change the
   game allows in combat (the health bar colors) passes `true` as a third argument and runs in combat
-  too.
+  too. In Forever's controller interface it also waits while the game's settings or game menu are
+  open (see Settings pages below), so a change made in the settings applies once they're closed.
 - The back buttons and the ring go through `ns.LaterOutsideWindows(key, fn)` instead: out of combat
   too, and in Forever's controller interface also away from the game's windows that have the
   controller (see Settings pages below).
@@ -97,6 +98,18 @@ The combat log can't be closed in the default UI, and the dock's own functions (
 and its tab is scaled down to 0.001: the dock gives every tab its parent, width and anchor again on
 each update (each tab hangs on the right edge of the one before), but never its scale, so the tab
 takes no room and the next tab closes the gap.
+
+The tooltips Forever's controller interface shows for new buffs come from the buff frame
+(`BuffFrameMixin:Update` queues each aura gained or refreshed, `ShowNextAuraForTooltip` shows it
+for 4 seconds) in `BuffFrameTooltip`, which nothing else uses: pointing at a buff or selecting it
+with the controller shows `GameTooltip`. So the option sends `BuffFrameTooltip` to the hidden
+holder, and Blizzard's own `SetOwner`, `Show` and `Hide` on it change nothing. Turned on in the
+settings, that happens after they close (see Settings pages). The game has a
+setting for it too, `GamepadShowAutoAuraTooltip`, which isn't in its options. It's left alone:
+`CVarCallbackRegistry` caches it and the buff frame reads it on every aura change, and a
+`SetCVar` from our code would fire `CVAR_UPDATE`, whose handler writes that cache without the
+`issecure()` check its reads have. If that handler runs with our taint, every later read would taint
+the buff frame's update, where right-clicking a buff calls `CancelUnitBuff`.
 
 Names in chat in class color are the game's own setting: `chatClassColorOverride` "0" means always
 (see `ChatFrameUtil.ShouldColorChatByClass`). Turning the option off gives the setting its default.
@@ -275,7 +288,21 @@ open (they aren't priority overrides, so the window's own win); only changes are
 `C_Timer.After` check every half second lets them go once one check found no window and the one
 before found none either, so they run at least half a second after the window closed, from our
 OnUpdate, whatever order the game closes it in. Without the controller interface they run on the
-next frame as before. With this the freeze hasn't come back (2026-10, Steam Deck).
+next frame as before. With this the back buttons froze it no more (2026-10, Steam Deck).
+
+Then turning on the buff tooltips' option and closing the settings froze it again, every time
+(2026-10, Steam Deck). That change was a single `SetParent` of `BuffFrameTooltip`, made through
+`ns.Later` while the settings were open. Nothing in the game's code that closing the settings runs
+(`SettingsPanelMixin:OnHide` with `SaveBindings`, `HideUIPanel` and `GamepadFrameControlsManager:FrameHidden`,
+`ToggleGameMenu` with the Escape handlers, SmartNavigation's panel stack) was found to depend on that
+tooltip, and the line that hangs is still unknown. What all four freezes share is a change made while
+the settings had the controller. So in the controller interface `ns.Later` holds every request while
+`ns.ControllerSettingsOpen()` (`SettingsPanel` or `GameMenuFrame` shown, as closing the settings
+goes back to the game menu) and lets it go the way `ns.LaterOutsideWindows` does, half a second at
+least after no window has the controller. Other windows don't hold it: the map pins update with the
+map open, the health bars with the bags open. Easy Controller does the same: its window waits until
+the settings and the game menu are closed. In the settings themselves only our own page frames
+change, plus `SetBinding` from the key boxes, as on the game's Key Bindings page.
 
 The world map pins are buttons on a frame of our own on the map's canvas, not pins from the map's
 pools. Their places are zone coordinates in percent (as `/way` reads them), from Forever's tables;
@@ -427,6 +454,14 @@ Things only the real client can confirm:
   - `/qol ring`: dragging on, off and between slots, clicking with the controller cursor, the
     tooltip, Escape and the close button, closing when combat starts.
   - No "tainted by" error in combat after using it.
+- Hide new buff tooltips (Options > Controller), in the controller interface: turning it on and
+  closing the settings (and the game menu) must not freeze the game, then gaining or refreshing a
+  buff (a food buff, a flask, a party member's buff) and a debuff shows no tooltip; selecting a buff
+  through the buff frame (the radial's Buffs) and pointing at one with the mouse still do. Turning it
+  off brings the pop-ups back without a reload. Right-clicking a buff away in combat still works.
+- In the controller interface, change an option on each page (main, Viewport, Action Bars, Minimap,
+  Controller), close the settings and the game menu: no freeze, and each change shows up about a
+  second after the game menu closed.
 
 ### Cutscenes and the viewport
 

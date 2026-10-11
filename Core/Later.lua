@@ -13,13 +13,16 @@ local _, ns = ...
 -- an event that asks for it again, the game goes on drawing frames instead of hanging. That holds
 -- whatever the game does with a timer started from a timer, which is why this isn't C_Timer.After(0).
 --
--- ns.LaterOutsideWindows also keeps away from the windows of the game that have the controller in
--- Forever's controller interface (ns.ControllerWindowOpen: the settings, the game menu, bags...).
--- Those windows drive the controller with key bindings and focus handling of their own, and the game
--- froze when the settings closed after the back buttons had been changed in them. In that interface
--- such a request runs only from a check made every half second, once a check found no window and the
--- one before it found none either: half a second at least after a window closed, so none of our code
--- runs while the game is still closing one, whatever order it does that in.
+-- In Forever's controller interface nothing runs while the game's settings or game menu are open
+-- (ns.ControllerSettingsOpen): the game froze on closing the settings, with no error, each time a
+-- feature had changed something while they were open (the back buttons, the buff tooltips). So a
+-- change made from the settings applies once they're closed. ns.LaterOutsideWindows keeps away from
+-- every window of the game that has the controller (ns.ControllerWindowOpen: also bags, the map...),
+-- for the back buttons and the ring, which set key bindings: those windows drive the controller with
+-- bindings and focus handling of their own. A request held back runs only from a check made every
+-- half second, once a check found no window and the one before it found none either: half a second
+-- at least after a window closed, so none of our code runs while the game is still closing one,
+-- whatever order it does that in.
 local WINDOW_CHECK_SECONDS = 0.5
 
 -- key -> { fn = ..., inCombat = true or nil, outsideWindows = true or nil, released = true or nil }
@@ -65,6 +68,14 @@ local function waitForWindows(key, request)
     end
 end
 
+local function mustWait(request, released)
+    if not ns.IsControllerUI() then return false end
+    if request.outsideWindows then
+        return not released or ns.ControllerWindowOpen()
+    end
+    return ns.ControllerSettingsOpen()
+end
+
 local function runPending()
     local batch = pending
     pending = {}
@@ -73,7 +84,7 @@ local function runPending()
         request.released = nil
         if InCombatLockdown() and not request.inCombat then
             afterCombat[key] = request
-        elseif request.outsideWindows and ns.IsControllerUI() and (not released or ns.ControllerWindowOpen()) then
+        elseif mustWait(request, released) then
             waitForWindows(key, request)
         else
             request.fn()
