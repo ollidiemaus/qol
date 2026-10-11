@@ -118,18 +118,18 @@ presses action button 1 and macros can check for Shift with `[mod:shift]`. Your 
 stay as they are; turn the option off and the keys page again.
 
 **Hide button borders:** the buttons of action bars 1 to 8, the stance bar and the pet bar lose
-their frame, and the icons are square (like HideActionBarBorders). Pointing at a button, pressing
+their frame, and the icons are square. Pointing at a button, pressing
 it, an active button, the red flash of auto attack and the green glow of an equipped item light up
 as squares, with the game's classic button textures; the cooldown swipe covers the whole icon. The
 casting animation on the buttons is left out, since it is drawn for the round frame. For icons
-without the dark edge some of them have, use an icon pack like Clean Icons - Mechagnome Edition.
+without the dark edge some of them have, use an icon pack.
 
 With Forever's controller interface on, the game shows its own action bars instead of these, so
 the options above wait until you switch back to keyboard and mouse. The ring works in both.
 
 ### Ring
 
-Eight actions on a ring, like OPie's rings, drawn in the bronze of Forever's minimap. Hold the
+Eight actions on a ring, drawn in the bronze of Forever's minimap. Hold the
 ring's key, point at an action and let go to use it; let go in the middle and nothing happens. It
 works in combat, shows cooldowns and charges, and names the action you point at in the middle.
 
@@ -174,9 +174,13 @@ Edit Mode, and keep their place in its compact layout.
 Action Bars and Minimap pages (and on Forever the Controller page) are listed below Quality of
 Life. Every page fits without scrolling;
 the main, Action Bars and Minimap pages show their options in two columns. With a controller, the
-arrows next to a viewport margin move it one pixel per press. Changes apply right away; the few that
+arrows next to a viewport margin move it one pixel per press. In Forever's controller interface a
+dropdown doesn't open its list: each press (or click) switches it to the next choice, as the game
+froze when the settings closed after one of its lists had been opened there. Changes apply right away; the few that
 touch protected parts of the interface (action bars, key bindings, viewport, system bar) wait until
-you leave combat.
+you leave combat. In Forever's controller interface the back buttons and the ring also wait until
+the settings and the game menu are closed (a second at most): the game sometimes froze on closing
+the settings after they had been changed there.
 
 Quality of Life is available in English and German.
 
@@ -186,14 +190,11 @@ Quality of Life is available in English and German.
   moves the button slots of the bars you flipped, changes the textures of the buttons whose borders
   you hid, parents hidden frames to a hidden holder, and adds lines to tooltips. That keeps it clear
   of the "tainted by an addon" errors Midnight-era clients are strict about.
-- Don't run it together with another viewport or action bar growth addon (for example Midnight
-  Viewport or Action Bar Button Growth Direction): both would move the same frames. Hiding the
-  button borders is the same: leave it off when HideActionBarBorders, Masque or a bar addon styles
-  your buttons.
-- Other tooltip addons may show vendor prices too (Auctionator, for one); turn one of them off if
-  you see the price twice.
-- The same goes for other quest automation and minimap addons (Leatrix Plus, SexyMap and the like):
-  use one of them for the same job.
-- Easy Controller Forever has back paddle buttons of its own around the controller action bar. Use
-  its paddles or these back buttons, not both: they would sit in the same place and want the same
-  keys.
+- Don't run it together with another viewport or action bar growth addon: both would move the
+  same frames. Hiding the button borders is the same: leave it off when another addon styles your
+  buttons.
+- Other tooltip addons may show vendor prices too; turn one of them off if you see the price twice.
+- The same goes for other quest automation and minimap addons: use one of them for the same job.
+- Another controller addon may put back paddle buttons of its own around the controller action bar.
+  Use its paddles or these back buttons, not both: they would sit in the same place and want the
+  same keys.

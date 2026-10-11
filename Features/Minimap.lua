@@ -4,8 +4,8 @@ local Options = ns.Options
 -- The minimap's shape and what sits around it.
 --   * Square: the map gets a square mask and a border (Forever's bronze, unwrapped from its round
 --     frame onto a square, or a thin black line); the round frame goes to the hidden holder.
---     GetMinimapShape() then answers "SQUARE", the convention other addons (LibDBIcon's minimap
---     buttons, for one) read to place their buttons.
+--     GetMinimapShape() then answers "SQUARE", the convention other addons read to place their
+--     minimap buttons.
 --   * Positions: the zone text, the clock, the addon compartment, the tracking button and Forever's
 --     day and night icon can each move to a row above or below the minimap (left, center or right),
 --     or be hidden; the tracking button and the day and night icon can also go inside the map, in

@@ -287,7 +287,7 @@ function BackButtons:Update()
 end
 
 local function schedule()
-    ns.Later("backButtons", function() BackButtons:Update() end)
+    ns.LaterOutsideWindows("backButtons", function() BackButtons:Update() end)
 end
 
 local function scheduleRefresh()

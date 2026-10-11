@@ -1,7 +1,7 @@
 local _, ns = ...
 local Options = ns.Options
 
--- Action buttons without their frame, with square icons (like HideActionBarBorders). For every
+-- Action buttons without their frame, with square icons. For every
 -- button of the bars ActionBars.lua knows (action bars 1 to 8, the stance bar and the pet bar):
 --   * the frame (the button's normal texture) gets alpha 0, and the icon loses its rounded mask;
 --   * the textures drawn for the rounded frame (mouseover, checked, pushed, the new action and
