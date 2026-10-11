@@ -10,10 +10,16 @@ local Options = ns.Options
 --
 -- Not with the hidden holder: parented there it never showed, and on Forever pointing at a buff then
 -- showed no tooltip either and the cursor stayed in sight after the game menu closed.
+--
+-- Only in the controller interface: with keyboard and mouse the tooltip keeps its alpha.
 local BuffTooltips = {}
 ns.BuffTooltips = BuffTooltips
 
 local KEY = "hideBuffTooltips"
+
+local function isOn()
+    return Options:Get(KEY) == true and ns.IsControllerUI()
+end
 
 local hooked = false
 -- Whether we made the tooltip transparent.
@@ -27,10 +33,10 @@ end
 function BuffTooltips:Apply()
     local tooltip = BuffFrameTooltip
     if not tooltip then return end
-    if Options:Get(KEY) then
+    if isOn() then
         if not hooked then
             tooltip:HookScript("OnShow", function(shown)
-                if Options:Get(KEY) then fade(shown) end
+                if isOn() then fade(shown) end
             end)
             hooked = true
         end
@@ -48,5 +54,8 @@ end
 
 function BuffTooltips:Init()
     Options:Watch({ KEY }, schedule)
-    if Options:Get(KEY) then schedule() end
+    ns.OnControllerUIChange(function()
+        if isOn() or faded then schedule() end
+    end)
+    if isOn() then schedule() end
 end

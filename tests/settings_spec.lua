@@ -243,6 +243,7 @@ describe("settings pages", function()
 
     it("binds a back button's key from the Controller page, as in Key Bindings", function()
         local ns = start({ controllerBackButtons = true }, true)
+        Stubs.SetControllerUI(true)
         local page = pages(ns).controller
         show(page)
         local row = keyRow(ns, 1)
@@ -278,6 +279,7 @@ describe("settings pages", function()
         -- The back button presses with it once the settings have closed (closing them saves the bindings).
         Stubs.Fire("UPDATE_BINDINGS")
         Stubs.RunTimers()
+        Stubs.AdvanceTime()
         T.eq(Stubs.state().overrides.F13.command, "CLICK QoLBackButton1:LeftButton")
     end)
 

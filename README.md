@@ -148,7 +148,9 @@ Turn it on under Action Bars > **Ring**.
 
 ### Controller
 
-Only on WoW Forever, for its controller interface.
+Only on WoW Forever, and only while its controller interface is on: with keyboard and mouse the
+back buttons hide and their keys press nothing, and the buff tooltips show as usual. Turning the
+controller interface on or off switches them right away.
 
 **Back buttons:** four more buttons on the controller action bar for controllers with back buttons
 or paddles, like the Steam Deck: L4 and L5 left of the d-pad buttons, R4 and R5 right of the face

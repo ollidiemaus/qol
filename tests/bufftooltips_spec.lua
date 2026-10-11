@@ -2,10 +2,19 @@ local T = require("testlib")
 local Stubs = require("wow_stubs")
 local describe, it = T.describe, T.it
 
+-- Forever with its controller interface on.
 local function start(savedOptions)
     local ns = Stubs.LoadAddon()
+    Stubs.SetControllerUI(true)
     Stubs.Login(savedOptions)
     return ns
+end
+
+-- The player turns the controller interface on or off.
+local function switch(on)
+    Stubs.SetControllerUI(on)
+    Stubs.Fire("INPUT_DEVICE_INTERFACE_TRANSITION")
+    Stubs.RunTimers()
 end
 
 -- The buff frame shows the tooltip for a buff gained; the game may give it its alpha back.
@@ -40,6 +49,26 @@ describe("buff tooltips", function()
         T.eq(BuffFrameTooltip:GetAlpha(), 1)
         popUp()
         T.eq(BuffFrameTooltip:GetAlpha(), 1)
+    end)
+
+    it("leaves the tooltip alone with keyboard and mouse", function()
+        Stubs.LoadAddon()
+        Stubs.Login({ hideBuffTooltips = true })
+        popUp()
+        T.eq(BuffFrameTooltip:GetAlpha(), 1)
+        T.eq(BuffFrameTooltip.hooks.OnShow, nil)
+    end)
+
+    it("follows the controller interface turned off and on", function()
+        start({ hideBuffTooltips = true })
+        switch(false)
+        T.eq(BuffFrameTooltip:GetAlpha(), 1)
+        popUp()
+        T.eq(BuffFrameTooltip:GetAlpha(), 1)
+        switch(true)
+        T.eq(BuffFrameTooltip:GetAlpha(), 0)
+        popUp()
+        T.eq(BuffFrameTooltip:GetAlpha(), 0)
     end)
 
     it("works in combat", function()

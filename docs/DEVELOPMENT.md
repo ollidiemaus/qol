@@ -61,6 +61,13 @@ Forever beta. So:
   (`SaveBindings` in `SettingsPanel`'s OnHide), which fires `UPDATE_BINDINGS`; in controller mode
   the bar features ignore it, and the back buttons and the ring update only once the settings have
   been closed for half a second (`ns.LaterOutsideWindows`).
+- The other way round, the controller features (the back buttons and the buff tooltips, the
+  Controller page) act only while the controller interface is on: with keyboard and mouse the back
+  buttons hide, lose their `type` attribute (so their keys, saved bindings included, press nothing)
+  and their override bindings, and the buff tooltip keeps its alpha. The game switches interfaces
+  without a reload and fires `INPUT_DEVICE_INTERFACE_TRANSITION`; `ns.OnControllerUIChange` runs
+  the features' updates on it (the bar paging overrides go and come back with it too). The ring
+  isn't one of them: it has a mouse key and a stick key and works in both.
 
 The action bar flip copies the grid math of `ActionBarMixin:UpdateGridLayout` and applies it to the
 bar's button containers only. Blizzard stores a new `oldGridSettings` table each time it lays a bar
@@ -107,7 +114,7 @@ action bar editor hides its own tooltip (`GamepadActionBarEditFrameMixin`): the 
 and hides as the game wants, only unseen. It first went to the hidden holder like the frames above,
 where it never showed at all; on the Steam Deck, pointing at a buff then showed no tooltip either,
 and after the game menu closed the cursor jumped to the middle as usual but stayed in sight
-(2026-10, cause not found in the UI code, gone or not with the alpha: to be confirmed). The game has a
+(2026-10, cause not found in the UI code; both gone with the alpha, confirmed 2026-10-11). The game has a
 setting for it too, `GamepadShowAutoAuraTooltip`, which isn't in its options. It's left alone:
 `CVarCallbackRegistry` caches it and the buff frame reads it on every aura change, and a
 `SetCVar` from our code would fire `CVAR_UPDATE`, whose handler writes that cache without the
@@ -435,6 +442,8 @@ Things only the real client can confirm:
   - The buttons sit clear of the d-pad and face buttons in the normal and the compact layout, at
     several Edit Mode sizes, and the labels don't overlap anything; they hide with the bar (keyboard
     and mouse, vehicles, cutscenes).
+  - Switching to keyboard and mouse without a reload: the keys press nothing (try F13 to F16 on
+    the keyboard's bars); switching back, they press the buttons again.
   - Icons, counts, cooldowns (also in combat: the cooldown call on our Cooldown), out-of-mana and
     unusable colors, the auto attack rim; dragging a spell on and off, with the action bars locked
     (Shift) and unlocked; the tooltip.
@@ -456,8 +465,9 @@ Things only the real client can confirm:
 - Hide new buff tooltips (Options > Controller), in the controller interface: gaining or refreshing a
   buff (a food buff, a flask, a party member's buff) and a debuff shows no tooltip; selecting a buff
   through the buff frame (the radial's Buffs) and pointing at one with the mouse still do. After the
-  game menu closes, the cursor goes to the middle and hides. Turning it off brings the pop-ups back
-  without a reload. Right-clicking a buff away in combat still works.
+  game menu closes, the cursor goes to the middle and hides (these three confirmed 2026-10-11, Steam
+  Deck). Turning it off brings the pop-ups back without a reload. Right-clicking a buff away in
+  combat still works.
 
 ### Cutscenes and the viewport
 

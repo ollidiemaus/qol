@@ -42,6 +42,12 @@ function ns.IsControllerUI()
     return getStyle() == styles.Gamepad
 end
 
+-- Runs fn when the player turns the controller interface on or off: the game switches without a
+-- reload. Not on clients without the event.
+function ns.OnControllerUIChange(fn)
+    ns.Events:On("INPUT_DEVICE_INTERFACE_TRANSITION", fn)
+end
+
 -- In the controller interface, a window of the game that has the controller (the settings, the
 -- game menu, bags...): Forever's GamepadFrameControlsManager keeps it as its active frame while it
 -- is open. A hidden one left behind doesn't count.

@@ -69,8 +69,10 @@ for index, info in ipairs(BUTTONS) do
     _G["BINDING_NAME_" .. BackButtons.Command(index)] = L["BACK_BUTTON_" .. info.label]
 end
 
+-- Only in the controller interface: with keyboard and mouse the buttons hide, their keys press
+-- nothing (a button without a type does nothing) and our override bindings are gone.
 local function isOn()
-    return Options:Get(KEY) == true and GamepadMainActionBarFrame ~= nil
+    return Options:Get(KEY) == true and GamepadMainActionBarFrame ~= nil and ns.IsControllerUI()
 end
 
 local holder
@@ -312,5 +314,8 @@ function BackButtons:Init()
     for _, event in ipairs(ns.Buttons.REFRESH_EVENTS) do
         ns.Events:On(event, scheduleRefresh)
     end
+    ns.OnControllerUIChange(function()
+        if isOn() or holder then schedule() end
+    end)
     if isOn() then schedule() end
 end

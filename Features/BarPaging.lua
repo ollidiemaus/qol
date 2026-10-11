@@ -10,7 +10,8 @@ local Options = ns.Options
 -- Override bindings belong to our own frame and are cleared when the option goes off; the saved
 -- key bindings are never changed. Bindings can't change in combat, so changes wait for its end.
 -- The controller interface has bars of its own that don't follow these pages, so while it's on
--- there are no overrides, and a bindings change (the settings fire one when they close) does nothing.
+-- there are no overrides (they go when it's turned on mid-game), and a bindings change (the settings
+-- fire one when they close) does nothing.
 local BarPaging = {}
 ns.BarPaging = BarPaging
 
@@ -93,8 +94,10 @@ function BarPaging:Init()
     Options:Watch({ KEY }, schedule)
     -- The player changed a binding, or another addon its overrides (setting ours fires this too;
     -- Update then finds nothing to change).
-    ns.Events:On("UPDATE_BINDINGS", function()
+    local function changed()
         if isOn() or next(applied) ~= nil then schedule() end
-    end)
+    end
+    ns.Events:On("UPDATE_BINDINGS", changed)
+    ns.OnControllerUIChange(changed)
     if isOn() then schedule() end
 end
