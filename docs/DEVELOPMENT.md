@@ -8,7 +8,7 @@ Notes for working on the addon. What it does for players is in the [README](../R
 |---|---|
 | `Core/` | Namespace and printing (`Init`), the event frame (`Events`), saved options with defaults and change watchers (`Options`), deferred changes (`Later`), the hidden holder for hidden frames (`Hider`), what the back buttons and the rings share (`Buttons`: an action slot's look, override bindings), `/qol` (`Slash`) and startup (`Lifecycle`) |
 | `Data/` | Static game data: `MapPins` (dungeon entrances, docks, portals; how it was made is at the top of the file) |
-| `Features/` | One file per feature: `Merchant`, `Quests`, `Tooltips`, `HideFrames` (also the chat buttons), `BuffTooltips` (the controller interface's tooltips for new buffs), `CombatLog`, `ChatClassColors`, `CombinedBagSort`, `ClassHealthBars`, `Minimap` (shape, positions, class colors and font sizes around the minimap), `MapPins`, `Viewport`, `ActionBars`, `ButtonBorders`, `BarPaging`, `BackButtons` (the controller back buttons, Forever only), `RingEntries` (what can go on a ring), `Ring`, `RingEditor` (`/qol ring`), `ReloadCommand` |
+| `Features/` | One file per feature: `Merchant`, `Quests`, `Tooltips`, `HideFrames` (also the chat buttons), `BuffTooltips` (the controller interface's tooltips for new buffs), `CombatLog`, `ChatClassColors`, `CombinedBagSort`, `ClassHealthBars`, `Minimap` (shape, positions, class colors and font sizes around the minimap), `MapPins`, `Viewport`, `ActionBars`, `ButtonBorders`, `BarPaging`, `BackButtons` (the controller back buttons, Forever only), `RingEntries` (what can go on a ring, and what a character has of it), `Ring`, `RingPicker` (the editor's list), `RingEditor` (`/qol ring`), `ReloadCommand` |
 | `UI/` | `SettingsPage.lua`, our own settings page (two columns, or rows across the page, and key binding rows); `Settings.lua`, the pages under Options > AddOns built with it |
 | `Locales/` | English strings, German overrides |
 | `Media/` | `Icon.tga`, the addon list icon (the TOC's `IconTexture`, 128×128, 32-bit), and `Icon.svg`, its source (not packaged); `Zeppelin.tga`, `Tram.tga`, `MinimapSquareBorder.tga` and the rings' `Ring.tga`, `RingSpoke.tga`, `RingLit1.tga` to `RingLit12.tga` and `RingSlot.tga` (see below) |
@@ -252,8 +252,21 @@ the cursor and how to read it off the cursor. A character's ring is the entries 
   does. It keeps the stick after the ring closes until the stick is at rest (`len` under 0.1) or for
   half a second, like `InputAxisBinding`'s `waitForCentering`, so letting go of the key with the
   stick out doesn't swing the camera.
-- `/qol ring` opens the editor (`Features/RingEditor.lua`): a plain frame, `QoLRingEditor`, with
-  the same art and Buttons for slots, plus one empty slot to add to. It shows the ring as this character sees it and maps a slot to its place in the saved
+- `/qol ring` opens the editor (`Features/RingEditor.lua`): `QoLRingEditor`, our own frame from the
+  game's `PortraitFrameTemplate` (Forever draws its `UI-Frame-Metal-*` and portrait corner in
+  bronze, `NineSliceLayoutOverrides.lua`), 860×640, with the addon's icon as portrait and a title
+  bar of ours to drag it by (`RegisterForDrag`, not `OnMouseDown`, which the controller's cursor
+  would stop on; `SetMovable`, `SetClampedToScreen`, `SetDontSavePosition`). The close button's
+  OnClick is replaced by our own `Hide` (the template's goes through `HideUIPanel`). Inside lies
+  one spell book page, `spellbook-page-condensed-c60` stretched over the frame's background area;
+  its dark top bar is its upper 8.1% and the parchment lies inside rims of 9.4% (top), 2.6%
+  (bottom), 3% (left) and 2.6% (right), measured from the texture of client 1.60.1. Without that
+  atlas (retail) it's a dark bar over plain parchment colors. Text on the paper is ink:
+  `SPELLBOOK_FONT_COLOR` (or Forever 1.60.1's value) without the font's shadow
+  (`RingPicker.Ink`).
+- The editor's left half holds the ring (the same art, with Buttons for slots, plus one empty slot
+  to add to), with "Ring 1 of 3" and the spell book's page buttons (`UI-SpellbookIcon-*Page-*`) in
+  the page's top bar. It shows the ring as this character sees it and maps a slot to its place in the saved
   list, so an entry dropped on slot 3 goes before the entry shown there, with other characters'
   entries kept where they are. Dropping reads `GetCursorInfo()` (a spell that's a mount's,
   `C_MountJournal.GetMountFromSpell`, is the mount; an item that's a toy, `PlayerHasToy`, the toy);
@@ -275,6 +288,28 @@ the cursor and how to read it off the cursor. A character's ring is the entries 
 - The Ring page's button (`Page:Button`) opens the editor over the settings without closing them:
   hiding `SettingsPanel` from addon code taints its `Commit`. Escape closes the settings (and the
   game menu they go back to) and leaves the editor open.
+- The editor's right half is `Features/RingPicker.lua`, built after Forever's spell book: tabs from
+  the game's `TabSystemTopButtonTemplate` standing on the parchment's top edge (the tab system they
+  call, their parent, is a strip of ours with `SetTab`, `GetTabWidthConstraints` and
+  `PlayTabSelectSound`; five tabs are 92 units each at least, so they end at the list's right edge
+  instead of starting at its left one), a `SearchBoxTemplate` (case-insensitive substring of the
+  name), and 2×10 rows filled down the first column, then the second, a page at a time, with the
+  spell book's page buttons and the mouse wheel. Paging instead of a scroll box: the controller's
+  cursor gets to every row and the page buttons, and it's how the spell book does it. A row is the
+  spell book's entry: icon (`spellbook-item-spellicon-mask`) in `spellbook-item-iconframe-c60`,
+  `spellbook-item-iconframe-hover` and `spellbook-item-backplate` as highlight, name and subtext in
+  ink, and a check mark when the entry is on the ring shown. A click puts it at the end of the ring
+  (refused past 12 shown) or takes it off; a drag picks it up (`RingEntries.Pickup`). The list is
+  read again when the editor opens and on the rings' known events while it's open.
+- What a character has (`RingEntries.Owned`): the spell book's skill lines that aren't hidden
+  (`C_SpellBook.GetSpellBookSkillLineInfo`), their spells without passives and other
+  specializations' (a mount's spell as the mount), a flyout's known spells in its place
+  (`GetFlyoutInfo`, `GetFlyoutSlotInfo`); items with a use (`C_Item.GetItemSpell`) in the bags and
+  the equipment slots 1 to 19, toys left out; toys through the Toy Box's own filter
+  (`C_ToyBox.GetNumFilteredToys`, `GetToyFromIndex`), which is the only list of them, so its
+  filters and search apply (changing them would change the Toy Box); collected mounts
+  (`C_MountJournal.GetMountIDs`); the account's macros, then the character's (`GetNumMacros`, from
+  `MAX_ACCOUNT_MACROS + 1`). Spells and macros in the game's order, the rest by name.
 - The editor's key boxes are the game's `KeyBindingFrameBindingButtonTemplate`, with a listener of
   our own like the settings pages' (below), which also takes gamepad buttons
   (`EnableGamePadButton`, `OnGamePadButtonDown`): the first key or button pressed is the key, Escape
@@ -505,6 +540,11 @@ Things only the real client can confirm:
   - The keys still work after opening and closing a gamepad window (bags, map, the settings), and
     no "tainted by" error shows up in combat afterwards.
 - The rings (the Ring page on, rings made with `/qol ring`):
+  - The editor's window: the bronze frame, the parchment page and its top bar line up (also at
+    other UI scales), dragging the title bar moves it, the close button closes it. The list: each
+    tab, the search box, the page buttons and the mouse wheel, clicking an entry on and off the
+    ring, its check mark, dragging one onto a slot, a full ring refused, the tooltips; with the
+    controller cursor, the tabs, rows and page buttons. A spell learned while it's open shows up.
   - The editor: dragging spells (from the spell book and from action bars), items from the bags,
     toys from the toy box, mounts from the mount journal and macros onto the empty slot, onto a
     slot and off the ring; picking up and putting down with clicks, also with the controller cursor;

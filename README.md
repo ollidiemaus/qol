@@ -134,13 +134,20 @@ Rings of actions, drawn in the bronze of Forever's minimap, as many as you like.
 point at an action and let go to use it; let go in the middle and nothing happens. A ring works in
 combat, shows cooldowns and charges, and names the action you point at in the middle.
 
-- **Making them:** click **Open** on the Ring page of the settings, or type `/qol ring`. Escape
-  closes the settings and leaves the editor open, and it stays open when you open the spell book.
-  Drag spells, items, toys, mounts or macros onto the ring's empty slot (the **+**) to add them,
-  onto a slot to put them there, or off the ring to take them away; a right-click takes one away
-  too. With a controller, click a slot to pick up or put down what's on it. The arrows above the
-  ring go to your other rings; **New ring** makes one, and **Delete ring** deletes the one shown
-  after a second click.
+- **Making them:** click **Open** on the Ring page of the settings, or type `/qol ring`. The editor
+  is a window in Forever's bronze frame with a spell book page in it; drag its title bar to move
+  it. Escape closes the settings and leaves the editor open, and it stays open when you open the
+  spell book.
+- **Adding actions:** the right of the page lists what this character has, as in the spell book:
+  tabs for **Spells**, **Items** (the ones with a use, in the bags or worn), **Toys**, **Mounts**
+  and **Macros**, a search box, and the page buttons (the mouse wheel turns pages too). Click one to
+  put it on the ring, and click it again (it has a check mark) to take it off. The toys are the ones
+  the Toy Box shows with its own filters.
+- **Arranging them:** drag one from the list, the spell book, the bags or an action bar onto the
+  ring's empty slot (the **+**) to add it, onto a slot to put it there, or off the ring to take it
+  away; a right-click takes one away too. With a controller, click a slot to pick up or put down
+  what's on it. The arrows in the page's top bar go to your other rings; **New ring** makes one, and
+  **Delete ring** deletes the one shown after a second click.
 - **Grows with what's on it:** a ring has as many slots as actions, up to 12, spread evenly round
   it, so there are no empty buttons.
 - **For all your characters:** the rings are saved for the account. Each character sees what it

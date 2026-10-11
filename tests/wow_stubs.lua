@@ -494,6 +494,28 @@ local function install()
         if template == "KeyBindingFrameBindingButtonTemplate" then
             function frame:SetSelected(selected) self.selected = selected end
         end
+        -- The game's portrait frame: its close button, and its title (in titleText).
+        if template == "PortraitFrameTemplate" then
+            frame.CloseButton = newRegion("Button", frame)
+            function frame:SetTitle(title) self.titleText = title end
+        end
+        -- A tab of the game's tab system (TabSystemButtonMixin): Init names it, a selected tab is
+        -- disabled, and a click calls SetTab on its parent, the tab system.
+        if template == "TabSystemTopButtonTemplate" then
+            function frame:Init(tabID, text)
+                self.tabID, self.text, self.width = tabID, text, 92
+                self:SetTabSelected(false)
+            end
+            function frame:SetTabSelected(selected)
+                self.isSelected = selected
+                self:SetEnabled(not selected)
+            end
+            frame:SetScript("OnClick", function(self)
+                local system, was = self:GetParent(), self.isSelected
+                system:SetTab(self.tabID, true)
+                if not was and self.isSelected then system:PlayTabSelectSound() end
+            end)
+        end
         if kind == "Cooldown" then
             function frame:SetCooldownFromDurationObject(duration) self.duration = duration end
             function frame:SetCooldown(start, duration) self.duration = { start = start, seconds = duration } end
@@ -780,7 +802,47 @@ local function install()
             if spell(id) then state.cursorInfo = { "spell", 1, "spell", id, id } end
         end,
     }
-    G.C_SpellBook = { IsSpellKnownOrInSpellBook = function(id) return spell(id) ~= nil end }
+    G.C_Spell.GetSpellSubtext = function(id) return (spell(id) or {}).subtext end
+    -- The spell book: one line of state.spellBook's slots ({ id, passive, offSpec, flyout }), or
+    -- without it the known spells by ID. A flyout's slots: state.flyouts[id] = { { spellID, known } }.
+    local function bookSlots()
+        if state.spellBook then return state.spellBook end
+        local ids = {}
+        for id in pairs(state.spells) do ids[#ids + 1] = id end
+        table.sort(ids)
+        local slots = {}
+        for index, id in ipairs(ids) do slots[index] = { id = id } end
+        return slots
+    end
+    G.Enum.SpellBookSpellBank = { Player = 0, Pet = 1 }
+    G.Enum.SpellBookItemType = { None = 0, Spell = 1, FutureSpell = 2, PetAction = 3, Flyout = 4 }
+    G.C_SpellBook = {
+        IsSpellKnownOrInSpellBook = function(id) return spell(id) ~= nil end,
+        GetNumSpellBookSkillLines = function() return 1 end,
+        GetSpellBookSkillLineInfo = function()
+            return { itemIndexOffset = 0, numSpellBookItems = #bookSlots(), shouldHide = false }
+        end,
+        GetSpellBookItemInfo = function(slot)
+            local s = bookSlots()[slot]
+            if not s then return nil end
+            return { actionID = s.id, itemType = s.flyout and 4 or 1, isPassive = s.passive == true,
+                isOffSpec = s.offSpec == true }
+        end,
+    }
+    G.GetFlyoutInfo = function(id)
+        local slots = state.flyouts[id]
+        return "Flyout " .. id, "", slots and #slots or 0, slots ~= nil
+    end
+    G.GetFlyoutSlotInfo = function(id, slot)
+        local s = state.flyouts[id][slot]
+        return s.spellID, s.spellID, s.known ~= false
+    end
+    -- An item with a use has a spell (state.items[id].use, its spell ID); state.equipped[slot] = id.
+    G.C_Item.GetItemSpell = function(id)
+        local info = item(id)
+        if info and info.use then return "Use " .. tostring(info.name), info.use end
+    end
+    G.GetInventoryItemID = function(_, slot) return state.equipped[slot] end
     G.C_Item.GetItemCount = function(id) return (item(id) or {}).count or 0 end
     G.C_Item.IsEquippedItem = function(id) return (item(id) or {}).equipped == true end
     G.C_Item.GetItemIconByID = function(id) return (item(id) or {}).texture end
@@ -798,9 +860,16 @@ local function install()
     G.C_Item.GetItemInfoInstant = function(link) return tonumber(tostring(link):match("item:(%d+)")) end
     G.C_Item.PickupItem = function(id) state.cursorInfo = { "item", id, "item:" .. id } end
     G.PlayerHasToy = function(id) return state.toys[id] ~= nil end
+    -- The toy box lists the toys this character has, by ID (its filter shows them all).
     G.C_ToyBox = {
         IsToyUsable = function(id) return (state.toys[id] or {}).usable ~= false end,
         PickupToyBoxItem = function(id) state.cursorInfo = { "item", id, "item:" .. id } end,
+        GetNumFilteredToys = function() return #sortedKeys(state.toys) end,
+        GetToyFromIndex = function(index) return sortedKeys(state.toys)[index] or -1 end,
+        GetToyInfo = function(id)
+            local info = item(id) or {}
+            return id, info.name, info.texture
+        end,
     }
     G.C_MountJournal = {
         GetMountInfoByID = function(id)
@@ -809,6 +878,7 @@ local function install()
             return m.name, m.spellID, m.texture, false, m.usable ~= false, 0, false, false, nil, m.hidden == true,
                 m.collected ~= false, id
         end,
+        GetMountIDs = function() return sortedKeys(state.mounts) end,
         GetMountFromSpell = function(spellID)
             for id, m in pairs(state.mounts) do
                 if m.spellID == spellID then return id end
@@ -824,6 +894,9 @@ local function install()
         return nil
     end
     G.GetMacroIndexByName = function(name) return macroIndex(name) or 0 end
+    -- All of state.macros are the account's.
+    G.GetNumMacros = function() return #state.macros, 0 end
+    G.MAX_ACCOUNT_MACROS = 120
     G.GetMacroInfo = function(nameOrIndex)
         local m = state.macros[macroIndex(nameOrIndex) or 0]
         if m then return m.name, m.texture, "" end
@@ -1033,7 +1106,7 @@ function Stubs.Reset(options)
         },
         overrides = {}, overrideCalls = 0, gamepadBindings = {},
         actions = {}, modifiedClicks = {}, placed = {}, settingValues = {},
-        spells = {}, items = {}, toys = {}, mounts = {}, macros = {},
+        spells = {}, items = {}, toys = {}, mounts = {}, macros = {}, flyouts = {}, equipped = {},
         -- The cursor in UI units, the controller's sticks (nil: no controller) and the actions
         -- secure buttons used.
         cursorX = 500, cursorY = 400, gamepad = nil, usedActions = {},

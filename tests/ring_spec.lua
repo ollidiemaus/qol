@@ -657,5 +657,175 @@ describe("ring", function()
             T.falsy(Stubs.TypeKey("ESCAPE"))
             T.falsy(QoLRingEditor:IsShown(), "closed")
         end)
+
+        it("is a window in the game's portrait frame, moved by its title bar and closed by its button", function()
+            start()
+            SlashCmdList.QOL("ring")
+            T.eq(QoLRingEditor.template, "PortraitFrameTemplate")
+            T.eq(QoLRingEditor.titleText, "Ring editor")
+            local titleBar
+            for _, region in ipairs(Stubs.state().regions) do
+                if region.parent == QoLRingEditor and region.scripts.OnDragStart then titleBar = region end
+            end
+            T.truthy(titleBar, "a title bar to drag")
+            T.falsy(titleBar.scripts.OnMouseDown, "dragged, not pressed, for the controller's cursor")
+            function QoLRingEditor:StartMoving() self.moving = true end
+            function QoLRingEditor:StopMovingOrSizing() self.moving = false end
+            titleBar:RunScript("OnDragStart")
+            T.truthy(QoLRingEditor.moving, "moving")
+            titleBar:RunScript("OnDragStop")
+            T.falsy(QoLRingEditor.moving, "put down")
+            QoLRingEditor.CloseButton:Click()
+            T.falsy(QoLRingEditor:IsShown(), "closed")
+        end)
+
+        describe("list", function()
+            local function list() return QoLRingEditor.list end
+            local function rows() return list().rows end
+            local function names()
+                local found = {}
+                for _, row in ipairs(rows()) do
+                    if row:IsShown() then found[#found + 1] = row.name:GetText() end
+                end
+                return found
+            end
+            local function tab(index) return list().tabs[index] end
+            local function search(text)
+                list().search:SetText(text)
+                list().search:RunScript("OnTextChanged", true)
+            end
+
+            it("shows the spell book, items with a use, toys, mounts and macros on tabs", function()
+                start(nil, nil, function(state)
+                    state.items[HEARTHSTONE].use = 8690
+                    state.items[2589] = { name = "Linen Cloth", count = 5 }
+                    state.items[TOY].use = 1234
+                    state.items[17067] = { name = "Ancient Cornerstone Grimoire", use = 7777 }
+                    state.bags[0] = { size = 16, [1] = { itemID = HEARTHSTONE }, [2] = { itemID = 2589 },
+                        [3] = { itemID = TOY } }
+                    state.equipped[17] = 17067
+                end)
+                SlashCmdList.QOL("ring")
+                T.same(names(), { "Frostbolt", "Fireball", "Blink" }, "the spell book's order")
+                T.truthy(tab(1).isSelected, "spells first")
+                tab(2):Click()
+                T.truthy(tab(2).isSelected and not tab(1).isSelected, "items")
+                T.falsy(tab(2):IsEnabled(), "the shown tab can't be clicked")
+                T.same(names(), { "Ancient Cornerstone Grimoire", "Hearthstone" }, "by name, worn ones too, no toys")
+                tab(3):Click()
+                T.same(names(), { "Toy Train Set" })
+                tab(4):Click()
+                T.same(names(), { "Brown Horse" })
+                tab(5):Click()
+                T.same(names(), { "Pull" })
+            end)
+
+            it("puts an entry on the ring with a click, checks it, and takes it off with another", function()
+                start()
+                SlashCmdList.QOL("ring")
+                rows()[2]:Click()
+                T.same(entries(), { spell(FIREBALL) })
+                T.truthy(rows()[2].check:IsShown(), "checked")
+                T.falsy(rows()[1].check:IsShown(), "not on the ring")
+                T.eq(QoLRingEditor.art.count, 2, "on the ring, with a slot to add one")
+                rows()[1]:Click()
+                T.same(entries(), { spell(FIREBALL), spell(FROSTBOLT) }, "added at the end")
+                tab(4):Click()
+                rows()[1]:Click()
+                T.same(entries()[3], { kind = "mount", id = MOUNT })
+                tab(1):Click()
+                rows()[2]:Click()
+                T.same(entries(), { spell(FROSTBOLT), { kind = "mount", id = MOUNT } }, "taken off again")
+                T.falsy(rows()[2].check:IsShown(), "no longer checked")
+                Stubs.RunTimers()
+                T.eq(attribute("*spell-1s1"), FROSTBOLT, "the ring follows")
+            end)
+
+            it("checks what's on the ring shown, and won't add to a full one", function()
+                local full = {}
+                start({ ringOf({ spell(FIREBALL) }), ringOf(full) }, nil, function(state)
+                    for id = 1001, 1012 do
+                        state.spells[id] = { name = "Spell " .. id }
+                        full[#full + 1] = spell(id)
+                    end
+                end)
+                SlashCmdList.QOL("ring")
+                T.truthy(rows()[2].check:IsShown(), "Fireball is on ring 1")
+                QoLRingEditor.next:Click()
+                T.falsy(rows()[2].check:IsShown(), "but not on ring 2")
+                rows()[2]:Click()
+                T.eq(#entries(2), 12, "nothing added")
+                T.eq(note(), "A ring shows up to 12 actions. Take one off first, or make a new ring.")
+                rows()[4]:Click()
+                T.eq(#entries(2), 11, "taking one off still works")
+            end)
+
+            it("drags an entry onto the cursor, to drop on a slot", function()
+                start({ ringOf({ spell(FIREBALL) }) })
+                SlashCmdList.QOL("ring")
+                rows()[3]:RunScript("OnDragStart")
+                T.eq(select(4, GetCursorInfo()), BLINK, "Blink on the cursor")
+                editorSlot(1):RunScript("OnReceiveDrag")
+                T.same(entries(), { spell(BLINK), spell(FIREBALL) })
+            end)
+
+            it("takes a mount's spell as the mount and a flyout's known spells; leaves out passives", function()
+                start(nil, nil, function(state)
+                    state.spells[MOUNT_SPELL] = { name = "Brown Horse" }
+                    state.spellBook = { { id = FIREBALL }, { id = 111, passive = true }, { id = 222, offSpec = true },
+                        { id = MOUNT_SPELL }, { id = 1, flyout = true } }
+                    state.flyouts[1] = { { spellID = BLINK }, { spellID = FROSTBOLT, known = false } }
+                end)
+                SlashCmdList.QOL("ring")
+                T.same(names(), { "Fireball", "Brown Horse", "Blink" })
+                rows()[2]:Click()
+                T.same(entries(), { { kind = "mount", id = MOUNT } })
+            end)
+
+            it("searches by name, turns pages, and says when there's nothing", function()
+                start(nil, nil, function(state)
+                    state.macros = {}
+                    for index = 1, 25 do state.macros[index] = { name = ("Macro %02d"):format(index) } end
+                    state.toys = {}
+                end)
+                SlashCmdList.QOL("ring")
+                tab(5):Click()
+                T.eq(#names(), 20, "a page of two columns of ten")
+                T.eq(list().page:GetText(), "Page 1/2")
+                T.falsy(list().previous:IsEnabled(), "no page before")
+                list().next:Click()
+                T.same(names(), { "Macro 21", "Macro 22", "Macro 23", "Macro 24", "Macro 25" })
+                T.eq(list().page:GetText(), "Page 2/2")
+                T.falsy(list().next:IsEnabled(), "no page after")
+                rows()[1]:GetParent():RunScript("OnMouseWheel", 1)
+                T.eq(list().page:GetText(), "Page 1/2", "the wheel turns back")
+                search(" macro 2")
+                T.same(names(), { "Macro 20", "Macro 21", "Macro 22", "Macro 23", "Macro 24", "Macro 25" }, "trimmed")
+                T.eq(list().page:GetText(), "Page 1/1")
+                search("zzz")
+                T.same(names(), {})
+                T.eq(list().empty:GetText(), "Nothing found.")
+                search("")
+                tab(3):Click()
+                T.eq(list().empty:GetText(), "No toys, or the Toy Box's filters hide them all.")
+                tab(5):Click()
+                T.eq(list().empty:GetText(), "")
+            end)
+
+            it("follows what this character learns while it's open, and says on a hover what a click does", function()
+                start({ ringOf({ spell(FIREBALL) }) })
+                SlashCmdList.QOL("ring")
+                Stubs.state().spells[30451] = { name = "Arcane Blast" }
+                Stubs.Fire("SPELLS_CHANGED")
+                Stubs.RunTimers()
+                T.same(names(), { "Frostbolt", "Fireball", "Blink", "Arcane Blast" })
+                rows()[2]:RunScript("OnEnter")
+                local lines = GameTooltip.lines
+                T.eq(lines[#lines].text, "On the ring: click to take it off.")
+                rows()[1]:RunScript("OnEnter")
+                lines = GameTooltip.lines
+                T.eq(lines[#lines].text, "Click to put it on the ring, or drag it onto a slot.")
+            end)
+        end)
     end)
 end)
