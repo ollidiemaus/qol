@@ -42,6 +42,7 @@ Features\BuffTooltips.lua
 Features\CombatLog.lua
 Features\ChatClassColors.lua
 Features\CombinedBagSort.lua
+Features\CombinedBagLayout.lua
 Features\ClassHealthBars.lua
 Features\Minimap.lua
 Features\MapPins.lua

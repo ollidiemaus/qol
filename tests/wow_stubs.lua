@@ -616,11 +616,17 @@ local function install()
     G.MicroMenuContainer = newRegion("Frame", G.UIParent)
     G.BagsBar = newRegion("Frame", G.UIParent)
     G.QuickJoinToastButton = newRegion("Frame", G.UIParent)
-    -- The combined bag starts closed; its sort button belongs to the backpack and starts hidden.
+    -- The combined bag starts closed and empty (Stubs.FillCombinedBag); its sort button belongs to
+    -- the backpack and starts hidden. Each script's hooks run in turn from hooks[script].
     G.ContainerFrameCombinedBags = newRegion("Frame", G.UIParent)
     G.ContainerFrameCombinedBags:Hide()
     G.ContainerFrameCombinedBags.hooks = {}
-    function G.ContainerFrameCombinedBags:HookScript(script, fn) self.hooks[script] = fn end
+    function G.ContainerFrameCombinedBags:HookScript(script, fn)
+        local before = self.hooks[script]
+        self.hooks[script] = before and function(...) before(...) fn(...) end or fn
+    end
+    G.ContainerFrameCombinedBags.MoneyFrame = newRegion("Frame", G.ContainerFrameCombinedBags)
+    G.ContainerFrameCombinedBags.Items = {}
     G.ContainerFrame1 = newRegion("Frame", G.UIParent)
     G.BagItemSearchBox = newRegion("Frame", G.ContainerFrame1)
     G.BagItemAutoSortButton = newRegion("Frame", G.ContainerFrame1)
@@ -1474,6 +1480,53 @@ function Stubs.SetBags(items)
         }
         state.prices[item.itemID] = item.price
     end
+end
+
+-- Fills the combined bag the way Blizzard makes its item buttons: sizes[1] is the backpack's size,
+-- sizes[2] the first bag's and so on, and Items runs from the last bag's last slot to the
+-- backpack's first. extended lists "bag:slot" of locked extra slots. Lays them out as Blizzard does.
+function Stubs.FillCombinedBag(sizes, extended)
+    local bag = _G.ContainerFrameCombinedBags
+    bag.Items = {}
+    for bagID = #sizes - 1, 0, -1 do
+        for slot = sizes[bagID + 1], 1, -1 do
+            local button = newRegion("Button", bag)
+            button.attributes, button.slot = { bagid = bagID }, slot
+            function button:GetAttribute(name) return self.attributes[name] end
+            function button:GetID() return self.slot end
+            button.isExtended = extended and extended[bagID .. ":" .. slot] or nil
+            button:SetSize(37, 37)
+            bag.Items[#bag.Items + 1] = button
+        end
+    end
+    Stubs.LayoutCombinedBag()
+end
+
+-- Blizzard's layout of the combined bag with keyboard and mouse (ContainerFrameMixin:UpdateItemLayout):
+-- by bag and slot, locked extra slots last, 10 to a row from the bottom right of the money frame
+-- leftwards and upwards, 5 apart.
+function Stubs.LayoutCombinedBag()
+    local bag = _G.ContainerFrameCombinedBags
+    local sorted = {}
+    for _, button in ipairs(bag.Items) do sorted[#sorted + 1] = button end
+    table.sort(sorted, function(a, b)
+        if (a.isExtended or false) ~= (b.isExtended or false) then return not a.isExtended end
+        if a.attributes.bagid ~= b.attributes.bagid then return a.attributes.bagid < b.attributes.bagid end
+        return a.slot < b.slot
+    end)
+    for index, button in ipairs(sorted) do
+        local cell = index - 1
+        button:ClearAllPoints()
+        button:SetPoint("BOTTOMRIGHT", bag.MoneyFrame, "TOPRIGHT", -(cell % 10) * 42, 4 + math.floor(cell / 10) * 42)
+    end
+end
+
+-- The combined bag's item button for a bag and slot.
+function Stubs.CombinedBagButton(bagID, slot)
+    for _, button in ipairs(_G.ContainerFrameCombinedBags.Items) do
+        if button.attributes.bagid == bagID and button.slot == slot then return button end
+    end
+    return nil
 end
 
 return Stubs
