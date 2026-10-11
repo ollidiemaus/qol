@@ -146,9 +146,10 @@ local function buildActionBars(page)
     page:Checkbox("right", "hideButtonBorders", L.HIDE_BUTTON_BORDERS, L.HIDE_BUTTON_BORDERS_TIP)
 end
 
--- Ring page: the switch, and where the rings are made (their editor, /qol ring).
+-- Ring page: the switch, and a button to where the rings are made (their editor, also /qol ring).
 local function buildRing(page)
     page:Checkbox("wide", "ring", L.RING, L.RING_TIP)
+    page:Button("wide", L.RING_EDITOR, L.RING_EDITOR_OPEN, L.RING_EDITOR_TIP, function() ns.RingEditor:Open() end)
     page:Note("wide", L.RING_NOTE)
 end
 

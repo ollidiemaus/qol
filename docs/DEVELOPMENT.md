@@ -252,18 +252,29 @@ the cursor and how to read it off the cursor. A character's ring is the entries 
   does. It keeps the stick after the ring closes until the stick is at rest (`len` under 0.1) or for
   half a second, like `InputAxisBinding`'s `waitForCentering`, so letting go of the key with the
   stick out doesn't swing the camera.
-- `/qol ring` opens the editor (`Features/RingEditor.lua`): a plain frame, `QoLRingEditor` (in
-  `UISpecialFrames` for Escape; the game reads that list in `securecall("CloseSpecialWindows")`, so
-  our entry's taint stays there), with the same art and Buttons for slots, plus one empty slot to
-  add to. It shows the ring as this character sees it and maps a slot to its place in the saved
+- `/qol ring` opens the editor (`Features/RingEditor.lua`): a plain frame, `QoLRingEditor`, with
+  the same art and Buttons for slots, plus one empty slot to add to. It shows the ring as this character sees it and maps a slot to its place in the saved
   list, so an entry dropped on slot 3 goes before the entry shown there, with other characters'
   entries kept where they are. Dropping reads `GetCursorInfo()` (a spell that's a mount's,
   `C_MountJournal.GetMountFromSpell`, is the mount; an item that's a toy, `PlayerHasToy`, the toy);
   an entry already on the ring moves. Taking one off puts it on the cursor (`C_Spell.PickupSpell`,
   `C_Item.PickupItem`, `C_ToyBox.PickupToyBoxItem`, `PickupMacro`; a mount by its spell). It only
-  changes our saved table and asks for an update; out of combat only, and combat closes it. It's a
-  slash command, not a button on the settings page, because hiding `SettingsPanel` from addon code
-  taints its `Commit`.
+  changes our saved table and asks for an update; out of combat only, and combat closes it.
+- Escape: the editor isn't in `UISpecialFrames`, because the game hides those not only on Escape but
+  whenever a window opens in the middle of the screen (`ShowUIPanel` of a `"center"` panel calls
+  `CloseWindows`, which calls `CloseSpecialWindows`), and the spell book (`PlayerSpellsFrame`,
+  `"centerOrLeft"`) opens there when nothing else is open; that closed the editor on P. Instead the
+  editor takes the keyboard (`EnableKeyboard`) with an `OnKeyDown` that hides it on Escape and keeps
+  that key (`SetPropagateKeyboardInput(false)`); every other key goes on to the game, and opening
+  the editor lets keys through again (`SetPropagateKeyboardInput(true)`; restricted in combat, and
+  the editor is only open out of it). The key boxes' listener sits above it and keeps every key, so
+  there Escape only cancels. While `SettingsPanel` or `GameMenuFrame` is shown, Escape goes on to
+  the game, which closes them first. Not through the game's `RegisterGameMenuEscHandler` (12.1 and
+  Forever): it inserts and sorts our handler into its list from our code, so the list's slots carry
+  our taint into every `ToggleGameMenu`. With the controller, the close button closes it.
+- The Ring page's button (`Page:Button`) opens the editor over the settings without closing them:
+  hiding `SettingsPanel` from addon code taints its `Commit`. Escape closes the settings (and the
+  game menu they go back to) and leaves the editor open.
 - The editor's key boxes are the game's `KeyBindingFrameBindingButtonTemplate`, with a listener of
   our own like the settings pages' (below), which also takes gamepad buttons
   (`EnableGamePadButton`, `OnGamePadButtonDown`): the first key or button pressed is the key, Escape
@@ -498,7 +509,9 @@ Things only the real client can confirm:
     toys from the toy box, mounts from the mount journal and macros onto the empty slot, onto a
     slot and off the ring; picking up and putting down with clicks, also with the controller cursor;
     right-click; the tooltips; a 13th action refused; new, switching, deleting; Escape and the close
-    button; closing when combat starts. Entries for another class show on that class only, and the
+    button; closing when combat starts. P opens the spell book with the editor open, and both stay
+    open; moving with the keys while it's open. The Ring page's button: the editor over the
+    settings, Escape closes the settings (and the game menu), then the editor. Entries for another class show on that class only, and the
     editor counts them.
   - Keys in the editor: a key, a key with a modifier, a controller button (in the controller
     interface too), Escape, right-click, a key taken from another ring. While the rings are on the

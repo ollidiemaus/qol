@@ -95,6 +95,17 @@ local function newRegion(kind, parent, template)
     function region:SetScale(scale) self.scale = scale end
     function region:GetScale() return self.scale or 1 end
     function region:SetFrameLevel(level) self.frameLevel = level end
+    function region:SetFrameStrata(strata) self.strata = strata end
+    function region:GetFrameStrata()
+        if self.strata then return self.strata end
+        if self.parent then return self.parent:GetFrameStrata() end
+        return "MEDIUM"
+    end
+    function region:EnableKeyboard(enabled) self.keyboard = enabled end
+    function region:SetPropagateKeyboardInput(propagate)
+        if state.combat then error("ADDON_ACTION_BLOCKED: SetPropagateKeyboardInput in combat") end
+        self.propagateKeyboard = propagate
+    end
     function region:GetFrameLevel() return self.frameLevel or 1 end
     function region:SetColorTexture(r, g, b, a) self.color = { r, g, b, a } end
     function region:SetVertexColor(r, g, b, a) self.vertexColor = { r, g, b, a } end
@@ -833,7 +844,6 @@ local function install()
         GetDeviceMappedState = function() return state.gamepad end,
         StickIndexToConfigName = function(index) return ({ [0] = "Movement", [1] = "Camera" })[index] end,
     }
-    G.UISpecialFrames = {}
     -- The game's Lua 5.1 has math.atan2; newer Lua only math.atan(y, x).
     G.math.atan2 = G.math.atan2 or function(y, x) return math.atan(y, x) end
     -- Secure handlers: the wrapped snippets, which Stubs.SecureClick runs.
@@ -979,7 +989,7 @@ local ADDON_GLOBALS = {
     "SLASH_QOL_RELOAD1", "hash_SlashCmdList", "IsSecureCmd", "SLASH_OTHERADDON1", "SLASH_RELOAD1",
     "HUD_EDIT_MODE_ACTION_BAR_LABEL", "HUD_EDIT_MODE_STANCE_BAR_LABEL", "HUD_EDIT_MODE_PET_ACTION_BAR_LABEL",
     "GetMinimapShape", "HybridMinimap", "TimeManagerClockButton", "GameTimeFrame", "AddonCompartmentFrame",
-    "TimeManagerClockTicker", "QoLNoAction", "ColorPickerFrame",
+    "TimeManagerClockTicker", "QoLNoAction", "ColorPickerFrame", "SettingsPanel", "GameMenuFrame",
     "GamepadMainActionBarFrame", "BINDING_HEADER_QOL",
     "QoLRing", "QoLRingButton", "QoLRingEditor",
 }
@@ -1105,11 +1115,23 @@ function Stubs.RunTimers()
     end
 end
 
--- A key typed on the keyboard, taken by every shown frame with an OnKeyDown.
+local STRATA = { BACKGROUND = 1, LOW = 2, MEDIUM = 3, HIGH = 4, DIALOG = 5, FULLSCREEN = 6,
+    FULLSCREEN_DIALOG = 7, TOOLTIP = 8 }
+
+-- A key typed on the keyboard: the shown frames that take the keyboard get it, the highest strata
+-- first, until one keeps it (it passes it on with SetPropagateKeyboardInput(true), also when set in
+-- its OnKeyDown). Returns whether it reached the game's key bindings.
 function Stubs.TypeKey(key)
+    local takers = {}
     for _, region in ipairs(state.regions) do
-        if region.scripts.OnKeyDown and region:IsVisible() then region.scripts.OnKeyDown(region, key) end
+        if region.keyboard and region:IsVisible() then takers[#takers + 1] = region end
     end
+    table.sort(takers, function(a, b) return STRATA[a:GetFrameStrata()] > STRATA[b:GetFrameStrata()] end)
+    for _, region in ipairs(takers) do
+        if region.scripts.OnKeyDown then region.scripts.OnKeyDown(region, key) end
+        if not region.propagateKeyboard then return false end
+    end
+    return true
 end
 
 -- A controller button pressed, taken by every shown frame with an OnGamePadButtonDown.

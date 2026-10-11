@@ -134,11 +134,13 @@ Rings of actions, drawn in the bronze of Forever's minimap, as many as you like.
 point at an action and let go to use it; let go in the middle and nothing happens. A ring works in
 combat, shows cooldowns and charges, and names the action you point at in the middle.
 
-- **Making them:** type `/qol ring`. Drag spells, items, toys, mounts or macros onto the ring's
-  empty slot (the **+**) to add them, onto a slot to put them there, or off the ring to take them
-  away; a right-click takes one away too. With a controller, click a slot to pick up or put down
-  what's on it. The arrows above the ring go to your other rings; **New ring** makes one, and
-  **Delete ring** deletes the one shown after a second click.
+- **Making them:** click **Open** on the Ring page of the settings, or type `/qol ring`. Escape
+  closes the settings and leaves the editor open, and it stays open when you open the spell book.
+  Drag spells, items, toys, mounts or macros onto the ring's empty slot (the **+**) to add them,
+  onto a slot to put them there, or off the ring to take them away; a right-click takes one away
+  too. With a controller, click a slot to pick up or put down what's on it. The arrows above the
+  ring go to your other rings; **New ring** makes one, and **Delete ring** deletes the one shown
+  after a second click.
 - **Grows with what's on it:** a ring has as many slots as actions, up to 12, spread evenly round
   it, so there are no empty buttons.
 - **For all your characters:** the rings are saved for the account. Each character sees what it
