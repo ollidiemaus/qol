@@ -14,7 +14,7 @@ globals = {
     "SLASH_QOL_RELOAD1",
     "hash_SlashCmdList",
     "GetMinimapShape", -- answers "SQUARE" while the minimap is square
-    "BINDING_HEADER_QOL", -- Bindings.xml's header; BackButtons.lua and Ring.lua name their bindings through _G
+    "BINDING_HEADER_QOL", -- Bindings.xml's header; BackButtons.lua names its bindings through _G
 }
 
 -- WoW API the addon reads. Keep this list explicit: an unexpected global is usually a typo.
@@ -41,8 +41,9 @@ read_globals = {
     "GetBindingKey", "GetBindingAction", "SetOverrideBinding", "SetOverrideBindingClick", "ClearOverrideBindings",
     "IsModifiedClick", "SetBinding", "GetBindingText", "GetBindingName", "IsKeyPressIgnoredForBinding",
     "CreateKeyChordStringUsingMetaKeyState", "NOT_BOUND",
-    -- Action slots
-    "PickupAction", "PlaceAction",
+    -- Action slots, and what goes on a ring
+    "PickupAction", "PlaceAction", "ClearCursor", "PlayerHasToy", "GetMacroInfo", "GetMacroIndexByName",
+    "GetMacroSpell", "GetMacroItem", "PickupMacro",
     -- Strings and formatting
     "GetLocale", "GetMoneyString", "SELL_PRICE",
     -- Units
@@ -59,7 +60,7 @@ read_globals = {
     -- Namespaces
     "Enum", "C_ActionBar", "C_AddOns", "C_Container", "C_CVar", "C_EventUtils", "C_GossipInfo", "C_Item", "C_Map", "C_MerchantFrame",
     "C_InputInterfaceStyle", "C_KeyBindings", "C_Texture", "C_Timer",
-    "C_GamePad", "C_TooltipInfo",
+    "C_GamePad", "C_TooltipInfo", "C_Spell", "C_SpellBook", "C_MountJournal", "C_ToyBox",
 }
 
 files["Locales/"] = { max_line_length = false }

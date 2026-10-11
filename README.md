@@ -6,7 +6,7 @@ Quality of Life bundles the little things you'd otherwise install five addons fo
 viewport, action bars that grow the other way, square action buttons without borders, class-colored
 health bars, junk selling and repairs at merchants, quests accepted and turned in for you, IDs and
 vendor prices in tooltips, a square minimap, dungeon entrances, boats and zeppelins on the world
-map, a ring of actions for mouse and controller, back buttons for the Steam Deck on Forever's
+map, rings of actions for mouse and controller, back buttons for the Steam Deck on Forever's
 controller bar, and switches to hide UI pieces you never click (also the buff tooltips that pop up
 in the controller interface). Everything is set up in the game's own options window. There's no minimap button.
 
@@ -126,27 +126,36 @@ casting animation on the buttons is left out, since it is drawn for the round fr
 without the dark edge some of them have, use an icon pack.
 
 With Forever's controller interface on, the game shows its own action bars instead of these, so
-the options above wait until you switch back to keyboard and mouse. The ring works in both.
+the options above wait until you switch back to keyboard and mouse. The rings work in both.
 
-### Ring
+### Rings
 
-Eight actions on a ring, drawn in the bronze of Forever's minimap. Hold the
-ring's key, point at an action and let go to use it; let go in the middle and nothing happens. It
-works in combat, shows cooldowns and charges, and names the action you point at in the middle.
+Rings of actions, drawn in the bronze of Forever's minimap, as many as you like. Hold a ring's key,
+point at an action and let go to use it; let go in the middle and nothing happens. A ring works in
+combat, shows cooldowns and charges, and names the action you point at in the middle.
 
-- **Two keys:** the Ring page lists them under **Keys**: **Ring (aim with the mouse)**, which opens
-  the ring at the mouse cursor, and **Ring (aim with the right stick)**, which opens it in the
-  middle of the screen for a controller's right stick (the camera stays still while you aim). Click
-  a box, then press the key; a right-click clears it. The same bindings are under Esc > Options >
-  Key Bindings > AddOns > Quality of Life. Both open the same ring, also in Forever's controller
-  interface.
-- **Filling it:** type `/qol ring` and drag spells, items or macros onto the ring, or off it to take
-  them away. With a controller, click a slot to pick up or put down what's on it. The ring's actions
-  are the first eight buttons of Action Bar 8 (or 6 or 7, picked under **Slots**), so what's there
-  is on the ring too. Pick a bar you don't use otherwise; the back buttons below use buttons 9 to 12,
-  so both can share one.
+- **Making them:** type `/qol ring`. Drag spells, items, toys, mounts or macros onto the ring's
+  empty slot (the **+**) to add them, onto a slot to put them there, or off the ring to take them
+  away; a right-click takes one away too. With a controller, click a slot to pick up or put down
+  what's on it. The arrows above the ring go to your other rings; **New ring** makes one, and
+  **Delete ring** deletes the one shown after a second click.
+- **Grows with what's on it:** a ring has as many slots as actions, up to 12, spread evenly round
+  it, so there are no empty buttons.
+- **For all your characters:** the rings are saved for the account. Each character sees what it
+  can use: spells it knows, items in its bags or worn, toys and mounts it has, macros it has (by
+  name). The rest stays on the ring for the characters that can, and the editor says how many that
+  are. A ring a character can't use anything on leaves its keys to the game.
+- **Two keys a ring:** below the ring in the editor, **Aim with the mouse** opens it at the mouse
+  cursor, and **Aim with the right stick** opens it in the middle of the screen for a controller's
+  right stick (the camera stays still while you aim). Click a box, then press the key or the
+  controller button; a right-click clears it. A key belongs to one ring at a time, and while the
+  rings are on it opens that ring instead of what Key Bindings gives it. The rings also work in
+  Forever's controller interface.
 
-Turn it on in the settings, on the Ring page.
+Turn them on in the settings, on the Ring page.
+
+Updating from the single ring: it was made of an action bar's buttons and its keys were in Key
+Bindings. The new rings start empty: make one with `/qol ring` and give it its keys there.
 
 ### Controller
 
@@ -190,7 +199,7 @@ arrows next to a viewport margin move it one pixel per press. In Forever's contr
 dropdown doesn't open its list: each press (or click) switches it to the next choice, as the game
 froze when the settings closed after one of its lists had been opened there. Changes apply right away; the few that
 touch protected parts of the interface (action bars, key bindings, viewport, system bar) wait until
-you leave combat. In Forever's controller interface the back buttons and the ring also wait until
+you leave combat. In Forever's controller interface the back buttons and the rings also wait until
 the settings and the game menu are closed (a second at most).
 
 Forever's beta can freeze when you close its settings after changing something with the controller
