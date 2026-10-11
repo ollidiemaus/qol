@@ -1,7 +1,7 @@
 local _, ns = ...
 
--- What the addon's own action buttons (the controller back buttons, the ring) share: the look of an
--- action slot, and override bindings that press a button with the keys bound to it.
+-- What the addon's own action buttons (the controller back buttons, the rings) share: the look of
+-- an action slot (the back buttons'), and override bindings that press a button with its keys.
 local Buttons = {}
 ns.Buttons = Buttons
 
@@ -61,8 +61,9 @@ local function same(a, b)
 end
 
 -- Override bindings on a frame of their own. Set takes { [key] = button name } and changes the
--- bindings only when that differs from the ones in place (not in combat). With an override binding
--- the key presses the button in Forever's controller interface too.
+-- bindings only when that differs from the ones in place (not in combat). A name may end in
+-- ":mouse button" for a click with another button than LeftButton (the rings' keys). With an
+-- override binding the key presses the button in Forever's controller interface too.
 function Buttons.NewOverrides()
     local overrides = { applied = {} }
     local owner
@@ -70,8 +71,9 @@ function Buttons.NewOverrides()
         if same(wanted, self.applied) then return end
         owner = owner or CreateFrame("Frame")
         ClearOverrideBindings(owner)
-        for key, name in pairs(wanted) do
-            SetOverrideBindingClick(owner, false, key, name, "LeftButton")
+        for key, target in pairs(wanted) do
+            local name, mouseButton = target:match("^([^:]+):?(.*)$")
+            SetOverrideBindingClick(owner, false, key, name, mouseButton ~= "" and mouseButton or "LeftButton")
         end
         self.applied = wanted
     end

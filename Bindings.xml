@@ -1,8 +1,6 @@
 <Bindings>
-	<!-- The ring's two keys (Features/Ring.lua), then the controller back buttons (Features/BackButtons.lua). -->
-	<Binding name="CLICK QoLRingMouse:LeftButton" header="QOL" category="ADDONS"/>
-	<Binding name="CLICK QoLRingStick:LeftButton" category="ADDONS"/>
-	<Binding name="CLICK QoLBackButton1:LeftButton" category="ADDONS"/>
+	<!-- The controller back buttons (Features/BackButtons.lua). The rings' keys are their own (Features/Ring.lua). -->
+	<Binding name="CLICK QoLBackButton1:LeftButton" header="QOL" category="ADDONS"/>
 	<Binding name="CLICK QoLBackButton2:LeftButton" category="ADDONS"/>
 	<Binding name="CLICK QoLBackButton3:LeftButton" category="ADDONS"/>
 	<Binding name="CLICK QoLBackButton4:LeftButton" category="ADDONS"/>

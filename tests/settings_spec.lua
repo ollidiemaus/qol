@@ -420,47 +420,14 @@ describe("settings pages", function()
             control(ns, "hideButtonBorders").row:PointFor("TOPLEFT")[5], "paging and buttons side by side")
     end)
 
-    it("puts the ring on a page of its own, in rows across it, the slots and keys greyed out while it's off", function()
+    it("puts the ring on a page of its own: the switch, and where the rings are made", function()
         local ns = start()
         local page = pages(ns).ring
         show(page)
-        local kinds = {}
-        for _, c in ipairs(page.controls) do
-            kinds[#kinds + 1] = c.kind
-            T.eq(c.column, "wide", c.key or c.command)
-        end
-        T.same(kinds, { "checkbox", "dropdown", "binding", "binding" })
-        T.same(headers(page, "wide"), { "Keys" })
-        local bar = control(ns, "ringBar")
-        T.same(values(bar), { 6, 7, 8 })
-        T.truthy(bar.indent)
-        T.falsy(bar.widget:IsEnabled())
-        local mouse = page.controls[3]
-        T.eq(mouse.command, "CLICK QoLRingMouse:LeftButton")
-        T.eq(mouse.text.text, "Ring (aim with the mouse)")
-        T.eq(page.controls[4].command, "CLICK QoLRingStick:LeftButton")
-        T.falsy(mouse.buttons[1]:IsEnabled())
-        control(ns, "ring").widget:Click()
-        T.truthy(bar.widget:IsEnabled())
-        T.truthy(mouse.buttons[1]:IsEnabled())
-    end)
-
-    it("binds the ring's keys from the Ring page, as in Key Bindings", function()
-        local ns = start({ ring = true })
-        local page = pages(ns).ring
-        show(page)
-        local stick = page.controls[4]
-        stick.buttons[1]:Click()
-        T.eq(page.note.text, "Press the key for Ring (aim with the right stick). Escape or another click on the box cancels.")
-        Stubs.TypeKey("F14")
-        T.eq(GetBindingAction("F14"), "CLICK QoLRingStick:LeftButton")
-        T.eq(stick.buttons[1].text, "F14")
-        T.eq(page.note.text, "F14 is now the key for Ring (aim with the right stick).")
-        -- The ring opens with it once the settings have closed (closing them saves the bindings).
-        Stubs.Fire("UPDATE_BINDINGS")
-        Stubs.RunTimers()
-        Stubs.AdvanceTime()
-        T.eq(Stubs.state().overrides.F14.command, "CLICK QoLRingStick:LeftButton")
+        T.eq(#page.controls, 1)
+        T.eq(page.controls[1].key, "ring")
+        T.eq(page.controls[1].column, "wide")
+        T.eq(page.note.text, "Type /qol ring to make rings, fill them and give them keys.")
     end)
 
     it("resets a page to its defaults after a second click", function()

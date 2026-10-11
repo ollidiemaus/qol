@@ -146,23 +146,10 @@ local function buildActionBars(page)
     page:Checkbox("right", "hideButtonBorders", L.HIDE_BUTTON_BORDERS, L.HIDE_BUTTON_BORDERS_TIP)
 end
 
--- Ring page: rows across the page, as on the Viewport page, then the ring's two keys (as in Key
--- Bindings > AddOns).
+-- Ring page: the switch, and where the rings are made (their editor, /qol ring).
 local function buildRing(page)
-    local enabled = is("ring")
     page:Checkbox("wide", "ring", L.RING, L.RING_TIP)
-    local bars = {}
-    for bar = 6, 8 do
-        bars[#bars + 1] = { value = bar, label = L.RING_BAR_CHOICE:format(bar) }
-    end
-    page:Dropdown("wide", "ringBar", L.RING_BAR, bars, L.RING_BAR_TIP, { indent = true, enabled = enabled })
-
-    page:Header("wide", L.SECTION_KEYS)
-    for _, info in ipairs(ns.Ring.OPENERS) do
-        page:Binding("wide", ns.Buttons.Command(info.name), info.label, L["RING_" .. info.aim:upper() .. "_TIP"],
-            { enabled = enabled })
-    end
-    page:Note("wide", L.BINDING_HINT)
+    page:Note("wide", L.RING_NOTE)
 end
 
 -- Controller page: the back buttons and the bar whose slots they use next to the buff tooltips,

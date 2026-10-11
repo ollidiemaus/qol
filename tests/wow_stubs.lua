@@ -34,9 +34,16 @@ local function newRegion(kind, parent, template)
             error("ADDON_ACTION_BLOCKED: Show or Hide on a protected frame in combat")
         end
     end
-    function region:Show() checkShow(self) self.shown = true end
-    function region:Hide() checkShow(self) self.shown = false end
-    function region:SetShown(shown) checkShow(self) self.shown = shown and true or false end
+    -- A frame's own OnShow and OnHide run when it is shown or hidden (not those of the frames under it).
+    function region:SetShown(shown)
+        checkShow(self)
+        local was = self.shown
+        self.shown = shown and true or false
+        local script = was ~= self.shown and self.scripts[self.shown and "OnShow" or "OnHide"]
+        if script then script(self) end
+    end
+    function region:Show() self:SetShown(true) end
+    function region:Hide() self:SetShown(false) end
     function region:IsShown() return self.shown end
     function region:IsVisible()
         local node = self
@@ -478,6 +485,7 @@ local function install()
         end
         if kind == "Cooldown" then
             function frame:SetCooldownFromDurationObject(duration) self.duration = duration end
+            function frame:SetCooldown(start, duration) self.duration = { start = start, seconds = duration } end
             function frame:Clear() self.duration = nil end
         end
         return frame
@@ -724,9 +732,11 @@ local function install()
     G.PickupAction = function(slot) state.cursor = action(slot) and slot end
     G.PlaceAction = function(slot) state.placed[#state.placed + 1] = slot end
     G.GetCursorInfo = function()
+        if state.cursorInfo then return unpack(state.cursorInfo) end
         if state.cursor then return "action", state.cursor end
         return nil
     end
+    G.ClearCursor = function() state.cursor, state.cursorInfo = nil, nil end
     -- An action's tooltip: its name (state.actions[slot].name) on the first line.
     G.C_TooltipInfo = {
         GetAction = function(slot)
@@ -734,6 +744,88 @@ local function install()
             return a and { lines = { { leftText = a.name } } } or nil
         end,
     }
+
+    -- What a ring holds, as this character has it. state.spells[id] = { name, texture, usable,
+    -- noMana, consumable, charges, count, cooldown } for the spells it knows; state.items[id] = { name,
+    -- texture, count, equipped, usable, consumable, stack, cooldown = { start, duration } } for the
+    -- items (count 0: not in the bags); state.toys[id] = { usable } for the toys it has (item data
+    -- in state.items); state.mounts[id] = { name, spellID, texture, usable, collected, hidden };
+    -- state.macros = { { name, texture, spell, item }, ... }. Picking one up puts it in
+    -- state.cursorInfo, as GetCursorInfo returns it.
+    local function spell(id) return state.spells[id] end
+    local function item(id) return state.items[id] end
+    G.C_Spell = {
+        GetSpellTexture = function(id) return (spell(id) or {}).texture end,
+        GetSpellName = function(id) return (spell(id) or {}).name end,
+        IsSpellUsable = function(id)
+            local info = spell(id) or {}
+            return info.usable ~= false, info.noMana == true
+        end,
+        IsConsumableSpell = function(id) return (spell(id) or {}).consumable == true end,
+        GetSpellCharges = function(id) return (spell(id) or {}).charges end,
+        GetSpellDisplayCount = function(id) return (spell(id) or {}).count or "" end,
+        GetSpellCooldownDuration = function(id) return (spell(id) or {}).cooldown or { seconds = 0 } end,
+        PickupSpell = function(id)
+            if spell(id) then state.cursorInfo = { "spell", 1, "spell", id, id } end
+        end,
+    }
+    G.C_SpellBook = { IsSpellKnownOrInSpellBook = function(id) return spell(id) ~= nil end }
+    G.C_Item.GetItemCount = function(id) return (item(id) or {}).count or 0 end
+    G.C_Item.IsEquippedItem = function(id) return (item(id) or {}).equipped == true end
+    G.C_Item.GetItemIconByID = function(id) return (item(id) or {}).texture end
+    G.C_Item.GetItemNameByID = function(id) return (item(id) or {}).name end
+    G.C_Item.IsUsableItem = function(id)
+        local info = item(id) or {}
+        return info.usable ~= false, false
+    end
+    G.C_Item.IsConsumableItem = function(id) return (item(id) or {}).consumable == true end
+    G.C_Item.GetItemMaxStackSizeByID = function(id) return (item(id) or {}).stack or 1 end
+    G.C_Item.GetItemCooldown = function(id)
+        local cooldown = (item(id) or {}).cooldown or { 0, 0 }
+        return cooldown[1], cooldown[2], true
+    end
+    G.C_Item.GetItemInfoInstant = function(link) return tonumber(tostring(link):match("item:(%d+)")) end
+    G.C_Item.PickupItem = function(id) state.cursorInfo = { "item", id, "item:" .. id } end
+    G.PlayerHasToy = function(id) return state.toys[id] ~= nil end
+    G.C_ToyBox = {
+        IsToyUsable = function(id) return (state.toys[id] or {}).usable ~= false end,
+        PickupToyBoxItem = function(id) state.cursorInfo = { "item", id, "item:" .. id } end,
+    }
+    G.C_MountJournal = {
+        GetMountInfoByID = function(id)
+            local m = state.mounts[id]
+            if not m then return nil end
+            return m.name, m.spellID, m.texture, false, m.usable ~= false, 0, false, false, nil, m.hidden == true,
+                m.collected ~= false, id
+        end,
+        GetMountFromSpell = function(spellID)
+            for id, m in pairs(state.mounts) do
+                if m.spellID == spellID then return id end
+            end
+            return nil
+        end,
+    }
+    local function macroIndex(nameOrIndex)
+        if type(nameOrIndex) == "number" then return state.macros[nameOrIndex] and nameOrIndex end
+        for index, m in ipairs(state.macros) do
+            if m.name == nameOrIndex then return index end
+        end
+        return nil
+    end
+    G.GetMacroIndexByName = function(name) return macroIndex(name) or 0 end
+    G.GetMacroInfo = function(nameOrIndex)
+        local m = state.macros[macroIndex(nameOrIndex) or 0]
+        if m then return m.name, m.texture, "" end
+    end
+    G.GetMacroSpell = function(index) return (state.macros[index] or {}).spell end
+    G.GetMacroItem = function(index)
+        local id = (state.macros[index] or {}).item
+        if id then return "Item " .. id, "item:" .. id end
+    end
+    G.PickupMacro = function(nameOrIndex)
+        local index = macroIndex(nameOrIndex)
+        if index then state.cursorInfo = { "macro", index } end
+    end
 
     G.GetCursorPosition = function() return state.cursorX, state.cursorY end
     -- Two sticks, as the controller settings name them.
@@ -817,6 +909,10 @@ local function install()
     function G.GameTooltip:SetText(text) self.lines = { { text = text } } end
     function G.GameTooltip:AddLine(text, r, g, b) table.insert(self.lines, { text = text, color = { r, g, b } }) end
     function G.GameTooltip:SetAction(slot) self.action, self.lines = slot, {} end
+    function G.GameTooltip:SetSpellByID(id) self.spell, self.lines = id, {} end
+    function G.GameTooltip:SetItemByID(id) self.item, self.lines = id, {} end
+    function G.GameTooltip:SetToyByItemID(id) self.toy, self.lines = id, {} end
+    function G.GameTooltip:SetMountBySpellID(id) self.mountSpell, self.lines = id, {} end
     function G.GameTooltip:IsOwned(owner) return self.owner == owner end
     function G.GameTooltip:Show() self.shown = true end
     function G.GameTooltip:Hide() self.shown = false end
@@ -885,8 +981,7 @@ local ADDON_GLOBALS = {
     "GetMinimapShape", "HybridMinimap", "TimeManagerClockButton", "GameTimeFrame", "AddonCompartmentFrame",
     "TimeManagerClockTicker", "QoLNoAction", "ColorPickerFrame",
     "GamepadMainActionBarFrame", "BINDING_HEADER_QOL",
-    "QoLRing", "QoLRingMouse", "QoLRingStick", "QoLRingEditor",
-    "BINDING_NAME_CLICK QoLRingMouse:LeftButton", "BINDING_NAME_CLICK QoLRingStick:LeftButton",
+    "QoLRing", "QoLRingButton", "QoLRingEditor",
 }
 for index = 1, 4 do
     ADDON_GLOBALS[#ADDON_GLOBALS + 1] = "QoLBackButton" .. index
@@ -928,6 +1023,7 @@ function Stubs.Reset(options)
         },
         overrides = {}, overrideCalls = 0, gamepadBindings = {},
         actions = {}, modifiedClicks = {}, placed = {}, settingValues = {},
+        spells = {}, items = {}, toys = {}, mounts = {}, macros = {},
         -- The cursor in UI units, the controller's sticks (nil: no controller) and the actions
         -- secure buttons used.
         cursorX = 500, cursorY = 400, gamepad = nil, usedActions = {},
@@ -1016,6 +1112,14 @@ function Stubs.TypeKey(key)
     end
 end
 
+-- A controller button pressed, taken by every shown frame with an OnGamePadButtonDown.
+function Stubs.PressGamePadButton(key)
+    for _, region in ipairs(state.regions) do
+        local script = region.scripts.OnGamePadButtonDown
+        if script and region:IsVisible() then script(region, key) end
+    end
+end
+
 function Stubs.SetControllerUI(on)
     state.interfaceStyle = on and 1 or 0
 end
@@ -1098,8 +1202,8 @@ end
 -- The restricted environment, one per header as in the game, with owner its handle.
 local function runSnippet(header, frame, body, ...)
     header.snippetEnv = header.snippetEnv or {
-        owner = frameHandle(header), math = math, string = string, tostring = tostring,
-        GetGamePadState = function() return state.gamepad end,
+        owner = frameHandle(header), math = math, string = string, tostring = tostring, tonumber = tonumber,
+        strmatch = string.match, GetGamePadState = function() return state.gamepad end,
     }
     local chunk = compile("local self, button, down = ...\n" .. body, header.snippetEnv)
     return chunk(frameHandle(frame), ...)
@@ -1116,9 +1220,10 @@ end
 
 -- One half of a click on a secure action button, as a CLICK binding sends it (key down, then up):
 -- the wrapped OnClick snippet, then the action, on the half useOnKeyDown picks (the game's default
--- is the key going down). Actions used go to state.usedActions.
-function Stubs.SecureClick(button, down)
-    local mouseButton = "LeftButton"
+-- is the key going down). Actions used go to state.usedActions: an action slot, or "spell:133",
+-- "item:item:6948", "toy:54452", "macro:Name" for the other types.
+function Stubs.SecureClick(button, down, mouseButton)
+    mouseButton = mouseButton or "LeftButton"
     local wrap = button.wraps and button.wraps.OnClick
     if wrap then
         local result = runSnippet(wrap.header, button, wrap.pre, mouseButton, down)
@@ -1128,9 +1233,21 @@ function Stubs.SecureClick(button, down)
     local onDown = button.attributes.useOnKeyDown ~= false
     if onDown ~= (down == true) then return end
     local suffix = mouseButton == "LeftButton" and "1" or ("-" .. mouseButton)
-    if modifiedAttribute(button, "type", suffix) == "action" then
+    local actionType = modifiedAttribute(button, "type", suffix)
+    if actionType == "action" then
         state.usedActions[#state.usedActions + 1] = modifiedAttribute(button, "action", suffix)
+    elseif actionType then
+        state.usedActions[#state.usedActions + 1] = actionType .. ":" .. tostring(modifiedAttribute(button, actionType, suffix))
     end
+end
+
+-- A key with an override binding that clicks a button, going down (true), up (false) or both (nil).
+function Stubs.PressOverride(key, down)
+    local entry = assert(state.overrides[key], "an override binding for " .. key)
+    local name, mouseButton = entry.command:match("^CLICK ([^:]+):(.+)$")
+    local button = assert(_G[name], name)
+    if down ~= false then Stubs.SecureClick(button, true, mouseButton) end
+    if down ~= true then Stubs.SecureClick(button, false, mouseButton) end
 end
 
 -- A key bound to a secure button, pressed and let go.
@@ -1162,9 +1279,9 @@ function Stubs.SetCombat(inCombat)
     end
 end
 
--- Loads the saved variables, logs in and lets every deferred change run.
-function Stubs.Login(savedOptions)
-    _G.QoLDB = savedOptions and { options = savedOptions } or nil
+-- Loads the saved variables (options, rings), logs in and lets every deferred change run.
+function Stubs.Login(savedOptions, savedRings)
+    _G.QoLDB = (savedOptions or savedRings) and { options = savedOptions, rings = savedRings } or nil
     Stubs.Fire("ADDON_LOADED", "QoL")
     Stubs.Fire("PLAYER_LOGIN")
     Stubs.Fire("PLAYER_ENTERING_WORLD")
