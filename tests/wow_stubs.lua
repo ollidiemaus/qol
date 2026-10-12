@@ -167,7 +167,7 @@ local function newRegion(kind, parent, template)
     end
     function region:CreateFontString(_, _, font)
         local text = newRegion("FontString", self)
-        text.font = font
+        if font then text:SetFontObject(font) end
         return text
     end
     function region:RegisterEvent(event)

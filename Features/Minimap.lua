@@ -16,10 +16,10 @@ local Options = ns.Options
 --     goes to the hidden holder.
 --   * Class colors for the zone text, the clock and the coordinates. The game colors the zone name
 --     by its PvP status each time the zone changes; the class color is put back right after.
---   * Font sizes for the zone text and the clock. Their buttons grow with a larger font, so the
---     rows around the minimap make room for them.
+--   * Font sizes for the zone text, the clock and the FPS and ping. Their frames grow with a larger
+--     font, so the rows around the minimap make room for them.
 --   * FPS and ping: a text of ours with the frame rate and the latency, placed in the rows like the
---     clock, also in class color.
+--     clock, also in class color and at another font size.
 -- Only widget methods are called; the game's own minimap code is never called or hooked.
 local MinimapLayout = {}
 ns.MinimapLayout = MinimapLayout
@@ -30,6 +30,7 @@ local CLOCK_COLOR, COORDS_COLOR = "minimapClockClassColor", "minimapCoordsClassC
 local CALENDAR = "hideMinimapCalendar"
 local ZONE_TEXT_SIZE, CLOCK_SIZE = "minimapZoneTextSize", "minimapClockSize"
 local PERFORMANCE, PERFORMANCE_COLOR = "minimapPerformance", "minimapPerformanceClassColor"
+local PERFORMANCE_SIZE = "minimapPerformanceSize"
 
 -- The choices for a moving element, in the order the settings list them (PositionsFor). "default"
 -- leaves it where the game puts it.
@@ -485,10 +486,11 @@ end
 -- The font sizes the settings offer; 0 is the game's own.
 MinimapLayout.FONT_SIZES = { 0, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20, 22, 24 }
 
--- The texts whose font size can change, each with the button around it. The button grows with a
--- larger font (the clock's in both directions, the zone text's only in height: the rows give it
--- its width). The zone text's font string has a height of its own, which grows too: a font string
--- shows nothing of a line that doesn't fit its height.
+-- The texts whose font size can change, each with the frame around it. The frame grows with a
+-- larger font (the clock's button and the FPS and ping in both directions, the zone text's button
+-- only in height: the rows give it its width). The zone text's font string has a height of its own,
+-- which grows too: a font string shows nothing of a line that doesn't fit its height. The FPS and
+-- ping is made here when it has a row, so it's sized before it's placed.
 MinimapLayout.SIZED = {
     { key = ZONE_TEXT_SIZE, textHeight = true,
         text = function() return MinimapZoneText end,
@@ -496,6 +498,12 @@ MinimapLayout.SIZED = {
     { key = CLOCK_SIZE, frameWidth = true,
         text = function() return TimeManagerClockTicker end,
         frame = function() return TimeManagerClockButton end },
+    { key = PERFORMANCE_SIZE, frameWidth = true,
+        text = function()
+            local frame = MinimapLayout:Performance()
+            return frame and frame.text
+        end,
+        frame = function() return MinimapLayout:Performance() end },
 }
 
 -- Per option: the text's font and the sizes that grow with it, from before we changed them.
@@ -666,7 +674,7 @@ function MinimapLayout.HasDayNight()
     return MinimapCluster ~= nil and type(MinimapCluster.DielFrame) == "table"
 end
 
-local LAYOUT_KEYS = { SQUARE, BORDER, CALENDAR, ZONE_TEXT_SIZE, CLOCK_SIZE }
+local LAYOUT_KEYS = { SQUARE, BORDER, CALENDAR, ZONE_TEXT_SIZE, CLOCK_SIZE, PERFORMANCE_SIZE }
 for _, element in ipairs(MinimapLayout.ELEMENTS) do LAYOUT_KEYS[#LAYOUT_KEYS + 1] = element.key end
 
 local function scheduleLayout()

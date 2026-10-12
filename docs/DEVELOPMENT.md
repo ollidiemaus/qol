@@ -183,7 +183,10 @@ once it hasn't; no OnUpdate of ours runs every frame for it. The frame keeps the
 999 and 999 and is as high as the clock's button, so its row never moves as the numbers change; the
 text is anchored to the side of its spot (left, right or center), so it keeps to the minimap's edge or
 to its neighbor. Its class color goes through the same code as the clock's, applied once more when the
-frame is made, in case the colors ran before it was there.
+frame is made, in case the colors ran before it was there. Its font size goes through the clock's code
+too: the frame grows both ways with a larger font, and Default gives the text the clock's font object
+(`WhiteNormalNumberFont`) back. The sizes are applied before the positions, so the frame is made there
+when it gets a row and has its size before it's first placed.
 
 Bar paging: each key bound to `ACTIONPAGE1` to `ACTIONPAGE6` gets an override binding on a frame of
 ours that mirrors what the key without modifiers does (`GetBindingAction(base, true)`, so a bar
@@ -615,7 +618,8 @@ Things only the real client can confirm:
 - The zone text and the clock at every font size, in the header bar and above and below the
   minimap (rows with something else in them), back to the game's look when set to Default.
 - FPS and ping in every row position, next to the clock in the same spot, at the minimap's edge
-  with one- and three-digit numbers, updating every second, in class color, and gone when hidden.
+  with one- and three-digit numbers, updating every second, in class color, at every font size (the
+  row making room, nothing cut off), and gone when hidden.
 - World map pins: in the right places on the zone and continent maps (the entrance positions are
   the instance portals, like retail's encounter journal pins), the tooltips' names in German, and a
   click opening the destination's map. Open the map in combat too.

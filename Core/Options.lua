@@ -45,6 +45,7 @@ local DEFAULTS = {
     minimapClockSize = 0,
     minimapPerformance = "hidden", -- FPS and ping: a row's spot or "hidden", no "default"
     minimapPerformanceClassColor = false,
+    minimapPerformanceSize = 0,
     minimapCompartment = "default",
     minimapTracking = "default",
     minimapDayNight = "default",

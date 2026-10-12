@@ -130,8 +130,11 @@ local function buildMinimap(page)
     page:Header("right", L.SECTION_MINIMAP_PERFORMANCE)
     page:Dropdown("right", "minimapPerformance", L.MINIMAP_POSITION, positions("minimapPerformance"),
         L.MINIMAP_PERFORMANCE_TIP)
+    local performanceShown = function() return Options:Get("minimapPerformance") ~= "hidden" end
     page:Checkbox("right", "minimapPerformanceClassColor", L.MINIMAP_CLASS_COLOR, L.MINIMAP_PERFORMANCE_CLASS_COLOR_TIP,
-        { enabled = function() return Options:Get("minimapPerformance") ~= "hidden" end })
+        { enabled = performanceShown })
+    page:Dropdown("right", "minimapPerformanceSize", L.FONT_SIZE, fontSizes(), L.MINIMAP_PERFORMANCE_SIZE_TIP,
+        { enabled = performanceShown })
 
     page:Header("right", L.SECTION_MINIMAP_BUTTONS)
     page:Dropdown("right", "minimapCompartment", L.MINIMAP_COMPARTMENT, positions("minimapCompartment"),
