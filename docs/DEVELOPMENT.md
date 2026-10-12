@@ -438,6 +438,9 @@ with the rings' editor below it), each an option's name with a control from the 
 templates (`SettingsCheckboxTemplate`, `WowStyle2DropdownTemplate`,
 `MinimalSliderWithSteppersTemplate`, `ColorSwatchTemplate` opening `ColorPickerFrame`), so they look
 like the game's pages and fit without scrolling (`SettingsPage.MAX_HEIGHT`, checked by the tests).
+A section that follows another one in its column gets 16 more above its header, so a page reads
+as groups rather than one long list, and sections side by side start at the same height where the
+columns' rows would leave their headers out of line (`Page:Align`: the Minimap page goes in pairs).
 All names use one font: the game's list draws dependent options smaller. A page resets with its own
 Defaults button, which asks with a second click: the game's confirmation dialog would spread taint.
 The game's "all settings" reset doesn't reach our pages any more, and they don't show up in the

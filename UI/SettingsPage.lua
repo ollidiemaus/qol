@@ -21,6 +21,7 @@ local MARGIN = 8          -- between the page's sides and the columns
 local GUTTER = 24         -- between the two columns
 local TOP = 54            -- the title bar above the columns
 local HEADER_HEIGHT = 36
+local SECTION_GAP = 16    -- above a section that follows another one, so each reads as a group
 local ROW_HEIGHT = 26
 local LABEL_X = 7         -- names start where the section titles do
 local INDENT = 15
@@ -209,7 +210,18 @@ local function newRow(page, column, height)
     return row
 end
 
+-- Leaves SECTION_GAP free in a column (in "wide", below both) that already has rows.
+local function sectionGap(page, column)
+    if column == "wide" then
+        local y = page:Height()
+        if y > TOP then page.y.left, page.y.right = y + SECTION_GAP, y + SECTION_GAP end
+    elseif page.y[column] and page.y[column] > TOP then
+        page.y[column] = page.y[column] + SECTION_GAP
+    end
+end
+
 function Page:Header(column, text, tooltip)
+    sectionGap(self, column)
     local row = newRow(self, column, HEADER_HEIGHT)
     local title = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
     title:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", LABEL_X, 8)
