@@ -46,6 +46,7 @@ Features\CombinedBagSort.lua
 Features\CombinedBagLayout.lua
 Features\ClassHealthBars.lua
 Features\DruidManaBar.lua
+Features\ScreenEdge.lua
 Features\Minimap.lua
 Features\MapPins.lua
 Features\Viewport.lua

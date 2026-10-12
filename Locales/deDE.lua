@@ -83,6 +83,12 @@ L.DRUID_MANA_BAR = "Mana in Bären- und Katzengestalt"
 L.DRUID_MANA_BAR_TIP = "Zeigt dein Mana in Bären- und Katzengestalt in einer dritten Leiste unter Wut oder Energie, "
     .. "im Stil des Spielerfensters. Die Zahlen folgen der Statustext-Einstellung des Spiels."
 
+L.SECTION_EDIT_MODE = "Bearbeitungsmodus"
+L.PAST_SCREEN_EDGE = "Fenster über den Bildschirmrand"
+L.PAST_SCREEN_EDGE_TIP = "Im Bearbeitungsmodus lassen sich Fenster ein Stück über den Bildschirmrand hinaus "
+    .. "verschieben, sodass ihre Grafik direkt am Rand sitzt. Schalte für das letzte Stück An Elemente anheften "
+    .. "aus: Es richtet den Rahmen eines Fensters am Rand aus."
+
 L.SECTION_UNIT_FRAMES = "Gesundheitsleisten in Klassenfarbe"
 L.CLASS_COLOR_PLAYER = "Spieler"
 L.CLASS_COLOR_TARGET = "Ziel"

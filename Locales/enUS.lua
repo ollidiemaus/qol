@@ -84,6 +84,11 @@ L.DRUID_MANA_BAR = "Mana in bear and cat form"
 L.DRUID_MANA_BAR_TIP = "Shows your mana in a third bar below rage or energy while you're in bear or cat form, "
     .. "in the player frame's own style. Its numbers follow the game's Status Text setting."
 
+L.SECTION_EDIT_MODE = "Edit Mode"
+L.PAST_SCREEN_EDGE = "Frames past the screen edge"
+L.PAST_SCREEN_EDGE_TIP = "Lets you move frames in Edit Mode a little past the edge of the screen, so their art "
+    .. "can sit right on it. Turn off Snap to Elements for the last bit: it lines a frame's box up with the edge."
+
 L.SECTION_UNIT_FRAMES = "Health bars in class color"
 L.CLASS_COLOR_PLAYER = "Player"
 L.CLASS_COLOR_TARGET = "Target"

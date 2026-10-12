@@ -36,7 +36,7 @@ read_globals = {
     "ChatFrameToggleVoiceMuteButton", "TextToSpeechButtonFrame", "BuffFrameTooltip",
     "InCombatLockdown", "GetPhysicalScreenSize", "ReloadUI", "IsSecureCmd", "CinematicFrame", "MovieFrame",
     "IsShiftKeyDown", "GamepadMainActionBarFrame", "GamepadMode", "SettingsPanel", "GameMenuFrame", "GetCursorPosition", "GetCursorInfo",
-    "SecureHandlerWrapScript",
+    "SecureHandlerWrapScript", "EditModeManagerFrame",
     -- Performance
     "GetFramerate", "GetNetStats",
     -- Key bindings

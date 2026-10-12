@@ -50,6 +50,9 @@ local function buildInterface(page)
     page:Header("left", L.SECTION_PLAYER_FRAME)
     page:Checkbox("left", "druidManaBar", L.DRUID_MANA_BAR, L.DRUID_MANA_BAR_TIP)
 
+    page:Header("left", L.SECTION_EDIT_MODE)
+    page:Checkbox("left", "pastScreenEdge", L.PAST_SCREEN_EDGE, L.PAST_SCREEN_EDGE_TIP)
+
     page:Header("right", L.SECTION_TOOLTIPS)
     page:Checkbox("right", "tooltipIDs", L.TOOLTIP_IDS, L.TOOLTIP_IDS_TIP)
     page:Checkbox("right", "tooltipSellPrice", L.TOOLTIP_SELL_PRICE, L.TOOLTIP_SELL_PRICE_TIP)
