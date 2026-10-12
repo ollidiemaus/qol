@@ -2,7 +2,7 @@ local _, ns = ...
 local L = ns.L
 
 -- /qol (or /qualityoflife) opens the settings window, or closes it again; there's no minimap button.
--- /qol ring (or rings) opens the rings' editor.
+-- /qol ring (or rings) opens it on the Ring page, where the rings are made.
 SLASH_QOL1 = "/qol"
 SLASH_QOL2 = "/qualityoflife"
 
@@ -13,7 +13,7 @@ SlashCmdList.QOL = function(message)
         return
     end
     if command == "ring" or command == "rings" then
-        ns.RingEditor:Toggle()
+        ns.SettingsPanel:Toggle("ring")
         return
     end
     ns.SettingsPanel:Toggle()

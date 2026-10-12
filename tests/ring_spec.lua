@@ -396,16 +396,26 @@ describe("ring", function()
         end
         local function note() return QoLRingEditor.note:GetText() end
 
-        it("opens with /qol ring, closes again, and makes a first ring to fill", function()
-            start()
+        it("is the settings' Ring page, which /qol ring opens and closes, and makes a first ring to fill", function()
+            local ns = start()
             SlashCmdList.QOL("ring")
-            T.truthy(QoLRingEditor:IsShown(), "open")
+            T.truthy(QoLSettings:IsShown(), "the settings open")
+            T.eq(ns.SettingsPanel.window.selected, "ring")
+            T.eq(QoLRingEditor:GetParent(), ns.SettingsPanel.pages.ring.frame)
+            T.truthy(QoLRingEditor:IsVisible(), "shown")
             T.same(QoLDB.rings, { { entries = {} } })
             T.eq(QoLRingEditor.title:GetText(), "Ring 1 of 1")
             T.eq(QoLRingEditor.art.count, 1)
             T.truthy(editorSlot(1).plus:IsShown(), "a slot to add one")
             SlashCmdList.QOL("ring")
-            T.falsy(QoLRingEditor:IsShown(), "closed again")
+            T.falsy(QoLSettings:IsShown(), "closed again")
+            -- From another page it goes to the Ring page instead of closing.
+            SlashCmdList.QOL("")
+            ns.SettingsPanel.window.buttons.automation:Click()
+            T.eq(ns.SettingsPanel.window.selected, "automation")
+            SlashCmdList.QOL("ring")
+            T.truthy(QoLSettings:IsShown(), "still open")
+            T.eq(ns.SettingsPanel.window.selected, "ring")
         end)
 
         it("adds what's dropped on the empty slot, and puts what's dropped on a slot there", function()
@@ -510,11 +520,8 @@ describe("ring", function()
             start({ ringOf({ spell(FIREBALL) }) })
             SlashCmdList.QOL("ring")
             T.falsy(QoLRingEditor.next:IsEnabled(), "no next ring")
-            local new, delete
-            for _, region in ipairs(Stubs.state().regions) do
-                if region.parent == QoLRingEditor.page and region.text == "New ring" then new = region end
-                if region.parent == QoLRingEditor.page and region.text == "Delete ring" then delete = region end
-            end
+            local new, delete = QoLRingEditor.new, QoLRingEditor.delete
+            T.eq(new:GetText(), "New ring")
             new:Click()
             T.eq(#QoLDB.rings, 2)
             T.eq(QoLRingEditor.title:GetText(), "Ring 2 of 2")
@@ -604,98 +611,86 @@ describe("ring", function()
         end)
 
         it("says so while the rings are off", function()
-            start(nil, {})
+            local ns = start(nil, {})
             SlashCmdList.QOL("ring")
-            T.eq(note(), "The rings are off: turn them on in the settings, on the Ring page.")
+            T.eq(note(), "The rings are off: turn them on at the top of this page.")
+            -- The switch is above it.
+            ns.SettingsPanel.pages.ring.controls[1].widget:Click()
+            T.truthy(ns.Options:Get("ring"), "on")
+            T.eq(note(), "Click a spell, item, toy, mount or macro on the right to put it on the ring, or drag it onto "
+                .. "a slot. Drag one off the ring to take it away (a right-click removes one).")
         end)
 
-        it("closes when combat starts and doesn't open in combat", function()
-            start()
+        it("changes nothing in combat, and shows what changed once it's over", function()
+            start({ ringOf({ spell(FIREBALL) }) })
             SlashCmdList.QOL("ring")
             QoLRingEditor.keys.mouse:RunScript("OnClick", "LeftButton")
             Stubs.state().combat = true
             Stubs.Fire("PLAYER_REGEN_DISABLED")
-            T.falsy(QoLRingEditor:IsShown(), "closed")
+            T.truthy(QoLRingEditor:IsVisible(), "still shown")
             T.falsy(QoLRingEditor.keys.mouse.selected, "no longer waiting")
+            T.eq(note(), "The rings can't be changed in combat.")
+            T.falsy(QoLRingEditor.new:IsEnabled(), "no new ring")
+            T.falsy(QoLRingEditor.delete:IsEnabled(), "no deleting")
+            T.falsy(QoLRingEditor.keys.mouse:IsEnabled(), "no keys")
+            editorSlot(1):RunScript("OnClick", "RightButton")
+            cursor("spell", 1, "spell", BLINK, BLINK)
+            editorSlot(2):RunScript("OnReceiveDrag")
+            QoLRingEditor.list.rows[2]:Click()
+            T.same(ids(), { FIREBALL }, "nothing taken off or added")
+            -- It opens in combat too, as the settings do.
             SlashCmdList.QOL("ring")
-            T.falsy(QoLRingEditor:IsShown(), "still closed")
-            T.eq(Stubs.state().messages[#Stubs.state().messages],
-                "|cff33ff99Quality of Life|r: The rings can't be changed in combat.")
+            SlashCmdList.QOL("ring")
+            T.truthy(QoLRingEditor:IsVisible(), "open in combat")
+            T.eq(note(), "The rings can't be changed in combat.")
+            T.falsy(QoLRingEditor.new:IsEnabled(), "still no new ring")
+            Stubs.state().combat = false
+            Stubs.Fire("PLAYER_REGEN_ENABLED")
+            T.truthy(QoLRingEditor.new:IsEnabled(), "new rings again")
+            T.truthy(QoLRingEditor.keys.mouse:IsEnabled(), "keys again")
+            T.eq(note(), "Click a spell, item, toy, mount or macro on the right to put it on the ring, or drag it onto "
+                .. "a slot. Drag one off the ring to take it away (a right-click removes one).")
         end)
 
-        it("closes on Escape and passes the other keys on to the game, so P opens the spell book", function()
+        it("leaves the other keys to the game, so P opens the spell book; Escape cancels a key, then closes", function()
             start()
             SlashCmdList.QOL("ring")
             T.truthy(Stubs.TypeKey("P"), "P reached the key bindings")
-            T.truthy(QoLRingEditor:IsShown(), "still open")
+            T.truthy(QoLRingEditor:IsVisible(), "still open")
             -- Waiting for a key, Escape only cancels that.
             QoLRingEditor.keys.mouse:RunScript("OnClick", "LeftButton")
             T.falsy(Stubs.TypeKey("ESCAPE"), "kept by the key box")
             T.falsy(QoLRingEditor.keys.mouse.selected, "cancelled")
-            T.truthy(QoLRingEditor:IsShown(), "still open after cancelling")
+            T.truthy(QoLSettings:IsShown(), "still open after cancelling")
             T.falsy(Stubs.TypeKey("ESCAPE"), "kept from the game menu")
-            T.falsy(QoLRingEditor:IsShown(), "closed")
+            T.falsy(QoLSettings:IsShown(), "closed")
+            Stubs.RunTimers()
             SlashCmdList.QOL("rings")
-            T.truthy(QoLRingEditor:IsShown(), "open again, with /qol rings too")
+            T.truthy(QoLRingEditor:IsVisible(), "open again, with /qol rings too")
             T.truthy(Stubs.TypeKey("W"), "keys go on to the game again")
         end)
 
-        it("leaves Escape to the game's settings and menu while they're open", function()
-            start()
-            local settings = CreateFrame("Frame", "SettingsPanel", UIParent)
-            settings:SetFrameStrata("HIGH")
-            local menu = CreateFrame("Frame", "GameMenuFrame", UIParent)
-            menu:Hide()
+        it("lays the ring, smaller than in game, and the list side by side on a spell book page below the title", function()
+            local ns = start()
             SlashCmdList.QOL("ring")
-            T.truthy(Stubs.TypeKey("ESCAPE"), "Escape went to the game, for the settings")
-            T.truthy(QoLRingEditor:IsShown(), "still open")
-            settings:Hide()
-            menu:Show()
-            T.truthy(Stubs.TypeKey("ESCAPE"), "and for the game menu the settings went back to")
-            T.truthy(QoLRingEditor:IsShown(), "still open")
-            menu:Hide()
-            T.falsy(Stubs.TypeKey("ESCAPE"))
-            T.falsy(QoLRingEditor:IsShown(), "closed")
-        end)
-
-        it("is a window in the game's portrait frame, moved by its title bar and closed by its button", function()
-            start()
-            SlashCmdList.QOL("ring")
-            T.eq(QoLRingEditor.template, "PortraitFrameTemplate")
-            T.eq(QoLRingEditor.titleText, "Ring editor")
-            local titleBar
-            for _, region in ipairs(Stubs.state().regions) do
-                if region.parent == QoLRingEditor and region.scripts.OnDragStart then titleBar = region end
-            end
-            T.truthy(titleBar, "a title bar to drag")
-            T.falsy(titleBar.scripts.OnMouseDown, "dragged, not pressed, for the controller's cursor")
-            function QoLRingEditor:StartMoving() self.moving = true end
-            function QoLRingEditor:StopMovingOrSizing() self.moving = false end
-            titleBar:RunScript("OnDragStart")
-            T.truthy(QoLRingEditor.moving, "moving")
-            titleBar:RunScript("OnDragStop")
-            T.falsy(QoLRingEditor.moving, "put down")
-            QoLRingEditor.CloseButton:Click()
-            T.falsy(QoLRingEditor:IsShown(), "closed")
-        end)
-
-        it("puts its keys' names, buttons and texts on the page, which would cover the window's own", function()
-            start()
-            SlashCmdList.QOL("ring")
-            local page = QoLRingEditor.page
-            T.truthy(page, "a page")
-            local texts = { ["Aim with the mouse"] = 0, ["Aim with the right stick"] = 0, ["New ring"] = 0,
-                ["Delete ring"] = 0 }
-            for _, region in ipairs(Stubs.state().regions) do
-                if region.text and texts[region.text] then
-                    T.eq(region.parent, page, region.text .. " on the page")
-                    texts[region.text] = texts[region.text] + 1
-                end
-            end
-            for text, found in pairs(texts) do T.eq(found, 1, text) end
-            for _, box in pairs(QoLRingEditor.keys) do T.eq(box:GetParent(), page, "key box on the page") end
-            T.eq(QoLRingEditor.note:GetParent(), page, "the note")
-            T.eq(QoLRingEditor.others:GetParent(), page, "the count of other characters' entries")
+            local Window = ns.SettingsWindow
+            local top = ns.SettingsPage.TOP
+            T.eq(QoLRingEditor:PointFor("TOPLEFT")[5], -top, "below the page's title")
+            T.eq(QoLRingEditor:GetWidth(), Window.PAGE_WIDTH)
+            T.eq(QoLRingEditor:GetHeight(), Window.PAGE_HEIGHT - top)
+            local holder = QoLRingEditor.art:GetParent()
+            local room = holder:GetParent()
+            T.eq(holder:GetScale(), 0.66)
+            T.truthy(holder:GetWidth() * holder:GetScale() <= room:GetWidth(), "the biggest ring fits its column")
+            -- The ring's column ends before the list starts.
+            local list = QoLRingEditor.list
+            local roomRight = room:PointFor("TOPLEFT")[4] + room:GetWidth()
+            local listLeft = QoLRingEditor:GetWidth() + list:PointFor("TOPRIGHT")[4] - list:GetWidth()
+            T.truthy(roomRight < listLeft, "column ends at " .. roomRight .. ", the list starts at " .. listLeft)
+            -- The list's rows end above its page buttons.
+            local Picker = ns.RingPicker
+            local rows = 30 + Picker.ROWS * Picker.ROW_HEIGHT
+            T.truthy(rows + list.next:GetHeight() < list:GetHeight(), "rows " .. rows .. " high in " .. list:GetHeight())
         end)
 
         describe("list", function()
@@ -809,11 +804,11 @@ describe("ring", function()
                 end)
                 SlashCmdList.QOL("ring")
                 tab(5):Click()
-                T.eq(#names(), 20, "a page of two columns of ten")
+                T.eq(#names(), 18, "a page of two columns of nine")
                 T.eq(list().page:GetText(), "Page 1/2")
                 T.falsy(list().previous:IsEnabled(), "no page before")
                 list().next:Click()
-                T.same(names(), { "Macro 21", "Macro 22", "Macro 23", "Macro 24", "Macro 25" })
+                T.same(names(), { "Macro 19", "Macro 20", "Macro 21", "Macro 22", "Macro 23", "Macro 24", "Macro 25" })
                 T.eq(list().page:GetText(), "Page 2/2")
                 T.falsy(list().next:IsEnabled(), "no page after")
                 rows()[1]:GetParent():RunScript("OnMouseWheel", 1)

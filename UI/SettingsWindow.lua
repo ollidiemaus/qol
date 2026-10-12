@@ -23,6 +23,9 @@ local LIST_WIDTH = 199
 local PAGE_GAP = 16    -- between the list and the page
 local PAGE_RIGHT = 22  -- right of the page
 local PAGE_HEIGHT = 601
+-- A page's room, for a page that lays itself out (the rings' editor).
+Window.PAGE_WIDTH = WIDTH - LIST_X - LIST_WIDTH - PAGE_GAP - PAGE_RIGHT
+Window.PAGE_HEIGHT = PAGE_HEIGHT
 -- The list as the game's draws it (Blizzard_CategoryList): a header, then a button per page.
 local HEADER_HEIGHT = 30
 local HEADER_LABEL_X = 20
@@ -133,18 +136,22 @@ function Window:Select(key)
     page:Refresh()
 end
 
-function Window:Open()
+-- key: the page to show (else the one it was on).
+function Window:Open(key)
     if self.frame:IsShown() then
+        if key and key ~= self.selected then self:Select(key) end
         self.frame:Raise()
         return
     end
+    if self.pages[key] then self.selected = key end
     ns.ShowWindow(self.frame)
 end
 
-function Window:Toggle()
-    if self.frame:IsShown() then
+-- Closes the window, or opens it; with key, on another page it goes there instead of closing.
+function Window:Toggle(key)
+    if self.frame:IsShown() and (not key or key == self.selected) then
         self.frame:Hide()
         return
     end
-    self:Open()
+    self:Open(key)
 end

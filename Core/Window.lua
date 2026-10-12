@@ -1,8 +1,9 @@
 local _, ns = ...
 
--- Our windows (the settings, /qol, and the rings' editor, /qol ring): the game's portrait frame,
--- which Forever draws in bronze, with the addon's icon as portrait and a title bar of ours to move
--- it by. Its close button hides it directly (the template's would go through the game's panel code).
+-- Our windows (the settings, /qol, with the rings' editor on its Ring page): the game's portrait
+-- frame, which Forever draws in bronze, with the addon's icon as portrait and a title bar of ours to
+-- move it by. Its close button hides it directly (the template's would go through the game's panel
+-- code).
 --
 -- Escape closes it, and every other key goes on to the game. Not through UISpecialFrames: the game
 -- closes those whenever one of its windows opens in the middle of the screen, the spell book too.

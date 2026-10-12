@@ -137,9 +137,10 @@ Rings of actions, drawn in the bronze of Forever's minimap, as many as you like.
 point at an action and let go to use it; let go in the middle and nothing happens. A ring works in
 combat, shows cooldowns and charges, and names the action you point at in the middle.
 
-- **Making them:** click **Open** on the Ring page of the settings, or type `/qol ring`. The editor
-  is a window in Forever's bronze frame with a spell book page in it; drag its title bar to move
-  it. Escape closes it, and it stays open when you open the spell book.
+- **Making them:** on the Ring page of the settings (`/qol ring` opens it there). Below the switch
+  that turns them on, the page is a page of the spell book: your ring on the left, what you can put
+  on it on the right. The settings stay open when you open the spell book, and in combat the page
+  shows your rings but changes nothing.
 - **Adding actions:** the right of the page lists what this character has, as in the spell book:
   tabs for **Spells**, **Items** (the ones with a use, in the bags or worn), **Toys**, **Mounts**
   and **Macros**, a search box, and the page buttons (the mouse wheel turns pages too). Click one to
@@ -148,25 +149,25 @@ combat, shows cooldowns and charges, and names the action you point at in the mi
 - **Arranging them:** drag one from the list, the spell book, the bags or an action bar onto the
   ring's empty slot (the **+**) to add it, onto a slot to put it there, or off the ring to take it
   away; a right-click takes one away too. With a controller, click a slot to pick up or put down
-  what's on it. The arrows in the page's top bar go to your other rings; **New ring** makes one, and
+  what's on it. The arrows above the ring go to your other rings; **New ring** makes one, and
   **Delete ring** deletes the one shown after a second click.
 - **Grows with what's on it:** a ring has as many slots as actions, up to 12, spread evenly round
   it, so there are no empty buttons.
 - **For all your characters:** the rings are saved for the account. Each character sees what it
   can use: spells it knows, items in its bags or worn, toys and mounts it has, macros it has (by
-  name). The rest stays on the ring for the characters that can, and the editor says how many that
+  name). The rest stays on the ring for the characters that can, and the page says how many that
   are. A ring a character can't use anything on leaves its keys to the game.
-- **Two keys a ring:** below the ring in the editor, **Aim with the mouse** opens it at the mouse
+- **Two keys a ring:** below the ring, **Aim with the mouse** opens it at the mouse
   cursor, and **Aim with the right stick** opens it in the middle of the screen for a controller's
   right stick (the camera stays still while you aim). Click a box, then press the key or the
   controller button; a right-click clears it. A key belongs to one ring at a time, and while the
   rings are on it opens that ring instead of what Key Bindings gives it. The rings also work in
   Forever's controller interface.
 
-Turn them on in the settings, on the Ring page.
+Turn them on at the top of the Ring page.
 
 Updating from the single ring: it was made of an action bar's buttons and its keys were in Key
-Bindings. The new rings start empty: make one with `/qol ring` and give it its keys there.
+Bindings. The new rings start empty: make one on the Ring page (`/qol ring`) and give it its keys there.
 
 ### Controller
 
