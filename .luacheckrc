@@ -23,7 +23,7 @@ read_globals = {
     "issecretvalue", "strsplit", "strtrim",
     -- Frames and UI
     "CreateFrame", "UIParent", "WorldFrame", "DEFAULT_CHAT_FRAME", "EventRegistry",
-    "Settings", "CreateSettingsListSectionHeaderInitializer", "MinimalSliderWithSteppersMixin", "SettingsTooltip",
+    "Settings", "CreateSettingsListSectionHeaderInitializer", "MinimalSliderWithSteppersMixin",
     "ColorPickerFrame",
     "SETTINGS_DEFAULTS", "NORMAL_FONT_COLOR", "GRAY_FONT_COLOR", "PlaySound", "SOUNDKIT",
     "GridLayoutUtil", "AnchorUtil", "TooltipDataProcessor",
@@ -40,7 +40,7 @@ read_globals = {
     -- Key bindings
     "GetBindingKey", "GetBindingAction", "SetOverrideBinding", "SetOverrideBindingClick", "ClearOverrideBindings",
     "IsModifiedClick", "SetBinding", "GetBindingText", "GetBindingName", "IsKeyPressIgnoredForBinding",
-    "CreateKeyChordStringUsingMetaKeyState", "NOT_BOUND",
+    "CreateKeyChordStringUsingMetaKeyState", "NOT_BOUND", "SaveBindings", "GetCurrentBindingSet",
     -- Action slots, and what goes on a ring
     "PickupAction", "PlaceAction", "ClearCursor", "PlayerHasToy", "GetMacroInfo", "GetMacroIndexByName",
     "GetMacroSpell", "GetMacroItem", "PickupMacro", "GetNumMacros", "MAX_ACCOUNT_MACROS", "GetInventoryItemID",

@@ -2,12 +2,16 @@ local T = require("testlib")
 local Stubs = require("wow_stubs")
 local describe, it = T.describe, T.it
 
+-- The addon loaded last, for show.
+local loaded
+
 -- forever: with Forever's controller action bar, which brings the Controller page.
 local function start(savedOptions, forever)
     local ns = Stubs.LoadAddon()
     if forever then Stubs.NewGamepadBar() end
     local api = Stubs.InstallSettings()
     Stubs.Login(savedOptions)
+    loaded = ns
     return ns, api
 end
 
@@ -33,10 +37,11 @@ local function keyRow(ns, index)
     error("no key binding row for back button " .. index)
 end
 
--- The frame that takes the keyboard while a key binding button waits for a key.
+-- The frame that takes the keyboard while a key binding button waits for a key: above the window,
+-- which takes it too, for Escape.
 local function waitingForKey()
     for _, region in ipairs(Stubs.state().regions) do
-        if region.scripts.OnKeyDown and region:IsShown() then return true end
+        if region.scripts.OnKeyDown and region:IsShown() and region.strata == "FULLSCREEN_DIALOG" then return true end
     end
     return false
 end
@@ -55,10 +60,25 @@ local function values(c)
     return list
 end
 
--- The page as the settings panel shows it.
+-- The page as the settings window shows it.
 local function show(page)
-    page.frame:Show()
-    page.frame:OnRefresh()
+    local panel = loaded.SettingsPanel
+    for key, other in pairs(panel.pages) do
+        if other == page then
+            panel:Open()
+            panel.window:Select(key)
+            return
+        end
+    end
+    error("not a page of the window")
+end
+
+-- The pages' names in the window's list, in its order.
+local function listed(ns)
+    local window = ns.SettingsPanel.window
+    local names = {}
+    for _, key in ipairs(window.order) do names[#names + 1] = window.buttons[key].label:GetText() end
+    return names
 end
 
 local function radio(c, text)
@@ -70,25 +90,103 @@ local function radio(c, text)
 end
 
 describe("settings pages", function()
-    it("registers the information page as the AddOns category, with a page for each part of the game below it", function()
+    it("puts a page for each part of the game in a window of their own, and only the information page under AddOns", function()
         local ns, api = start()
-        local main = api.registered
-        T.eq(main.name, "Quality of Life")
-        T.eq(main.frame, ns.SettingsPanel.info.frame, "the information page is our own")
-        local names = {}
-        for index = 2, #api.categories do
-            T.eq(api.categories[index].parent, main)
-            T.truthy(api.categories[index].frame)
-            names[#names + 1] = api.categories[index].name
+        T.eq(api.registered.name, "Quality of Life")
+        T.eq(api.registered.frame, ns.SettingsPanel.info.frame, "the information page is our own")
+        T.eq(#api.categories, 1, "no pages in the game's list")
+        local window = ns.SettingsPanel.window
+        T.eq(QoLSettings, window.frame)
+        T.eq(QoLSettings.template, "PortraitFrameFlatTemplate")
+        T.eq(QoLSettings.titleText, "Quality of Life")
+        T.same(listed(ns), { "Automation", "Interface", "Chat", "Action Bars", "Minimap", "World map", "Viewport",
+            "Ring" })
+        for key, page in pairs(pages(ns)) do
+            T.eq(page.frame:GetParent(), window.container, key)
         end
-        T.same(names, { "Automation", "Interface", "Chat", "Action Bars", "Minimap", "World map", "Viewport", "Ring" })
+    end)
+
+    it("draws the window with the game's settings art, which Forever draws in bronze", function()
+        start()
+        local atlases = {}
+        for _, region in ipairs(Stubs.state().regions) do
+            if region.atlas and (region.parent == QoLSettings or region.parent == loaded.SettingsPanel.window.list) then
+                atlases[region.atlas] = true
+            end
+        end
+        T.truthy(atlases.Options_InnerFrame, "the inner frame")
+        T.truthy(atlases.Options_CategoryHeader_1, "the list's header")
+    end)
+
+    it("shows one page at a time, the first when it opens, its button lit in the list", function()
+        local ns = start()
+        local window = ns.SettingsPanel.window
+        local automation, minimap = window.buttons.automation, window.buttons.minimap
+        SlashCmdList.QOL("")
+        T.truthy(QoLSettings:IsShown())
+        T.truthy(pages(ns).automation.frame:IsShown())
+        T.falsy(pages(ns).minimap.frame:IsShown())
+        T.eq(automation.highlight:GetAtlas(), "Options_List_Active")
+        T.truthy(automation.highlight:IsShown())
+        T.eq(automation.label:GetFontObject(), "GameFontHighlight")
+        T.eq(minimap.label:GetFontObject(), "GameFontNormal")
+        T.falsy(minimap.highlight:IsShown())
+
+        minimap:RunScript("OnEnter")
+        T.eq(minimap.highlight:GetAtlas(), "Options_List_Hover")
+        T.truthy(minimap.highlight:IsShown())
+        minimap:Click()
+        T.truthy(pages(ns).minimap.frame:IsShown())
+        T.falsy(pages(ns).automation.frame:IsShown())
+        T.falsy(automation.highlight:IsShown())
+        T.eq(minimap.highlight:GetAtlas(), "Options_List_Active")
+        minimap:RunScript("OnLeave")
+        T.truthy(minimap.highlight:IsShown(), "still lit")
+
+        SlashCmdList.QOL("")
+        T.falsy(QoLSettings:IsShown(), "/qol again closes it")
+        ns.Options:Set("squareMinimap", true)
+        SlashCmdList.QOL("")
+        T.truthy(pages(ns).minimap.frame:IsShown(), "back on the page it was on")
+        T.truthy(control(ns, "squareMinimap").widget:GetChecked(), "up to date")
+    end)
+
+    it("closes on Escape and passes the other keys on to the game, in combat every key", function()
+        start()
+        SlashCmdList.QOL("")
+        T.truthy(Stubs.TypeKey("P"), "P reached the key bindings")
+        T.truthy(QoLSettings:IsShown(), "still open")
+        T.falsy(Stubs.TypeKey("ESCAPE"), "kept from the game menu")
+        T.falsy(QoLSettings:IsShown(), "closed")
+        Stubs.RunTimers()
+        Stubs.SetCombat(true)
+        SlashCmdList.QOL("")
+        T.truthy(QoLSettings:IsShown(), "opens in combat")
+        T.truthy(Stubs.TypeKey("W"), "keys go on to the game again")
+        T.truthy(Stubs.TypeKey("ESCAPE"), "Escape too, in combat")
+        T.truthy(QoLSettings:IsShown(), "still open")
+        QoLSettings.CloseButton:Click()
+        T.falsy(QoLSettings:IsShown(), "closed by its button")
+        Stubs.SetCombat(false)
+    end)
+
+    it("leaves Escape to the game's settings while they're open, which it opens over", function()
+        start()
+        local settings = CreateFrame("Frame", "SettingsPanel", UIParent)
+        settings:SetFrameStrata("HIGH")
+        SlashCmdList.QOL("")
+        T.truthy(Stubs.TypeKey("ESCAPE"), "Escape went to the game, for its settings")
+        T.truthy(QoLSettings:IsShown(), "still open")
+        settings:Hide()
+        T.falsy(Stubs.TypeKey("ESCAPE"))
+        T.falsy(QoLSettings:IsShown(), "closed")
     end)
 
     it("adds a Controller page on Forever, for the controller action bar", function()
-        local ns, api = start(nil, true)
-        T.eq(#api.categories, 10)
-        T.eq(api.categories[10].name, "Controller")
-        T.eq(api.categories[10].parent, api.registered)
+        local ns = start(nil, true)
+        local names = listed(ns)
+        T.eq(#names, 9)
+        T.eq(names[9], "Controller")
         T.same(headers(pages(ns).controller, "left"), { "Back buttons" })
         T.same(headers(pages(ns).controller, "right"), { "Buffs" })
         T.same(headers(pages(ns).controller, "wide"), { "Keys" })
@@ -276,7 +374,9 @@ describe("settings pages", function()
         first:RunScript("OnClick", "RightButton")
         T.same({ GetBindingKey("CLICK QoLBackButton1:LeftButton") }, { "F13" })
 
-        -- The back button presses with it once the settings have closed (closing them saves the bindings).
+        -- Each change is saved right away, as the game's settings save theirs when they close. That
+        -- fires UPDATE_BINDINGS, and the back button presses with the key.
+        T.eq(Stubs.state().bindingSaves[1], 3, "saved three times, in the set in use")
         Stubs.Fire("UPDATE_BINDINGS")
         Stubs.RunTimers()
         Stubs.AdvanceTime()
@@ -480,12 +580,6 @@ describe("settings pages", function()
         T.eq(ns.Options:Get("squareMinimap"), true)
     end)
 
-    it("resets with the game's reset of all settings", function()
-        local ns = start({ hideMicroMenu = true })
-        pages(ns).interface.frame:OnDefault()
-        T.eq(ns.Options:Get("hideMicroMenu"), false)
-    end)
-
     it("puts the viewport options in rows across the page, the margins greyed out while it's off", function()
         local ns = start()
         local page = pages(ns).viewport
@@ -606,15 +700,46 @@ describe("settings pages", function()
         T.eq(ns.SettingsPanel.info.versionText, nil)
     end)
 
-    it("opens from the slash command", function()
-        local _, api = start()
-        SlashCmdList.QOL("")
-        T.eq(api.opened, api.registered:GetID())
+    it("opens the settings from a button on the information page", function()
+        local ns = start()
+        local info = ns.SettingsPanel.info
+        info.frame:Show()
+        T.eq(info.openButton:GetText(), "Open settings (/qol)")
+        T.falsy(info.openLater:IsShown(), "no note with keyboard and mouse")
+        info.openButton:Click()
+        Stubs.RunTimers()
+        T.truthy(QoLSettings:IsShown(), "open, over the game's options")
     end)
 
-    it("is skipped without the Settings API", function()
-        Stubs.LoadAddon()
+    it("opens the settings only once the game's options are closed, in the controller interface", function()
+        local ns = start()
+        local info = ns.SettingsPanel.info
+        Stubs.SetControllerUI(true)
+        info.frame:Show()
+        T.truthy(info.openLater:IsShown(), "says so next to the button")
+        T.eq(info.openLater:GetText(), "They open once you close the game's options.")
+        local options = CreateFrame("Frame", "SettingsPanel", UIParent)
+        Stubs.SetControllerWindow(options)
+        info.openButton:Click()
+        Stubs.RunTimers()
+        Stubs.AdvanceTime()
+        T.falsy(QoLSettings:IsShown(), "not while the game's options have the controller")
+        options:Hide()
+        Stubs.SetControllerWindow(nil)
+        Stubs.AdvanceTime()
+        Stubs.AdvanceTime()
+        T.truthy(QoLSettings:IsShown(), "open once they closed")
+        info.frame:Hide()
+        Stubs.SetControllerUI(false)
+        info.frame:Show()
+        T.falsy(info.openLater:IsShown(), "follows the interface")
+    end)
+
+    it("opens the window without the Settings API too, only the information page missing", function()
+        local ns = Stubs.LoadAddon()
         Stubs.Login()
+        T.eq(ns.SettingsPanel.info, nil)
         SlashCmdList.QOL("")
+        T.truthy(QoLSettings:IsShown())
     end)
 end)

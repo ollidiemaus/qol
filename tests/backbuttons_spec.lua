@@ -51,7 +51,7 @@ describe("controller back buttons", function()
         Stubs.Login(on())
         T.eq(QoLBackButton1, nil)
         T.eq(next(Stubs.state().overrides), nil)
-        T.eq(ns.SettingsPanel.pages, nil)
+        T.eq(ns.SettingsPanel.pages.controller, nil, "no Controller page")
     end)
 
     it("name their bindings in the Key Bindings window", function()

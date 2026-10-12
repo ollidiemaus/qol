@@ -2,17 +2,16 @@ local _, ns = ...
 local L = ns.L
 local Options = ns.Options
 
--- A settings page of our own (a canvas in the Settings API) with the options in two columns, so a
--- page fits without scrolling, or in rows across the whole page ("wide", for sliders). It looks
--- like the game's own pages: the title with a Defaults button, section headers, and each option as
+-- A page of the settings window (UI/SettingsWindow.lua) with the options in two columns, so a page
+-- fits without scrolling, or in rows across the whole page ("wide", for sliders). It looks like the
+-- game's own settings pages: the title with a Defaults button, section headers, and each option as
 -- its name with a checkbox, a dropdown, a slider or a color swatch, from the game's own templates,
 -- a key binding's two keys, as in the game's Key Bindings, or a button that opens something. Every
 -- name uses the same font; an option that belongs to another one sits indented below it and is
 -- greyed out while it can't apply.
 --
 -- Every control reads and writes ns.Options, and the page follows Options:Watch, so it also shows
--- changes made elsewhere. All frames are ours: the settings panel only parents and shows the page,
--- and calls OnRefresh and OnDefault on it.
+-- changes made elsewhere. The window parents and shows the page, and refreshes it when it does.
 local Page = {}
 Page.__index = Page
 ns.SettingsPage = Page
@@ -32,7 +31,7 @@ local WIDE_CONTROL_X = -80   -- in a wide row the control starts there from the 
 local KEY_WIDTH, KEY_HEIGHT = 160, 22 -- a key binding's buttons, as in the game's Key Bindings
 local BUTTON_WIDTH, BUTTON_HEIGHT = 160, 22
 local CONFIRM_SECONDS = 3
--- The room the settings panel gives a page (its default size), checked by the tests.
+-- The room the settings window gives a page (as the game's settings do), checked by the tests.
 Page.MAX_HEIGHT = 600
 
 -- Key binding rows: the frame of ours that takes the keyboard while a button waits for a key, and
@@ -50,22 +49,16 @@ local function playToggle(checked)
     end
 end
 
-local function tooltipFrame()
-    return SettingsTooltip or GameTooltip
-end
-
 local function showTooltip(owner, title, text)
-    local tooltip = tooltipFrame()
-    if not (tooltip and text) then return end
-    tooltip:SetOwner(owner, "ANCHOR_RIGHT")
-    tooltip:SetText(title, 1, 1, 1)
-    tooltip:AddLine(text, nil, nil, nil, true)
-    tooltip:Show()
+    if not text then return end
+    GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
+    GameTooltip:SetText(title, 1, 1, 1)
+    GameTooltip:AddLine(text, nil, nil, nil, true)
+    GameTooltip:Show()
 end
 
 local function hideTooltip()
-    local tooltip = tooltipFrame()
-    if tooltip then tooltip:Hide() end
+    GameTooltip:Hide()
 end
 
 ------------------------------------------------------------------------------------------------
@@ -88,16 +81,13 @@ function Page.New(title)
 
     page:CreateDefaultsButton()
 
-    -- The settings panel calls these: when it shows the page, and when the player resets all settings.
-    function frame.OnRefresh() page:Refresh() end
-    function frame.OnDefault() page:SetDefaults() end
-    -- Leaving the page (or closing the settings) stops waiting for a key.
+    -- Leaving the page (or closing the window) stops waiting for a key.
     frame:HookScript("OnHide", function()
         if waiting and waiting.control.page == page then page:StopWaiting() end
         page:Say(nil)
     end)
     Options:Watch(function(key) return page.keys[key] ~= nil end, function()
-        if frame:IsShown() then page:Refresh() end
+        if frame:IsVisible() then page:Refresh() end
     end)
     return page
 end
@@ -308,8 +298,9 @@ end
 -- choices: { { value = ..., label = ... }, ... } in the order the menu lists them.
 -- With Forever's controller interface on, a click steps to the next choice instead of opening the
 -- game's menu: in that interface the menu brings controller wiring of its own (a prompted binding
--- footer, binding groups, suspending the settings panel's focus), and the game stopped responding
--- when the settings closed after one was opened from our page (see docs/DEVELOPMENT.md).
+-- footer, binding groups, suspending the focus of the window that has the controller), and the
+-- game stopped responding when its settings closed after one was opened from our page, back when
+-- the pages were in them (see docs/DEVELOPMENT.md).
 function Page:Dropdown(column, key, label, choices, tooltip, options)
     local control = optionRow(self, column, "dropdown", key, label, tooltip, options)
     control.choices = choices
@@ -399,11 +390,12 @@ end
 --
 -- A row works like one in the game's Key Bindings: two buttons with the command's keys. A click on
 -- one waits for a key (a click on it again, or Escape, stops waiting), a right-click clears it.
--- While a button waits, a frame of ours above the settings takes the keyboard, as the game's own
+-- While a button waits, a frame of ours above the window takes the keyboard, as the game's own
 -- KeybindListener does. Gamepad buttons stay with the controller cursor, which needs them (in
--- Forever's controller interface A on the button again stops waiting, B closes the settings); the
--- Steam Deck's back buttons send keys anyway. A key is taken from whatever had it, as in Key
--- Bindings, and the settings panel saves the bindings when it closes. Not in combat.
+-- Forever's controller interface A on the button again stops waiting); the Steam Deck's back
+-- buttons send keys anyway. A key is taken from whatever had it, as in Key Bindings, and the
+-- bindings are saved right away: the game's settings save them when they close, and these aren't
+-- theirs. Not in combat.
 
 -- The binding's context, as the game's Key Bindings pass it to GetBindingKey and SetBinding.
 local function contextFor(command)
@@ -435,6 +427,12 @@ local function unbind(command, slot)
     if key then SetBinding(key, nil, context) end
 end
 
+-- As the game's settings do when they close: into the set in use (the account's or the
+-- character's). It fires UPDATE_BINDINGS.
+local function saveBindings()
+    if SaveBindings and GetCurrentBindingSet then SaveBindings(GetCurrentBindingSet()) end
+end
+
 function Page:StopWaiting()
     waiting = nil
     listener:Hide()
@@ -454,6 +452,7 @@ local function keyPressed(key)
     if IsKeyPressIgnoredForBinding(key) then return end
     local chord = CreateKeyChordStringUsingMetaKeyState(key)
     local previous = bind(control.command, slot, chord)
+    saveBindings()
     page:StopWaiting()
     if previous then
         page:Say(L.BINDING_MOVED:format(GetBindingText(chord), control.title(), GetBindingName(previous)))
@@ -485,6 +484,7 @@ local function bindingClicked(control, slot, mouseButton)
     end
     if mouseButton == "RightButton" then
         unbind(control.command, slot)
+        saveBindings()
         page:StopWaiting()
         page:Say(nil)
     elseif mouseButton == "LeftButton" then
@@ -570,12 +570,4 @@ end
 
 function Page:Say(message)
     if self.note then self.note:SetText(message or self.hint) end
-end
-
--- The page's category in Options > AddOns, below parent when given.
-function Page:Register(parent)
-    if parent then
-        return Settings.RegisterCanvasLayoutSubcategory(parent, self.frame, self.title)
-    end
-    return Settings.RegisterCanvasLayoutCategory(self.frame, self.title)
 end

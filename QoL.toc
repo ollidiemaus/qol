@@ -31,6 +31,7 @@ Core\API.lua
 Core\Later.lua
 Core\Hider.lua
 Core\Buttons.lua
+Core\Window.lua
 
 Data\MapPins.lua
 
@@ -58,6 +59,7 @@ Features\RingEditor.lua
 Features\ReloadCommand.lua
 
 UI\SettingsPage.lua
+UI\SettingsWindow.lua
 UI\InfoPage.lua
 UI\Settings.lua
 

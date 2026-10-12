@@ -139,8 +139,7 @@ combat, shows cooldowns and charges, and names the action you point at in the mi
 
 - **Making them:** click **Open** on the Ring page of the settings, or type `/qol ring`. The editor
   is a window in Forever's bronze frame with a spell book page in it; drag its title bar to move
-  it. Escape closes the settings and leaves the editor open, and it stays open when you open the
-  spell book.
+  it. Escape closes it, and it stays open when you open the spell book.
 - **Adding actions:** the right of the page lists what this character has, as in the spell book:
   tabs for **Spells**, **Items** (the ones with a use, in the bags or worn), **Toys**, **Mounts**
   and **Macros**, a search box, and the page buttons (the mouse wheel turns pages too). Click one to
@@ -203,8 +202,16 @@ at still shows its tooltip.
 
 ## Settings
 
-**Esc > Options > AddOns > Quality of Life**, or type `/qol` (or `/qualityoflife`). That opens an
-information page with the chat commands and the author's other addons, with links to copy. The options are on the pages listed below it:
+Type `/qol` (or `/qualityoflife`): the settings open in a window of their own, in Forever's bronze
+frame and laid out like the game's options, with the pages on the left and their options on the
+right. Drag its title bar to move it; `/qol` again, Escape or the X closes it. It also opens in
+combat; Escape then goes to the game, so close it with the X.
+
+**Esc > Options > AddOns > Quality of Life** has an information page with the chat commands, the
+author's other addons (with links to copy) and an **Open settings (/qol)** button. In Forever's
+controller interface the button opens the window once you close the game's options.
+
+The pages:
 
 - **Automation:** junk selling, repairs, quests.
 - **Interface:** hiding the system and bag bars, the combined bags, tooltips, health bars in class color.
@@ -212,17 +219,18 @@ information page with the chat commands and the author's other addons, with link
 - **Action Bars**, **Minimap**, **World map** (on Forever), **Viewport**, **Ring** and **Controller**
   (on Forever).
 
-Every options page fits without scrolling, most in two columns. With a controller, the
+Every page fits without scrolling, most in two columns. With a controller, the
 arrows next to a viewport margin move it one pixel per press. In Forever's controller interface a
 dropdown doesn't open its list: each press (or click) switches it to the next choice, as the game
-froze when the settings closed after one of its lists had been opened there. Changes apply right away; the few that
-touch protected parts of the interface (action bars, key bindings, viewport, system bar) wait until
-you leave combat. In Forever's controller interface the back buttons and the rings also wait until
-the settings and the game menu are closed (a second at most).
+froze when its options closed after one of these lists had been opened there. Changes apply right
+away, key bindings set on the Controller page too; the few that touch protected parts of the
+interface (action bars, key bindings, viewport, system bar) wait until you leave combat. In
+Forever's controller interface the back buttons and the rings also wait until the game's options
+and menu are closed (a second at most).
 
-Forever's beta can freeze when you close its settings after changing something with the controller
-interface on, after its own options too (Invert X Axis did it). Change settings with the controller
-interface off to be safe.
+Forever's beta can freeze when you close its options after changing something there with the
+controller interface on (its own Invert X Axis did it). Quality of Life's settings are in their own
+window, outside the game's options, so changing them doesn't involve those.
 
 Quality of Life is available in English and German.
 

@@ -11,13 +11,17 @@ L.SLASH_HELP = "/qol opens the settings, /qol ring the rings' editor."
 L.DEFAULTS = "Defaults"
 L.DEFAULTS_CONFIRM = "Sure?"
 L.DEFAULTS_TIP = "Sets the options on this page back to their defaults. Click a second time to confirm."
+-- The settings window: the heading of its list of pages
+L.SETTINGS = "Settings"
 
 -- Information page
 L.INFO_VERSION = "Version %s"
-L.INFO_INTRO = "Small improvements to the game in one addon. Nearly everything is off until you turn it on, "
-    .. "on the pages in the list on the left; only junk selling, vendor prices in tooltips and /rl start on."
+L.INFO_INTRO = "Small improvements to the game in one addon. Nearly everything is off until you turn it on in the "
+    .. "settings; only junk selling, vendor prices in tooltips and /rl start on."
+L.INFO_OPEN_SETTINGS = "Open settings (/qol)"
+L.INFO_OPEN_SETTINGS_LATER = "They open once you close the game's options."
 L.INFO_COMMANDS = "Commands"
-L.INFO_COMMAND_SETTINGS = "Opens these settings."
+L.INFO_COMMAND_SETTINGS = "Opens the settings, or closes them again."
 L.INFO_COMMAND_RING = "Opens the rings' editor."
 L.INFO_COMMAND_RELOAD = "Reloads the interface, while it's on (Chat page)."
 L.INFO_MORE_ADDONS = "More addons by %s"
@@ -213,8 +217,7 @@ L.RING_TIP = "Hold a ring's key, point at an action and let go to use it; let go
     .. "character can use."
 L.RING_EDITOR = "Ring editor"
 L.RING_EDITOR_OPEN = "Open"
-L.RING_EDITOR_TIP = "Make rings, put actions on them and give them keys. The editor opens over the settings: "
-    .. "Escape closes the settings and leaves the editor open."
+L.RING_EDITOR_TIP = "Make rings, put actions on them and give them keys, in a window of its own."
 L.RING_NOTE = "/qol ring opens the editor too."
 
 -- Ring editor (/qol ring)
