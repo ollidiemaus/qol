@@ -388,6 +388,34 @@ local function newHealthBar(unit)
     }), raw
 end
 
+-- The player frame as Mainline's PlayerFrame.xml builds it, as far as the addon looks at it: the
+-- art (PlayerFrameContainer: the frame texture and the threat glow, FrameFlash), the protected
+-- frame the bars sit on (PlayerFrameContent.PlayerFrameContentMain) and the fields
+-- PlayerFrame_ToPlayerArt keeps: state ("player" or "vehicle"), activeAlternatePowerBar (Blizzard's
+-- third bar) and classPowerBar. Read-only to the addon; Stubs.DrawPlayerFrame and Stubs.PlayerFrame
+-- change it the way Blizzard does.
+local GLOW_ATLAS = { player = "UI-HUD-UnitFrame-Player-PortraitOn-InCombat",
+    vehicle = "UI-HUD-UnitFrame-Player-PortraitOn-Vehicle-InCombat" }
+local GLOW_OFFSET = { player = { -1.5, 1 }, vehicle = { -3.5, 1 } }
+
+local function newPlayerFrame(healthBar)
+    local container = newRegion("Frame", nil)
+    local main = newRegion("Frame", nil)
+    main.protected = true
+    local raw = { unit = "player", healthbar = healthBar, state = "player", PlayerFrameContainer = container,
+        PlayerFrameContent = { PlayerFrameContentMain = main } }
+    container.FrameTexture = container:CreateTexture()
+    container.FrameTexture:SetAtlas("UI-HUD-UnitFrame-Player-PortraitOn")
+    container.FrameFlash = container:CreateTexture()
+    container.FrameFlash:SetAtlas(GLOW_ATLAS.player)
+    container.FrameFlash:SetPoint("CENTER", container, "CENTER", -1.5, 1)
+    state.playerFrame = raw
+    return setmetatable({}, {
+        __index = raw,
+        __newindex = function(_, key) error("the addon wrote player frame field " .. tostring(key)) end,
+    })
+end
+
 -- The world map: its canvas (1000 x 667 at zoom 1), its data providers and the map it shows.
 -- Blizzard_WorldMap creates it; a test can drop it to load the map later (Stubs.LoadWorldMap).
 function Stubs.NewWorldMap()
@@ -522,6 +550,14 @@ local function install()
                 if not was and self.isSelected then system:PlayTabSelectSound() end
             end)
         end
+        if kind == "StatusBar" then
+            function frame:SetStatusBarTexture(texture) self.statusBarTexture = texture end
+            function frame:SetMinMaxValues(minValue, maxValue) self.minValue, self.maxValue = minValue, maxValue end
+            function frame:GetMinMaxValues() return self.minValue or 0, self.maxValue or 1 end
+            function frame:SetValue(value) self.value = value end
+            function frame:GetValue() return self.value or 0 end
+            function frame:SetMouseMotionEnabled(enabled) self.mouseMotion = enabled end
+        end
         if kind == "Cooldown" then
             function frame:SetCooldownFromDurationObject(duration) self.duration = duration end
             function frame:SetCooldown(start, duration) self.duration = { start = start, seconds = duration } end
@@ -589,6 +625,7 @@ local function install()
             Quest = 23 },
         TooltipDataLineType = { SellPrice = 11 },
         InputDeviceInterfaceType = { Mkb = 0, Gamepad = 1 },
+        PowerType = { Mana = 0, Rage = 1, Focus = 2, Energy = 3 },
     }
     G.TooltipDataProcessor = {
         AddTooltipPostCall = function(tooltipType, fn)
@@ -1044,6 +1081,23 @@ local function install()
         if not (info and info.class) then return nil end
         return "Localized " .. tostring(info.class), info.class, 1
     end
+    -- Power: info.powerType (an Enum.PowerType, mana when not set), info.mana and info.maxMana, and
+    -- info.power and info.maxPower for the other types.
+    G.UnitPowerType = function(unit)
+        local info = state.units[unit]
+        return info and info.powerType or G.Enum.PowerType.Mana
+    end
+    G.UnitPower = function(unit, powerType)
+        local info = state.units[unit] or {}
+        if powerType == G.Enum.PowerType.Mana then return info.mana or 0 end
+        return info.power or 0
+    end
+    G.UnitPowerMax = function(unit, powerType)
+        local info = state.units[unit] or {}
+        if powerType == G.Enum.PowerType.Mana then return info.maxMana or 0 end
+        return info.maxPower or 0
+    end
+    G.AbbreviateLargeNumbers = function(value) return tostring(value) end
     G.RAID_CLASS_COLORS = {
         MAGE = { r = 0.25, g = 0.78, b = 0.92 },
         PRIEST = { r = 1, g = 1, b = 1 },
@@ -1059,6 +1113,7 @@ local function install()
         state.healthBars[name] = raw
         G[name] = { unit = unit, healthbar = bar }
     end
+    G.PlayerFrame = newPlayerFrame(G.PlayerFrame.healthbar)
 
     -- Action bar layout helpers: record what the addon asks for.
     G.GridLayoutUtil = {
@@ -1487,6 +1542,23 @@ end
 -- Puts a unit in the world (info: isPlayer, treatAsPlayer, class), or removes it with nil.
 function Stubs.SetUnit(unit, info)
     state.units[unit] = info
+end
+
+-- The player frame's raw fields (state, activeAlternatePowerBar, classPowerBar, ...), for tests to
+-- change the way Blizzard does.
+function Stubs.PlayerFrame()
+    return state.playerFrame
+end
+
+-- Blizzard draws the player frame again (PlayerFrame_UpdateArt, on entering the world and on the
+-- vehicle events): the player's or a vehicle's art, which sets the threat glow's atlas and place.
+function Stubs.DrawPlayerFrame(vehicle)
+    local frame = state.playerFrame
+    frame.state = vehicle and "vehicle" or "player"
+    local container = frame.PlayerFrameContainer
+    container.FrameFlash:SetAtlas(GLOW_ATLAS[frame.state])
+    local offset = GLOW_OFFSET[frame.state]
+    container.FrameFlash:SetPoint("CENTER", container, "CENTER", offset[1], offset[2])
 end
 
 -- The raw state of a unit frame's health bar (unit, color, desaturated), by frame name. Tests

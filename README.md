@@ -95,6 +95,10 @@ the default map marks dungeon entrances itself.
   focus target frames takes the class color of the unit it shows, each frame switched on separately. The bar
   keeps the shading of the default green bar. Units without a clear class, like most NPCs (and the
   player frame while you're in a vehicle), keep the default bar.
+- **Mana in bear and cat form:** the player frame shows your mana in a third bar under rage or
+  energy while you're shapeshifted, in the frame's own art (the one the game uses for a third bar).
+  Its numbers follow the game's Status Text setting, like the other bars. Off by default; it stays
+  away in a vehicle.
 
 ### Chat commands
 
@@ -218,7 +222,8 @@ controller interface the button opens the window once you close the game's optio
 The pages:
 
 - **Automation:** junk selling, repairs, quests.
-- **Interface:** hiding the system and bag bars, the combined bags, tooltips, health bars in class color.
+- **Interface:** hiding the system and bag bars, the combined bags, mana in bear and cat form, tooltips,
+  health bars in class color.
 - **Chat:** the chat buttons, the combat log, names in class color, `/rl`.
 - **Action Bars**, **Minimap**, **World map** (on Forever), **Viewport**, **Ring** and **Controller**
   (on Forever).

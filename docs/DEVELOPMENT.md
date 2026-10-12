@@ -8,7 +8,7 @@ Notes for working on the addon. What it does for players is in the [README](../R
 |---|---|
 | `Core/` | Namespace and printing (`Init`), the event frame (`Events`), saved options with defaults and change watchers (`Options`), deferred changes (`Later`), the hidden holder for hidden frames (`Hider`), what the back buttons and the rings share (`Buttons`: an action slot's look, override bindings), our windows' frame (`Window`: the settings), `/qol` (`Slash`) and startup (`Lifecycle`) |
 | `Data/` | Static game data: `MapPins` (dungeon entrances, docks, portals; how it was made is at the top of the file) |
-| `Features/` | One file per feature: `Merchant`, `Quests`, `Tooltips`, `HideFrames` (also the chat buttons), `BuffTooltips` (the controller interface's tooltips for new buffs), `CombatLog`, `ChatClassColors`, `CombinedBagSort`, `CombinedBagLayout`, `ClassHealthBars`, `Minimap` (shape, positions, class colors and font sizes around the minimap, and the FPS and ping text), `MapPins`, `Viewport`, `ActionBars`, `ButtonBorders`, `BarPaging`, `BackButtons` (the controller back buttons, Forever only), `RingEntries` (what can go on a ring, and what a character has of it), `Ring`, `RingPicker` (the editor's list), `RingEditor` (the settings' Ring page, `/qol ring`), `ReloadCommand` |
+| `Features/` | One file per feature: `Merchant`, `Quests`, `Tooltips`, `HideFrames` (also the chat buttons), `BuffTooltips` (the controller interface's tooltips for new buffs), `CombatLog`, `ChatClassColors`, `CombinedBagSort`, `CombinedBagLayout`, `ClassHealthBars`, `DruidManaBar` (mana in bear and cat form), `Minimap` (shape, positions, class colors and font sizes around the minimap, and the FPS and ping text), `MapPins`, `Viewport`, `ActionBars`, `ButtonBorders`, `BarPaging`, `BackButtons` (the controller back buttons, Forever only), `RingEntries` (what can go on a ring, and what a character has of it), `Ring`, `RingPicker` (the editor's list), `RingEditor` (the settings' Ring page, `/qol ring`), `ReloadCommand` |
 | `UI/` | `SettingsPage.lua`, a settings page (two columns, or rows across the page, and key binding rows); `SettingsWindow.lua`, the window that `/qol` opens, with the list of pages; `InfoPage.lua`, the information page under Options > AddOns, with a button that opens the window; `Settings.lua`, the pages built with them, in the list's order |
 | `Locales/` | English strings, German overrides |
 | `Media/` | `Icon.tga`, the addon list icon (the TOC's `IconTexture`, 128×128, 32-bit), and `Icon.svg`, its source (not packaged); `Zeppelin.tga`, `Tram.tga`, `MinimapSquareBorder.tga` and the rings' `Ring.tga`, `RingSpoke.tga`, `RingLit1.tga` to `RingLit12.tga` and `RingSlot.tga` (see below); `AutoPotion.tga`, `AutoSetup.tga` and `Wayscribe.tga`, copies of the other addons' icons for the information page |
@@ -98,6 +98,27 @@ focus target bars and never colors them itself, so a color stays until we change
 follows Blizzard's raid frames: `UnitIsPlayer` or `UnitTreatAsPlayerForDisplay`, with a known,
 non-secret class (`UnitClass` is secret while a unit's identity is restricted). The bar's own
 `unit` field says what it shows, so the player frame in a vehicle (`"vehicle"`) keeps its default.
+
+Forever's player frame has a third bar only for the druid's astral power (moonkin), so bear and cat
+form show no mana. The druid mana bar follows the rule of Blizzard's Wrath to Mists clients
+(`AlternatePowerBar_UpdatePowerType`): the player's power isn't mana and `UnitPowerMax(mana)` is
+above 0. It is drawn the way `PlayerFrame_ToPlayerArt` draws a third bar: a texture of ours with the
+`AlternatePowerFrameTexture` atlas at its place on `PlayerFrameContainer` (not protected), and a
+status bar of ours with the mana bar texture at the place and size of
+`PlayerFrameAlternatePowerBarBaseTemplate`. The bar is a child of `PlayerFrameContentMain`, which is
+protected, but the bar itself isn't, so it shows and hides in combat (druids shift in combat). On
+Blizzard's frame only widget methods: the usual art (`FrameTexture`) gets alpha 0, which Blizzard
+never sets (it only shows and hides it), and the threat glow (`FrameFlash`) gets the
+`ClassResource-InCombat` atlas and its point, since the usual glow misses the third bar's border.
+Blizzard sets the glow again in `PlayerFrame_UpdateArt` (entering the world, the vehicle events), so
+those events are wake-ups. When the bar hides, the glow gets the usual atlas back only while the
+frame shows the player (not a vehicle), Blizzard has no third bar of its own, and the glow still has
+ours. The bar stands aside for Blizzard's own third bar (`activeAlternatePowerBar`, moonkin on
+retail) and for a shown `classPowerBar` (retail's combo points sit where it goes). Left as they are:
+the rage or energy bar's mask (Blizzard switches it to `Unit_BarMask` for a third bar; the two differ
+by a pixel the frame art covers) and the bottom managed container (pet frame and the like), which
+Blizzard moves 10 down for its third bar. The text follows `TextStatusBar`: `statusText` shows it
+always or on hover, `statusTextDisplay` picks numbers, percent or both.
 
 The combat log can't be closed in the default UI, and the dock's own functions (`FCF_Close`,
 `FCF_UnDockFrame`) write to the chat frames and the dock. So `ChatFrame2` goes to the hidden holder
@@ -583,6 +604,10 @@ Things only the real client can confirm:
   "minus" one) shows the default green, switching targets in combat recolors at once, and turning
   an option off brings the green back without a `/reload`. Also on the target of target, focus and
   focus target.
+- Mana in bear and cat form (a druid): the mana bar follows casting and regeneration while
+  shapeshifted (whether the server sends mana updates in a form), shifting in and out in combat
+  shows and hides it, the threat glow fits the frame in combat with and without the bar, and a
+  vehicle shows its own art. Something in the bottom container (a pet frame) isn't covered by it.
 - Quests: accepting from a gossip NPC and from a quest greeting NPC (several quests in a row), a
   shared quest, turning in with one reward and with none, a choice of rewards and a quest that costs
   gold staying open, and Shift leaving everything to the player.

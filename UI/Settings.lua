@@ -36,8 +36,8 @@ local function buildAutomation(page)
     page:Checkbox("right", "questTurnIn", L.QUEST_TURN_IN, L.QUEST_TURN_IN_TIP)
 end
 
--- Interface page: the bars to hide and the combined bags on the left, tooltips and health bars on
--- the right.
+-- Interface page: the bars to hide, the combined bags and the player frame on the left, tooltips and
+-- health bars on the right.
 local function buildInterface(page)
     page:Header("left", L.SECTION_HIDE)
     page:Checkbox("left", "hideMicroMenu", L.HIDE_MICRO_MENU, L.HIDE_MICRO_MENU_TIP)
@@ -46,6 +46,9 @@ local function buildInterface(page)
     page:Header("left", L.SECTION_COMBINED_BAGS)
     page:Checkbox("left", "showCombinedBagSort", L.SHOW_COMBINED_BAG_SORT, L.SHOW_COMBINED_BAG_SORT_TIP)
     page:Checkbox("left", "combinedBagTopLeft", L.COMBINED_BAG_TOP_LEFT, L.COMBINED_BAG_TOP_LEFT_TIP)
+
+    page:Header("left", L.SECTION_PLAYER_FRAME)
+    page:Checkbox("left", "druidManaBar", L.DRUID_MANA_BAR, L.DRUID_MANA_BAR_TIP)
 
     page:Header("right", L.SECTION_TOOLTIPS)
     page:Checkbox("right", "tooltipIDs", L.TOOLTIP_IDS, L.TOOLTIP_IDS_TIP)

@@ -48,9 +48,10 @@ read_globals = {
     "GetMacroSpell", "GetMacroItem", "PickupMacro", "GetNumMacros", "MAX_ACCOUNT_MACROS", "GetInventoryItemID",
     "GetFlyoutInfo", "GetFlyoutSlotInfo", "SPELLBOOK_FONT_COLOR",
     -- Strings and formatting
-    "GetLocale", "GetMoneyString", "SELL_PRICE",
+    "GetLocale", "GetMoneyString", "SELL_PRICE", "AbbreviateLargeNumbers",
     -- Units
     "UnitIsPlayer", "UnitTreatAsPlayerForDisplay", "UnitClass", "UnitGUID", "RAID_CLASS_COLORS",
+    "UnitPowerType", "UnitPower", "UnitPowerMax", "PlayerFrame",
     -- Quests
     "AcceptQuest", "CompleteQuest", "GetQuestReward", "GetNumQuestChoices", "IsQuestCompletable", "GetQuestMoneyToGet",
     "QuestGetAutoAccept", "QuestIsFromAdventureMap", "GetNumActiveQuests", "GetNumAvailableQuests", "GetActiveTitle",

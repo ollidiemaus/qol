@@ -45,6 +45,7 @@ Features\ChatClassColors.lua
 Features\CombinedBagSort.lua
 Features\CombinedBagLayout.lua
 Features\ClassHealthBars.lua
+Features\DruidManaBar.lua
 Features\Minimap.lua
 Features\MapPins.lua
 Features\Viewport.lua
