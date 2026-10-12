@@ -46,6 +46,11 @@ Hold **Shift** while talking to an NPC to do everything yourself that time.
 - **Start combined bags at the top left:** the combined bag shows the backpack's first slot in the
   top left corner and your last bag at the bottom, so sorting puts the hearthstone top left instead
   of bottom right. With keyboard and mouse only; the controller interface already does this.
+- **Frames past the screen edge:** in Edit Mode, frames can go a little past the edge of the screen
+  (30 points, more for a frame you made bigger), so their art can sit right on it. Turn off Snap to
+  Elements for the last bit: it lines a frame's box up with the edge. Where you put a frame is saved
+  in the Edit Mode layout, so it stays after a `/reload` and a layout switch (AutoSetup's on a
+  resolution change too). Turned off, the frames are kept inside the screen again.
 
 ### Chat
 
@@ -222,8 +227,8 @@ controller interface the button opens the window once you close the game's optio
 The pages:
 
 - **Automation:** junk selling, repairs, quests.
-- **Interface:** hiding the system and bag bars, the combined bags, mana in bear and cat form, tooltips,
-  health bars in class color.
+- **Interface:** hiding the system and bag bars, the combined bags, mana in bear and cat form, frames
+  past the screen edge, tooltips, health bars in class color.
 - **Chat:** the chat buttons, the combat log, names in class color, `/rl`.
 - **Action Bars**, **Minimap**, **World map** (on Forever), **Viewport**, **Ring** and **Controller**
   (on Forever).
@@ -247,7 +252,8 @@ Quality of Life is available in English and German.
 
 - Quality of Life never replaces or hooks Blizzard's action bar, Edit Mode or tooltip code. It only
   moves the button slots of the bars you flipped, changes the textures of the buttons whose borders
-  you hid, parents hidden frames to a hidden holder, and adds lines to tooltips. That keeps it clear
+  you hid, widens how far Edit Mode frames may go, parents hidden frames to a hidden holder, and adds
+  lines to tooltips. That keeps it clear
   of the "tainted by an addon" errors Midnight-era clients are strict about.
 - Don't run it together with another viewport or action bar growth addon: both would move the
   same frames. Hiding the button borders is the same: leave it off when another addon styles your

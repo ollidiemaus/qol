@@ -670,6 +670,10 @@ local function install()
     G.MicroMenuContainer = newRegion("Frame", G.UIParent)
     G.BagsBar = newRegion("Frame", G.UIParent)
     G.QuickJoinToastButton = newRegion("Frame", G.UIParent)
+    -- Edit Mode, closed, with no frames yet (Stubs.NewEditModeFrame adds them).
+    G.EditModeManagerFrame = newRegion("Frame", G.UIParent)
+    G.EditModeManagerFrame:Hide()
+    G.EditModeManagerFrame.registeredSystemFrames = {}
     -- The combined bag starts closed and empty (Stubs.FillCombinedBag); its sort button belongs to
     -- the backpack and starts hidden. Each script's hooks run in turn from hooks[script].
     G.ContainerFrameCombinedBags = newRegion("Frame", G.UIParent)
@@ -1264,6 +1268,7 @@ function Stubs.NextFrame()
         local onUpdate = region.scripts.OnUpdate
         if onUpdate and region:IsVisible() then onUpdate(region, 0) end
     end
+    Stubs.RenderEditMode()
 end
 
 -- Draws frames until no timer is due and no frame has an OnUpdate to run (each may start more).
@@ -1625,6 +1630,112 @@ function Stubs.CombinedBagButton(bagID, slot)
         if button.attributes.bagid == bagID and button.slot == slot then return button end
     end
     return nil
+end
+
+-- Blizzard's EditModeSystemMixin:UpdateClampOffsets: the frame's clamp insets go from its edges to
+-- its selection box's.
+function Stubs.EditModeClamp(frame)
+    local selection = frame.Selection
+    frame:SetClampRectInsets(selection:GetLeft() - frame:GetLeft(), selection:GetRight() - frame:GetRight(),
+        selection:GetTop() - frame:GetTop(), selection:GetBottom() - frame:GetBottom())
+end
+
+-- An Edit Mode frame at left, bottom with a size, its selection box `margin` bigger on every side
+-- (smaller for a negative one), and Edit Mode's clamp. clampSets counts the SetClampRectInsets calls.
+-- Like the game's, its own ClearAllPoints and SetPoint sit in its metatable, and Edit Mode puts Lua
+-- of its own over both (EditModeSystemMixin:OnSystemLoad), counted in overrideCalls. anchorings
+-- counts the own ClearAllPoints calls. The game lays a frame out only after its anchors changed
+-- (Stubs.RenderEditMode, at the end of a drawn frame): laidOutUnder is the clamp it was laid out
+-- under, so whether the clamp let it past the edge.
+function Stubs.NewEditModeFrame(left, bottom, width, height, margin, protected)
+    local frame = newRegion("Frame", _G.UIParent)
+    frame.protected = protected
+    frame.Selection = newRegion("Frame", frame)
+    frame.rect = { left, bottom, width, height }
+    frame.Selection.rect = { left - margin, bottom - margin, width + 2 * margin, height + 2 * margin }
+    for _, region in ipairs({ frame, frame.Selection }) do
+        function region:GetLeft() return self.rect[1] end
+        function region:GetBottom() return self.rect[2] end
+        function region:GetRight() return self.rect[1] + self.rect[3] end
+        function region:GetTop() return self.rect[2] + self.rect[4] end
+    end
+    frame.clamp, frame.clampSets = { 0, 0, 0, 0 }, 0
+    function frame:SetClampRectInsets(l, r, t, b)
+        if state.combat and self.protected then
+            error("ADDON_ACTION_BLOCKED: SetClampRectInsets on a protected frame in combat")
+        end
+        self.clamp = { l, r, t, b }
+        self.clampSets = self.clampSets + 1
+    end
+    function frame:GetClampRectInsets() return self.clamp[1], self.clamp[2], self.clamp[3], self.clamp[4] end
+
+    local ownSetPoint, ownClearAllPoints = frame.SetPoint, frame.ClearAllPoints
+    local methods = setmetatable({}, getmetatable(frame))
+    function methods.SetPoint(self, ...)
+        ownSetPoint(self, ...)
+        self.layoutDirty = true
+    end
+    function methods.ClearAllPoints(self)
+        ownClearAllPoints(self)
+        self.layoutDirty = true
+        self.anchorings = self.anchorings + 1
+    end
+    setmetatable(frame, { __index = methods })
+    frame.anchorings, frame.overrideCalls = 0, 0
+    function frame:SetPoint(...)
+        self.overrideCalls = self.overrideCalls + 1
+        methods.SetPoint(self, ...)
+    end
+    function frame:ClearAllPoints()
+        self.overrideCalls = self.overrideCalls + 1
+        methods.ClearAllPoints(self)
+    end
+
+    methods.SetPoint(frame, "BOTTOMLEFT", _G.UIParent, "BOTTOMLEFT", left, bottom)
+    table.insert(_G.EditModeManagerFrame.registeredSystemFrames, frame)
+    Stubs.EditModeClamp(frame)
+    Stubs.RenderEditMode()
+    return frame
+end
+
+-- The game lays out the Edit Mode frames whose anchors changed, under the clamp they have now.
+function Stubs.RenderEditMode()
+    for _, frame in ipairs(_G.EditModeManagerFrame.registeredSystemFrames) do
+        if frame.layoutDirty then
+            frame.layoutDirty = false
+            frame.laidOutUnder = { frame.clamp[1], frame.clamp[2], frame.clamp[3], frame.clamp[4] }
+        end
+    end
+end
+
+-- Edit Mode applies a layout to a frame (EditModeSystemMixin:UpdateSystem): ApplySystemAnchor
+-- anchors it again with Edit Mode's SetPoint, then UpdateClampOffsets.
+function Stubs.ApplyEditModeLayout(frame)
+    local points = {}
+    for index = 1, frame:GetNumPoints() do points[index] = { frame:GetPoint(index) } end
+    frame:ClearAllPoints()
+    for _, point in ipairs(points) do frame:SetPoint(unpack(point)) end
+    Stubs.EditModeClamp(frame)
+end
+
+-- Edit Mode opens: Blizzard highlights every frame, which sets its clamp again, then tells
+-- EventRegistry. Draw frames with Stubs.NextFrame while it's open (Stubs.RunTimers would never end).
+function Stubs.OpenEditMode()
+    local manager = _G.EditModeManagerFrame
+    manager:Show()
+    for _, frame in ipairs(manager.registeredSystemFrames) do Stubs.EditModeClamp(frame) end
+    Stubs.TriggerRegistry("EditMode.Enter")
+    Stubs.RenderEditMode()
+end
+
+-- Edit Mode closes: RevertAllChanges applies the saved layout again, then EventRegistry hears of it,
+-- and the game draws the frame.
+function Stubs.CloseEditMode()
+    local manager = _G.EditModeManagerFrame
+    for _, frame in ipairs(manager.registeredSystemFrames) do Stubs.ApplyEditModeLayout(frame) end
+    manager:Hide()
+    Stubs.TriggerRegistry("EditMode.Exit")
+    Stubs.RenderEditMode()
 end
 
 return Stubs

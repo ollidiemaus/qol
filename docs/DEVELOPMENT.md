@@ -8,7 +8,7 @@ Notes for working on the addon. What it does for players is in the [README](../R
 |---|---|
 | `Core/` | Namespace and printing (`Init`), the event frame (`Events`), saved options with defaults and change watchers (`Options`), deferred changes (`Later`), the hidden holder for hidden frames (`Hider`), what the back buttons and the rings share (`Buttons`: an action slot's look, override bindings), our windows' frame (`Window`: the settings), `/qol` (`Slash`) and startup (`Lifecycle`) |
 | `Data/` | Static game data: `MapPins` (dungeon entrances, docks, portals; how it was made is at the top of the file) |
-| `Features/` | One file per feature: `Merchant`, `Quests`, `Tooltips`, `HideFrames` (also the chat buttons), `BuffTooltips` (the controller interface's tooltips for new buffs), `CombatLog`, `ChatClassColors`, `CombinedBagSort`, `CombinedBagLayout`, `ClassHealthBars`, `DruidManaBar` (mana in bear and cat form), `Minimap` (shape, positions, class colors and font sizes around the minimap, and the FPS and ping text), `MapPins`, `Viewport`, `ActionBars`, `ButtonBorders`, `BarPaging`, `BackButtons` (the controller back buttons, Forever only), `RingEntries` (what can go on a ring, and what a character has of it), `Ring`, `RingPicker` (the editor's list), `RingEditor` (the settings' Ring page, `/qol ring`), `ReloadCommand` |
+| `Features/` | One file per feature: `Merchant`, `Quests`, `Tooltips`, `HideFrames` (also the chat buttons), `BuffTooltips` (the controller interface's tooltips for new buffs), `CombatLog`, `ChatClassColors`, `CombinedBagSort`, `CombinedBagLayout`, `ClassHealthBars`, `DruidManaBar` (mana in bear and cat form), `ScreenEdge` (Edit Mode frames past the screen edge), `Minimap` (shape, positions, class colors and font sizes around the minimap, and the FPS and ping text), `MapPins`, `Viewport`, `ActionBars`, `ButtonBorders`, `BarPaging`, `BackButtons` (the controller back buttons, Forever only), `RingEntries` (what can go on a ring, and what a character has of it), `Ring`, `RingPicker` (the editor's list), `RingEditor` (the settings' Ring page, `/qol ring`), `ReloadCommand` |
 | `UI/` | `SettingsPage.lua`, a settings page (two columns, or rows across the page, and key binding rows); `SettingsWindow.lua`, the window that `/qol` opens, with the list of pages; `InfoPage.lua`, the information page under Options > AddOns, with a button that opens the window; `Settings.lua`, the pages built with them, in the list's order |
 | `Locales/` | English strings, German overrides |
 | `Media/` | `Icon.tga`, the addon list icon (the TOC's `IconTexture`, 128×128, 32-bit), and `Icon.svg`, its source (not packaged); `Zeppelin.tga`, `Tram.tga`, `MinimapSquareBorder.tga` and the rings' `Ring.tga`, `RingSpoke.tga`, `RingLit1.tga` to `RingLit12.tga` and `RingSlot.tga` (see below); `AutoPotion.tga`, `AutoSetup.tga` and `Wayscribe.tga`, copies of the other addons' icons for the information page |
@@ -119,6 +119,38 @@ the rage or energy bar's mask (Blizzard switches it to `Unit_BarMask` for a thir
 by a pixel the frame art covers) and the bottom managed container (pet frame and the like), which
 Blizzard moves 10 down for its third bar. The text follows `TextStatusBar`: `statusText` shows it
 always or on hover, `statusTextDisplay` picks numbers, percent or both.
+
+Every Edit Mode frame is clamped to the screen (`EditModeSystemTemplate`), and Edit Mode makes the
+clamped rectangle the frame's selection box: `EditModeSystemMixin:UpdateClampOffsets` sets the clamp
+insets from the frame's edges to its `Selection`'s. That box takes in the empty space around the
+art, so the art can't reach the edge. Frames past the screen edge gives each frame Blizzard's insets
+moved 30 further in on every side (in the frame's own units, so a frame shown bigger may go further),
+with `SetClampRectInsets`, a widget method, on the frames of
+`EditModeManagerFrame.registeredSystemFrames` (a field read). Nothing else is needed for saving:
+`UpdateSystemAnchorInfo` saves a dragged frame's anchor from `GetPoint`, past the edge or not.
+Blizzard sets its insets again whenever it lays a frame out (`UpdateSystem`, `UpdateSystemSetting`,
+`HighlightSystem`; 0s for a frame not laid out yet): on `EDIT_MODE_LAYOUTS_UPDATED` (a layout loaded
+or switched; AutoSetup's `SelectLayout` goes through `C_EditMode.SetActiveLayout`, which fires it,
+since that's how the new layout gets applied), on leaving Edit Mode (`ExitEditMode` calls
+`RevertAllChanges`, which applies the saved layout again), `PLAYER_SPECIALIZATION_CHANGED`, and in
+Edit Mode on a highlight or a setting change, without an event. So the events are wake-ups, and
+between `EditMode.Enter` and `EditMode.Exit` (EventRegistry) a frame of ours compares the frames
+every drawn frame while the option is on. The insets are always worked out from the selection box,
+whatever Blizzard set; a frame that has them already is left alone.
+
+New insets alone don't bring back a frame the game already pulled in: the first version set them a
+frame after Edit Mode closed, and everything placed past the edge stayed on the screen (seen
+2026-10-12). Leaving Edit Mode anchors every frame again under Blizzard's insets, the game lays them
+out inside the screen, and as far as we can tell a change of insets alone doesn't lay a frame out
+again (not yet confirmed in game). So a frame whose insets
+we changed is anchored again at the points it has, which makes the game lay it out under the new
+ones. That uses the widget's own `ClearAllPoints` and `SetPoint`, from the frame's metatable:
+`EditModeSystemMixin:OnSystemLoad` replaces both on its frames with Lua that writes to the frame
+(`SetSnappedToFrame`, `ClearFrameSnap`), which would taint it; the same points again leave its snap
+bookkeeping right. A frame being dragged (`isDragging`, a field read) is left to the drag. Turning
+the option off gives the frames we changed Blizzard's insets back and anchors them again, so they
+come back inside the screen. Several frames are protected, so `ns.Later` waits for the end of combat
+(Edit Mode can't open in combat anyway).
 
 The combat log can't be closed in the default UI, and the dock's own functions (`FCF_Close`,
 `FCF_UnDockFrame`) write to the chat frames and the dock. So `ChatFrame2` goes to the hidden holder
@@ -608,6 +640,11 @@ Things only the real client can confirm:
   shapeshifted (whether the server sends mana updates in a form), shifting in and out in combat
   shows and hides it, the threat glow fits the frame in combat with and without the bar, and a
   vehicle shows its own art. Something in the bottom container (a pet frame) isn't covered by it.
+- Frames past the screen edge, with Snap to Elements off: an action bar, the minimap and a unit frame
+  dragged to each edge go up to 30 past it, also right after changing a setting of theirs in Edit
+  Mode. After saving, a `/reload` and switching layouts (by hand and with AutoSetup on a resolution
+  change), they come back to the same place, not pulled in by the screen. Turned off, they are back
+  inside the screen; no "tainted by" error in combat afterwards (the action bars are protected).
 - Quests: accepting from a gossip NPC and from a quest greeting NPC (several quests in a row), a
   shared quest, turning in with one reward and with none, a choice of rewards and a quest that costs
   gold staying open, and Shift leaving everything to the player.
