@@ -1,4 +1,5 @@
 local _, ns = ...
+local L = ns.L
 local Options = ns.Options
 
 -- The minimap's shape and what sits around it.
@@ -15,8 +16,10 @@ local Options = ns.Options
 --     goes to the hidden holder.
 --   * Class colors for the zone text, the clock and the coordinates. The game colors the zone name
 --     by its PvP status each time the zone changes; the class color is put back right after.
---   * Font sizes for the zone text and the clock. Their buttons grow with a larger font, so the
---     rows around the minimap make room for them.
+--   * Font sizes for the zone text, the clock and the FPS and ping. Their frames grow with a larger
+--     font, so the rows around the minimap make room for them.
+--   * FPS and ping: a text of ours with the frame rate and the latency, placed in the rows like the
+--     clock, also in class color and at another font size.
 -- Only widget methods are called; the game's own minimap code is never called or hooked.
 local MinimapLayout = {}
 ns.MinimapLayout = MinimapLayout
@@ -26,6 +29,8 @@ local ZONE_TEXT, CLASS_COLOR = "minimapZoneText", "minimapZoneTextClassColor"
 local CLOCK_COLOR, COORDS_COLOR = "minimapClockClassColor", "minimapCoordsClassColor"
 local CALENDAR = "hideMinimapCalendar"
 local ZONE_TEXT_SIZE, CLOCK_SIZE = "minimapZoneTextSize", "minimapClockSize"
+local PERFORMANCE, PERFORMANCE_COLOR = "minimapPerformance", "minimapPerformanceClassColor"
+local PERFORMANCE_SIZE = "minimapPerformanceSize"
 
 -- The choices for a moving element, in the order the settings list them (PositionsFor). "default"
 -- leaves it where the game puts it.
@@ -55,6 +60,11 @@ MinimapLayout.ELEMENTS = {
     { key = ZONE_TEXT, isZoneText = true,
         frame = function() return MinimapCluster and MinimapCluster.ZoneTextButton end },
     { key = "minimapClock", frame = function() return TimeManagerClockButton end },
+    -- Our own FPS and ping text (see below): the game has no place for it, so it has no default,
+    -- and its text keeps to the side of the row it's on.
+    { key = PERFORMANCE, own = true,
+        frame = function() return MinimapLayout:Performance() end,
+        align = function(frame, side) MinimapLayout.AlignPerformance(frame, side) end },
     { key = "minimapCompartment", frame = function() return AddonCompartmentFrame end },
     -- Forever only: the day and night icon on the round frame.
     { key = "minimapDayNight", inside = true,
@@ -76,7 +86,7 @@ function MinimapLayout.PositionsFor(key)
         if value == "hidden" and element and element.inside then
             for _, inside in ipairs(MinimapLayout.INSIDE_POSITIONS) do list[#list + 1] = inside end
         end
-        list[#list + 1] = value
+        if not (value == "default" and element and element.own) then list[#list + 1] = value end
     end
     return list
 end
@@ -275,7 +285,8 @@ local function putBackZoneText(saved)
     MinimapZoneText:SetJustifyH(saved.justify)
 end
 
--- Where an element goes: "default", "hidden" or a row and side.
+-- Where an element goes: "default", "hidden" or a row and side. One of our own is hidden unless
+-- it has a row.
 local function positionOf(element)
     local value = Options:Get(element.key)
     if element.isZoneText then
@@ -285,7 +296,7 @@ local function positionOf(element)
     if value == "hidden" then return "hidden" end
     local slot = SLOTS[value]
     if slot and (element.inside or not slot.inside) then return slot end
-    return "default"
+    return element.own and "hidden" or "default"
 end
 
 -- An invisible frame of ours around what is drawn of the minimap; the rows sit just outside it.
@@ -435,6 +446,7 @@ function MinimapLayout:ApplyPositions()
             if type(position) == "table" then
                 remember(frame, element.isZoneText and rememberZoneText or nil)
                 setInside(frame, position.inside == true)
+                if element.align then element.align(frame, position.side) end
                 local side = (position.inside and inside or rows)[position.row][position.side]
                 side[#side + 1] = { element = element, frame = frame }
                 zoneTextMoved = zoneTextMoved or element.isZoneText == true
@@ -474,10 +486,11 @@ end
 -- The font sizes the settings offer; 0 is the game's own.
 MinimapLayout.FONT_SIZES = { 0, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20, 22, 24 }
 
--- The texts whose font size can change, each with the button around it. The button grows with a
--- larger font (the clock's in both directions, the zone text's only in height: the rows give it
--- its width). The zone text's font string has a height of its own, which grows too: a font string
--- shows nothing of a line that doesn't fit its height.
+-- The texts whose font size can change, each with the frame around it. The frame grows with a
+-- larger font (the clock's button and the FPS and ping in both directions, the zone text's button
+-- only in height: the rows give it its width). The zone text's font string has a height of its own,
+-- which grows too: a font string shows nothing of a line that doesn't fit its height. The FPS and
+-- ping is made here when it has a row, so it's sized before it's placed.
 MinimapLayout.SIZED = {
     { key = ZONE_TEXT_SIZE, textHeight = true,
         text = function() return MinimapZoneText end,
@@ -485,6 +498,12 @@ MinimapLayout.SIZED = {
     { key = CLOCK_SIZE, frameWidth = true,
         text = function() return TimeManagerClockTicker end,
         frame = function() return TimeManagerClockButton end },
+    { key = PERFORMANCE_SIZE, frameWidth = true,
+        text = function()
+            local frame = MinimapLayout:Performance()
+            return frame and frame.text
+        end,
+        frame = function() return MinimapLayout:Performance() end },
 }
 
 -- Per option: the text's font and the sizes that grow with it, from before we changed them.
@@ -510,11 +529,10 @@ local function applySize(sized)
         if sized.frameWidth then frame:SetWidth(saved.frameWidth * grow) end
         if sized.textHeight then text:SetHeight(saved.textHeight * grow) end
     elseif saved then
-        if saved.object then
-            text:SetFontObject(saved.object)
-        else
-            text:SetFont(saved.file, saved.height, saved.flags)
-        end
+        -- The text still has its font object after SetFont, and the client ignores the one a text
+        -- already has: only SetFont brings the game's font back.
+        text:SetFont(saved.file, saved.height, saved.flags)
+        if saved.object then text:SetFontObject(saved.object) end
         frame:SetHeight(saved.frameHeight)
         if sized.frameWidth then frame:SetWidth(saved.frameWidth) end
         if sized.textHeight then text:SetHeight(saved.textHeight) end
@@ -535,6 +553,64 @@ function MinimapLayout:Apply()
 end
 
 ------------------------------------------------------------------------------------------------
+-- FPS and ping
+
+-- A frame of ours with the frame rate and the latency (the higher of home and world, as the game's
+-- own latency meter goes by), made the first time it has a row. A timer updates it once a second
+-- while it has one; no OnUpdate runs every frame for it. It keeps the width of a three-digit
+-- reading, so nothing in its row moves as the numbers change, and its text keeps to its side.
+local PERFORMANCE_SECONDS = 1
+local PERFORMANCE_HEIGHT = 16 -- the clock button's, so either sits alike in a row
+local performance
+local ticking = false
+
+local function performanceShown()
+    return type(positionOf(elementFor(PERFORMANCE))) == "table"
+end
+
+local function updatePerformance()
+    local fps = GetFramerate()
+    local _, _, home, world = GetNetStats()
+    fps = ns.IsUsable(fps) and math.floor(fps + 0.5) or 0
+    local latency = (ns.IsUsable(home) and ns.IsUsable(world)) and math.max(home, world) or 0
+    performance.text:SetFormattedText(L.MINIMAP_PERFORMANCE_TEXT, fps, latency)
+end
+
+local function tick()
+    if not performanceShown() then
+        ticking = false
+        return
+    end
+    updatePerformance()
+    C_Timer.After(PERFORMANCE_SECONDS, tick)
+end
+
+function MinimapLayout:Performance()
+    local shown = performanceShown()
+    if not (performance or shown) then return nil end
+    if not performance then
+        performance = CreateFrame("Frame", nil, MinimapCluster)
+        local text = performance:CreateFontString(nil, "ARTWORK", "WhiteNormalNumberFont")
+        text:SetFormattedText(L.MINIMAP_PERFORMANCE_TEXT, 999, 999)
+        performance:SetSize(text:GetStringWidth(), PERFORMANCE_HEIGHT)
+        performance.text = text
+        -- The colors may have been applied before it was there.
+        self:ApplyColors()
+    end
+    if shown and not ticking then
+        ticking = true
+        tick()
+    end
+    return performance
+end
+
+function MinimapLayout.AlignPerformance(frame, side)
+    local point = side == "left" and "LEFT" or side == "right" and "RIGHT" or "CENTER"
+    frame.text:ClearAllPoints()
+    frame.text:SetPoint(point)
+end
+
+------------------------------------------------------------------------------------------------
 -- Class colors
 
 local function coordsText()
@@ -548,6 +624,7 @@ MinimapLayout.COLORED = {
     { key = CLASS_COLOR, text = function() return MinimapZoneText end },
     { key = CLOCK_COLOR, text = function() return TimeManagerClockTicker end },
     { key = COORDS_COLOR, text = coordsText },
+    { key = PERFORMANCE_COLOR, text = function() return performance and performance.text end },
 }
 
 local function classColor()
@@ -596,7 +673,7 @@ function MinimapLayout.HasDayNight()
     return MinimapCluster ~= nil and type(MinimapCluster.DielFrame) == "table"
 end
 
-local LAYOUT_KEYS = { SQUARE, BORDER, CALENDAR, ZONE_TEXT_SIZE, CLOCK_SIZE }
+local LAYOUT_KEYS = { SQUARE, BORDER, CALENDAR, ZONE_TEXT_SIZE, CLOCK_SIZE, PERFORMANCE_SIZE }
 for _, element in ipairs(MinimapLayout.ELEMENTS) do LAYOUT_KEYS[#LAYOUT_KEYS + 1] = element.key end
 
 local function scheduleLayout()

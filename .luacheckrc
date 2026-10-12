@@ -37,6 +37,8 @@ read_globals = {
     "InCombatLockdown", "GetPhysicalScreenSize", "ReloadUI", "IsSecureCmd", "CinematicFrame", "MovieFrame",
     "IsShiftKeyDown", "GamepadMainActionBarFrame", "GamepadMode", "SettingsPanel", "GameMenuFrame", "GetCursorPosition", "GetCursorInfo",
     "SecureHandlerWrapScript",
+    -- Performance
+    "GetFramerate", "GetNetStats",
     -- Key bindings
     "GetBindingKey", "GetBindingAction", "SetOverrideBinding", "SetOverrideBindingClick", "ClearOverrideBindings",
     "IsModifiedClick", "SetBinding", "GetBindingText", "GetBindingName", "IsKeyPressIgnoredForBinding",

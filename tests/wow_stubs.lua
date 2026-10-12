@@ -141,10 +141,16 @@ local function newRegion(kind, parent, template)
     function region:SetEnabled(enabled) self.enabled = enabled and true or false end
     function region:IsEnabled() return self.enabled end
     function region:SetText(text) self.text = text end
+    function region:SetFormattedText(format, ...) self.text = format:format(...) end
     function region:GetText() return self.text end
+    -- 5 units a character, whatever the font.
+    function region:GetStringWidth() return #(self.text or "") * 5 end
     -- Fonts: a font object (by name) brings its file, height and flags (state.fonts); SetFont sets
     -- them directly.
+    -- Like the client, the font object the text already has changes nothing: a font SetFont gave it
+    -- stays (seen in game 2026-10-12: a font size set back to Default showed only after a reload).
     function region:SetFontObject(font)
+        if font == self.font then return end
         self.font = font
         local known = state.fonts[font]
         if known then self.fontFile, self.fontHeight, self.fontFlags = known[1], known[2], known[3] end
@@ -164,7 +170,7 @@ local function newRegion(kind, parent, template)
     end
     function region:CreateFontString(_, _, font)
         local text = newRegion("FontString", self)
-        text.font = font
+        if font then text:SetFontObject(font) end
         return text
     end
     function region:RegisterEvent(event)
@@ -538,6 +544,8 @@ local function install()
     G.WorldFrame.protected = true
     G.WorldFrame:SetAllPoints(nil)
     G.GetPhysicalScreenSize = function() return state.screenWidth, state.screenHeight end
+    G.GetFramerate = function() return state.framerate end
+    G.GetNetStats = function() return 0, 0, state.latencyHome, state.latencyWorld end
     -- Cutscenes: shown while an in-engine cinematic or a movie plays.
     G.CinematicFrame = newRegion("Frame", nil)
     G.CinematicFrame:Hide()
@@ -1104,6 +1112,7 @@ function Stubs.Reset(options)
         combat = false,
         interfaceStyle = 0,
         screenWidth = 2560, screenHeight = 1440,
+        framerate = 59.7, latencyHome = 45, latencyWorld = 38,
         bags = {}, prices = {}, used = {}, soldAll = 0, sellAllEnabled = true,
         canRepair = false, repairCost = 0, repairs = {}, money = 0,
         inGuild = false, guildCanRepair = false, guildLimit = 0, guildMoney = 0,

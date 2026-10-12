@@ -63,13 +63,16 @@ Hold **Shift** while talking to an NPC to do everything yourself that time.
   top.
 - **Zone text, clock and coordinates in class color.** The zone text normally shows the color for
   friendly, hostile or contested territory.
-- **Font size of the zone text and the clock,** from 9 to 24 or the game's own. With a larger font
-  the clock's button grows with it, and the rows above and below the minimap make room.
+- **Font size of the zone text, the clock and FPS and ping,** from 9 to 24 or the game's own. With a
+  larger font the clock's button grows with it, and the rows above and below the minimap make room.
 - **Clock, addon compartment, tracking button and Forever's day and night icon:** each can move to
   a row above or below the minimap (left, center or right), or be hidden. The tracking button and
   the day and night icon can also sit inside the map: in a corner, or in the middle of its top or
   bottom edge. Things in the same spot sit side by side; with something below the minimap, the
   coordinates move under it.
+- **FPS and ping** in a row above or below the minimap (left, center or right), like the clock,
+  updated every second, also in class color and at another font size. The ping is the higher of
+  your home and world latency.
 - **Hide the calendar button.**
 - **Hide the coordinates under the minimap.**
 
