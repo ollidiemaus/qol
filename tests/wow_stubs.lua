@@ -147,7 +147,10 @@ local function newRegion(kind, parent, template)
     function region:GetStringWidth() return #(self.text or "") * 5 end
     -- Fonts: a font object (by name) brings its file, height and flags (state.fonts); SetFont sets
     -- them directly.
+    -- Like the client, the font object the text already has changes nothing: a font SetFont gave it
+    -- stays (seen in game 2026-10-12: a font size set back to Default showed only after a reload).
     function region:SetFontObject(font)
+        if font == self.font then return end
         self.font = font
         local known = state.fonts[font]
         if known then self.fontFile, self.fontHeight, self.fontFlags = known[1], known[2], known[3] end

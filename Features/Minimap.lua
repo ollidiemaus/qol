@@ -529,11 +529,10 @@ local function applySize(sized)
         if sized.frameWidth then frame:SetWidth(saved.frameWidth * grow) end
         if sized.textHeight then text:SetHeight(saved.textHeight * grow) end
     elseif saved then
-        if saved.object then
-            text:SetFontObject(saved.object)
-        else
-            text:SetFont(saved.file, saved.height, saved.flags)
-        end
+        -- The text still has its font object after SetFont, and the client ignores the one a text
+        -- already has: only SetFont brings the game's font back.
+        text:SetFont(saved.file, saved.height, saved.flags)
+        if saved.object then text:SetFontObject(saved.object) end
         frame:SetHeight(saved.frameHeight)
         if sized.frameWidth then frame:SetWidth(saved.frameWidth) end
         if sized.textHeight then text:SetHeight(saved.textHeight) end

@@ -168,8 +168,11 @@ day and night icon's center again whenever the minimap's scale is set; `Minimap.
 it out again after that. The clock's text (`TimeManagerClockTicker`) and the coordinates'
 (`PlayerCoords.CoordText`) keep their color once set; the zone text is colored again by the game on
 every zone change, so the class color is put back on the zone events. A font size sets the text's
-own font file and flags at the new size (`SetFont`) and gives the font object back when set to the
-game's size again; the game never sets these fonts itself. A larger font makes the clock's button
+own font file and flags at the new size (`SetFont`); the game never sets these fonts itself. Set to
+the game's size again, the text gets the game's font back with `SetFont` too, then its font object:
+after `SetFont` the text still has that font object, and the client ignores a `SetFontObject` with
+the one a text already has, so that alone left the larger font until a `/reload` (seen in game
+2026-10-12; the stubs' `SetFontObject` does the same). A larger font makes the clock's button
 wider and higher and the zone text's button and font string higher (`MinimapZoneText` has a height
 of 12 and shows nothing of a line that doesn't fit), by the ratio to the game's size; a smaller one
 leaves them as they are. The sizes are set before the positions, which go by the buttons' sizes.
