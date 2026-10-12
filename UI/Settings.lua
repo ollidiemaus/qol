@@ -96,7 +96,7 @@ local function fontSizes()
 end
 
 -- Minimap page: the map and the texts around it on the left; the clock, FPS and ping, and the
--- buttons on the right.
+-- buttons on the right. The sections go side by side in pairs, so their headers line up.
 local function buildMinimap(page)
     page:Header("left", L.SECTION_MINIMAP_SHAPE)
     page:Checkbox("left", "squareMinimap", L.SQUARE_MINIMAP, L.SQUARE_MINIMAP_TIP)
@@ -104,6 +104,15 @@ local function buildMinimap(page)
         { value = "bronze", label = L.BORDER_BRONZE },
         { value = "black", label = L.BORDER_BLACK },
     }, L.SQUARE_MINIMAP_BORDER_TIP, { indent = true, enabled = is("squareMinimap") })
+
+    page:Header("right", L.SECTION_MINIMAP_CLOCK)
+    page:Dropdown("right", "minimapClock", L.MINIMAP_POSITION, positions("minimapClock"), L.MINIMAP_POSITION_TIP)
+    local clockShown = function() return Options:Get("minimapClock") ~= "hidden" end
+    page:Checkbox("right", "minimapClockClassColor", L.MINIMAP_CLASS_COLOR, L.MINIMAP_CLOCK_CLASS_COLOR_TIP,
+        { enabled = clockShown })
+    page:Dropdown("right", "minimapClockSize", L.FONT_SIZE, fontSizes(), L.MINIMAP_CLOCK_SIZE_TIP,
+        { enabled = clockShown })
+    page:Align()
 
     page:Header("left", L.SECTION_MINIMAP_ZONE_TEXT)
     page:Dropdown("left", "minimapZoneText", L.MINIMAP_POSITION, {
@@ -114,19 +123,6 @@ local function buildMinimap(page)
     page:Checkbox("left", "minimapZoneTextClassColor", L.MINIMAP_CLASS_COLOR, L.MINIMAP_ZONE_TEXT_CLASS_COLOR_TIP)
     page:Dropdown("left", "minimapZoneTextSize", L.FONT_SIZE, fontSizes(), L.MINIMAP_ZONE_TEXT_SIZE_TIP)
 
-    page:Header("left", L.SECTION_MINIMAP_COORDS)
-    page:Checkbox("left", "minimapCoordsClassColor", L.MINIMAP_CLASS_COLOR, L.MINIMAP_COORDS_CLASS_COLOR_TIP,
-        { enabled = isNot("hideMinimapCoords") })
-    page:Checkbox("left", "hideMinimapCoords", L.HIDE_MINIMAP_COORDS, L.HIDE_MINIMAP_COORDS_TIP)
-
-    page:Header("right", L.SECTION_MINIMAP_CLOCK)
-    page:Dropdown("right", "minimapClock", L.MINIMAP_POSITION, positions("minimapClock"), L.MINIMAP_POSITION_TIP)
-    local clockShown = function() return Options:Get("minimapClock") ~= "hidden" end
-    page:Checkbox("right", "minimapClockClassColor", L.MINIMAP_CLASS_COLOR, L.MINIMAP_CLOCK_CLASS_COLOR_TIP,
-        { enabled = clockShown })
-    page:Dropdown("right", "minimapClockSize", L.FONT_SIZE, fontSizes(), L.MINIMAP_CLOCK_SIZE_TIP,
-        { enabled = clockShown })
-
     page:Header("right", L.SECTION_MINIMAP_PERFORMANCE)
     page:Dropdown("right", "minimapPerformance", L.MINIMAP_POSITION, positions("minimapPerformance"),
         L.MINIMAP_PERFORMANCE_TIP)
@@ -135,6 +131,12 @@ local function buildMinimap(page)
         { enabled = performanceShown })
     page:Dropdown("right", "minimapPerformanceSize", L.FONT_SIZE, fontSizes(), L.MINIMAP_PERFORMANCE_SIZE_TIP,
         { enabled = performanceShown })
+    page:Align()
+
+    page:Header("left", L.SECTION_MINIMAP_COORDS)
+    page:Checkbox("left", "minimapCoordsClassColor", L.MINIMAP_CLASS_COLOR, L.MINIMAP_COORDS_CLASS_COLOR_TIP,
+        { enabled = isNot("hideMinimapCoords") })
+    page:Checkbox("left", "hideMinimapCoords", L.HIDE_MINIMAP_COORDS, L.HIDE_MINIMAP_COORDS_TIP)
 
     page:Header("right", L.SECTION_MINIMAP_BUTTONS)
     page:Dropdown("right", "minimapCompartment", L.MINIMAP_COMPARTMENT, positions("minimapCompartment"),
