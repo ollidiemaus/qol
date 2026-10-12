@@ -8,7 +8,7 @@ Notes for working on the addon. What it does for players is in the [README](../R
 |---|---|
 | `Core/` | Namespace and printing (`Init`), the event frame (`Events`), saved options with defaults and change watchers (`Options`), deferred changes (`Later`), the hidden holder for hidden frames (`Hider`), what the back buttons and the rings share (`Buttons`: an action slot's look, override bindings), our windows' frame (`Window`: the settings), `/qol` (`Slash`) and startup (`Lifecycle`) |
 | `Data/` | Static game data: `MapPins` (dungeon entrances, docks, portals; how it was made is at the top of the file) |
-| `Features/` | One file per feature: `Merchant`, `Quests`, `Tooltips`, `HideFrames` (also the chat buttons), `BuffTooltips` (the controller interface's tooltips for new buffs), `CombatLog`, `ChatClassColors`, `CombinedBagSort`, `CombinedBagLayout`, `ClassHealthBars`, `Minimap` (shape, positions, class colors and font sizes around the minimap), `MapPins`, `Viewport`, `ActionBars`, `ButtonBorders`, `BarPaging`, `BackButtons` (the controller back buttons, Forever only), `RingEntries` (what can go on a ring, and what a character has of it), `Ring`, `RingPicker` (the editor's list), `RingEditor` (the settings' Ring page, `/qol ring`), `ReloadCommand` |
+| `Features/` | One file per feature: `Merchant`, `Quests`, `Tooltips`, `HideFrames` (also the chat buttons), `BuffTooltips` (the controller interface's tooltips for new buffs), `CombatLog`, `ChatClassColors`, `CombinedBagSort`, `CombinedBagLayout`, `ClassHealthBars`, `Minimap` (shape, positions, class colors and font sizes around the minimap, and the FPS and ping text), `MapPins`, `Viewport`, `ActionBars`, `ButtonBorders`, `BarPaging`, `BackButtons` (the controller back buttons, Forever only), `RingEntries` (what can go on a ring, and what a character has of it), `Ring`, `RingPicker` (the editor's list), `RingEditor` (the settings' Ring page, `/qol ring`), `ReloadCommand` |
 | `UI/` | `SettingsPage.lua`, a settings page (two columns, or rows across the page, and key binding rows); `SettingsWindow.lua`, the window that `/qol` opens, with the list of pages; `InfoPage.lua`, the information page under Options > AddOns, with a button that opens the window; `Settings.lua`, the pages built with them, in the list's order |
 | `Locales/` | English strings, German overrides |
 | `Media/` | `Icon.tga`, the addon list icon (the TOC's `IconTexture`, 128×128, 32-bit), and `Icon.svg`, its source (not packaged); `Zeppelin.tga`, `Tram.tga`, `MinimapSquareBorder.tga` and the rings' `Ring.tga`, `RingSpoke.tga`, `RingLit1.tga` to `RingLit12.tga` and `RingSlot.tga` (see below); `AutoPotion.tga`, `AutoSetup.tga` and `Wayscribe.tga`, copies of the other addons' icons for the information page |
@@ -173,6 +173,17 @@ game's size again; the game never sets these fonts itself. A larger font makes t
 wider and higher and the zone text's button and font string higher (`MinimapZoneText` has a height
 of 12 and shows nothing of a line that doesn't fit), by the ratio to the game's size; a smaller one
 leaves them as they are. The sizes are set before the positions, which go by the buttons' sizes.
+
+The FPS and ping text is a frame of ours (a child of `MinimapCluster`, like the clock) that the rows
+place like any other element. The game has no place for it, so it has no "Default" position (an
+unknown or inside value hides it), and it's only made the first time it has a row. It shows
+`GetFramerate()` and the higher of `GetNetStats()`'s home and world latency, as the game's own latency
+meter on the micro menu does. A `C_Timer.After(1)` chain updates it while it has a row and ends itself
+once it hasn't; no OnUpdate of ours runs every frame for it. The frame keeps the width of a reading of
+999 and 999 and is as high as the clock's button, so its row never moves as the numbers change; the
+text is anchored to the side of its spot (left, right or center), so it keeps to the minimap's edge or
+to its neighbor. Its class color goes through the same code as the clock's, applied once more when the
+frame is made, in case the colors ran before it was there.
 
 Bar paging: each key bound to `ACTIONPAGE1` to `ACTIONPAGE6` gets an override binding on a frame of
 ours that mirrors what the key without modifiers does (`GetBindingAction(base, true)`, so a bar
@@ -603,6 +614,8 @@ Things only the real client can confirm:
   without a `/reload` when turned off. No "tainted by" error in combat afterwards.
 - The zone text and the clock at every font size, in the header bar and above and below the
   minimap (rows with something else in them), back to the game's look when set to Default.
+- FPS and ping in every row position, next to the clock in the same spot, at the minimap's edge
+  with one- and three-digit numbers, updating every second, in class color, and gone when hidden.
 - World map pins: in the right places on the zone and continent maps (the entrance positions are
   the instance portals, like retail's encounter journal pins), the tooltips' names in German, and a
   click opening the destination's map. Open the map in combat too.

@@ -70,6 +70,8 @@ Hold **Shift** while talking to an NPC to do everything yourself that time.
   the day and night icon can also sit inside the map: in a corner, or in the middle of its top or
   bottom edge. Things in the same spot sit side by side; with something below the minimap, the
   coordinates move under it.
+- **FPS and ping** in a row above or below the minimap (left, center or right), like the clock,
+  updated every second, also in class color. The ping is the higher of your home and world latency.
 - **Hide the calendar button.**
 - **Hide the coordinates under the minimap.**
 

@@ -141,7 +141,10 @@ local function newRegion(kind, parent, template)
     function region:SetEnabled(enabled) self.enabled = enabled and true or false end
     function region:IsEnabled() return self.enabled end
     function region:SetText(text) self.text = text end
+    function region:SetFormattedText(format, ...) self.text = format:format(...) end
     function region:GetText() return self.text end
+    -- 5 units a character, whatever the font.
+    function region:GetStringWidth() return #(self.text or "") * 5 end
     -- Fonts: a font object (by name) brings its file, height and flags (state.fonts); SetFont sets
     -- them directly.
     function region:SetFontObject(font)
@@ -538,6 +541,8 @@ local function install()
     G.WorldFrame.protected = true
     G.WorldFrame:SetAllPoints(nil)
     G.GetPhysicalScreenSize = function() return state.screenWidth, state.screenHeight end
+    G.GetFramerate = function() return state.framerate end
+    G.GetNetStats = function() return 0, 0, state.latencyHome, state.latencyWorld end
     -- Cutscenes: shown while an in-engine cinematic or a movie plays.
     G.CinematicFrame = newRegion("Frame", nil)
     G.CinematicFrame:Hide()
@@ -1104,6 +1109,7 @@ function Stubs.Reset(options)
         combat = false,
         interfaceStyle = 0,
         screenWidth = 2560, screenHeight = 1440,
+        framerate = 59.7, latencyHome = 45, latencyWorld = 38,
         bags = {}, prices = {}, used = {}, soldAll = 0, sellAllEnabled = true,
         canRepair = false, repairCost = 0, repairs = {}, money = 0,
         inGuild = false, guildCanRepair = false, guildLimit = 0, guildMoney = 0,

@@ -95,7 +95,8 @@ local function fontSizes()
     return choices
 end
 
--- Minimap page: the map and the texts around it on the left, the buttons on the right.
+-- Minimap page: the map and the texts around it on the left; the clock, FPS and ping, and the
+-- buttons on the right.
 local function buildMinimap(page)
     page:Header("left", L.SECTION_MINIMAP_SHAPE)
     page:Checkbox("left", "squareMinimap", L.SQUARE_MINIMAP, L.SQUARE_MINIMAP_TIP)
@@ -125,6 +126,12 @@ local function buildMinimap(page)
         { enabled = clockShown })
     page:Dropdown("right", "minimapClockSize", L.FONT_SIZE, fontSizes(), L.MINIMAP_CLOCK_SIZE_TIP,
         { enabled = clockShown })
+
+    page:Header("right", L.SECTION_MINIMAP_PERFORMANCE)
+    page:Dropdown("right", "minimapPerformance", L.MINIMAP_POSITION, positions("minimapPerformance"),
+        L.MINIMAP_PERFORMANCE_TIP)
+    page:Checkbox("right", "minimapPerformanceClassColor", L.MINIMAP_CLASS_COLOR, L.MINIMAP_PERFORMANCE_CLASS_COLOR_TIP,
+        { enabled = function() return Options:Get("minimapPerformance") ~= "hidden" end })
 
     page:Header("right", L.SECTION_MINIMAP_BUTTONS)
     page:Dropdown("right", "minimapCompartment", L.MINIMAP_COMPARTMENT, positions("minimapCompartment"),

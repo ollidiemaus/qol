@@ -334,6 +334,92 @@ describe("minimap buttons inside the map", function()
     end)
 end)
 
+describe("minimap FPS and ping", function()
+    -- The frame keeps the width of "999 fps  999 ms": 15 characters, 5 units each in the stubs.
+    local WIDTH = 15 * 5
+
+    local function performance(ns)
+        return ns.MinimapLayout:Performance()
+    end
+
+    it("aren't there by default", function()
+        local ns = start()
+        T.eq(performance(ns), nil)
+        T.eq(#Stubs.state().delayed, 0)
+    end)
+
+    it("show the frame rate and the higher latency at the right end of the row above", function()
+        local ns = start({ squareMinimap = true, minimapPerformance = "topRight" })
+        local frame = performance(ns)
+        T.eq(frame.text:GetText(), "60 fps  45 ms")
+        local where = center(frame)
+        T.eq(where.relativePoint, "TOP")
+        near(where.x, BRONZE_WIDTH / 2 - WIDTH / 2)
+        near(where.y, 3 + 16 / 2)
+        -- The text keeps to the minimap's edge, however wide the numbers are.
+        T.eq(frame.text:GetPoint(1), "RIGHT")
+    end)
+
+    it("sit next to the clock in the same spot", function()
+        local ns = start({ squareMinimap = true, minimapClock = "bottomLeft", minimapPerformance = "bottomLeft" })
+        near(center(TimeManagerClockButton).x, -BRONZE_WIDTH / 2 + 20)
+        near(center(performance(ns)).x, -BRONZE_WIDTH / 2 + 40 + 4 + WIDTH / 2)
+        T.eq(performance(ns).text:GetPoint(1), "LEFT")
+    end)
+
+    it("update once a second, and stop while hidden", function()
+        local ns = start({ minimapPerformance = "bottom" })
+        local frame = performance(ns)
+        T.eq(frame.text:GetPoint(1), "CENTER")
+        Stubs.state().framerate = 143.6
+        Stubs.state().latencyWorld = 120
+        Stubs.AdvanceTime()
+        T.eq(frame.text:GetText(), "144 fps  120 ms")
+
+        set(ns, "minimapPerformance", "hidden")
+        T.falsy(frame:IsVisible())
+        Stubs.state().framerate = 30
+        Stubs.AdvanceTime()
+        T.eq(#Stubs.state().delayed, 0)
+        T.eq(frame.text:GetText(), "144 fps  120 ms")
+
+        set(ns, "minimapPerformance", "topLeft")
+        T.truthy(frame:IsVisible())
+        T.eq(frame.text:GetText(), "30 fps  120 ms")
+        T.eq(center(frame).relativePoint, "TOP")
+    end)
+
+    it("keep one timer when hidden and shown again within a second", function()
+        local ns = start({ minimapPerformance = "top" })
+        set(ns, "minimapPerformance", "hidden")
+        set(ns, "minimapPerformance", "bottom")
+        T.eq(#Stubs.state().delayed, 1)
+        Stubs.AdvanceTime()
+        T.eq(#Stubs.state().delayed, 1)
+    end)
+
+    it("have no default place and none inside the map", function()
+        local ns = start({ minimapPerformance = "insideTop" })
+        T.eq(performance(ns), nil)
+        set(ns, "minimapPerformance", "default")
+        T.eq(performance(ns), nil)
+    end)
+
+    it("show in class color, and white again when turned off", function()
+        local ns = start({ minimapPerformance = "top", minimapPerformanceClassColor = true })
+        local text = performance(ns).text
+        T.same(text.textColor, MAGE)
+        set(ns, "minimapPerformanceClassColor", false)
+        T.same(text.textColor, { 1, 1, 1 })
+    end)
+
+    it("take the class color when they're placed after it was turned on", function()
+        local ns = start({ minimapPerformanceClassColor = true })
+        set(ns, "minimapPerformance", "bottomRight")
+        T.same(performance(ns).text.textColor, MAGE)
+    end)
+end)
+
 describe("minimap clock and coordinates in class color", function()
     it("color the clock, and give its own color back when turned off", function()
         local ns = start({ minimapClockClassColor = true })
