@@ -156,11 +156,17 @@ local function buildActionBars(page)
     page:Checkbox("right", "hideButtonBorders", L.HIDE_BUTTON_BORDERS, L.HIDE_BUTTON_BORDERS_TIP)
 end
 
--- Ring page: the switch, and a button to where the rings are made (their editor, also /qol ring).
+-- Ring page (also /qol ring): the switch in the title bar, and below it, on a page of the spell
+-- book, the rings' editor (Features/RingEditor.lua), which follows the page when it's shown.
 local function buildRing(page)
-    page:Checkbox("wide", "ring", L.RING, L.RING_TIP)
-    page:Button("wide", L.RING_EDITOR, L.RING_EDITOR_OPEN, L.RING_EDITOR_TIP, function() ns.RingEditor:Open() end)
-    page:Note("wide", L.RING_NOTE)
+    page:Checkbox("title", "ring", L.RING, L.RING_TIP)
+    local Window, top = ns.SettingsWindow, ns.SettingsPage.TOP
+    ns.RingEditor:Create(page.frame, top, Window.PAGE_WIDTH, Window.PAGE_HEIGHT - top)
+    local refresh = page.Refresh
+    function page:Refresh()
+        refresh(self)
+        ns.RingEditor:Refresh()
+    end
 end
 
 -- Controller page: the back buttons and the bar whose slots they use next to the buff tooltips,
@@ -212,7 +218,7 @@ local function buildViewport(page)
 end
 
 -- The window's pages, in the order of its list. available: whether the page has anything to change
--- on this client.
+-- on this client; defaults: false for a page without a Defaults button.
 local PAGES = {
     { key = "automation", title = L.CATEGORY_AUTOMATION, build = buildAutomation },
     { key = "interface", title = L.CATEGORY_INTERFACE, build = buildInterface },
@@ -223,7 +229,8 @@ local PAGES = {
     { key = "worldMap", title = L.CATEGORY_WORLD_MAP, build = buildWorldMap,
         available = function() return ns.MapPins.IsAvailable() end },
     { key = "viewport", title = L.CATEGORY_VIEWPORT, build = buildViewport },
-    { key = "ring", title = L.CATEGORY_RING, build = buildRing },
+    -- Its only option is the switch: no Defaults button, as resetting it would turn the rings off.
+    { key = "ring", title = L.CATEGORY_RING, build = buildRing, defaults = false },
     -- Only Forever has the controller action bar; on retail there's nothing for it to change.
     { key = "controller", title = L.CATEGORY_CONTROLLER, build = buildController,
         available = function() return GamepadMainActionBarFrame ~= nil end },
@@ -234,7 +241,7 @@ function SettingsPanel:Init()
     self.pages = {}
     for _, info in ipairs(PAGES) do
         if not info.available or info.available() then
-            local page = ns.SettingsPage.New(info.title)
+            local page = ns.SettingsPage.New(info.title, { defaults = info.defaults })
             info.build(page)
             self.window:Add(info.key, info.title, page)
             self.pages[info.key] = page
@@ -253,10 +260,11 @@ function SettingsPanel:Init()
     Settings.RegisterAddOnCategory(self.category)
 end
 
-function SettingsPanel:Open()
-    self.window:Open()
+-- key: a page to open the window on (else the one it was on).
+function SettingsPanel:Open(key)
+    self.window:Open(key)
 end
 
-function SettingsPanel:Toggle()
-    self.window:Toggle()
+function SettingsPanel:Toggle(key)
+    self.window:Toggle(key)
 end

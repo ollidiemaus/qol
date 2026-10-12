@@ -6,9 +6,9 @@ Notes for working on the addon. What it does for players is in the [README](../R
 
 | Folder | What's in it |
 |---|---|
-| `Core/` | Namespace and printing (`Init`), the event frame (`Events`), saved options with defaults and change watchers (`Options`), deferred changes (`Later`), the hidden holder for hidden frames (`Hider`), what the back buttons and the rings share (`Buttons`: an action slot's look, override bindings), our windows' frame (`Window`: the settings and the rings' editor), `/qol` (`Slash`) and startup (`Lifecycle`) |
+| `Core/` | Namespace and printing (`Init`), the event frame (`Events`), saved options with defaults and change watchers (`Options`), deferred changes (`Later`), the hidden holder for hidden frames (`Hider`), what the back buttons and the rings share (`Buttons`: an action slot's look, override bindings), our windows' frame (`Window`: the settings), `/qol` (`Slash`) and startup (`Lifecycle`) |
 | `Data/` | Static game data: `MapPins` (dungeon entrances, docks, portals; how it was made is at the top of the file) |
-| `Features/` | One file per feature: `Merchant`, `Quests`, `Tooltips`, `HideFrames` (also the chat buttons), `BuffTooltips` (the controller interface's tooltips for new buffs), `CombatLog`, `ChatClassColors`, `CombinedBagSort`, `CombinedBagLayout`, `ClassHealthBars`, `Minimap` (shape, positions, class colors and font sizes around the minimap), `MapPins`, `Viewport`, `ActionBars`, `ButtonBorders`, `BarPaging`, `BackButtons` (the controller back buttons, Forever only), `RingEntries` (what can go on a ring, and what a character has of it), `Ring`, `RingPicker` (the editor's list), `RingEditor` (`/qol ring`), `ReloadCommand` |
+| `Features/` | One file per feature: `Merchant`, `Quests`, `Tooltips`, `HideFrames` (also the chat buttons), `BuffTooltips` (the controller interface's tooltips for new buffs), `CombatLog`, `ChatClassColors`, `CombinedBagSort`, `CombinedBagLayout`, `ClassHealthBars`, `Minimap` (shape, positions, class colors and font sizes around the minimap), `MapPins`, `Viewport`, `ActionBars`, `ButtonBorders`, `BarPaging`, `BackButtons` (the controller back buttons, Forever only), `RingEntries` (what can go on a ring, and what a character has of it), `Ring`, `RingPicker` (the editor's list), `RingEditor` (the settings' Ring page, `/qol ring`), `ReloadCommand` |
 | `UI/` | `SettingsPage.lua`, a settings page (two columns, or rows across the page, and key binding rows); `SettingsWindow.lua`, the window that `/qol` opens, with the list of pages; `InfoPage.lua`, the information page under Options > AddOns, with a button that opens the window; `Settings.lua`, the pages built with them, in the list's order |
 | `Locales/` | English strings, German overrides |
 | `Media/` | `Icon.tga`, the addon list icon (the TOC's `IconTexture`, 128×128, 32-bit), and `Icon.svg`, its source (not packaged); `Zeppelin.tga`, `Tram.tga`, `MinimapSquareBorder.tga` and the rings' `Ring.tga`, `RingSpoke.tga`, `RingLit1.tga` to `RingLit12.tga` and `RingSlot.tga` (see below); `AutoPotion.tga`, `AutoSetup.tga` and `Wayscribe.tga`, copies of the other addons' icons for the information page |
@@ -270,60 +270,58 @@ the cursor and how to read it off the cursor. A character's ring is the entries 
   does. It keeps the stick after the ring closes until the stick is at rest (`len` under 0.1) or for
   half a second, like `InputAxisBinding`'s `waitForCentering`, so letting go of the key with the
   stick out doesn't swing the camera.
-- `/qol ring` opens the editor (`Features/RingEditor.lua`): `QoLRingEditor`, our own frame
-  (`ns.NewWindow` in `Core/Window.lua`, as the settings window) from the game's
-  `PortraitFrameTemplate` (Forever draws its `UI-Frame-Metal-*` and portrait corner in
-  bronze, `NineSliceLayoutOverrides.lua`), 860×640, with the addon's icon as portrait and a title
-  bar of ours to drag it by (`RegisterForDrag`, not `OnMouseDown`, which the controller's cursor
-  would stop on; `SetMovable`, `SetClampedToScreen`, `SetDontSavePosition`). The close button's
-  OnClick is replaced by our own `Hide` (the template's goes through `HideUIPanel`). Inside lies
-  one spell book page, `spellbook-page-condensed-c60` stretched over the frame's background area;
-  its dark top bar is its upper 8.1% and the parchment lies inside rims of 9.4% (top), 2.6%
-  (bottom), 3% (left) and 2.6% (right), measured from the texture of client 1.60.1. Without that
-  atlas (retail) it's a dark bar over plain parchment colors. Text on the paper is ink:
-  `SPELLBOOK_FONT_COLOR` (or Forever 1.60.1's value) without the font's shadow
-  (`RingPicker.Ink`). Everything on the parchment is the page's (its font strings and child
-  frames): the page is a child of the window, so it draws over the window's own regions, and the
-  window's other children at the page's frame level have their layers drawn among the page's. Built
-  on the window, the keys' names and the note vanished under the parchment and the buttons kept
-  only their text (seen in game, 2026-10).
-- The editor's left half holds the ring (the same art, with Buttons for slots, plus one empty slot
-  to add to), with "Ring 1 of 3" and the spell book's page buttons (`UI-SpellbookIcon-*Page-*`) in
-  the page's top bar. It shows the ring as this character sees it and maps a slot to its place in the saved
+- The rings' editor (`Features/RingEditor.lua`) is the settings window's Ring page; `/qol ring`
+  opens the window there (`SettingsPanel:Toggle("ring")`: from another page it goes there instead of
+  closing). Until 2026-10 it was a window of its own, opened by a button on that page, which only
+  held the switch besides: the editor is now the page. Its title bar (`SettingsPage.TOP`, 54) keeps
+  the page's title, with the switch where the other pages have their Defaults button (a `"title"`
+  row; no Defaults button, which would only turn the rings off). Below it, filling the rest of the
+  page (665×547), lies `QoLRingEditor`: one spell book page, `spellbook-page-condensed-c60`
+  stretched over it; its dark top bar is its upper 8.1% and the parchment lies inside rims of 9.4%
+  (top), 2.6% (bottom), 3% (left) and 2.6% (right), measured from the texture of client 1.60.1.
+  Without that atlas (retail) it's a dark bar over plain parchment colors. Text on the paper is
+  ink: `SPELLBOOK_FONT_COLOR` (or Forever 1.60.1's value) without the font's shadow
+  (`RingPicker.Ink`). The page wraps `Page:Refresh` to refresh the editor too, so it's up to date
+  whenever the window shows the page and when the switch changes.
+- The room is the game's canvas (665 wide) where the window was 860, so the left column is 256
+  wide and the list 350 (2×9 rows of 175, which cuts long names shorter; the tooltip has them). The
+  ring is drawn at 0.66 (`SetScale` on its frame, anchored only to the middle of a room at the
+  page's scale, as offsets from a scaled frame shrink too), in the room the biggest one takes. The
+  list's five tabs (at least 92 units each, as wide as their side art) reach 464 into the top bar
+  from the list's right edge, past its left one, over the left column: so "Ring 1 of 3" and its
+  arrows stand on the parchment above the ring instead of in the bar. The keys' names are left of
+  their boxes, on two lines when they need them.
+- The editor's left column holds the ring (the same art, with Buttons for slots, plus one empty
+  slot to add to), with "Ring 1 of 3" and the spell book's page buttons (`UI-SpellbookIcon-*Page-*`)
+  above it. It shows the ring as this character sees it and maps a slot to its place in the saved
   list, so an entry dropped on slot 3 goes before the entry shown there, with other characters'
   entries kept where they are. Dropping reads `GetCursorInfo()` (a spell that's a mount's,
   `C_MountJournal.GetMountFromSpell`, is the mount; an item that's a toy, `PlayerHasToy`, the toy);
   an entry already on the ring moves. Taking one off puts it on the cursor (`C_Spell.PickupSpell`,
   `C_Item.PickupItem`, `C_ToyBox.PickupToyBoxItem`, `PickupMacro`; a mount by its spell). It only
-  changes our saved table and asks for an update; out of combat only, and combat closes it.
-- Escape: the editor isn't in `UISpecialFrames`, because the game hides those not only on Escape but
-  whenever a window opens in the middle of the screen (`ShowUIPanel` of a `"center"` panel calls
-  `CloseWindows`, which calls `CloseSpecialWindows`), and the spell book (`PlayerSpellsFrame`,
-  `"centerOrLeft"`) opens there when nothing else is open; that closed the editor on P. Instead the
-  editor takes the keyboard (`EnableKeyboard`) with an `OnKeyDown` that hides it on Escape and keeps
-  that key (`SetPropagateKeyboardInput(false)`); every other key goes on to the game, and from the
-  next frame on (`ns.Later`) and on opening keys go through again (`SetPropagateKeyboardInput(true)`;
-  restricted in combat, and the editor is only open out of it). The key boxes' listener sits above it and keeps every key, so
-  there Escape only cancels. While `SettingsPanel` or `GameMenuFrame` is shown, Escape goes on to
-  the game, which closes them first. Not through the game's `RegisterGameMenuEscHandler` (12.1 and
-  Forever): it inserts and sorts our handler into its list from our code, so the list's slots carry
-  our taint into every `ToggleGameMenu`. With the controller, the close button closes it.
-- The Ring page's button (`Page:Button`) opens the editor over the settings window, which stays
-  open. Both are toplevel at `DIALOG` strata, so the one shown or clicked last is on top and gets
-  Escape first.
-- The editor's right half is `Features/RingPicker.lua`, built after Forever's spell book: tabs from
+  changes our saved table and asks for an update; out of combat only. The settings open in combat,
+  so the page does too: it shows the rings, its buttons and key boxes are off (`SetEnabled`), a
+  click, drop or drag changes nothing, and the note says why. `PLAYER_REGEN_DISABLED` comes while
+  `InCombatLockdown` is still false, so that handler locks the page itself; `PLAYER_REGEN_ENABLED`
+  refreshes it, with what changed meanwhile.
+- Escape and the other keys are the settings window's (`ns.NewWindow`, below): Escape closes it,
+  every other key goes on to the game, so P opens the spell book with the window open (it isn't in
+  `UISpecialFrames`, which the spell book would close). The key boxes' listener sits above the
+  window and keeps every key, so there Escape only cancels. Leaving the page or closing the window
+  (the editor's `OnHide`) stops waiting for a key and takes the focus from the search box.
+- The editor's right column is `Features/RingPicker.lua`, built after Forever's spell book: tabs from
   the game's `TabSystemTopButtonTemplate` standing on the parchment's top edge (the tab system they
   call, their parent, is a strip of ours with `SetTab`, `GetTabWidthConstraints` and
   `PlayTabSelectSound`; five tabs are 92 units each at least, so they end at the list's right edge
   instead of starting at its left one), a `SearchBoxTemplate` (case-insensitive substring of the
-  name), and 2×10 rows filled down the first column, then the second, a page at a time, with the
+  name), and 2×9 rows filled down the first column, then the second, a page at a time, with the
   spell book's page buttons and the mouse wheel. Paging instead of a scroll box: the controller's
   cursor gets to every row and the page buttons, and it's how the spell book does it. A row is the
   spell book's entry: icon (`spellbook-item-spellicon-mask`) in `spellbook-item-iconframe-c60`,
   `spellbook-item-iconframe-hover` and `spellbook-item-backplate` as highlight, name and subtext in
   ink, and a check mark when the entry is on the ring shown. A click puts it at the end of the ring
   (refused past 12 shown) or takes it off; a drag picks it up (`RingEntries.Pickup`). The list is
-  read again when the editor opens and on the rings' known events while it's open.
+  read again when the page is shown and on the rings' known events while it is.
 - What a character has (`RingEntries.Owned`): the spell book's skill lines that aren't hidden
   (`C_SpellBook.GetSpellBookSkillLineInfo`), their spells without passives and other
   specializations' (a mount's spell as the mount), a flyout's known spells in its place
@@ -342,8 +340,8 @@ the cursor and how to read it off the cursor. A character's ring is the entries 
   `ns.LaterOutsideWindows`, out of combat and away from the game's controller windows, on the
   option, on the editor's changes and on what changes what a character has (`SPELLS_CHANGED`,
   `BAG_UPDATE_DELAYED`, `PLAYER_EQUIPMENT_CHANGED`, `UPDATE_MACROS`, the toy and mount events). In
-  combat a ring keeps what it had. The editor is no such window (the controller manager doesn't
-  know it), so the rings change while it is open.
+  combat a ring keeps what it had. The settings window is no such window (the controller manager
+  doesn't know it), so the rings change while the page is open.
 
 The rings' textures come from Forever's own art (build 1.60.1.70291). `Media/Ring.tga` (512×512,
 drawn 343 units wide) is a dark disc, the radial menu's wheel (`gamepad-radial-menu-wheelbg`, file
@@ -369,7 +367,7 @@ they moved out because the game, on Forever with the controller interface on, fr
 its settings closed after a change in them (below). Out there, nothing of ours runs while the game's
 settings are open, and closing our window is a plain `Hide` of a frame of ours.
 
-- The window is `ns.NewWindow` (`Core/Window.lua`, shared with the rings' editor) with
+- The window is `ns.NewWindow` (`Core/Window.lua`) with
   `PortraitFrameFlatTemplate`: the game's portrait frame, whose `UI-Frame-Metal-*` border and portrait
   corner Forever draws in bronze, with the flat dark background of the game's settings
   (`FlatPanelBackgroundTemplate`). Inside, it copies the game's `SettingsPanel`
@@ -389,9 +387,8 @@ settings are open, and closing our window is a plain `Hide` of a frame of ours.
   selected, `Options_List_Hover` under the mouse. A click selects with the game's sound.
 - One page is shown at a time; the window refreshes it when it shows it (a selection, or the window
   opening on the page it was on), and a page follows `Options:Watch` while visible.
-- Escape closes the window, other keys go on to the game (`ns.NewWindow`, as the rings' editor did
-  it, see there): not through `UISpecialFrames` or `RegisterGameMenuEscHandler`. Unlike the editor,
-  the settings open in combat too. Keeping a key (`SetPropagateKeyboardInput(false)`) is restricted
+- Escape closes the window, other keys go on to the game (`ns.NewWindow`): not through
+  `UISpecialFrames` or `RegisterGameMenuEscHandler`. The window opens in combat too. Keeping a key (`SetPropagateKeyboardInput(false)`) is restricted
   in combat, so there every key goes on to the game, Escape too, and the X closes the window; after
   Escape closed it, keys are let through again from the next frame (`ns.Later`), so the window never
   opens in combat holding the keyboard.
@@ -418,8 +415,9 @@ The options are grouped by part of the game: Automation (merchant and quests), I
 (the bars to hide, the combined bags, tooltips, health bars), Chat (the chat window, `/rl`), Action
 Bars, Minimap, World map (only where `MapPins.IsAvailable()`), Viewport, Ring and Controller (only
 on Forever). Every page is built by `UI/SettingsPage.lua`: two columns of rows, or rows across the
-page (`"wide"`, the Viewport page, as its sliders need the room, the Ring page, with one option and
-a note, and the World map page, with two), each an option's name with a control from the game's own
+page (`"wide"`, the Viewport page, as its sliders need the room, and the World map page, with two),
+or an option in the title bar instead of the Defaults button (`"title"`, the Ring page's switch,
+with the rings' editor below it), each an option's name with a control from the game's own
 templates (`SettingsCheckboxTemplate`, `WowStyle2DropdownTemplate`,
 `MinimalSliderWithSteppersTemplate`, `ColorSwatchTemplate` opening `ColorPickerFrame`), so they look
 like the game's pages and fit without scrolling (`SettingsPage.MAX_HEIGHT`, checked by the tests).
@@ -595,7 +593,8 @@ Things only the real client can confirm:
   game's options, Escape closing those first. In combat it opens, every key (Escape too) goes to
   the game, the X closes it. The pages: two columns in English and German (no name cut off),
   checkboxes and dropdowns working, dependent options greyed out, and the Defaults button asking
-  first. The Ring page's button opens the editor over the window, Escape closes the editor first.
+  first. The Ring page: the switch in the title bar lined up with the title, the parchment below
+  the divider, nothing past the page's edges (English and German).
 - The zeppelin and tram pins' icons next to the boats', on zone and continent maps.
 - Hidden button borders on every bar (also the stance and pet bars): square icons, the mouseover,
   pressed and checked (auto attack, an active stance) textures, the red auto attack flash, the
@@ -627,19 +626,19 @@ Things only the real client can confirm:
   - The keys still work after opening and closing a gamepad window (bags, map, the settings), and
     no "tainted by" error shows up in combat afterwards.
 - The rings (the Ring page on, rings made with `/qol ring`):
-  - The editor's window: the bronze frame, the parchment page and its top bar line up (also at
-    other UI scales), dragging the title bar moves it, the close button closes it. The list: each
+  - The Ring page: the parchment page and its top bar line up below the title (also at other UI
+    scales); the tabs in the bar clear of "Ring 1 of 3" and its arrows; the smaller ring with 12
+    actions inside its column; the keys' names on two lines where needed (German too). The list: each
     tab, the search box, the page buttons and the mouse wheel, clicking an entry on and off the
     ring, its check mark, dragging one onto a slot, a full ring refused, the tooltips; with the
     controller cursor, the tabs, rows and page buttons. A spell learned while it's open shows up.
   - The editor: dragging spells (from the spell book and from action bars), items from the bags,
     toys from the toy box, mounts from the mount journal and macros onto the empty slot, onto a
     slot and off the ring; picking up and putting down with clicks, also with the controller cursor;
-    right-click; the tooltips; a 13th action refused; new, switching, deleting; Escape and the close
-    button; closing when combat starts. P opens the spell book with the editor open, and both stay
-    open; moving with the keys while it's open. The Ring page's button: the editor over the
-    settings, Escape closes the settings (and the game menu), then the editor. Entries for another class show on that class only, and the
-    editor counts them.
+    right-click; the tooltips; a 13th action refused; new, switching, deleting; in combat the
+    buttons off and nothing changing, back once it ends. P opens the spell book with the page open,
+    and both stay open; moving with the keys while it's open. Entries for another class show on that
+    class only, and the page counts them.
   - Keys in the editor: a key, a key with a modifier, a controller button (in the controller
     interface too), Escape, right-click, a key taken from another ring. While the rings are on the
     key opens its ring instead of its Key Bindings action; with them off (or the ring empty for this

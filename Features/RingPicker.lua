@@ -15,7 +15,8 @@ local KINDS = { "spell", "item", "toy", "mount", "macro" }
 local LABELS = {
     spell = L.RING_SPELLS, item = L.RING_ITEMS, toy = L.RING_TOYS, mount = L.RING_MOUNTS, macro = L.RING_MACROS,
 }
-Picker.COLUMNS, Picker.ROWS = 2, 10
+-- Two columns of nine: what fits the settings page below its search box and above its page buttons.
+Picker.COLUMNS, Picker.ROWS = 2, 9
 Picker.ROW_HEIGHT = 44
 local ICON = 36
 local SEARCH_HEIGHT = 22
@@ -261,14 +262,14 @@ function Picker.Create(column, rise, handlers)
     pageText:SetPoint("RIGHT", previous, "LEFT", -8, 0)
     Picker.Ink(pageText)
 
-    -- Filled when the editor opens.
+    -- Filled when the Ring page is shown.
     newTabs(column, rise)
     selectTab(shown.kind)
     column.search, column.rows, column.tabs, column.empty = search, rows, tabs, empty
     column.previous, column.next, column.page = previous, nextPage, pageText
 end
 
--- The editor closed: no more typing into the search box.
+-- The Ring page was left: no more typing into the search box.
 function Picker.Hide()
     if search then search:ClearFocus() end
 end

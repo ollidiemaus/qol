@@ -8,7 +8,8 @@ local Options = ns.Options
 -- its name with a checkbox, a dropdown, a slider or a color swatch, from the game's own templates,
 -- a key binding's two keys, as in the game's Key Bindings, or a button that opens something. Every
 -- name uses the same font; an option that belongs to another one sits indented below it and is
--- greyed out while it can't apply.
+-- greyed out while it can't apply. A page that is one thing of its own below its title (the rings'
+-- editor) can have its switch in the title bar instead of the Defaults button ("title").
 --
 -- Every control reads and writes ns.Options, and the page follows Options:Watch, so it also shows
 -- changes made elsewhere. The window parents and shows the page, and refreshes it when it does.
@@ -28,11 +29,14 @@ local DROPDOWN_WIDTH = 160
 local SLIDER_WIDTH = 250
 local SLIDER_VALUE_ROOM = 50 -- right of a slider in a column, for its value
 local WIDE_CONTROL_X = -80   -- in a wide row the control starts there from the middle, as on the game's list
+local TITLE_ROW_Y, TITLE_ROW_RIGHT, TITLE_ROW_WIDTH = 14, 28, 300 -- an option in the title bar
 local KEY_WIDTH, KEY_HEIGHT = 160, 22 -- a key binding's buttons, as in the game's Key Bindings
 local BUTTON_WIDTH, BUTTON_HEIGHT = 160, 22
 local CONFIRM_SECONDS = 3
 -- The room the settings window gives a page (as the game's settings do), checked by the tests.
 Page.MAX_HEIGHT = 600
+-- Where the rows start, below the title and its divider.
+Page.TOP = TOP
 
 -- Key binding rows: the frame of ours that takes the keyboard while a button waits for a key, and
 -- { control, slot } of that button.
@@ -64,7 +68,8 @@ end
 ------------------------------------------------------------------------------------------------
 -- The page
 
-function Page.New(title)
+-- options: defaults (false for a page without a Defaults button).
+function Page.New(title, options)
     local frame = CreateFrame("Frame")
     frame:Hide()
     local page = setmetatable({ title = title, frame = frame, controls = {}, headers = {}, keys = {},
@@ -79,7 +84,7 @@ function Page.New(title)
     divider:SetAtlas("Options_HorizontalDivider", true)
     divider:SetPoint("TOP", frame, "TOP", 0, -50)
 
-    page:CreateDefaultsButton()
+    if not (options and options.defaults == false) then page:CreateDefaultsButton() end
 
     -- Leaving the page (or closing the window) stops waiting for a key.
     frame:HookScript("OnHide", function()
@@ -173,9 +178,16 @@ end
 ------------------------------------------------------------------------------------------------
 -- Rows
 
--- column: "left", "right", or "wide" (across both, below what either holds so far).
+-- column: "left", "right", "wide" (across both, below what either holds so far) or "title" (in the
+-- title bar).
 local function newRow(page, column, height)
     local row = CreateFrame("Frame", nil, page.frame)
+    if column == "title" then
+        -- In the title bar, where the other pages have their Defaults button; the rows below don't move.
+        row:SetPoint("TOPRIGHT", page.frame, "TOPRIGHT", -TITLE_ROW_RIGHT, -TITLE_ROW_Y)
+        row:SetSize(TITLE_ROW_WIDTH, height)
+        return row
+    end
     if column == "wide" then
         local y = page:Height()
         row:SetPoint("TOPLEFT", page.frame, "TOPLEFT", MARGIN, -y)
@@ -231,7 +243,8 @@ local function optionRow(page, column, kind, key, label, tooltip, options)
     end
     local text = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     text:SetPoint("LEFT", row, "LEFT", LABEL_X + (options.indent and INDENT or 0), 0)
-    text:SetJustifyH("LEFT")
+    -- In the title bar the name goes next to its control.
+    text:SetJustifyH(column == "title" and "RIGHT" or "LEFT")
     text:SetWordWrap(false)
     text:SetText(name())
 
