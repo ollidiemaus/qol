@@ -2,14 +2,14 @@ local _, ns = ...
 local L = ns.L
 local Options = ns.Options
 
--- Quality of Life's pages under Options > AddOns: the information page (UI/InfoPage.lua), which /qol
--- opens, and below it a page for each part of the game: Automation, Interface, Chat, Action Bars,
--- Minimap, World map (on Forever's maps), Viewport, Ring and, on Forever (which has the controller
--- action bar), Controller. Every page is our own (UI/SettingsPage.lua), none is the game's own list
--- of settings: on Forever, with the controller interface on, the game stopped responding when the
--- settings closed after showing Viewport as the game's list, with its sliders and color swatch (see
--- docs/DEVELOPMENT.md). The pages only read and write ns.Options, and the features react through
--- Options:Watch. Without the Settings API the pages are skipped.
+-- Quality of Life's settings: a window of our own (UI/SettingsWindow.lua), which /qol opens, with a
+-- page for each part of the game: Automation, Interface, Chat, Action Bars, Minimap, World map (on
+-- Forever's maps), Viewport, Ring and, on Forever (which has the controller action bar), Controller.
+-- Under Options > AddOns there's only the information page (UI/InfoPage.lua), with a button that
+-- opens the window. The game's settings have nothing of ours to change: on Forever, with the
+-- controller interface on, the game stopped responding now and then when they closed after a
+-- change (see docs/DEVELOPMENT.md). The pages only read and write ns.Options, and the features react
+-- through Options:Watch.
 local SettingsPanel = {}
 ns.SettingsPanel = SettingsPanel
 
@@ -211,8 +211,8 @@ local function buildViewport(page)
     end
 end
 
--- The pages below the information page, in the order of the list on the left. available: whether the
--- page has anything to change on this client.
+-- The window's pages, in the order of its list. available: whether the page has anything to change
+-- on this client.
 local PAGES = {
     { key = "automation", title = L.CATEGORY_AUTOMATION, build = buildAutomation },
     { key = "interface", title = L.CATEGORY_INTERFACE, build = buildInterface },
@@ -230,30 +230,33 @@ local PAGES = {
 }
 
 function SettingsPanel:Init()
-    if not (Settings and Settings.RegisterCanvasLayoutCategory and Settings.RegisterCanvasLayoutSubcategory) then
-        return
-    end
-    local shown = {}
-    for _, info in ipairs(PAGES) do
-        if not info.available or info.available() then shown[#shown + 1] = info end
-    end
-
-    self.info = ns.InfoPage.New()
-    local category = self.info:Register()
+    self.window = ns.SettingsWindow.New()
     self.pages = {}
-    for _, info in ipairs(shown) do
-        local page = ns.SettingsPage.New(info.title)
-        info.build(page)
-        page:Register(category)
-        self.pages[info.key] = page
+    for _, info in ipairs(PAGES) do
+        if not info.available or info.available() then
+            local page = ns.SettingsPage.New(info.title)
+            info.build(page)
+            self.window:Add(info.key, info.title, page)
+            self.pages[info.key] = page
+        end
     end
 
-    Settings.RegisterAddOnCategory(category)
-    self.category = category
+    -- Without the Settings API there's no AddOns list for the information page; /qol still works.
+    if not (Settings and Settings.RegisterCanvasLayoutCategory and Settings.RegisterAddOnCategory) then return end
+    -- In Forever's controller interface the window waits until the game's settings and menu are
+    -- closed: they have the controller while open, so it couldn't get to the window, and nothing of
+    -- ours should change while they're open.
+    self.info = ns.InfoPage.New(function()
+        ns.LaterOutsideWindows("settingsWindow", function() self:Open() end)
+    end)
+    self.category = self.info:Register()
+    Settings.RegisterAddOnCategory(self.category)
 end
 
 function SettingsPanel:Open()
-    if self.category and Settings.OpenToCategory then
-        Settings.OpenToCategory(self.category:GetID())
-    end
+    self.window:Open()
+end
+
+function SettingsPanel:Toggle()
+    self.window:Toggle()
 end

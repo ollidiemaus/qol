@@ -1,10 +1,10 @@
 local addonName, ns = ...
 local L = ns.L
 
--- Quality of Life's own entry under Options > AddOns, which /qol opens: what the addon is, the chat
--- commands and the author's other addons, as on AutoPotion's information page. It has no options (so
--- no Defaults button) and, like the other pages, fits without scrolling below the same title bar. All
--- frames are ours and are made at login, like the other pages'.
+-- Quality of Life's entry under Options > AddOns: what the addon is, a button that opens the settings
+-- window (as /qol does), the chat commands and the author's other addons, as on AutoPotion's
+-- information page. It has no options (so no Defaults button) and fits without scrolling below a
+-- title bar like the settings pages'. All frames are ours and are made at login.
 local InfoPage = {}
 InfoPage.__index = InfoPage
 ns.InfoPage = InfoPage
@@ -20,6 +20,7 @@ local ADDON_ICON_SIZE = 36
 local ICON_GAP = 10
 local LINK_WIDTH, LINK_HEIGHT = 300, 20
 local LINK_BORDER = 5 -- InputBoxTemplate draws its border this far outside the box
+local OPEN_WIDTH, OPEN_HEIGHT = 220, 22
 
 local COMMANDS = {
     { command = "/qol", about = L.INFO_COMMAND_SETTINGS },
@@ -64,10 +65,12 @@ local function version()
     return text
 end
 
-function InfoPage.New()
+-- openSettings: what the button does.
+function InfoPage.New(openSettings)
     local frame = CreateFrame("Frame")
     frame:Hide()
-    local info = setmetatable({ frame = frame, sections = {}, entries = {}, installed = {}, links = {} }, InfoPage)
+    local info = setmetatable({ frame = frame, sections = {}, entries = {}, installed = {}, links = {},
+        openSettings = openSettings }, InfoPage)
 
     local title = frame:CreateFontString(nil, "ARTWORK", "GameFontHighlightHuge")
     title:SetPoint("TOPLEFT", frame, "TOPLEFT", 7, -22)
@@ -191,9 +194,27 @@ function InfoPage:Link(addon)
     self.last, self.indent = box, self.indent + LINK_BORDER
 end
 
+-- The button to the settings, below the introduction. In Forever's controller interface the window
+-- opens once the game's settings are closed, and a line next to the button says so.
+function InfoPage:SettingsButton()
+    local button = CreateFrame("Button", nil, self.content, "UIPanelButtonTemplate")
+    button:SetSize(OPEN_WIDTH, OPEN_HEIGHT)
+    button:SetPoint("TOPLEFT", self.last, "BOTTOMLEFT", 0, -ENTRY_GAP)
+    button:SetText(L.INFO_OPEN_SETTINGS)
+    button:SetScript("OnClick", function() self.openSettings() end)
+    local later = self.content:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
+    later:SetPoint("LEFT", button, "RIGHT", 8, 0)
+    later:SetPoint("RIGHT", self.content, "RIGHT")
+    later:SetJustifyH("LEFT")
+    later:SetText(L.INFO_OPEN_SETTINGS_LATER)
+    self.openButton, self.openLater = button, later
+    self.last = button
+end
+
 function InfoPage:Build()
     self.last = self:Text("GameFontNormal", L.INFO_INTRO)
     self.indent = 0
+    self:SettingsButton()
 
     self:Section(L.INFO_COMMANDS)
     for _, entry in ipairs(COMMANDS) do
@@ -207,14 +228,16 @@ function InfoPage:Build()
 end
 
 -- Installed next to the other addons that are loaded: checked on each showing, as addons that load
--- after this one aren't loaded yet when the page is made.
+-- after this one aren't loaded yet when the page is made. The same for the controller interface,
+-- which the game switches without a reload.
 function InfoPage:Refresh()
     for name, label in pairs(self.installed) do
         label:SetShown(isAddOnLoaded(name))
     end
+    self.openLater:SetShown(ns.IsControllerUI())
 end
 
--- The addon's category in Options > AddOns, which the other pages go below.
+-- The addon's category in Options > AddOns.
 function InfoPage:Register()
     return Settings.RegisterCanvasLayoutCategory(self.frame, L.ADDON_TITLE)
 end

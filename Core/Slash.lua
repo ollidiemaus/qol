@@ -1,8 +1,8 @@
 local _, ns = ...
 local L = ns.L
 
--- /qol (or /qualityoflife) opens the settings; there's no minimap button. /qol ring (or rings)
--- opens the rings' editor.
+-- /qol (or /qualityoflife) opens the settings window, or closes it again; there's no minimap button.
+-- /qol ring (or rings) opens the rings' editor.
 SLASH_QOL1 = "/qol"
 SLASH_QOL2 = "/qualityoflife"
 
@@ -16,5 +16,5 @@ SlashCmdList.QOL = function(message)
         ns.RingEditor:Toggle()
         return
     end
-    ns.SettingsPanel:Open()
+    ns.SettingsPanel:Toggle()
 end

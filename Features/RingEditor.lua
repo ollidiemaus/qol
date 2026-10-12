@@ -51,11 +51,6 @@ local waiting
 local function rings() return Ring.List() end
 local function ring() return rings()[current] end
 
--- The settings and the game menu take Escape before the editor, which the Ring page opens over them.
-local function gameWindowOpen()
-    return (SettingsPanel and SettingsPanel:IsShown()) or (GameMenuFrame and GameMenuFrame:IsShown())
-end
-
 local function keyName(index, aim)
     return (aim == "mouse" and L.RING_KEY_MOUSE or L.RING_KEY_STICK):format(index)
 end
@@ -394,33 +389,6 @@ local function newPage()
     return page, edges
 end
 
--- The window: the game's portrait frame, with the addon's icon and a title bar to move it by. Its
--- close button hides it directly (the template's would go through the game's panel code).
-local function newWindow()
-    editor = CreateFrame("Frame", "QoLRingEditor", UIParent, "PortraitFrameTemplate")
-    editor:SetSize(WIDTH, HEIGHT)
-    editor:SetPoint("CENTER")
-    editor:SetFrameStrata("DIALOG")
-    editor:SetToplevel(true)
-    editor:SetMovable(true)
-    editor:SetClampedToScreen(true)
-    editor:SetDontSavePosition(true)
-    editor:EnableMouse(true)
-    editor:Hide()
-    editor:SetTitle(L.RING_EDITOR)
-    editor:SetPortraitToAsset("Interface\\AddOns\\QoL\\Media\\Icon")
-    editor.CloseButton:SetScript("OnClick", function() editor:Hide() end)
-    -- A drag, not a mouse down: the controller's cursor would stop on a frame with OnMouseDown.
-    local titleBar = CreateFrame("Frame", nil, editor)
-    titleBar:SetPoint("TOPLEFT", 58, 0)
-    titleBar:SetPoint("TOPRIGHT", -24, 0)
-    titleBar:SetHeight(21)
-    titleBar:EnableMouse(true)
-    titleBar:RegisterForDrag("LeftButton")
-    titleBar:SetScript("OnDragStart", function() editor:StartMoving() end)
-    titleBar:SetScript("OnDragStop", function() editor:StopMovingOrSizing() end)
-end
-
 -- The ring, which one it is with arrows to the others in the bar above it, and the actions on it.
 -- All of it on the page: the page is a child of the window, so it covers the window's own text,
 -- and the window's other children at its frame level have their layers drawn among its parchment.
@@ -497,15 +465,7 @@ local function newListColumn(page, edges)
 end
 
 local function create()
-    newWindow()
-    -- Escape closes it, and the other keys go on to the game. Not through UISpecialFrames: the game
-    -- closes those whenever one of its windows opens in the middle of the screen, the spell book too.
-    editor:EnableKeyboard(true)
-    editor:SetScript("OnKeyDown", function(_, key)
-        if key ~= "ESCAPE" or InCombatLockdown() or gameWindowOpen() then return end
-        editor:SetPropagateKeyboardInput(false)
-        editor:Hide()
-    end)
+    editor = ns.NewWindow("QoLRingEditor", L.RING_EDITOR, WIDTH, HEIGHT)
     editor:SetScript("OnHide", function()
         stopWaiting()
         Picker.Hide()
@@ -542,12 +502,10 @@ function Editor:Open()
         return
     end
     if not editor then create() end
-    -- Restricted in combat; the editor is only open out of it.
-    editor:SetPropagateKeyboardInput(true)
     render()
     Picker.Fill()
     say(nil)
-    editor:Show()
+    ns.ShowWindow(editor)
 end
 
 function Editor:Toggle()

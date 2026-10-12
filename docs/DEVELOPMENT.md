@@ -6,16 +6,16 @@ Notes for working on the addon. What it does for players is in the [README](../R
 
 | Folder | What's in it |
 |---|---|
-| `Core/` | Namespace and printing (`Init`), the event frame (`Events`), saved options with defaults and change watchers (`Options`), deferred changes (`Later`), the hidden holder for hidden frames (`Hider`), what the back buttons and the rings share (`Buttons`: an action slot's look, override bindings), `/qol` (`Slash`) and startup (`Lifecycle`) |
+| `Core/` | Namespace and printing (`Init`), the event frame (`Events`), saved options with defaults and change watchers (`Options`), deferred changes (`Later`), the hidden holder for hidden frames (`Hider`), what the back buttons and the rings share (`Buttons`: an action slot's look, override bindings), our windows' frame (`Window`: the settings and the rings' editor), `/qol` (`Slash`) and startup (`Lifecycle`) |
 | `Data/` | Static game data: `MapPins` (dungeon entrances, docks, portals; how it was made is at the top of the file) |
 | `Features/` | One file per feature: `Merchant`, `Quests`, `Tooltips`, `HideFrames` (also the chat buttons), `BuffTooltips` (the controller interface's tooltips for new buffs), `CombatLog`, `ChatClassColors`, `CombinedBagSort`, `CombinedBagLayout`, `ClassHealthBars`, `Minimap` (shape, positions, class colors and font sizes around the minimap), `MapPins`, `Viewport`, `ActionBars`, `ButtonBorders`, `BarPaging`, `BackButtons` (the controller back buttons, Forever only), `RingEntries` (what can go on a ring, and what a character has of it), `Ring`, `RingPicker` (the editor's list), `RingEditor` (`/qol ring`), `ReloadCommand` |
-| `UI/` | `SettingsPage.lua`, our own settings page (two columns, or rows across the page, and key binding rows); `InfoPage.lua`, the information page that `/qol` opens; `Settings.lua`, the pages under Options > AddOns built with them, in the list's order |
+| `UI/` | `SettingsPage.lua`, a settings page (two columns, or rows across the page, and key binding rows); `SettingsWindow.lua`, the window that `/qol` opens, with the list of pages; `InfoPage.lua`, the information page under Options > AddOns, with a button that opens the window; `Settings.lua`, the pages built with them, in the list's order |
 | `Locales/` | English strings, German overrides |
 | `Media/` | `Icon.tga`, the addon list icon (the TOC's `IconTexture`, 128×128, 32-bit), and `Icon.svg`, its source (not packaged); `Zeppelin.tga`, `Tram.tga`, `MinimapSquareBorder.tga` and the rings' `Ring.tga`, `RingSpoke.tga`, `RingLit1.tga` to `RingLit12.tga` and `RingSlot.tga` (see below); `AutoPotion.tga`, `AutoSetup.tga` and `Wayscribe.tga`, copies of the other addons' icons for the information page |
 | `tests/` | Specs run in plain Lua against `tests/wow_stubs.lua` |
 | `Bindings.xml` | The back buttons' entries under Key Bindings > AddOns (the client loads it from the addon's folder, not the TOC) |
 
-Features never talk to each other or to the settings page. The page writes `ns.Options`; a feature
+Features never talk to each other or to the settings pages. A page writes `ns.Options`; a feature
 reads it with `Options:Get` and reacts to changes through `Options:Watch`.
 
 ## Rules for touching Blizzard frames
@@ -270,8 +270,9 @@ the cursor and how to read it off the cursor. A character's ring is the entries 
   does. It keeps the stick after the ring closes until the stick is at rest (`len` under 0.1) or for
   half a second, like `InputAxisBinding`'s `waitForCentering`, so letting go of the key with the
   stick out doesn't swing the camera.
-- `/qol ring` opens the editor (`Features/RingEditor.lua`): `QoLRingEditor`, our own frame from the
-  game's `PortraitFrameTemplate` (Forever draws its `UI-Frame-Metal-*` and portrait corner in
+- `/qol ring` opens the editor (`Features/RingEditor.lua`): `QoLRingEditor`, our own frame
+  (`ns.NewWindow` in `Core/Window.lua`, as the settings window) from the game's
+  `PortraitFrameTemplate` (Forever draws its `UI-Frame-Metal-*` and portrait corner in
   bronze, `NineSliceLayoutOverrides.lua`), 860×640, with the addon's icon as portrait and a title
   bar of ours to drag it by (`RegisterForDrag`, not `OnMouseDown`, which the controller's cursor
   would stop on; `SetMovable`, `SetClampedToScreen`, `SetDontSavePosition`). The close button's
@@ -300,16 +301,16 @@ the cursor and how to read it off the cursor. A character's ring is the entries 
   `CloseWindows`, which calls `CloseSpecialWindows`), and the spell book (`PlayerSpellsFrame`,
   `"centerOrLeft"`) opens there when nothing else is open; that closed the editor on P. Instead the
   editor takes the keyboard (`EnableKeyboard`) with an `OnKeyDown` that hides it on Escape and keeps
-  that key (`SetPropagateKeyboardInput(false)`); every other key goes on to the game, and opening
-  the editor lets keys through again (`SetPropagateKeyboardInput(true)`; restricted in combat, and
-  the editor is only open out of it). The key boxes' listener sits above it and keeps every key, so
+  that key (`SetPropagateKeyboardInput(false)`); every other key goes on to the game, and from the
+  next frame on (`ns.Later`) and on opening keys go through again (`SetPropagateKeyboardInput(true)`;
+  restricted in combat, and the editor is only open out of it). The key boxes' listener sits above it and keeps every key, so
   there Escape only cancels. While `SettingsPanel` or `GameMenuFrame` is shown, Escape goes on to
   the game, which closes them first. Not through the game's `RegisterGameMenuEscHandler` (12.1 and
   Forever): it inserts and sorts our handler into its list from our code, so the list's slots carry
   our taint into every `ToggleGameMenu`. With the controller, the close button closes it.
-- The Ring page's button (`Page:Button`) opens the editor over the settings without closing them:
-  hiding `SettingsPanel` from addon code taints its `Commit`. Escape closes the settings (and the
-  game menu they go back to) and leaves the editor open.
+- The Ring page's button (`Page:Button`) opens the editor over the settings window, which stays
+  open. Both are toplevel at `DIALOG` strata, so the one shown or clicked last is on top and gets
+  Escape first.
 - The editor's right half is `Features/RingPicker.lua`, built after Forever's spell book: tabs from
   the game's `TabSystemTopButtonTemplate` standing on the parchment's top edge (the tab system they
   call, their parent, is a strip of ours with `SetTab`, `GetTabWidthConstraints` and
@@ -361,31 +362,74 @@ remapped and laid over each other with small Pillow and numpy scripts, not kept 
 
 ## Settings pages
 
-The AddOns entry, Quality of Life, is an information page (`UI/InfoPage.lua`), as AutoPotion's
-is: a short introduction, the chat commands, and the author's other addons with their icon (copies
-in `Media/`), an Installed label while one is loaded (checked on each showing, as addons that load
-after us aren't loaded when the page is made) and their link in a read-only edit box to copy, as the
-game can't open web pages. It has no options, so no Defaults button. Unlike AutoPotion's it doesn't
-scroll: it's about 500 high, within `SettingsPage.MAX_HEIGHT`, with two lines of text per addon (the
-tests can't measure wrapped text, so this one isn't checked). Its frames are made at login like the
-other pages', so SmartNavigation's `CreateFrame` hook rebuilds no window for them. Not yet tried in
-Forever's controller interface: what a press on a link box does (an `EditBox` takes the keyboard
-focus).
+The settings are a window of our own (`UI/SettingsWindow.lua`), `QoLSettings`, which `/qol` opens and
+closes. Under Options > AddOns there's only the information page (`UI/InfoPage.lua`), with a button
+that opens the window. Until 2026-10 the pages were canvases below that page in the game's settings;
+they moved out because the game, on Forever with the controller interface on, froze now and then when
+its settings closed after a change in them (below). Out there, nothing of ours runs while the game's
+settings are open, and closing our window is a plain `Hide` of a frame of ours.
 
-Below it, the options are grouped by part of the game: Automation (merchant and quests), Interface
+- The window is `ns.NewWindow` (`Core/Window.lua`, shared with the rings' editor) with
+  `PortraitFrameFlatTemplate`: the game's portrait frame, whose `UI-Frame-Metal-*` border and portrait
+  corner Forever draws in bronze, with the flat dark background of the game's settings
+  (`FlatPanelBackgroundTemplate`). Inside, it copies the game's `SettingsPanel`
+  (`Blizzard_SettingsPanel.xml`, 920×724) without the Game and AddOns tabs, the search box and the
+  buttons below: 920×696, `Options_InnerFrame` (886×618, at its own size) 60 below the top instead of
+  64, the list (199 wide) 12 below that, and the page right of it, 16 from the list and 22 from the
+  window's right edge, 665×601, the room the game gives a canvas (`SettingsPage.MAX_HEIGHT` is 600).
+  Forever's client has `-c60` versions of the options art (`options_innerframe-c60`,
+  `options_categoryheader_1-c60`, `options_list_hover-c60`, the tabs and the divider) that no UI
+  code names, as it has for the metal frame: the client swaps them in for the plain names, which is
+  what we use. `options_list_active` has none.
+- The list is drawn as the game's (`Blizzard_CategoryList`) but with frames of ours, not its
+  templates: `SettingsCategoryListButtonMixin` reads its scroll box's element data and a file local
+  of the game's settings. A header (`Options_CategoryHeader_1`, drawn on the list itself so the
+  buttons go over its art, "Settings" in `GameFontHighlightMedium` at 20), then a button per page,
+  175×20, 2 apart, its name at 36: gold (`GameFontNormal`), white on `Options_List_Active` when
+  selected, `Options_List_Hover` under the mouse. A click selects with the game's sound.
+- One page is shown at a time; the window refreshes it when it shows it (a selection, or the window
+  opening on the page it was on), and a page follows `Options:Watch` while visible.
+- Escape closes the window, other keys go on to the game (`ns.NewWindow`, as the rings' editor did
+  it, see there): not through `UISpecialFrames` or `RegisterGameMenuEscHandler`. Unlike the editor,
+  the settings open in combat too. Keeping a key (`SetPropagateKeyboardInput(false)`) is restricted
+  in combat, so there every key goes on to the game, Escape too, and the X closes the window; after
+  Escape closed it, keys are let through again from the next frame (`ns.Later`), so the window never
+  opens in combat holding the keyboard.
+- The information page's button opens the window through `ns.LaterOutsideWindows`: with keyboard and
+  mouse on the next frame, over the game's settings (we can't close them: hiding `SettingsPanel` from
+  addon code taints its `Commit`), and Escape closes them first, then ours. In Forever's controller
+  interface only once the game's settings and menu are closed, as Easy Controller's window does: they
+  have the controller while open, so its cursor couldn't get to ours, and nothing of ours runs while
+  they're open. A line next to the button says so while that interface is on (checked on each
+  showing, as it switches without a reload).
+- The information page is a short introduction, the button, the chat commands, and the author's
+  other addons with their icon (copies in `Media/`), an Installed label while one is loaded (checked
+  on each showing, as addons that load after us aren't loaded when the page is made) and their link
+  in a read-only edit box to copy, as the game can't open web pages. It has no options, so no Defaults
+  button. It doesn't scroll: it's about 540 high, within `SettingsPage.MAX_HEIGHT`, with two lines of
+  text per addon (the tests can't measure wrapped text, so this one isn't checked). Not yet tried in
+  Forever's controller interface: what a press on a link box does (an `EditBox` takes the keyboard
+  focus).
+- All frames (the window, the pages, the information page) are made on `ADDON_LOADED`, never while a
+  window of the game has the controller, so SmartNavigation's `CreateFrame` hook rebuilds no window
+  for them.
+
+The options are grouped by part of the game: Automation (merchant and quests), Interface
 (the bars to hide, the combined bags, tooltips, health bars), Chat (the chat window, `/rl`), Action
 Bars, Minimap, World map (only where `MapPins.IsAvailable()`), Viewport, Ring and Controller (only
-on Forever). Every page is a canvas (`Settings.RegisterCanvasLayoutCategory`) built by `UI/SettingsPage.lua`:
-two columns of rows, or rows across the page (`"wide"`, the Viewport page, as its sliders need the
-room, the Ring page, with one option and a note, and the World map page, with two), each an option's name with a
-control from the game's own templates (`SettingsCheckboxTemplate`, `WowStyle2DropdownTemplate`,
+on Forever). Every page is built by `UI/SettingsPage.lua`: two columns of rows, or rows across the
+page (`"wide"`, the Viewport page, as its sliders need the room, the Ring page, with one option and
+a note, and the World map page, with two), each an option's name with a control from the game's own
+templates (`SettingsCheckboxTemplate`, `WowStyle2DropdownTemplate`,
 `MinimalSliderWithSteppersTemplate`, `ColorSwatchTemplate` opening `ColorPickerFrame`), so they look
 like the game's pages and fit without scrolling (`SettingsPage.MAX_HEIGHT`, checked by the tests).
-All names use one font: the game's list draws dependent options smaller. A page refreshes on
-`OnRefresh` (the panel showing it) and through `Options:Watch`, and resets on `OnDefault` (the
-game's "all settings" reset) and its own Defaults button, which asks with a second click: the
-game's confirmation dialog would spread taint. The canvas pages don't show up in the settings
-search.
+All names use one font: the game's list draws dependent options smaller. A page resets with its own
+Defaults button, which asks with a second click: the game's confirmation dialog would spread taint.
+The game's "all settings" reset doesn't reach our pages any more, and they don't show up in the
+settings search. Tooltips are `GameTooltip`.
+
+The history below is from the time the pages were in the game's settings; the workarounds it led to
+stay since they cost nothing.
 
 No page is the game's vertical list (`RegisterVerticalLayoutSubcategory` with proxy settings).
 Viewport was one, with sliders and a color swatch, and on Forever with the controller interface on
@@ -462,12 +506,12 @@ whatever had it (`SetBinding(key, nil, context)`), the keys bound again in their
 action's context (`C_KeyBindings.GetBindingContextForAction`). A right-click clears a slot. Gamepad
 buttons are not listened for: the controller cursor needs A (a second press on the button stops
 waiting) and B, and the Steam Deck's back buttons send keyboard keys anyway; a paddle needs no key.
-Nothing calls `SaveBindings`: the settings panel saves the bindings when it closes, which fires
-`UPDATE_BINDINGS`, and the back buttons' override bindings follow from there through
-`ns.LaterOutsideWindows`, after the settings closed. So the only thing done while the settings are
-open is `SetBinding`, which the game's own Key Bindings page does there too. All frames (the
-buttons and the listener) are created when the pages are built at login, not while a controller
-window is open, so SmartNavigation's `CreateFrame` hook rebuilds no window for them.
+Each change is saved right away (`SaveBindings(GetCurrentBindingSet())`), as the game's settings
+save the bindings when they close: our window isn't theirs, so nothing else would save them. That
+fires `UPDATE_BINDINGS`, and the back buttons' override bindings follow from there through
+`ns.LaterOutsideWindows`. All frames (the buttons and the listener) are created when the pages are
+built at login, not while a controller window is open, so SmartNavigation's `CreateFrame` hook
+rebuilds no window for them.
 
 ## Tests and lint
 
@@ -501,11 +545,13 @@ Things only the real client can confirm:
 
 - The viewport margins line up with the world at your resolution and UI scale, and stay with Alt+Z.
 - With Forever's controller interface on (Options > Controller), the viewport and the Action Bars
-  options on: open the settings, look at every page (Viewport included: step a margin with its
+  options on: open the settings with `/qol` and from the information page's button (it opens once
+  the game's options and menu are closed, and says so), and check that the controller cursor reaches
+  the list and the pages. Look at every page (Viewport included: step a margin with its
   arrows, open the color picker; on the Controller page turn on the back buttons, press the bar
   dropdown a few times, with A and with the touch screen, and bind a back button's key: A on a key
-  box, then the back button), go to another page, and close the settings with B and with Esc. The dropdowns step through their choices without opening a list.
-  The game must not freeze, and the viewport stays. The back buttons take the new bar only after the settings and the game menu are closed, within a second. The game's own controller action
+  box, then the back button), go to another page, and close the window with its X. The dropdowns step through their choices without opening a list.
+  The game must not freeze, also when opening and closing the game's options and menu afterwards, and the viewport stays. The back buttons take the new bar within a second. A back button's key still works after a `/reload` (saved right away). The game's own controller action
   bars show; the flips and borders come back after switching to keyboard and mouse.
 - Cutscenes with the viewport on (margins on all four sides), see below.
 - Flipped bars stay flipped after Edit Mode changes, a `/reload`, shapeshifting (stance bar) and
@@ -542,9 +588,14 @@ Things only the real client can confirm:
 - Bar paging off: Shift+1 to Shift+6 press the action buttons (a `[mod:shift]` macro sees Shift),
   also with a bar addon that binds the number keys itself; turning it off pages again, and changing
   a key binding in combat is picked up after combat.
-- The settings pages: two columns at the panel's default size in English and German (no name cut
-  off), checkboxes and dropdowns working, dependent options greyed out, and the Defaults button
-  asking first.
+- The settings window: Forever's bronze frame and the bronze options art (inner frame, the list's
+  header and hover highlight; the selected page's highlight is the plain one), lined up as in the
+  game's options, also at other UI scales; the portrait icon; dragging the title bar; `/qol` opening
+  and closing it, Escape and the X closing it; opened from the information page's button over the
+  game's options, Escape closing those first. In combat it opens, every key (Escape too) goes to
+  the game, the X closes it. The pages: two columns in English and German (no name cut off),
+  checkboxes and dropdowns working, dependent options greyed out, and the Defaults button asking
+  first. The Ring page's button opens the editor over the window, Escape closes the editor first.
 - The zeppelin and tram pins' icons next to the boats', on zone and continent maps.
 - Hidden button borders on every bar (also the stance and pet bars): square icons, the mouseover,
   pressed and checked (auto attack, an active stance) textures, the red auto attack flash, the

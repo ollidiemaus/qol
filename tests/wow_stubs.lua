@@ -494,8 +494,8 @@ local function install()
         if template == "KeyBindingFrameBindingButtonTemplate" then
             function frame:SetSelected(selected) self.selected = selected end
         end
-        -- The game's portrait frame: its close button, and its title (in titleText).
-        if template == "PortraitFrameTemplate" then
+        -- The game's portrait frames: the close button, and the title (in titleText).
+        if template == "PortraitFrameTemplate" or template == "PortraitFrameFlatTemplate" then
             frame.CloseButton = newRegion("Button", frame)
             function frame:SetTitle(title) self.titleText = title end
         end
@@ -724,6 +724,12 @@ local function install()
         if state.combat then error("ADDON_ACTION_BLOCKED: binding changed in combat") end
         state.bindings[key] = command
         return true
+    end
+    -- Saving the bindings counts the saves of each set in state.bindingSaves.
+    G.GetCurrentBindingSet = function() return 1 end
+    G.SaveBindings = function(set)
+        if state.combat then error("ADDON_ACTION_BLOCKED: bindings saved in combat") end
+        state.bindingSaves[set] = (state.bindingSaves[set] or 0) + 1
     end
     G.GetBindingText = function(key) return key end
     G.GetBindingName = function(command) return G["BINDING_NAME_" .. command] or command end
@@ -1066,6 +1072,8 @@ local function install()
             return { point = point, relativeTo = relativeTo, relativePoint = relativePoint }
         end,
     }
+    -- The game's slider template (MinimalSliderWithSteppersTemplate), with or without the Settings API.
+    G.MinimalSliderWithSteppersMixin = { Label = { Right = 2 }, Event = { OnValueChanged = "OnValueChanged" } }
 end
 
 -- Globals the addon or a test may leave behind.
@@ -1079,7 +1087,7 @@ local ADDON_GLOBALS = {
     "GetMinimapShape", "HybridMinimap", "TimeManagerClockButton", "GameTimeFrame", "AddonCompartmentFrame",
     "TimeManagerClockTicker", "QoLNoAction", "ColorPickerFrame", "SettingsPanel", "GameMenuFrame",
     "GamepadMainActionBarFrame", "BINDING_HEADER_QOL",
-    "QoLRing", "QoLRingButton", "QoLRingEditor",
+    "QoLRing", "QoLRingButton", "QoLRingEditor", "QoLSettings",
 }
 for index = 1, 4 do
     ADDON_GLOBALS[#ADDON_GLOBALS + 1] = "QoLBackButton" .. index
@@ -1120,7 +1128,7 @@ function Stubs.Reset(options)
             ["SHIFT-4"] = "ACTIONPAGE4", ["SHIFT-5"] = "ACTIONPAGE5", ["SHIFT-6"] = "ACTIONPAGE6",
             ["SHIFT-MOUSEWHEELUP"] = "PREVIOUSACTIONPAGE", ["SHIFT-MOUSEWHEELDOWN"] = "NEXTACTIONPAGE",
         },
-        overrides = {}, overrideCalls = 0, gamepadBindings = {},
+        overrides = {}, overrideCalls = 0, gamepadBindings = {}, bindingSaves = {},
         actions = {}, modifiedClicks = {}, placed = {}, settingValues = {},
         spells = {}, items = {}, toys = {}, mounts = {}, macros = {}, flyouts = {}, equipped = {},
         -- The cursor in UI units, the controller's sticks (nil: no controller) and the actions
@@ -1464,7 +1472,6 @@ function Stubs.InstallSettings()
         OpenToCategory = function(id) api.opened = id end,
     }
     _G.CreateSettingsListSectionHeaderInitializer = function(text, tooltip) return { header = text, tooltip = tooltip } end
-    _G.MinimalSliderWithSteppersMixin = { Label = { Right = 2 }, Event = { OnValueChanged = "OnValueChanged" } }
     return api
 end
 
