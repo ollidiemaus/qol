@@ -59,6 +59,7 @@ local DEFAULTS = {
     classColorTargetOfTarget = false,
     classColorFocus = false,
     classColorFocusTarget = false,
+    druidManaBar = false,
 
     reloadCommand = true,
 

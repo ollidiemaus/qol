@@ -78,6 +78,11 @@ L.COMBINED_BAG_TOP_LEFT_TIP = "Zeigt den ersten Platz des Rucksacks oben links i
     .. "letzte Tasche unten, sodass das Sortieren den Ruhestein oben links ablegt. Nur mit Tastatur und Maus: Die "
     .. "Controller-Oberfläche macht das schon."
 
+L.SECTION_PLAYER_FRAME = "Spielerfenster"
+L.DRUID_MANA_BAR = "Mana in Bären- und Katzengestalt"
+L.DRUID_MANA_BAR_TIP = "Zeigt dein Mana in Bären- und Katzengestalt in einer dritten Leiste unter Wut oder Energie, "
+    .. "im Stil des Spielerfensters. Die Zahlen folgen der Statustext-Einstellung des Spiels."
+
 L.SECTION_UNIT_FRAMES = "Gesundheitsleisten in Klassenfarbe"
 L.CLASS_COLOR_PLAYER = "Spieler"
 L.CLASS_COLOR_TARGET = "Ziel"

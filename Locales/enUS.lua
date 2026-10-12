@@ -79,6 +79,11 @@ L.COMBINED_BAG_TOP_LEFT_TIP = "Shows the backpack's first slot in the top left c
     .. "last bag at the bottom, so sorting puts the hearthstone top left. With keyboard and mouse only: the "
     .. "controller interface already does this."
 
+L.SECTION_PLAYER_FRAME = "Player frame"
+L.DRUID_MANA_BAR = "Mana in bear and cat form"
+L.DRUID_MANA_BAR_TIP = "Shows your mana in a third bar below rage or energy while you're in bear or cat form, "
+    .. "in the player frame's own style. Its numbers follow the game's Status Text setting."
+
 L.SECTION_UNIT_FRAMES = "Health bars in class color"
 L.CLASS_COLOR_PLAYER = "Player"
 L.CLASS_COLOR_TARGET = "Target"
