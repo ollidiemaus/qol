@@ -24,15 +24,16 @@ local TAB_GAP = 2
 local ICON_SIZE = 50 -- the inside of the tab art (SidePanelTabButtonMixin's interior)
 local UNKNOWN_ICON = "Interface\\MailFrame\\Mail-Icon"
 
--- "name-realm" in lower case with the realm as GetNormalizedRealmName writes it (no spaces or
--- dashes), so "Bankalt", "bankalt" and "Bankalt-Your Realm" are the same character. A name
--- without a realm is on the player's realm.
+-- "name-realm" in lower case, one space between Forever's name and surname, and the realm as
+-- GetNormalizedRealmName writes it (no spaces or dashes), so "Bankalt", "bankalt" and
+-- "Bankalt-Your Realm" are the same character. A name without a realm is on the player's realm.
 local function characterKey(text)
     local name, realm = text:match("^([^%-]+)%-(.+)$")
     if not name then
         name, realm = text, GetNormalizedRealmName and GetNormalizedRealmName() or ""
     end
-    return (name:gsub("%s", "") .. "-" .. realm:gsub("[%s%-]", "")):lower()
+    name = strtrim(name):gsub("%s+", " ")
+    return (name .. "-" .. realm:gsub("[%s%-]", "")):lower()
 end
 
 local function characters()
@@ -42,9 +43,16 @@ local function characters()
     return db.characters
 end
 
+-- The player's name as To takes it. On Forever every character has a surname and first names
+-- repeat: UnitName gives the surname where retail gives the realm, and the full name is both with
+-- a space between (NameUtil.FormatUnitNameForDisplay).
 local function playerKey()
-    local name = UnitName("player")
+    local name, surname = UnitName("player")
     if not ns.IsUsable(name) then return nil end
+    if RegionalUniqueNamesEnabled and RegionalUniqueNamesEnabled() and ns.IsUsable(surname) and surname ~= ""
+        and not name:find(" ", 1, true) then
+        name = name .. " " .. surname
+    end
     return characterKey(name)
 end
 

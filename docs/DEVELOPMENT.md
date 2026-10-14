@@ -216,7 +216,14 @@ title bar; the first starts 60 below the frame's top right, as the Group Finder'
 2 below. Each is made without a parent and parented afterwards (SmartNavigation's `CreateFrame`
 hook), and its icon is the `classicon-<class>` atlas (what `GetClassAtlas` gives, square class
 portraits) of a character QoL has seen log in (`QoLDB.characters`, name and normalized realm in
-lower case), else `Interface\MailFrame\Mail-Icon`, the mail frame's portrait. The template's mixin
+lower case), else `Interface\MailFrame\Mail-Icon`, the mail frame's portrait. On Forever every
+character has a surname and first names repeat (two characters can both be Scoopz), and
+`UnitName` gives the surname as its second value, where retail gives the realm. So with
+`RegionalUniqueNamesEnabled()` the player's name is both with a space between, as the game's
+`NameUtil.FormatUnitNameForDisplay` writes it and as To takes it (a mail to Scoopz Scoopzi went
+out, 2026-10-14); the first name alone matched no
+bookmark (seen in game 2026-10-14). Names are compared with their spaces trimmed and runs of them
+made one. The template's mixin
 writes its own fields on our frame (the tooltip text, the icon's pressed offset) and shows
 `tooltipText` on hover. A left click (`SetCustomOnMouseUpHandler`, let go over the tab) puts the
 name in To with `SendMailNameEditBox:SetText` and gives `SendMailSubjectEditBox` the keyboard, the
@@ -526,6 +533,9 @@ templates (`SettingsCheckboxTemplate`, `WowStyle2DropdownTemplate`,
 (Enter, Tab, a click elsewhere), trimmed, and Escape puts the saved text back; Tab goes on to the
 page's next text row through the template's own `nextEditBox` and `previousEditBox`. A refresh
 leaves a box alone while it has the keyboard. Not yet tried in Forever's controller interface.
+A page can start with a few lines that say what its options are for (`Page:Text`, the Mail page's):
+the font string gets the column's width from `SettingsWindow.PAGE_WIDTH`, so its wrapped height
+(`GetStringHeight`) is known while the page is built, before the window lays it out.
 A section that follows another one in its column gets 16 more above its header, so a page reads
 as groups rather than one long list, and sections side by side start at the same height where the
 columns' rows would leave their headers out of line (`Page:Align`: the Minimap page goes in pairs).

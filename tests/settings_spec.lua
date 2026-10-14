@@ -226,6 +226,18 @@ describe("settings pages", function()
         T.same(headers(minimap, "right"), { "Clock", "FPS and ping", "Buttons" })
     end)
 
+    it("says what the mail bookmarks are above them, wrapped across the page", function()
+        local ns = start()
+        local text = pages(ns).mail.texts[1]
+        T.eq(text.column, "wide")
+        T.eq(text.string:GetText(), ns.L.MAIL_INTRO)
+        T.eq(text.string:GetWidth(), ns.SettingsWindow.PAGE_WIDTH - 2 * 8 - 7, "the page less its margins")
+        local bottom = ns.SettingsPage.TOP + 12 + text.string:GetStringHeight()
+        T.truthy(text.string:GetStringHeight() > 12, "more than one line")
+        local first = control(ns, "mailBookmark1").row:PointFor("TOPLEFT")
+        T.truthy(-first[5] >= bottom + 36, "the first bookmark is below the text and the section's title")
+    end)
+
     it("fits every page without scrolling", function()
         local ns = start(nil, true)
         for name, page in pairs(pages(ns)) do

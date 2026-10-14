@@ -145,6 +145,12 @@ local function newRegion(kind, parent, template)
     function region:GetText() return self.text end
     -- 5 units a character, whatever the font.
     function region:GetStringWidth() return #(self.text or "") * 5 end
+    -- Wrapped at the width SetWidth gave it, a line as high as the font.
+    function region:GetStringHeight()
+        local lines = 1
+        if self.width and self.width > 0 then lines = math.max(1, math.ceil(self:GetStringWidth() / self.width)) end
+        return lines * (self.fontHeight or 12)
+    end
     -- Fonts: a font object (by name) brings its file, height and flags (state.fonts); SetFont sets
     -- them directly.
     -- Like the client, the font object the text already has changes nothing: a font SetFont gave it
@@ -1145,10 +1151,13 @@ local function install()
         local info = state.units[unit]
         return info ~= nil and info.treatAsPlayer == true
     end
+    -- On Forever (state.regionalNames) a character's surname comes where retail gives the realm.
     G.UnitName = function(unit)
         local info = state.units[unit]
-        return info and info.name
+        if not info then return nil end
+        return info.name, info.surname
     end
+    G.RegionalUniqueNamesEnabled = function() return state.regionalNames == true end
     G.GetNormalizedRealmName = function() return state.realm end
     G.UnitClass = function(unit)
         local info = state.units[unit]
@@ -1247,6 +1256,7 @@ function Stubs.Reset(options)
         inGuild = false, guildCanRepair = false, guildLimit = 0, guildMoney = 0,
         layouts = {}, reloads = 0,
         units = { player = { isPlayer = true, class = "MAGE", name = "Testmage" } }, realm = "TestRealm",
+        regionalNames = false,
         focus = nil,
         atlases = { ["ui-hud-minimap-frame-generic-mask"] = { width = 215, height = 226 } },
         fonts = { GameFontNormal = { "Fonts\\FRIZQT__.TTF", 12, "" },

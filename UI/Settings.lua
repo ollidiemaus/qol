@@ -77,8 +77,9 @@ local function buildChat(page)
     page:Checkbox("right", "reloadCommand", L.RELOAD_COMMAND, L.RELOAD_COMMAND_TIP)
 end
 
--- Mail page: the bookmarks on the Send Mail tab, a name each.
+-- Mail page: what the bookmarks are, then the bookmarks on the Send Mail tab, a name each.
 local function buildMail(page)
+    page:Text("wide", L.MAIL_INTRO)
     page:Header("left", L.SECTION_MAIL_BOOKMARKS)
     for index, key in ipairs(ns.MailBookmarks.KEYS) do
         page:TextBox("left", key, L.MAIL_BOOKMARK:format(index), L.MAIL_BOOKMARK_TIP)

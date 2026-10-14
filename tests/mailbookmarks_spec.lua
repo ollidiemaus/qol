@@ -145,6 +145,28 @@ describe("mail bookmarks", function()
         T.eq(tabs(ns)[3].Icon:GetAtlas(), "classicon-priest")
     end)
 
+    -- Seen in game 2026-10-14: Forever's characters Scoopz Scoopz and Scoopz Scoopzi, kept as "scoopz".
+    it("knows Forever's characters by name and surname, as first names repeat there", function()
+        local ns = Stubs.LoadAddon()
+        local state = Stubs.state()
+        state.regionalNames = true
+        state.units.player.name, state.units.player.surname = "Scoopz", "Scoopz"
+        Stubs.Login({ mailBookmark1 = "Scoopz Scoopz", mailBookmark2 = "scoopz  Scoopzi ", mailBookmark3 = "Scoopz" },
+            nil, { ["scoopz scoopzi-testrealm"] = "DRUID" })
+        T.eq(QoLDB.characters["scoopz scoopz-testrealm"], "MAGE")
+        T.falsy(QoLDB.characters["scoopz-testrealm"])
+        T.same(shown(ns), { "scoopz  Scoopzi ", "Scoopz" }, "not the one playing, but the other Scoopz")
+        T.eq(tabs(ns)[1].Icon:GetAtlas(), "classicon-druid")
+        T.eq(tabs(ns)[2].Icon.texture, MAIL_ICON)
+    end)
+
+    it("leaves UnitName's second value out where names have no surnames", function()
+        Stubs.LoadAddon()
+        Stubs.state().units.player.surname = "OtherRealm"
+        Stubs.Login()
+        T.eq(QoLDB.characters["testmage-testrealm"], "MAGE")
+    end)
+
     it("leaves out blank and repeated bookmarks and the character playing", function()
         local ns = start({ mailBookmark1 = "Testmage", mailBookmark2 = "Bankalt", mailBookmark4 = "BANKALT",
             mailBookmark5 = "Herbbank", mailBookmark6 = "Testmage-TestRealm" })

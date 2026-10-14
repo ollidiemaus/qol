@@ -122,10 +122,12 @@ L.RELOAD_COMMAND_TIP = "Fügt /rl als Kurzform von /reload hinzu. Nur wenn das S
 L.CATEGORY_MAIL = "Post"
 L.SECTION_MAIL_BOOKMARKS = "Lesezeichen"
 L.MAIL_BOOKMARK = "Lesezeichen %d"
-L.MAIL_BOOKMARK_TIP = "Ein Charakter, dem du oft Post schickst, etwa ein Bankcharakter: sein Name, oder Name-Realm "
-    .. "auf einem anderen Realm. Er erscheint als Reiter rechts am Fenster Post versenden, und ein Klick auf den "
-    .. "Reiter trägt den Namen bei An ein. Der Reiter zeigt die Klasse des Charakters, sobald er sich mit diesem "
-    .. "Addon eingeloggt hat."
+L.MAIL_INTRO = "Charaktere, denen du oft Post schickst, etwa ein Bankcharakter, als Reiter rechts am Fenster "
+    .. "Post versenden. Ein Klick auf einen Reiter trägt den Namen bei An ein. Ein Reiter zeigt die Klasse des "
+    .. "Charakters, sobald er sich mit QoL eingeloggt hat, bis dahin das Briefsymbol."
+L.MAIL_BOOKMARK_TIP = "Der Name eines Charakters, wie du ihn bei An schreiben würdest: in WoW Forever mit "
+    .. "Nachnamen (Name Nachname), sonst Name-Realm für einen Charakter auf einem anderen Realm. Leer für keinen "
+    .. "Reiter."
 
 -- Settings: world map page
 L.CATEGORY_WORLD_MAP = "Weltkarte"

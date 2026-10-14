@@ -66,7 +66,8 @@ Hold **Shift** while talking to an NPC to do everything yourself that time.
   on the right of the Send Mail window. A click on a tab puts the name in **To** and moves on to
   **Subject**. A tab shows the character's class once they've logged in with Quality of Life, else
   the mail icon; point at it for the name. The character you're playing gets no tab. Type the names
-  on the Mail page of the settings: the name, or Name-Realm for a character on another realm.
+  on the Mail page of the settings as you would in To: on WoW Forever with the surname (Name
+  Surname), elsewhere the name, or Name-Realm for a character on another realm.
 
 ### Minimap
 
