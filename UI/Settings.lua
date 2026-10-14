@@ -3,8 +3,8 @@ local L = ns.L
 local Options = ns.Options
 
 -- Quality of Life's settings: a window of our own (UI/SettingsWindow.lua), which /qol opens, with a
--- page for each part of the game: Automation, Interface, Chat, Action Bars, Minimap, World map (on
--- Forever's maps), Viewport, Ring and, on Forever (which has the controller action bar), Controller.
+-- page for each part of the game: Automation, Interface, Chat, Mail, Action Bars, Minimap, World map
+-- (on Forever's maps), Viewport, Ring and, on Forever (which has the controller action bar), Controller.
 -- Under Options > AddOns there's only the information page (UI/InfoPage.lua), with a button that
 -- opens the window. The game's settings have nothing of ours to change: on Forever, with the
 -- controller interface on, the game stopped responding now and then when they closed after a
@@ -75,6 +75,14 @@ local function buildChat(page)
 
     page:Header("right", L.SECTION_COMMANDS)
     page:Checkbox("right", "reloadCommand", L.RELOAD_COMMAND, L.RELOAD_COMMAND_TIP)
+end
+
+-- Mail page: the bookmarks on the Send Mail tab, a name each.
+local function buildMail(page)
+    page:Header("left", L.SECTION_MAIL_BOOKMARKS)
+    for index, key in ipairs(ns.MailBookmarks.KEYS) do
+        page:TextBox("left", key, L.MAIL_BOOKMARK:format(index), L.MAIL_BOOKMARK_TIP)
+    end
 end
 
 -- World map page: what's marked on the map, in rows across the page.
@@ -241,6 +249,7 @@ local PAGES = {
     { key = "automation", title = L.CATEGORY_AUTOMATION, build = buildAutomation },
     { key = "interface", title = L.CATEGORY_INTERFACE, build = buildInterface },
     { key = "chat", title = L.CATEGORY_CHAT, build = buildChat },
+    { key = "mail", title = L.CATEGORY_MAIL, build = buildMail },
     { key = "actionBars", title = L.CATEGORY_ACTION_BARS, build = buildActionBars },
     { key = "minimap", title = L.CATEGORY_MINIMAP, build = buildMinimap },
     -- Only where there are pins to show: they are on Forever's maps.

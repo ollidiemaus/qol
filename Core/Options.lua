@@ -30,6 +30,14 @@ local DEFAULTS = {
     hideCombatLog = false,
     chatClassColors = false,
 
+    -- Names for the mail bookmarks, "" for none.
+    mailBookmark1 = "",
+    mailBookmark2 = "",
+    mailBookmark3 = "",
+    mailBookmark4 = "",
+    mailBookmark5 = "",
+    mailBookmark6 = "",
+
     squareMinimap = false,
     squareMinimapBorder = "bronze", -- "bronze" or "black"
     minimapZoneText = "default", -- "default", "above" or "below"

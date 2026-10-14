@@ -118,6 +118,15 @@ L.RELOAD_COMMAND = "/rl lädt die Oberfläche neu"
 L.RELOAD_COMMAND_TIP = "Fügt /rl als Kurzform von /reload hinzu. Nur wenn das Spiel und deine anderen "
     .. "Addons /rl nicht schon verwenden; dann bleibt deren Befehl."
 
+-- Settings: mail page
+L.CATEGORY_MAIL = "Post"
+L.SECTION_MAIL_BOOKMARKS = "Lesezeichen"
+L.MAIL_BOOKMARK = "Lesezeichen %d"
+L.MAIL_BOOKMARK_TIP = "Ein Charakter, dem du oft Post schickst, etwa ein Bankcharakter: sein Name, oder Name-Realm "
+    .. "auf einem anderen Realm. Er erscheint als Reiter rechts am Fenster Post versenden, und ein Klick auf den "
+    .. "Reiter trägt den Namen bei An ein. Der Reiter zeigt die Klasse des Charakters, sobald er sich mit diesem "
+    .. "Addon eingeloggt hat."
+
 -- Settings: world map page
 L.CATEGORY_WORLD_MAP = "Weltkarte"
 L.MAP_DUNGEONS = "Dungeon- und Schlachtzugeingänge"

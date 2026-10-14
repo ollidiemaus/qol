@@ -118,6 +118,14 @@ L.RELOAD_COMMAND = "/rl reloads the interface"
 L.RELOAD_COMMAND_TIP = "Adds /rl as a short form of /reload. Only when the game and your other addons "
     .. "don't already use /rl; then theirs stays."
 
+-- Settings: mail page
+L.CATEGORY_MAIL = "Mail"
+L.SECTION_MAIL_BOOKMARKS = "Bookmarks"
+L.MAIL_BOOKMARK = "Bookmark %d"
+L.MAIL_BOOKMARK_TIP = "A character you often send mail to, such as a bank character: their name, or Name-Realm "
+    .. "on another realm. It shows as a tab on the right of the Send Mail window, and a click on the tab puts the "
+    .. "name in To. The tab shows the character's class once they have logged in with this addon."
+
 -- Settings: world map page
 L.CATEGORY_WORLD_MAP = "World map"
 L.MAP_DUNGEONS = "Show dungeon and raid entrances"

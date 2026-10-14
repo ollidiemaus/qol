@@ -8,7 +8,7 @@ Notes for working on the addon. What it does for players is in the [README](../R
 |---|---|
 | `Core/` | Namespace and printing (`Init`), the event frame (`Events`), saved options with defaults and change watchers (`Options`), deferred changes (`Later`), the hidden holder for hidden frames (`Hider`), what the back buttons and the rings share (`Buttons`: an action slot's look, override bindings), our windows' frame (`Window`: the settings), `/qol` (`Slash`) and startup (`Lifecycle`) |
 | `Data/` | Static game data: `MapPins` (dungeon entrances, docks, portals; how it was made is at the top of the file) |
-| `Features/` | One file per feature: `Merchant`, `Quests`, `Tooltips`, `HideFrames` (also the chat buttons), `BuffTooltips` (the controller interface's tooltips for new buffs), `CombatLog`, `ChatClassColors`, `CombinedBagSort`, `CombinedBagLayout`, `ClassHealthBars`, `DruidManaBar` (mana in bear and cat form), `ScreenEdge` (Edit Mode frames past the screen edge), `Minimap` (shape, positions, class colors and font sizes around the minimap, and the FPS and ping text), `MapPins`, `Viewport`, `ActionBars`, `ButtonBorders`, `BarPaging`, `BackButtons` (the controller back buttons, Forever only), `RingEntries` (what can go on a ring, and what a character has of it), `Ring`, `RingPicker` (the editor's list), `RingEditor` (the settings' Ring page, `/qol ring`), `ReloadCommand` |
+| `Features/` | One file per feature: `Merchant`, `Quests`, `Tooltips`, `HideFrames` (also the chat buttons), `BuffTooltips` (the controller interface's tooltips for new buffs), `CombatLog`, `ChatClassColors`, `CombinedBagSort`, `CombinedBagLayout`, `MailBookmarks` (tabs on the Send Mail tab), `ClassHealthBars`, `DruidManaBar` (mana in bear and cat form), `ScreenEdge` (Edit Mode frames past the screen edge), `Minimap` (shape, positions, class colors and font sizes around the minimap, and the FPS and ping text), `MapPins`, `Viewport`, `ActionBars`, `ButtonBorders`, `BarPaging`, `BackButtons` (the controller back buttons, Forever only), `RingEntries` (what can go on a ring, and what a character has of it), `Ring`, `RingPicker` (the editor's list), `RingEditor` (the settings' Ring page, `/qol ring`), `ReloadCommand` |
 | `UI/` | `SettingsPage.lua`, a settings page (two columns, or rows across the page, and key binding rows); `SettingsWindow.lua`, the window that `/qol` opens, with the list of pages; `InfoPage.lua`, the information page under Options > AddOns, with a button that opens the window; `Settings.lua`, the pages built with them, in the list's order |
 | `Locales/` | English strings, German overrides |
 | `Media/` | `Icon.tga`, the addon list icon (the TOC's `IconTexture`, 128×128, 32-bit), and `Icon.svg`, its source (not packaged); `Zeppelin.tga`, `Tram.tga`, `MinimapSquareBorder.tga` and the rings' `Ring.tga`, `RingSpoke.tga`, `RingLit1.tga` to `RingLit12.tga` and `RingSlot.tga` (see below); `AutoPotion.tga`, `AutoSetup.tga` and `Wayscribe.tga`, copies of the other addons' icons for the information page |
@@ -207,6 +207,24 @@ OnSizeChanged hooks, `BAG_CONTAINER_UPDATE`, `BAG_UPDATE_DELAYED` and the interf
 feature up, and it sets a button only when its anchor differs (works in game, confirmed 2026-10-11). The C_Container setting for the sort
 direction (`SetSortBagsRightToLeft`, Blizzard's old "Reverse Clean Up Bags") is no way around this:
 Forever's client keeps it (it reads back after a relog), but its sort ignores it (2026-10-11).
+
+The mail bookmarks are side tabs of ours on `SendMailFrame` (Blizzard shows it only on the Send Mail
+tab, so the tabs come and go with it), made from `LargeSideTabButtonTemplate`, the template of
+Forever's own side tabs (Collections, Inspect, Group Finder; its `common-sidetab` art has `-c60`
+versions in Forever's client). A tab is 55 high, so six fit along the mail frame (424) below its
+title bar; the first starts 60 below the frame's top right, as the Group Finder's do, each next one
+2 below. Each is made without a parent and parented afterwards (SmartNavigation's `CreateFrame`
+hook), and its icon is the `classicon-<class>` atlas (what `GetClassAtlas` gives, square class
+portraits) of a character QoL has seen log in (`QoLDB.characters`, name and normalized realm in
+lower case), else `Interface\MailFrame\Mail-Icon`, the mail frame's portrait. The template's mixin
+writes its own fields on our frame (the tooltip text, the icon's pressed offset) and shows
+`tooltipText` on hover. A left click (`SetCustomOnMouseUpHandler`, let go over the tab) puts the
+name in To with `SendMailNameEditBox:SetText` and gives `SendMailSubjectEditBox` the keyboard, the
+widget methods the game's own Reply and the To box's Enter use, from `ns.Later` (in combat too: the
+boxes aren't protected). `SetText` runs the box's `OnTextChanged` (autocomplete, which does nothing
+for text that wasn't typed, and `SendMailFrame_CanSend`) from our call. Nothing on the mail frame is
+hooked or written. `OpenMailFrame` sits 46 right of the mail frame (`MailFrame.xml`), so a letter
+left open covers the tabs' right edge, mostly their transparent part.
 
 The square minimap's bronze border, `Media/MinimapSquareBorder.tga` (512×512), is Forever's own
 round frame (`ui-hud-minimap-frame-c60-2x`, file 8026708 of build 1.60.1.70291) unwrapped onto a
@@ -495,15 +513,19 @@ settings are open, and closing our window is a plain `Hide` of a frame of ours.
   for them.
 
 The options are grouped by part of the game: Automation (merchant and quests), Interface
-(the bars to hide, the combined bags, tooltips, health bars), Chat (the chat window, `/rl`), Action
-Bars, Minimap, World map (only where `MapPins.IsAvailable()`), Viewport, Ring and Controller (only
+(the bars to hide, the combined bags, tooltips, health bars), Chat (the chat window, `/rl`), Mail
+(the bookmarks' names), Action Bars, Minimap, World map (only where `MapPins.IsAvailable()`), Viewport, Ring and Controller (only
 on Forever). Every page is built by `UI/SettingsPage.lua`: two columns of rows, or rows across the
 page (`"wide"`, the Viewport page, as its sliders need the room, and the World map page, with two),
 or an option in the title bar instead of the Defaults button (`"title"`, the Ring page's switch,
 with the rings' editor below it), each an option's name with a control from the game's own
 templates (`SettingsCheckboxTemplate`, `WowStyle2DropdownTemplate`,
-`MinimalSliderWithSteppersTemplate`, `ColorSwatchTemplate` opening `ColorPickerFrame`), so they look
-like the game's pages and fit without scrolling (`SettingsPage.MAX_HEIGHT`, checked by the tests).
+`MinimalSliderWithSteppersTemplate`, `ColorSwatchTemplate` opening `ColorPickerFrame`,
+`InputBoxTemplate` for a name), so they look like the game's pages and fit without scrolling
+(`SettingsPage.MAX_HEIGHT`, checked by the tests). A text row saves when its box loses the keyboard
+(Enter, Tab, a click elsewhere), trimmed, and Escape puts the saved text back; Tab goes on to the
+page's next text row through the template's own `nextEditBox` and `previousEditBox`. A refresh
+leaves a box alone while it has the keyboard. Not yet tried in Forever's controller interface.
 A section that follows another one in its column gets 16 more above its header, so a page reads
 as groups rather than one long list, and sections side by side start at the same height where the
 columns' rows would leave their headers out of line (`Page:Align`: the Minimap page goes in pairs).

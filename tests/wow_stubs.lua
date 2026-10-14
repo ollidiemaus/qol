@@ -226,6 +226,32 @@ local function newRegion(kind, parent, template)
 end
 Stubs.NewFrame = function(parent) return newRegion("Frame", parent) end
 
+-- An edit box takes the keyboard with SetFocus (one at a time, state.focus) and gives it up with
+-- ClearFocus, running OnEditFocusGained and OnEditFocusLost as the game does.
+function Stubs.MakeEditBox(box)
+    function box:SetFocus()
+        local old = state.focus
+        if old == self then return end
+        state.focus = self
+        if old then old:RunScript("OnEditFocusLost") end
+        self:RunScript("OnEditFocusGained")
+    end
+    function box:ClearFocus()
+        if state.focus ~= self then return end
+        state.focus = nil
+        self:RunScript("OnEditFocusLost")
+    end
+    function box:HasFocus() return state.focus == self end
+    function box:HighlightText(start, stop) self.highlighted = { start, stop } end
+    return box
+end
+
+-- Typing into an edit box: it takes the keyboard, and its text becomes text.
+function Stubs.Type(box, text)
+    box:SetFocus()
+    box:SetText(text)
+end
+
 -- MinimalSliderWithSteppersTemplate: a slider with a step arrow on each side and its value in
 -- RightText. As in the game, a new value (dragged, stepped or set) fires OnValueChanged, the same
 -- value again doesn't.
@@ -559,6 +585,25 @@ local function install()
                 if not was and self.isSelected then system:PlayTabSelectSound() end
             end)
         end
+        -- A side tab (SidePanelTabButtonMixin): its icon, SetChecked showing the selected art, a mouse
+        -- up calling the handler SetCustomOnMouseUpHandler gave, and tooltipText on hover.
+        if template == "LargeSideTabButtonTemplate" then
+            frame.Icon = newRegion("Texture", frame)
+            frame.SelectedTexture = newRegion("Texture", frame)
+            function frame:SetChecked(checked) self.SelectedTexture:SetShown(checked) end
+            function frame:SetCustomOnMouseUpHandler(handler) self.customMouseUpHandler = handler end
+            frame:SetScript("OnMouseUp", function(self, button, upInside)
+                if self.customMouseUpHandler then self.customMouseUpHandler(self, button, upInside) end
+            end)
+            frame:SetScript("OnEnter", function(self)
+                if not self.tooltipText then return end
+                G.GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+                G.GameTooltip:SetText(self.tooltipText)
+                G.GameTooltip:Show()
+            end)
+            frame:SetScript("OnLeave", function() G.GameTooltip:Hide() end)
+        end
+        if kind == "EditBox" then Stubs.MakeEditBox(frame) end
         if kind == "StatusBar" then
             function frame:SetStatusBarTexture(texture) self.statusBarTexture = texture end
             function frame:SetMinMaxValues(minValue, maxValue) self.minValue, self.maxValue = minValue, maxValue end
@@ -701,6 +746,14 @@ local function install()
     G.BagItemSearchBox = newRegion("Frame", G.ContainerFrame1)
     G.BagItemAutoSortButton = newRegion("Frame", G.ContainerFrame1)
     G.BagItemAutoSortButton:Hide()
+    -- The mail frame, closed, with its Send Mail tab (hidden while the Inbox tab shows) and that tab's
+    -- To and Subject boxes.
+    G.MailFrame = newRegion("Frame", G.UIParent)
+    G.MailFrame:Hide()
+    G.SendMailFrame = newRegion("Frame", G.MailFrame)
+    G.SendMailFrame:Hide()
+    G.SendMailNameEditBox = Stubs.MakeEditBox(newRegion("EditBox", G.SendMailFrame))
+    G.SendMailSubjectEditBox = Stubs.MakeEditBox(newRegion("EditBox", G.SendMailFrame))
     -- Chat: the combat log window and its tab, and the buttons next to ChatFrame1.
     G.ChatFrame2 = newRegion("Frame", G.UIParent)
     G.ChatFrame2Tab = newRegion("Button", G.UIParent)
@@ -1092,6 +1145,11 @@ local function install()
         local info = state.units[unit]
         return info ~= nil and info.treatAsPlayer == true
     end
+    G.UnitName = function(unit)
+        local info = state.units[unit]
+        return info and info.name
+    end
+    G.GetNormalizedRealmName = function() return state.realm end
     G.UnitClass = function(unit)
         local info = state.units[unit]
         if not (info and info.class) then return nil end
@@ -1188,7 +1246,8 @@ function Stubs.Reset(options)
         canRepair = false, repairCost = 0, repairs = {}, money = 0,
         inGuild = false, guildCanRepair = false, guildLimit = 0, guildMoney = 0,
         layouts = {}, reloads = 0,
-        units = { player = { isPlayer = true, class = "MAGE" } },
+        units = { player = { isPlayer = true, class = "MAGE", name = "Testmage" } }, realm = "TestRealm",
+        focus = nil,
         atlases = { ["ui-hud-minimap-frame-generic-mask"] = { width = 215, height = 226 } },
         fonts = { GameFontNormal = { "Fonts\\FRIZQT__.TTF", 12, "" },
             WhiteNormalNumberFont = { "Fonts\\ARIALN.TTF", 10, "OUTLINE" } },
@@ -1479,9 +1538,11 @@ function Stubs.SetCombat(inCombat)
     end
 end
 
--- Loads the saved variables (options, rings), logs in and lets every deferred change run.
-function Stubs.Login(savedOptions, savedRings)
-    _G.QoLDB = (savedOptions or savedRings) and { options = savedOptions, rings = savedRings } or nil
+-- Loads the saved variables (options, rings, the characters seen), logs in and lets every deferred
+-- change run.
+function Stubs.Login(savedOptions, savedRings, savedCharacters)
+    _G.QoLDB = (savedOptions or savedRings or savedCharacters)
+        and { options = savedOptions, rings = savedRings, characters = savedCharacters } or nil
     Stubs.Fire("ADDON_LOADED", "QoL")
     Stubs.Fire("PLAYER_LOGIN")
     Stubs.Fire("PLAYER_ENTERING_WORLD")
