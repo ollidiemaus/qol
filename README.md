@@ -4,8 +4,8 @@
 
 Quality of Life bundles the little things you'd otherwise install five addons for: a smaller 3D
 viewport, action bars that grow the other way, square action buttons without borders, class-colored
-health bars, junk selling and repairs at merchants, quests accepted and turned in for you, IDs and
-vendor prices in tooltips, a square minimap, dungeon entrances, boats and zeppelins on the world
+health bars, junk selling and repairs at merchants, quests accepted and turned in for you, bookmarks
+for your bank characters on the mail frame, IDs and vendor prices in tooltips, a square minimap, dungeon entrances, boats and zeppelins on the world
 map, rings of actions for mouse and controller, back buttons for the Steam Deck on Forever's
 controller bar, and switches to hide UI pieces you never click (also the buff tooltips that pop up
 in the controller interface). Everything is set up in the game's own options window. There's no minimap button.
@@ -59,6 +59,15 @@ Hold **Shift** while talking to an NPC to do everything yourself that time.
 - **Hide the combat log:** the Combat Log tab leaves the chat window. The combat log keeps running,
   so addons that read it still work.
 - **Names in class color:** player names in chat take the color of their class, in every channel.
+
+### Mail
+
+- **Bookmarks:** up to six characters you often send mail to, such as your bank characters, as tabs
+  on the right of the Send Mail window. A click on a tab puts the name in **To** and moves on to
+  **Subject**. A tab shows the character's class once they've logged in with Quality of Life, else
+  the mail icon; point at it for the name. The character you're playing gets no tab. Type the names
+  on the Mail page of the settings as you would in To: on WoW Forever with the surname (Name
+  Surname), elsewhere the name, or Name-Realm for a character on another realm.
 
 ### Minimap
 
@@ -230,6 +239,7 @@ The pages:
 - **Interface:** hiding the system and bag bars, the combined bags, mana in bear and cat form, frames
   past the screen edge, tooltips, health bars in class color.
 - **Chat:** the chat buttons, the combat log, names in class color, `/rl`.
+- **Mail:** the bookmarks' names.
 - **Action Bars**, **Minimap**, **World map** (on Forever), **Viewport**, **Ring** and **Controller**
   (on Forever).
 
@@ -252,8 +262,8 @@ Quality of Life is available in English and German.
 
 - Quality of Life never replaces or hooks Blizzard's action bar, Edit Mode or tooltip code. It only
   moves the button slots of the bars you flipped, changes the textures of the buttons whose borders
-  you hid, widens how far Edit Mode frames may go, parents hidden frames to a hidden holder, and adds
-  lines to tooltips. That keeps it clear
+  you hid, widens how far Edit Mode frames may go, parents hidden frames to a hidden holder, adds
+  lines to tooltips, and puts a bookmark's name in the mail's To box. That keeps it clear
   of the "tainted by an addon" errors Midnight-era clients are strict about.
 - Don't run it together with another viewport or action bar growth addon: both would move the
   same frames. Hiding the button borders is the same: leave it off when another addon styles your

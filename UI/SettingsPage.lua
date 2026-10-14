@@ -5,11 +5,12 @@ local Options = ns.Options
 -- A page of the settings window (UI/SettingsWindow.lua) with the options in two columns, so a page
 -- fits without scrolling, or in rows across the whole page ("wide", for sliders). It looks like the
 -- game's own settings pages: the title with a Defaults button, section headers, and each option as
--- its name with a checkbox, a dropdown, a slider or a color swatch, from the game's own templates,
--- a key binding's two keys, as in the game's Key Bindings, or a button that opens something. Every
--- name uses the same font; an option that belongs to another one sits indented below it and is
--- greyed out while it can't apply. A page that is one thing of its own below its title (the rings'
--- editor) can have its switch in the title bar instead of the Defaults button ("title").
+-- its name with a checkbox, a dropdown, a slider, a color swatch or a text box, from the game's own
+-- templates, a key binding's two keys, as in the game's Key Bindings, or a button that opens
+-- something. A few lines of text can say what a page's options are for. Every name uses the same
+-- font; an option that belongs to another one sits indented below it and is greyed out while it
+-- can't apply. A page that is one thing of its own below its title (the rings' editor) can have its
+-- switch in the title bar instead of the Defaults button ("title").
 --
 -- Every control reads and writes ns.Options, and the page follows Options:Watch, so it also shows
 -- changes made elsewhere. The window parents and shows the page, and refreshes it when it does.
@@ -33,6 +34,8 @@ local WIDE_CONTROL_X = -80   -- in a wide row the control starts there from the 
 local TITLE_ROW_Y, TITLE_ROW_RIGHT, TITLE_ROW_WIDTH = 14, 28, 300 -- an option in the title bar
 local KEY_WIDTH, KEY_HEIGHT = 160, 22 -- a key binding's buttons, as in the game's Key Bindings
 local BUTTON_WIDTH, BUTTON_HEIGHT = 160, 22
+local TEXT_WIDTH, TEXT_HEIGHT = 160, 20
+local TEXT_TOP = 12      -- above a paragraph, between it and the title's divider
 local CONFIRM_SECONDS = 3
 -- The room the settings window gives a page (as the game's settings do), checked by the tests.
 Page.MAX_HEIGHT = 600
@@ -73,7 +76,7 @@ end
 function Page.New(title, options)
     local frame = CreateFrame("Frame")
     frame:Hide()
-    local page = setmetatable({ title = title, frame = frame, controls = {}, headers = {}, keys = {},
+    local page = setmetatable({ title = title, frame = frame, controls = {}, headers = {}, texts = {}, keys = {},
         y = { left = TOP, right = TOP } }, Page)
 
     local titleText = frame:CreateFontString(nil, "ARTWORK", "GameFontHighlightHuge")
@@ -161,6 +164,8 @@ function Page:Refresh()
             control.refreshKeys(enabled)
         elseif control.kind == "dropdown" then
             control.widget:GenerateMenu()
+        elseif control.kind == "text" and not control.widget:HasFocus() then
+            control.widget:SetText(Options:Get(control.key))
         end
     end
 end
@@ -569,6 +574,35 @@ function Page:Binding(column, command, label, tooltip, options)
     return control
 end
 
+-- A line of text (a character's name), in the game's input box. It's saved when the box loses the
+-- keyboard (Enter, Tab, a click elsewhere) without spaces around it; Escape puts back what was saved.
+-- Tab and Shift+Tab go on to the page's next and previous text rows (the template's
+-- EditBox_OnTabPressed reads nextEditBox and previousEditBox).
+function Page:TextBox(column, key, label, tooltip, options)
+    local control = optionRow(self, column, "text", key, label, tooltip, options)
+    local box = CreateFrame("EditBox", nil, control.row, "InputBoxTemplate")
+    box:SetSize(TEXT_WIDTH, TEXT_HEIGHT)
+    box:SetAutoFocus(false)
+    box:SetScript("OnEnterPressed", box.ClearFocus)
+    box:SetScript("OnEscapePressed", function()
+        box:SetText(Options:Get(key))
+        box:ClearFocus()
+    end)
+    box:SetScript("OnEditFocusLost", function()
+        box:HighlightText(0, 0)
+        Options:Set(key, strtrim(box:GetText() or ""))
+        box:SetText(Options:Get(key))
+    end)
+    box:SetScript("OnEnter", control.enter)
+    box:SetScript("OnLeave", control.leave)
+    if self.lastTextBox then
+        self.lastTextBox.nextEditBox, box.previousEditBox = box, self.lastTextBox
+    end
+    self.lastTextBox = box
+    place(control, box)
+    return control
+end
+
 -- A button named text, for something that isn't an option (onClick does it).
 function Page:Button(column, label, text, tooltip, onClick, options)
     local control = optionRow(self, column, "button", nil, label, tooltip, options)
@@ -580,6 +614,21 @@ function Page:Button(column, label, text, tooltip, onClick, options)
     button:SetScript("OnLeave", control.leave)
     place(control, button)
     return control
+end
+
+-- A few lines that say what the options below are for, wrapped to the column. The text is
+-- measured at the column's width (the window's page less the margins) to know the row's height.
+function Page:Text(column, text)
+    local width = ns.SettingsWindow.PAGE_WIDTH - 2 * MARGIN
+    if column ~= "wide" then width = (width - GUTTER) / 2 end
+    local paragraph = self.frame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    paragraph:SetWidth(width - LABEL_X)
+    paragraph:SetJustifyH("LEFT")
+    paragraph:SetText(text)
+    sectionGap(self, column)
+    local row = newRow(self, column, TEXT_TOP + paragraph:GetStringHeight())
+    paragraph:SetPoint("TOPLEFT", row, "TOPLEFT", LABEL_X, -TEXT_TOP)
+    self.texts[#self.texts + 1] = { column = column, text = text, string = paragraph }
 end
 
 -- A line of small text below the key bindings: hint while nothing happens, else what they report.

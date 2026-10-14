@@ -38,6 +38,7 @@ read_globals = {
     "InCombatLockdown", "GetPhysicalScreenSize", "ReloadUI", "IsSecureCmd", "CinematicFrame", "MovieFrame",
     "IsShiftKeyDown", "GamepadMainActionBarFrame", "GamepadMode", "SettingsPanel", "GameMenuFrame", "GetCursorPosition", "GetCursorInfo",
     "SecureHandlerWrapScript", "EditModeManagerFrame",
+    "SendMailFrame", "SendMailNameEditBox", "SendMailSubjectEditBox",
     -- Performance
     "GetFramerate", "GetNetStats",
     -- Key bindings
@@ -51,7 +52,8 @@ read_globals = {
     -- Strings and formatting
     "GetLocale", "GetMoneyString", "SELL_PRICE", "AbbreviateLargeNumbers",
     -- Units
-    "UnitIsPlayer", "UnitTreatAsPlayerForDisplay", "UnitClass", "UnitGUID", "RAID_CLASS_COLORS",
+    "UnitIsPlayer", "UnitTreatAsPlayerForDisplay", "UnitClass", "UnitGUID", "UnitName", "GetNormalizedRealmName",
+    "RegionalUniqueNamesEnabled", "RAID_CLASS_COLORS",
     "UnitPowerType", "UnitPower", "UnitPowerMax", "PlayerFrame",
     -- Quests
     "AcceptQuest", "CompleteQuest", "GetQuestReward", "GetNumQuestChoices", "IsQuestCompletable", "GetQuestMoneyToGet",

@@ -118,6 +118,16 @@ L.RELOAD_COMMAND = "/rl reloads the interface"
 L.RELOAD_COMMAND_TIP = "Adds /rl as a short form of /reload. Only when the game and your other addons "
     .. "don't already use /rl; then theirs stays."
 
+-- Settings: mail page
+L.CATEGORY_MAIL = "Mail"
+L.SECTION_MAIL_BOOKMARKS = "Bookmarks"
+L.MAIL_BOOKMARK = "Bookmark %d"
+L.MAIL_INTRO = "Characters you often send mail to, such as a bank character, as tabs on the right of the Send "
+    .. "Mail window. A click on a tab puts the name in To. A tab shows the character's class once they have "
+    .. "logged in with QoL, and the mail icon until then."
+L.MAIL_BOOKMARK_TIP = "A character's name as you would write it in To: on WoW Forever with the surname (Name "
+    .. "Surname), elsewhere Name-Realm for a character on another realm. Empty for no tab."
+
 -- Settings: world map page
 L.CATEGORY_WORLD_MAP = "World map"
 L.MAP_DUNGEONS = "Show dungeon and raid entrances"
