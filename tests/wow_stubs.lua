@@ -189,6 +189,15 @@ local function newRegion(kind, parent, template)
         if self.kind == "CheckButton" then self.checked = not self.checked end
         self:RunScript("OnClick", "LeftButton")
     end
+    -- A button's state textures: an atlas each, and a highlight texture made on first use.
+    function region:SetNormalAtlas(atlas) self.normalAtlas = atlas end
+    function region:SetPushedAtlas(atlas) self.pushedAtlas = atlas end
+    function region:SetHighlightTexture(file, blendMode)
+        self.highlight = self.highlight or newRegion("Texture", self)
+        self.highlight:SetTexture(file)
+        self.highlight:SetBlendMode(blendMode)
+    end
+    function region:GetHighlightTexture() return self.highlight end
     function region:SetChecked(checked) self.checked = checked and true or false end
     function region:GetChecked() return self.checked == true end
     -- A dropdown (DropdownButton): SetupMenu keeps the generator, GenerateMenu builds the menu as
@@ -643,7 +652,10 @@ local function install()
         GetContainerNumSlots = function(bag) return state.bags[bag] and state.bags[bag].size or 0 end,
         GetContainerItemInfo = function(bag, slot) return state.bags[bag] and state.bags[bag][slot] end,
         UseContainerItem = function(bag, slot) table.insert(state.used, bag .. ":" .. slot) end,
+        SortBags = function() state.bagSorts = state.bagSorts + 1 end,
     }
+    G.BAG_CLEANUP_BAGS = "Clean Up Bags"
+    G.BAG_CLEANUP_BAGS_DESCRIPTION = "Sort the items in your bags."
     G.C_Item = {
         GetItemInfo = function(itemID)
             local price = state.prices[itemID]
@@ -1172,7 +1184,7 @@ function Stubs.Reset(options)
         interfaceStyle = 0,
         screenWidth = 2560, screenHeight = 1440,
         framerate = 59.7, latencyHome = 45, latencyWorld = 38,
-        bags = {}, prices = {}, used = {}, soldAll = 0, sellAllEnabled = true,
+        bags = {}, prices = {}, used = {}, bagSorts = 0, soldAll = 0, sellAllEnabled = true,
         canRepair = false, repairCost = 0, repairs = {}, money = 0,
         inGuild = false, guildCanRepair = false, guildLimit = 0, guildMoney = 0,
         layouts = {}, reloads = 0,

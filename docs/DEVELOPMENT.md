@@ -177,6 +177,19 @@ the buff frame's update, where right-clicking a buff calls `CancelUnitBuff`.
 Names in chat in class color are the game's own setting: `chatClassColorOverride` "0" means always
 (see `ChatFrameUtil.ShouldColorChatByClass`). Turning the option off gives the setting its default.
 
+The combined bag's sort button is a button of ours, a child of the bag anchored left of
+`BagItemSearchBox`, that plays Blizzard's sound and calls `C_Container.SortBags()` (no restrictions)
+with Blizzard's art and tooltip strings. Forever's own `BagItemAutoSortButton` sits at the bag's top
+right under `GamepadBagBar` (a child of the combined bag in both interfaces, its backpack icon in
+sight with keyboard and mouse), and the controller interface hides it. The option first moved
+Blizzard's button instead, but `ContainerFrameMixin:UpdateSearchBox` anchors it at the top right
+again on every `Update()`, without `ClearAllPoints`: from the bag updater's OnUpdate after a
+`BAG_UPDATE` (a sort, loot), and on `BAG_NEW_ITEMS_UPDATED` and quest changes. A wake-up on
+`BAG_UPDATE_DELAYED` raced that OnUpdate, so after a click the button went back under the bag icon
+(2026-10-14). Blizzard's code never touches our button, so it needs no wake-up but the option. It's
+made without a parent and parented afterwards, for SmartNavigation's `CreateFrame` hook (see
+Forever's controller notes).
+
 The combined bag from the top left: with keyboard and mouse, Blizzard lays the combined bag's item
 buttons out from the bottom right of its money frame, leftwards and upwards
 (`ContainerFrameMixin:GetAnchorLayout`, `BottomRightToTopLeft`), in the order bag by bag from the
