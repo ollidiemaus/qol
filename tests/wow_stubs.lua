@@ -179,10 +179,29 @@ local function newRegion(kind, parent, template)
         if font then text:SetFontObject(font) end
         return text
     end
-    function region:RegisterEvent(event)
+    local function checkKnown(event)
         if state.unknownEvents[event] then error("Attempt to register unknown event \"" .. event .. "\"") end
+    end
+    -- events[event] is true for every unit, or the set of units RegisterUnitEvent named.
+    function region:RegisterEvent(event)
+        checkKnown(event)
         self.events[event] = true
     end
+    -- Like the game: at least one unit, none of them nil (the API's units aren't nilable), and
+    -- registering the event again replaces the units.
+    function region:RegisterUnitEvent(event, ...)
+        checkKnown(event)
+        local count = select("#", ...)
+        if count < 1 then error("RegisterUnitEvent takes at least one unit") end
+        local units = {}
+        for index = 1, count do
+            local unit = select(index, ...)
+            if type(unit) ~= "string" then error("RegisterUnitEvent: unit " .. index .. " isn't a unit token") end
+            units[unit] = true
+        end
+        self.events[event] = units
+    end
+    function region:UnregisterEvent(event) self.events[event] = nil end
     function region:SetScript(script, fn) self.scripts[script] = fn end
     function region:GetScript(script) return self.scripts[script] end
     function region:HookScript(script, fn) self.hooks[script] = fn end
@@ -1311,12 +1330,28 @@ function Stubs.LoadAddon(options)
     return ns
 end
 
+-- Whether a frame gets the event: a unit event (first argument a unit) reaches a frame registered
+-- with RegisterUnitEvent only for one of its units.
+local function receives(region, event, unit)
+    local registered = region.events[event]
+    if not registered or not region.scripts.OnEvent then return false end
+    return registered == true or (unit ~= nil and registered[unit] == true)
+end
+
 function Stubs.Fire(event, ...)
     for _, region in ipairs(state.regions) do
-        if region.events[event] and region.scripts.OnEvent then
+        if receives(region, event, ...) then
             region.scripts.OnEvent(region, event, ...)
         end
     end
+end
+
+-- Whether any frame QoL made would get the event for the unit.
+function Stubs.Listens(event, unit)
+    for _, region in ipairs(state.regions) do
+        if receives(region, event, unit) then return true end
+    end
+    return false
 end
 
 function Stubs.TriggerRegistry(event, ...)

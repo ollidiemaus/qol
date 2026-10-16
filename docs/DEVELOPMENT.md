@@ -6,7 +6,7 @@ Notes for working on the addon. What it does for players is in the [README](../R
 
 | Folder | What's in it |
 |---|---|
-| `Core/` | Namespace and printing (`Init`), the event frame (`Events`), saved options with defaults and change watchers (`Options`), deferred changes (`Later`), the hidden holder for hidden frames (`Hider`), what the back buttons and the rings share (`Buttons`: an action slot's look, override bindings), our windows' frame (`Window`: the settings), `/qol` (`Slash`) and startup (`Lifecycle`) |
+| `Core/` | Namespace and printing (`Init`), the event frame and unit listeners (`Events`), saved options with defaults and change watchers (`Options`), deferred changes (`Later`), the hidden holder for hidden frames (`Hider`), what the back buttons and the rings share (`Buttons`: an action slot's look, override bindings), our windows' frame (`Window`: the settings), `/qol` (`Slash`) and startup (`Lifecycle`) |
 | `Data/` | Static game data: `MapPins` (dungeon entrances, docks, portals; how it was made is at the top of the file) |
 | `Features/` | One file per feature: `Merchant`, `Quests`, `Tooltips`, `HideFrames` (also the chat buttons), `BuffTooltips` (the controller interface's tooltips for new buffs), `CombatLog`, `ChatClassColors`, `CombinedBagSort`, `CombinedBagLayout`, `MailBookmarks` (tabs on the Send Mail tab), `ClassHealthBars`, `DruidManaBar` (mana in bear and cat form), `ScreenEdge` (Edit Mode frames past the screen edge), `Minimap` (shape, positions, class colors and font sizes around the minimap, and the FPS and ping text), `MapPins`, `Viewport`, `ActionBars`, `ButtonBorders`, `BarPaging`, `BackButtons` (the controller back buttons, Forever only), `RingEntries` (what can go on a ring, and what a character has of it), `Ring`, `RingPicker` (the editor's list), `RingEditor` (the settings' Ring page, `/qol ring`), `ReloadCommand` |
 | `UI/` | `SettingsPage.lua`, a settings page (two columns, or rows across the page, and key binding rows); `SettingsWindow.lua`, the window that `/qol` opens, with the list of pages; `InfoPage.lua`, the information page under Options > AddOns, with a button that opens the window; `Settings.lua`, the pages built with them, in the list's order |
@@ -40,6 +40,15 @@ Forever beta. So:
   own `Show()` calls then change nothing.
 - Compare or compute with game values only after `ns.IsUsable(value)` (nil and secret values fail).
 - Register events through `ns.Events:On`; it skips events the client doesn't know.
+- Events about units (`UNIT_*`, first argument a unit) go through a unit listener, never through
+  `ns.Events:On` (`ClassHealthBars` and `DruidManaBar` still do until #29 and #30 move them):
+  `ns.Events:NewUnitListener(unit1[, unit2])` registers with `RegisterUnitEvent` on a frame of its
+  own, so the game drops every other unit's events before QoL wakes (in a raid with nameplates,
+  hundreds a second). It takes one or two units, all a feature needs so far; a feature that shows
+  more units makes more listeners. Make a listener once, at Init: frames are never freed.
+  `listener:On(event, handler)` skips an unknown event like `ns.Events:On` (one handler per event,
+  a second `On` replaces it; handlers get `(event, ...)`), and `listener:Off(event)` unregisters it,
+  for an event that only matters while something shows.
 - The few calls into Blizzard code are listed here, each with why it's safe: the world map's
   `AddDataProvider` (the map's own extension point; it calls each provider in a secure call of its
   own) and `SetMapID` (only from a click on one of our own pins, like a click on a zone).
@@ -648,7 +657,10 @@ The stubs make action bars read-only (a write to a bar field fails the test), an
 fail on `SetPoint`/`SetParent` (and `Show`/`Hide`) in combat, so the taint rules above are checked,
 not just written down. A frame made from `SecureActionButtonTemplate` marks itself and its parents
 protected and fails on `SetAttribute` in combat; `Stubs.NewGamepadBar()` (between `LoadAddon` and
-`Login`) makes Forever's controller bar with its `PageUnit` anchors.
+`Login`) makes Forever's controller bar with its `PageUnit` anchors. `Stubs.Fire` delivers an event
+to a frame registered with `RegisterUnitEvent` only when its first argument is one of that frame's
+units, as the game does, and `Stubs.Listens(event, unit)` says whether any of our frames would get
+the event for that unit, so a spec can check that other units' events never reach QoL.
 
 ## Trying it in game
 

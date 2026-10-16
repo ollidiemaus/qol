@@ -161,9 +161,7 @@ function ActionBars:Init()
     for _, event in ipairs(WAKE_EVENTS) do
         ns.Events:On(event, wake)
     end
-    ns.Events:On("UNIT_PET", function(_, unit)
-        if unit == "player" then wake() end
-    end)
+    ns.Events:NewUnitListener("player"):On("UNIT_PET", wake)
     -- Changing a bar in Edit Mode lays it out again without an event.
     if EventRegistry and EventRegistry.RegisterCallback then
         EventRegistry:RegisterCallback("EditMode.Exit", wake, ActionBars)

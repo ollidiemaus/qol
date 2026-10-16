@@ -128,6 +128,13 @@ describe("action bar growth", function()
         T.eq(#state.layouts, count + 1)
     end)
 
+    it("hears pet changes for the player only, so other players' pets never wake it", function()
+        start({ flipVertical_PetActionBar = true }, { PetActionBar = { numRows = 2 } })
+        T.eq(Stubs.Listens("UNIT_PET", "player"), true)
+        T.eq(Stubs.Listens("UNIT_PET", "party1"), false)
+        T.eq(Stubs.Listens("UNIT_PET", "nameplate1"), false)
+    end)
+
     it("names bars like Edit Mode does when the game has the names", function()
         local ns = Stubs.LoadAddon()
         HUD_EDIT_MODE_ACTION_BAR_LABEL = "Aktionsleiste %d"
