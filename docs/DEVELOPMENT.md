@@ -41,7 +41,7 @@ Forever beta. So:
 - Compare or compute with game values only after `ns.IsUsable(value)` (nil and secret values fail).
 - Register events through `ns.Events:On`; it skips events the client doesn't know.
 - Events about units (`UNIT_*`, first argument a unit) go through a unit listener, never through
-  `ns.Events:On` (`ClassHealthBars` and `DruidManaBar` still do until #29 and #30 move them):
+  `ns.Events:On` (`DruidManaBar` still does until #30 moves it):
   `ns.Events:NewUnitListener(unit1[, unit2])` registers with `RegisterUnitEvent` on a frame of its
   own, so the game drops every other unit's events before QoL wakes (in a raid with nameplates,
   hundreds a second). It takes one or two units, all a feature needs so far; a feature that shows

@@ -119,11 +119,15 @@ describe("class colored health bars", function()
         untouched("TargetFrame")
     end)
 
-    it("ignore events for units none of the bars show", function()
+    it("hear the target and focus events only for the target and the focus", function()
         start({ classColorTarget = true })
-        Stubs.SetUnit("target", { isPlayer = true, class = "MAGE" })
-        Stubs.Fire("UNIT_TARGET", "raid7")
-        Stubs.RunTimers()
-        untouched("TargetFrame")
+        for _, event in ipairs({ "UNIT_TARGET", "UNIT_CLASSIFICATION_CHANGED", "UNIT_TARGETABLE_CHANGED" }) do
+            for _, unit in ipairs({ "target", "focus" }) do
+                T.eq(Stubs.Listens(event, unit), true, event .. " " .. unit)
+            end
+            for _, unit in ipairs({ "party1", "raid7", "nameplate1" }) do
+                T.eq(Stubs.Listens(event, unit), false, event .. " " .. unit)
+            end
+        end
     end)
 end)

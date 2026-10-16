@@ -88,9 +88,6 @@ local function isActive()
     return next(originals) ~= nil
 end
 
--- Units whose events can change what one of the bars shows.
-local UNITS = { player = true, target = true, focus = true }
-
 -- Events are wake-ups: Apply looks at every bar again. Some only matter because Blizzard redraws
 -- the target and focus frames on them, giving the bar a new texture for the unit's classification;
 -- Apply runs after that, in case the new texture dropped the tint.
@@ -100,11 +97,14 @@ local EVENTS = {
     "PLAYER_FOCUS_CHANGED",
     "GROUP_ROSTER_UPDATE", -- redraws the focus frame
 }
-local UNIT_EVENTS = {
-    "UNIT_TARGET", -- for "target" and "focus": the target of target or focus target changed
+-- Unit events, heard only for the units the bars show.
+local TARGET_EVENTS = {
+    "UNIT_TARGET", -- the target of target or focus target changed
     "UNIT_CLASSIFICATION_CHANGED",
     "UNIT_TARGETABLE_CHANGED",
-    "UNIT_ENTERED_VEHICLE", -- for "player": the player frame switches to the vehicle and back
+}
+local PLAYER_EVENTS = {
+    "UNIT_ENTERED_VEHICLE", -- the player frame switches to the vehicle and back
     "UNIT_EXITING_VEHICLE",
     "UNIT_EXITED_VEHICLE",
 }
@@ -118,10 +118,13 @@ function ClassHealthBars:Init()
     for _, event in ipairs(EVENTS) do
         ns.Events:On(event, wake)
     end
-    for _, event in ipairs(UNIT_EVENTS) do
-        ns.Events:On(event, function(_, unit)
-            if UNITS[unit] then wake() end
-        end)
+    local targetListener = ns.Events:NewUnitListener("target", "focus")
+    for _, event in ipairs(TARGET_EVENTS) do
+        targetListener:On(event, wake)
+    end
+    local playerListener = ns.Events:NewUnitListener("player")
+    for _, event in ipairs(PLAYER_EVENTS) do
+        playerListener:On(event, wake)
     end
     wake()
 end
