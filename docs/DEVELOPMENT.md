@@ -154,7 +154,10 @@ since that's how the new layout gets applied), on leaving Edit Mode (`ExitEditMo
 Edit Mode on a highlight or a setting change, without an event. So the events are wake-ups, and
 between `EditMode.Enter` and `EditMode.Exit` (EventRegistry) a frame of ours compares the frames
 every drawn frame while the option is on. The insets are always worked out from the selection box,
-whatever Blizzard set; a frame that has them already is left alone.
+whatever Blizzard set; a frame that has them already is left alone. That check makes no garbage of its own (`ns.Later` still builds a request per call, until #32):
+insets go around as four numbers (multiple returns), never tables, the watcher and the schedule
+helper call one function defined at file scope, and a frame anchored again reuses its own copy of
+its anchors.
 
 New insets alone don't bring back a frame the game already pulled in: the first version set them a
 frame after Edit Mode closed, and everything placed past the edge stayed on the screen (seen

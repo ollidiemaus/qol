@@ -32,6 +32,8 @@ local KEY = "pastScreenEdge"
 -- empty space around its art, and may go as much further.
 local PAST = 30
 
+local abs = math.abs
+
 -- The frames we gave insets of ours, as keys.
 local extended = setmetatable({}, { __mode = "k" })
 
@@ -43,6 +45,8 @@ local function allUsable(...)
 end
 
 -- Edit Mode's insets for a laid out frame (UpdateClampOffsets): from its edges to its selection box's.
+-- Insets go around as four numbers, never tables: this runs for every Edit Mode frame on every drawn
+-- frame while Edit Mode is open.
 local function selectionInsets(frame)
     local selection = frame.Selection
     if not (selection and frame.GetClampRectInsets) then return nil end
@@ -50,18 +54,15 @@ local function selectionInsets(frame)
     local sLeft, sRight, sTop, sBottom = selection:GetLeft(), selection:GetRight(), selection:GetTop(),
         selection:GetBottom()
     if not allUsable(left, right, top, bottom, sLeft, sRight, sTop, sBottom) then return nil end
-    return { sLeft - left, sRight - right, sTop - top, sBottom - bottom }
+    return sLeft - left, sRight - right, sTop - top, sBottom - bottom
 end
 
-local function moved(insets)
-    return { insets[1] + PAST, insets[2] - PAST, insets[3] - PAST, insets[4] + PAST }
+local function moved(left, right, top, bottom)
+    return left + PAST, right - PAST, top - PAST, bottom + PAST
 end
 
-local function same(a, b)
-    for index = 1, 4 do
-        if math.abs(a[index] - b[index]) > 0.1 then return false end
-    end
-    return true
+local function near(a, b)
+    return abs(a - b) <= 0.1
 end
 
 local function widgetMethod(frame, name)
@@ -70,21 +71,34 @@ local function widgetMethod(frame, name)
     return type(methods) == "table" and methods[name] or nil
 end
 
+-- Each frame's own copy of its anchors, reused every time it's anchored again.
+local anchors = setmetatable({}, { __mode = "k" })
+
 -- Anchors the frame again at the points it has, so the game lays it out under its new insets.
 local function relayout(frame)
     if frame.isDragging then return end
     local clearAllPoints, setPoint = widgetMethod(frame, "ClearAllPoints"), widgetMethod(frame, "SetPoint")
     local count = frame:GetNumPoints()
     if not (clearAllPoints and setPoint and ns.IsUsable(count) and count > 0) then return end
-    local points = {}
+    local points = anchors[frame]
+    if not points then
+        points = {}
+        anchors[frame] = points
+    end
     for index = 1, count do
         local point, relativeTo, relativePoint, x, y = frame:GetPoint(index)
         if not (point and relativeTo and allUsable(x, y)) then return end
-        points[index] = { point, relativeTo, relativePoint, x, y }
+        local anchor = points[index]
+        if not anchor then
+            anchor = {}
+            points[index] = anchor
+        end
+        anchor[1], anchor[2], anchor[3], anchor[4], anchor[5] = point, relativeTo, relativePoint, x, y
     end
     clearAllPoints(frame)
-    for _, p in ipairs(points) do
-        setPoint(frame, p[1], p[2], p[3], p[4], p[5])
+    for index = 1, count do
+        local anchor = points[index]
+        setPoint(frame, anchor[1], anchor[2], anchor[3], anchor[4], anchor[5])
     end
 end
 
@@ -94,18 +108,21 @@ function ScreenEdge:Apply()
     local frames = EditModeManagerFrame and EditModeManagerFrame.registeredSystemFrames
     if type(frames) ~= "table" then return end
     for _, frame in ipairs(frames) do
-        local wanted = (on or extended[frame]) and selectionInsets(frame)
-        local current = wanted and { frame:GetClampRectInsets() }
-        if current and allUsable(current[1], current[2], current[3], current[4]) then
+        local left, right, top, bottom
+        if on or extended[frame] then left, right, top, bottom = selectionInsets(frame) end
+        local cLeft, cRight, cTop, cBottom
+        if left then cLeft, cRight, cTop, cBottom = frame:GetClampRectInsets() end
+        if left and allUsable(cLeft, cRight, cTop, cBottom) then
             if on then
-                wanted = moved(wanted)
+                left, right, top, bottom = moved(left, right, top, bottom)
                 extended[frame] = true
             else
                 extended[frame] = nil
             end
-            local changed = not same(current, wanted)
+            local changed = not (near(cLeft, left) and near(cRight, right) and near(cTop, top)
+                and near(cBottom, bottom))
             if changed then
-                frame:SetClampRectInsets(wanted[1], wanted[2], wanted[3], wanted[4])
+                frame:SetClampRectInsets(left, right, top, bottom)
             end
             -- Turned off, a frame past the edge comes back in even if Blizzard's insets are back already.
             if changed or not on then relayout(frame) end
@@ -113,8 +130,13 @@ function ScreenEdge:Apply()
     end
 end
 
+-- Defined once: schedule hands it to ns.Later on every drawn frame while the watcher shows.
+local function apply()
+    ScreenEdge:Apply()
+end
+
 local function schedule()
-    ns.Later("screenEdge", function() ScreenEdge:Apply() end)
+    ns.Later("screenEdge", apply)
 end
 
 -- Shown while Edit Mode is open and the option is on: Blizzard sets the insets again without an
