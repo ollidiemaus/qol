@@ -32,7 +32,9 @@ Forever beta. So:
   the game fire an event asking for it again can't spin inside one frame and freeze the game
   (nothing says when the game runs a `C_Timer.After(0)` started from a timer callback). A change the
   game allows in combat (the health bar colors) passes `true` as a third argument and runs in combat
-  too.
+  too. It makes no garbage per request, since busy events (cooldowns, usability) ask many times a
+  second: each key keeps one request table, reset by every new request, the batch swaps between two
+  tables, and every feature's schedule helper hands it a function defined once, not a new closure.
 - The back buttons and the rings go through `ns.LaterOutsideWindows(key, fn)` instead: out of combat
   too, and in Forever's controller interface also away from the game's windows that have the
   controller (see Settings pages below).
@@ -154,7 +156,7 @@ since that's how the new layout gets applied), on leaving Edit Mode (`ExitEditMo
 Edit Mode on a highlight or a setting change, without an event. So the events are wake-ups, and
 between `EditMode.Enter` and `EditMode.Exit` (EventRegistry) a frame of ours compares the frames
 every drawn frame while the option is on. The insets are always worked out from the selection box,
-whatever Blizzard set; a frame that has them already is left alone. That check makes no garbage of its own (`ns.Later` still builds a request per call, until #32):
+whatever Blizzard set; a frame that has them already is left alone. That check makes no garbage of its own:
 insets go around as four numbers (multiple returns), never tables, the watcher and the schedule
 helper call one function defined at file scope, and a frame anchored again reuses its own copy of
 its anchors.

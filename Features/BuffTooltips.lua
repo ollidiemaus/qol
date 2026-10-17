@@ -48,8 +48,12 @@ function BuffTooltips:Apply()
     end
 end
 
+local function apply()
+    BuffTooltips:Apply()
+end
+
 local function schedule()
-    ns.Later("buffTooltips", function() BuffTooltips:Apply() end, true)
+    ns.Later("buffTooltips", apply, true)
 end
 
 function BuffTooltips:Init()

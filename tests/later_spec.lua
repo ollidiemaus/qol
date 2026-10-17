@@ -41,6 +41,25 @@ describe("ns.Later", function()
         T.eq(ran, 2)
     end)
 
+    it("replaces a request that hasn't run yet with one made while the others run", function()
+        local ns = Stubs.LoadAddon()
+        Stubs.Login()
+        local result = {}
+        local function note(name) result[#result + 1] = name end
+        ns.Later("a", function()
+            note("a")
+            ns.Later("b", function() note("b, asked again") end)
+        end)
+        ns.Later("b", function() note("b") end)
+        Stubs.NextFrame()
+        -- Whatever the order, nothing runs after a this frame: b either ran before it was asked for
+        -- again or waits for the next frame.
+        T.eq(result[#result], "a")
+        local ranBefore = #result
+        Stubs.RunTimers()
+        T.same({ unpack(result, ranBefore + 1) }, { "b, asked again" })
+    end)
+
     it("waits for the end of combat", function()
         local ns = Stubs.LoadAddon()
         Stubs.Login()
@@ -144,6 +163,23 @@ describe("ns.LaterOutsideWindows", function()
         Stubs.RunTimers()
         Stubs.SetControllerWindow(nil)
         Stubs.AdvanceTime()
+        Stubs.AdvanceTime()
+        T.same(result, { "second" })
+    end)
+
+    it("makes a new request wait again, also one asked for after a check let the last go", function()
+        local ns = Stubs.LoadAddon()
+        Stubs.Login()
+        Stubs.SetControllerUI(true)
+        local result = {}
+        ns.LaterOutsideWindows("test", function() result[#result + 1] = "first" end)
+        Stubs.RunTimers()
+        -- Asked for in the drawn frame of the check that lets the first go, before it ran.
+        _G.C_Timer.After(0.5, function()
+            ns.LaterOutsideWindows("test", function() result[#result + 1] = "second" end)
+        end)
+        Stubs.AdvanceTime()
+        T.same(result, {})
         Stubs.AdvanceTime()
         T.same(result, { "second" })
     end)

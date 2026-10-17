@@ -36,8 +36,12 @@ function ChatClassColors:Apply()
     end
 end
 
+local function apply()
+    ChatClassColors:Apply()
+end
+
 local function schedule()
-    ns.Later("chatClassColors", function() ChatClassColors:Apply() end)
+    ns.Later("chatClassColors", apply)
 end
 
 -- At login only an option that is on does anything. The setting goes back to its default only

@@ -120,8 +120,12 @@ function ActionBars:Update()
     end
 end
 
+local function update()
+    ActionBars:Update()
+end
+
 local function schedule()
-    ns.Later("actionBars", function() ActionBars:Update() end)
+    ns.Later("actionBars", update)
 end
 
 local function isFlipKey(key)

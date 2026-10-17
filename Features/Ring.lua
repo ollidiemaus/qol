@@ -475,8 +475,12 @@ function Ring:Update()
     bindings:Set(on and Ring.Overrides() or {})
 end
 
+local function update()
+    Ring:Update()
+end
+
 local function schedule()
-    ns.LaterOutsideWindows("ring", function() Ring:Update() end)
+    ns.LaterOutsideWindows("ring", update)
 end
 
 -- The rings changed (the editor).
@@ -484,12 +488,13 @@ function Ring.Changed()
     schedule()
 end
 
+-- Defined once: cooldown and usability events ask for it many times a second while the ring shows.
+local function refresh()
+    if art:IsVisible() then Ring.Refresh(art) end
+end
+
 local function scheduleRefresh()
-    if art and art:IsVisible() then
-        ns.Later("ringArt", function()
-            if art:IsVisible() then Ring.Refresh(art) end
-        end, true)
-    end
+    if art and art:IsVisible() then ns.Later("ringArt", refresh, true) end
 end
 
 -- What changes the entries a character can use: spells learned, items gained or used up, toys,

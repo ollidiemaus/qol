@@ -36,8 +36,12 @@ function CombatLog:Apply()
     end
 end
 
+local function apply()
+    CombatLog:Apply()
+end
+
 local function schedule()
-    ns.Later("combatLog", function() CombatLog:Apply() end)
+    ns.Later("combatLog", apply)
 end
 
 function CombatLog:Init()

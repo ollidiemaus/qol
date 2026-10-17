@@ -227,8 +227,12 @@ function Viewport:Apply()
     if not border:IsShown() then border:Show() end
 end
 
+local function apply()
+    Viewport:Apply()
+end
+
 schedule = function()
-    ns.Later("viewport", function() Viewport:Apply() end)
+    ns.Later("viewport", apply)
 end
 
 function Viewport:Init()

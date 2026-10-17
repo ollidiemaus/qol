@@ -86,8 +86,12 @@ function BarPaging:Update()
     applied = wanted
 end
 
+local function update()
+    BarPaging:Update()
+end
+
 local function schedule()
-    ns.Later("barPaging", function() BarPaging:Update() end)
+    ns.Later("barPaging", update)
 end
 
 function BarPaging:Init()

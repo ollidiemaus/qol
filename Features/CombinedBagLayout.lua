@@ -85,8 +85,12 @@ function CombinedBagLayout:Apply()
     self.flipped = flip
 end
 
+local function apply()
+    CombinedBagLayout:Apply()
+end
+
 local function schedule()
-    ns.Later("combinedBagLayout", function() CombinedBagLayout:Apply() end, true)
+    ns.Later("combinedBagLayout", apply, true)
 end
 
 -- Blizzard lays the bag out when it opens (OnShow), when its size changes (a bag swapped, a

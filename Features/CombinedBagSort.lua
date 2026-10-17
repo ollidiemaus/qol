@@ -62,8 +62,12 @@ function CombinedBagSort:Apply()
     end
 end
 
+local function apply()
+    CombinedBagSort:Apply()
+end
+
 local function schedule()
-    ns.Later("combinedBagSort", function() CombinedBagSort:Apply() end)
+    ns.Later("combinedBagSort", apply)
 end
 
 function CombinedBagSort:Init()

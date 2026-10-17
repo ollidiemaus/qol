@@ -512,21 +512,24 @@ function Editor:Create(parent, top, width, height)
     ns.Events:On("PLAYER_REGEN_ENABLED", function()
         if editor:IsVisible() then self:Refresh() end
     end)
+    -- Made once: the events ask for them many times a second while the editor shows.
+    local function renderShown()
+        if editor:IsVisible() then render() end
+    end
+    local function fillShown()
+        if editor:IsVisible() then Picker.Fill() end
+    end
     local function later(key, fn)
-        if editor:IsVisible() and not InCombatLockdown() then
-            ns.Later(key, function()
-                if editor:IsVisible() then fn() end
-            end)
-        end
+        if editor:IsVisible() and not InCombatLockdown() then ns.Later(key, fn) end
     end
     for _, event in ipairs(Ring.KNOWN_EVENTS) do
         ns.Events:On(event, function()
-            later("ringEditor", render)
-            later("ringEditorList", Picker.Fill)
+            later("ringEditor", renderShown)
+            later("ringEditorList", fillShown)
         end)
     end
     for _, event in ipairs(Ring.REFRESH_EVENTS) do
-        ns.Events:On(event, function() later("ringEditor", render) end)
+        ns.Events:On(event, function() later("ringEditor", renderShown) end)
     end
 end
 

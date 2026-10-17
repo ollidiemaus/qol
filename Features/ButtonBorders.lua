@@ -174,8 +174,12 @@ function ButtonBorders:Apply()
     end
 end
 
+local function apply()
+    ButtonBorders:Apply()
+end
+
 local function schedule()
-    ns.Later("buttonBorders", function() ButtonBorders:Apply() end)
+    ns.Later("buttonBorders", apply)
 end
 
 local function wake()

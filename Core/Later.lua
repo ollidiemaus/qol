@@ -22,8 +22,14 @@ local _, ns = ...
 -- runs while the game is still closing one, whatever order it does that in.
 local WINDOW_CHECK_SECONDS = 0.5
 
+-- One request per key, reused for every request for it: busy events ask again every frame.
 -- key -> { fn = ..., inCombat = true or nil, outsideWindows = true or nil, released = true or nil }
+local requests = {}
+-- key -> its request, for the requests waiting for the next frame, for combat to end and for the
+-- windows. A request waits in one of them at most.
 local pending = {}
+-- The requests of the frame being run; swapped with pending, so neither is made anew each frame.
+local batch = {}
 local afterCombat = {}
 local afterWindows = {}
 local checkingWindows = false
@@ -66,17 +72,22 @@ local function waitForWindows(key, request)
 end
 
 local function runPending()
-    local batch = pending
-    pending = {}
+    batch, pending = pending, batch
     for key, request in pairs(batch) do
-        local released = request.released
-        request.released = nil
-        if InCombatLockdown() and not request.inCombat then
-            afterCombat[key] = request
-        elseif request.outsideWindows and ns.IsControllerUI() and (not released or ns.ControllerWindowOpen()) then
-            waitForWindows(key, request)
-        else
-            request.fn()
+        -- Taken out before it runs: when one raises an error, the others still run a frame later.
+        batch[key] = nil
+        -- Asked for again while the batch runs: that request replaced this one and waits for the
+        -- next frame.
+        if pending[key] == nil then
+            local released = request.released
+            request.released = nil
+            if InCombatLockdown() and not request.inCombat then
+                afterCombat[key] = request
+            elseif request.outsideWindows and ns.IsControllerUI() and (not released or ns.ControllerWindowOpen()) then
+                waitForWindows(key, request)
+            else
+                request.fn()
+            end
         end
     end
 end
@@ -86,13 +97,24 @@ driver:SetScript("OnUpdate", function(self)
     if next(pending) == nil then self:Hide() end
 end)
 
+-- Resets the key's request to a fresh one and queues it.
+local function renew(key, fn, inCombat, outsideWindows)
+    local record = requests[key]
+    if not record then
+        record = {}
+        requests[key] = record
+    end
+    record.fn, record.inCombat, record.outsideWindows, record.released = fn, inCombat, outsideWindows, nil
+    queue(key, record)
+end
+
 function ns.Later(key, fn, inCombat)
-    queue(key, { fn = fn, inCombat = inCombat or nil })
+    renew(key, fn, inCombat or nil, nil)
 end
 
 -- Never in combat.
 function ns.LaterOutsideWindows(key, fn)
-    queue(key, { fn = fn, outsideWindows = true })
+    renew(key, fn, nil, true)
 end
 
 ns.Events:On("PLAYER_REGEN_ENABLED", function()

@@ -300,9 +300,13 @@ function MapPins:Update()
     if self.map and self.map:IsShown() then self:Redraw() end
 end
 
+local function update()
+    MapPins:Update()
+end
+
 -- Showing pins is allowed in combat, so the map can change while it is open in combat.
 local function schedule()
-    ns.Later("mapPins", function() MapPins:Update() end, true)
+    ns.Later("mapPins", update, true)
 end
 
 function MapPins:Init()

@@ -676,13 +676,21 @@ end
 local LAYOUT_KEYS = { SQUARE, BORDER, CALENDAR, ZONE_TEXT_SIZE, CLOCK_SIZE, PERFORMANCE_SIZE }
 for _, element in ipairs(MinimapLayout.ELEMENTS) do LAYOUT_KEYS[#LAYOUT_KEYS + 1] = element.key end
 
+local function apply()
+    MinimapLayout:Apply()
+end
+
 local function scheduleLayout()
-    ns.Later("minimapLayout", function() MinimapLayout:Apply() end)
+    ns.Later("minimapLayout", apply)
+end
+
+local function applyColors()
+    MinimapLayout:ApplyColors()
 end
 
 -- A color is allowed in combat, so a zone change in combat gets the class color at once.
 local function scheduleColor()
-    ns.Later("minimapColors", function() MinimapLayout:ApplyColors() end, true)
+    ns.Later("minimapColors", applyColors, true)
 end
 
 local COLOR_KEYS = {}

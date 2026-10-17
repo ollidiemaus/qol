@@ -77,8 +77,12 @@ function ClassHealthBars:Apply()
     end
 end
 
+local function apply()
+    ClassHealthBars:Apply()
+end
+
 local function schedule()
-    ns.Later("classHealthBars", function() ClassHealthBars:Apply() end, true)
+    ns.Later("classHealthBars", apply, true)
 end
 
 local function isActive()

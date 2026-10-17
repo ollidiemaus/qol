@@ -293,14 +293,21 @@ function BackButtons:Update()
     self:Refresh()
 end
 
+local function update()
+    BackButtons:Update()
+end
+
 local function schedule()
-    ns.LaterOutsideWindows("backButtons", function() BackButtons:Update() end)
+    ns.LaterOutsideWindows("backButtons", update)
+end
+
+-- Defined once: cooldown and usability events ask for it many times a second while the buttons show.
+local function refresh()
+    BackButtons:Refresh()
 end
 
 local function scheduleRefresh()
-    if holder and holder:IsShown() then
-        ns.Later("backButtonsArt", function() BackButtons:Refresh() end, true)
-    end
+    if holder and holder:IsShown() then ns.Later("backButtonsArt", refresh, true) end
 end
 
 function BackButtons:Init()

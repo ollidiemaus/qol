@@ -195,8 +195,12 @@ function DruidManaBar:Apply()
     end
 end
 
+local function apply()
+    DruidManaBar:Apply()
+end
+
 local function schedule()
-    ns.Later("druidManaBar", function() DruidManaBar:Apply() end, true)
+    ns.Later("druidManaBar", apply, true)
 end
 
 local function isActive()

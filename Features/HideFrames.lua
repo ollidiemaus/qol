@@ -46,8 +46,12 @@ function HideFrames:Apply()
     end
 end
 
+local function apply()
+    HideFrames:Apply()
+end
+
 local function schedule()
-    ns.Later("hideFrames", function() HideFrames:Apply() end)
+    ns.Later("hideFrames", apply)
 end
 
 function HideFrames:Init()
