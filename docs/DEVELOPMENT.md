@@ -74,7 +74,20 @@ Forever beta. So:
   for an event that only matters while something shows.
 - The few calls into Blizzard code are listed here, each with why it's safe: the world map's
   `AddDataProvider` (the map's own extension point; it calls each provider in a secure call of its
-  own) and `SetMapID` (only from a click on one of our own pins, like a click on a zone).
+  own) and `SetMapID` (only from a click on one of our own pins, like a click on a zone). One
+  Blizzard table is written to: `hash_SlashCmdList`, the chat's cache of slash commands. Whenever
+  the chat parses a slash command (and once at load), `ImportAllListsToHash`
+  (`Blizzard_ChatFrameBase/Shared/ChatFrameUtil.lua`) moves every new entry of `SlashCmdList` into
+  it, and the chat then runs the command it finds there. So once chat has been used, QoL's `/rl` is
+  in that table, and turning `/rl` off removes it there too (`ReloadCommand:Unregister`, only when
+  the entry is still ours); otherwise `/rl` would keep working until a reload. It's safe: the game's
+  own comment (`SlashCommandsRegistry.lua`) keeps the table global so addons can unregister their
+  commands this way; the only reader is the edit box's `ParseText` (`ChatFrameEditBox.lua`), after
+  the secure commands, which have a table of their own; and on a miss it tries emotes and then
+  prints the usual help text for an unknown command, as for any typo. Two leftovers of the import
+  stay: the copy behind `SlashCmdList`'s metatable (nothing runs it) and
+  `hash_ChatTypeInfoList["/RL"]`, which names no chat type, so `/rl` still tab-completes but does
+  nothing.
 - Leave `WorldFrame` alone while a cutscene plays. Blizzard's `CinematicFrame` re-anchors it for
   the black bars and resets it to full screen at the end; `MovieFrame` hides it. Two hands on
   `WorldFrame` during a cutscene is how viewport addons crash the game. The viewport waits until
