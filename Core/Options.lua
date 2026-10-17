@@ -95,6 +95,11 @@ local function stored()
     return ns.db and ns.db.options
 end
 
+-- Saved values whose type doesn't match their default (a hand-edited file, or one from a QoL that
+-- stores the option differently). They stay in the file, so that QoL finds them again, while Get
+-- returns the default; Set replaces them. Worked out once at Init, since Get runs on tooltip paths.
+local mismatched = {}
+
 function Options:AddDefault(key, value)
     DEFAULTS[key] = value
 end
@@ -106,7 +111,7 @@ end
 function Options:Get(key)
     local options = stored()
     local value = options and options[key]
-    if value == nil then
+    if value == nil or mismatched[key] then
         return DEFAULTS[key]
     end
     return value
@@ -121,6 +126,7 @@ function Options:Set(key, value)
         value = nil
     end
     options[key] = value
+    mismatched[key] = nil
     local new = self:Get(key)
     if new ~= old then
         for _, watcher in ipairs(self.watchers) do
@@ -150,12 +156,11 @@ function Options:Init(db)
     if type(db.options) ~= "table" then
         db.options = {}
     end
-    -- Drop values whose type no longer matches the default (a hand-edited or outdated file), so
-    -- every Get returns what the features expect.
+    mismatched = {}
     for key, value in pairs(db.options) do
         local default = DEFAULTS[key]
         if default ~= nil and type(value) ~= type(default) then
-            db.options[key] = nil
+            mismatched[key] = true
         end
     end
 end

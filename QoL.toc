@@ -27,6 +27,7 @@ Locales\deDE.lua
 Core\Init.lua
 Core\Events.lua
 Core\Options.lua
+Core\SavedData.lua
 Core\API.lua
 Core\Later.lua
 Core\Hider.lua

@@ -677,6 +677,8 @@ local function install()
 
     G.InCombatLockdown = function() return state.combat end
     G.ReloadUI = function() state.reloads = state.reloads + 1 end
+    -- Errors handed to the game's error handler, in order.
+    G.geterrorhandler = function() return function(err) state.errors[#state.errors + 1] = err end end
     -- Other addons that are loaded (state.loadedAddons, by folder), and our TOC's version
     -- (Stubs.LoadAddon({ version = ... }), else none, as in an unpackaged checkout).
     G.C_AddOns = {
@@ -1284,7 +1286,7 @@ function Stubs.Reset(options)
         bags = {}, prices = {}, used = {}, bagSorts = 0, soldAll = 0, sellAllEnabled = true,
         canRepair = false, repairCost = 0, repairs = {}, money = 0,
         inGuild = false, guildCanRepair = false, guildLimit = 0, guildMoney = 0,
-        layouts = {}, reloads = 0,
+        layouts = {}, reloads = 0, errors = {},
         units = { player = { isPlayer = true, class = "MAGE", name = "Testmage" } }, realm = "TestRealm",
         regionalNames = false,
         focus = nil,

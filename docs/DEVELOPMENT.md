@@ -6,7 +6,7 @@ Notes for working on the addon. What it does for players is in the [README](../R
 
 | Folder | What's in it |
 |---|---|
-| `Core/` | Namespace and printing (`Init`), the event frame and unit listeners (`Events`), saved options with defaults and change watchers (`Options`), deferred changes (`Later`), the hidden holder for hidden frames (`Hider`), what the back buttons and the rings share (`Buttons`: an action slot's look, override bindings), our windows' frame (`Window`: the settings), `/qol` (`Slash`) and startup (`Lifecycle`) |
+| `Core/` | Namespace and printing (`Init`), the event frame and unit listeners (`Events`), saved options with defaults and change watchers (`Options`), the saved data's version and migrations (`SavedData`), deferred changes (`Later`), the hidden holder for hidden frames (`Hider`), what the back buttons and the rings share (`Buttons`: an action slot's look, override bindings), our windows' frame (`Window`: the settings), `/qol` (`Slash`) and startup (`Lifecycle`) |
 | `Data/` | Static game data: `MapPins` (dungeon entrances, docks, portals; how it was made is at the top of the file) |
 | `Features/` | One file per feature: `Merchant`, `Quests`, `Tooltips`, `HideFrames` (also the chat buttons), `BuffTooltips` (the controller interface's tooltips for new buffs), `CombatLog`, `ChatClassColors`, `CombinedBagSort`, `CombinedBagLayout`, `MailBookmarks` (tabs on the Send Mail tab), `ClassHealthBars`, `DruidManaBar` (mana in bear and cat form), `ScreenEdge` (Edit Mode frames past the screen edge), `Minimap` (shape, positions, class colors and font sizes around the minimap, and the FPS and ping text), `MapPins`, `Viewport`, `ActionBars`, `ButtonBorders`, `BarPaging`, `BackButtons` (the controller back buttons, Forever only), `RingEntries` (what can go on a ring, and what a character has of it), `Ring`, `RingPicker` (the editor's list), `RingEditor` (the settings' Ring page, `/qol ring`), `ReloadCommand` |
 | `UI/` | `SettingsPage.lua`, a settings page (two columns, or rows across the page, and key binding rows); `SettingsWindow.lua`, the window that `/qol` opens, with the list of pages; `InfoPage.lua`, the information page under Options > AddOns, with a button that opens the window; `Settings.lua`, the pages built with them, in the list's order |
@@ -17,6 +17,27 @@ Notes for working on the addon. What it does for players is in the [README](../R
 
 Features never talk to each other or to the settings pages. A page writes `ns.Options`; a feature
 reads it with `Options:Get` and reacts to changes through `Options:Watch`.
+
+## Saved data
+
+Everything QoL saves is in `QoLDB`, account-wide: `options` (only values that differ from their
+default), `rings` and `characters` (the mail bookmarks' class icons), and `version`, the layout's
+version (`Core/SavedData.lua`, now 1). On `ADDON_LOADED`, before anything reads the file,
+`SavedData:Migrate` runs `MIGRATIONS[n]` for every version from the saved one up to `VERSION`, one
+at a time, and writes each version once its migration is done. There are none yet: a file without a
+version is the layout from before versions, which version 1 kept, so 0 to 1 only writes the number.
+A change to the layout raises `VERSION` and adds the migration that turns the old layout into the
+new one. A migration that fails (an error) stops there: the error goes to the game's error handler,
+the version stays at the last one that worked, and QoL loads as usual. So a migration works out
+everything it needs before it writes anything, and leaves the file as it was when it fails.
+
+A player can go back to an older QoL, and the client writes whatever is in memory at logout, so
+QoL doesn't reset what it doesn't understand. A file with a newer version than `VERSION` is left
+alone: no migrations run and the version stays. A saved option whose type doesn't match its default
+stays in the file too; `Options:Init` marks it, `Get` returns the default for a marked key (one table
+lookup, since `Get` runs on tooltip paths) and `Set` replaces the value and clears the mark. Options
+QoL has no default for are kept and never read. The one exception is Ring: at login it drops what
+isn't a ring from `QoLDB.rings` (`clean` in `Features/Ring.lua`), as it did before versions.
 
 ## Rules for touching Blizzard frames
 

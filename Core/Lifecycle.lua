@@ -7,6 +7,7 @@ ns.Events:On("ADDON_LOADED", function(_, loaded)
     if type(QoLDB) ~= "table" then
         QoLDB = {}
     end
+    ns.SavedData:Migrate(QoLDB)
     ns.Options:Init(QoLDB)
     ns.SettingsPanel:Init()
 end)
