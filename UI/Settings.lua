@@ -44,7 +44,6 @@ local function buildInterface(page)
     page:Checkbox("left", "hideBagsBar", L.HIDE_BAGS_BAR, L.HIDE_BAGS_BAR_TIP)
 
     page:Header("left", L.SECTION_COMBINED_BAGS)
-    page:Checkbox("left", "showCombinedBagSort", L.SHOW_COMBINED_BAG_SORT, L.SHOW_COMBINED_BAG_SORT_TIP)
     page:Checkbox("left", "combinedBagTopLeft", L.COMBINED_BAG_TOP_LEFT, L.COMBINED_BAG_TOP_LEFT_TIP)
 
     page:Header("left", L.SECTION_PLAYER_FRAME)

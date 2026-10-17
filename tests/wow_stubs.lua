@@ -732,10 +732,7 @@ local function install()
         GetContainerNumSlots = function(bag) return state.bags[bag] and state.bags[bag].size or 0 end,
         GetContainerItemInfo = function(bag, slot) return state.bags[bag] and state.bags[bag][slot] end,
         UseContainerItem = function(bag, slot) table.insert(state.used, bag .. ":" .. slot) end,
-        SortBags = function() state.bagSorts = state.bagSorts + 1 end,
     }
-    G.BAG_CLEANUP_BAGS = "Clean Up Bags"
-    G.BAG_CLEANUP_BAGS_DESCRIPTION = "Sort the items in your bags."
     G.C_Item = {
         GetItemInfo = function(itemID)
             local price = state.prices[itemID]
@@ -766,8 +763,8 @@ local function install()
     G.EditModeManagerFrame = newRegion("Frame", G.UIParent)
     G.EditModeManagerFrame:Hide()
     G.EditModeManagerFrame.registeredSystemFrames = {}
-    -- The combined bag starts closed and empty (Stubs.FillCombinedBag); its sort button belongs to
-    -- the backpack and starts hidden. Each script's hooks run in turn from hooks[script].
+    -- The combined bag starts closed and empty (Stubs.FillCombinedBag). Each script's hooks run in
+    -- turn from hooks[script].
     G.ContainerFrameCombinedBags = newRegion("Frame", G.UIParent)
     G.ContainerFrameCombinedBags:Hide()
     G.ContainerFrameCombinedBags.hooks = {}
@@ -777,10 +774,6 @@ local function install()
     end
     G.ContainerFrameCombinedBags.MoneyFrame = newRegion("Frame", G.ContainerFrameCombinedBags)
     G.ContainerFrameCombinedBags.Items = {}
-    G.ContainerFrame1 = newRegion("Frame", G.UIParent)
-    G.BagItemSearchBox = newRegion("Frame", G.ContainerFrame1)
-    G.BagItemAutoSortButton = newRegion("Frame", G.ContainerFrame1)
-    G.BagItemAutoSortButton:Hide()
     -- The mail frame, closed, with its Send Mail tab (hidden while the Inbox tab shows) and that tab's
     -- To and Subject boxes.
     G.MailFrame = newRegion("Frame", G.UIParent)
@@ -1287,7 +1280,7 @@ function Stubs.Reset(options)
         interfaceStyle = 0,
         screenWidth = 2560, screenHeight = 1440,
         framerate = 59.7, latencyHome = 45, latencyWorld = 38,
-        bags = {}, prices = {}, used = {}, bagSorts = 0, soldAll = 0, sellAllEnabled = true,
+        bags = {}, prices = {}, used = {}, soldAll = 0, sellAllEnabled = true,
         canRepair = false, repairCost = 0, repairs = {}, money = 0,
         inGuild = false, guildCanRepair = false, guildLimit = 0, guildMoney = 0,
         layouts = {}, reloads = 0, errors = {},
