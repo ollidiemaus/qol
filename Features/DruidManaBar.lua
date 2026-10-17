@@ -31,6 +31,8 @@ local GLOW_THIRD_BAR = "UI-HUD-UnitFrame-Player-PortraitOn-ClassResource-InComba
 
 -- Created the first time the bar shows.
 local bar, art, text, leftText, rightText
+-- Hears the player's unit events, made at Init. It hears the mana only while the bar shows.
+local playerListener
 local hovered = false
 -- The usual art's alpha before we hid it, while it is hidden.
 local frameAlpha
@@ -60,31 +62,54 @@ local function percent(value, maxValue)
     return math.ceil(value / maxValue * 100) .. "%"
 end
 
--- Like the frame's other bars (TextStatusBar): the game's Status Text setting shows the text always
--- ("statusText") or only under the mouse, as numbers, a percentage or both ("statusTextDisplay";
--- both puts the percentage left and the mana right, as on a mana bar).
-local function updateText()
-    text:SetText("")
-    leftText:SetText("")
-    rightText:SetText("")
-    if not (hovered or C_CVar.GetCVar("statusText") == "1") then return end
-    local value, maxValue = UnitPower("player", MANA), UnitPowerMax("player", MANA)
-    if not (ns.IsUsable(value) and ns.IsUsable(maxValue)) or maxValue <= 0 then return end
-    local mode = C_CVar.GetCVar("statusTextDisplay")
-    if mode == "BOTH" then
-        leftText:SetText(percent(value, maxValue))
-        rightText:SetText(number(value))
-    elseif mode == "PERCENT" then
-        text:SetText(percent(value, maxValue))
-    else
-        text:SetText(number(value) .. " / " .. number(maxValue))
-    end
+-- The text each of the three font strings has, so that a tick sets only the ones that change.
+local shownText = {}
+
+local function setText(fontString, value)
+    if shownText[fontString] == value then return end
+    shownText[fontString] = value
+    fontString:SetText(value)
 end
 
+-- Like the frame's other bars (TextStatusBar): the game's Status Text setting shows the text always
+-- ("statusText") or only under the mouse, as numbers, a percentage or both ("statusTextDisplay";
+-- both puts the percentage left and the mana right, as on a mana bar). Read when the bar is made
+-- and when the setting changes, not on a mana tick.
+local alwaysText, textMode
+
+local function readStatusText()
+    alwaysText = C_CVar.GetCVar("statusText") == "1"
+    textMode = C_CVar.GetCVar("statusTextDisplay")
+end
+
+local function updateText()
+    local center, left, right = "", "", ""
+    if hovered or alwaysText then
+        local value, maxValue = UnitPower("player", MANA), UnitPowerMax("player", MANA)
+        if ns.IsUsable(value) and ns.IsUsable(maxValue) and maxValue > 0 then
+            if textMode == "BOTH" then
+                left, right = percent(value, maxValue), number(value)
+            elseif textMode == "PERCENT" then
+                center = percent(value, maxValue)
+            else
+                center = number(value) .. " / " .. number(maxValue)
+            end
+        end
+    end
+    setText(text, center)
+    setText(leftText, left)
+    setText(rightText, right)
+end
+
+-- The mana can be secret: it is passed on as it is on every tick, never compared.
 local function updateValue()
-    bar:SetMinMaxValues(0, UnitPowerMax("player", MANA))
     bar:SetValue(UnitPower("player", MANA))
     updateText()
+end
+
+-- A mana tick: only the value and the texts. The range is set in Apply.
+local function onPower(_, _, powerToken)
+    if powerToken == "MANA" then updateValue() end
 end
 
 local function newText(point, x)
@@ -109,6 +134,7 @@ local function create()
     bar:SetStatusBarTexture(BAR)
     bar:Hide()
     text, leftText, rightText = newText("CENTER", 0), newText("LEFT", 2), newText("RIGHT", -2)
+    readStatusText()
     -- Under the mouse it shows its text, like the frame's mana bar; clicks reach the frame.
     bar:SetMouseMotionEnabled(true)
     bar:SetMouseClickEnabled(false)
@@ -144,10 +170,13 @@ function DruidManaBar:Apply()
             glow:SetPoint("CENTER", container, "CENTER", -2, 0.5)
         end
         glowChanged = true
+        bar:SetMinMaxValues(0, UnitPowerMax("player", MANA))
         updateValue()
         bar:Show()
+        playerListener:On("UNIT_POWER_FREQUENT", onPower)
         return
     end
+    playerListener:Off("UNIT_POWER_FREQUENT")
     bar:Hide()
     art:Hide()
     if frameAlpha then
@@ -174,10 +203,11 @@ local function isActive()
     return Options:Get(KEY) or (bar ~= nil and bar:IsShown())
 end
 
--- Wake-ups for whether the bar shows: a new form (its power), the mana pool, and Blizzard drawing
--- the frame again, which gives the glow back its own atlas.
+-- Wake-ups for whether the bar shows: a new form (its power), the mana pool (also the bar's range),
+-- and Blizzard drawing the frame again, which gives the glow back its own atlas.
 local EVENTS = { "PLAYER_ENTERING_WORLD", "UPDATE_SHAPESHIFT_FORM" }
-local UNIT_EVENTS = {
+-- Unit events, heard only for the player.
+local PLAYER_EVENTS = {
     "UNIT_DISPLAYPOWER",
     "UNIT_MAXPOWER",
     "UNIT_ENTERED_VEHICLE",
@@ -194,17 +224,15 @@ function DruidManaBar:Init()
     for _, event in ipairs(EVENTS) do
         ns.Events:On(event, wake)
     end
-    for _, event in ipairs(UNIT_EVENTS) do
-        ns.Events:On(event, function(_, unit)
-            if unit == "player" then wake() end
-        end)
+    playerListener = ns.Events:NewUnitListener("player")
+    for _, event in ipairs(PLAYER_EVENTS) do
+        playerListener:On(event, wake)
     end
-    -- The mana as it changes, and the Status Text setting, while the bar shows.
-    ns.Events:On("UNIT_POWER_FREQUENT", function(_, unit, powerToken)
-        if unit == "player" and powerToken == "MANA" and bar and bar:IsShown() then updateValue() end
-    end)
+    -- The Status Text setting, once the bar is made. The game's setting sets both with SetCVar.
     ns.Events:On("CVAR_UPDATE", function(_, name)
-        if (name == "statusText" or name == "statusTextDisplay") and bar and bar:IsShown() then updateText() end
+        if not (bar and (name == "statusText" or name == "statusTextDisplay")) then return end
+        readStatusText()
+        if bar:IsShown() then updateText() end
     end)
     wake()
 end

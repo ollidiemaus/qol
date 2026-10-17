@@ -42,12 +42,12 @@ local function art()
     return nil
 end
 
--- The bar's texts by where they sit: CENTER, LEFT and RIGHT.
-local function texts()
+-- The bar's texts by where they sit: CENTER, LEFT and RIGHT. With "textSets": how often each was set.
+local function texts(field)
     local found = {}
     for _, region in ipairs(Stubs.state().regions) do
         if region.kind == "FontString" and region.parent == manaBar() then
-            found[region.points[1][1]] = region.text
+            found[region.points[1][1]] = region[field or "text"]
         end
     end
     return found
@@ -82,6 +82,11 @@ local function withThirdBar()
     T.eq(container().FrameTexture:GetAlpha(), 0)
     T.eq(container().FrameFlash.atlas, GLOW_THIRD_BAR)
     T.same(glowOffset(), { -2, 0.5 })
+end
+
+local function tick(mana)
+    Stubs.state().units.player.mana = mana
+    Stubs.Fire("UNIT_POWER_FREQUENT", "player", "MANA")
 end
 
 local function shift(powerType)
@@ -226,5 +231,107 @@ describe("druid mana bar", function()
         Stubs.Fire("UNIT_POWER_FREQUENT", "player", "MANA")
         T.eq(manaBar().value, Stubs.SECRET)
         T.same(texts(), { CENTER = "", LEFT = "", RIGHT = "" })
+    end)
+
+    it("hears the mana only for the player, and only while the bar shows", function()
+        local ns = start({ druidManaBar = true }, druid(MANA))
+        T.eq(Stubs.Listens("UNIT_POWER_FREQUENT", "player"), false, "caster form")
+        shift(RAGE)
+        T.eq(Stubs.Listens("UNIT_POWER_FREQUENT", "player"), true, "bear form")
+        for _, unit in ipairs({ "target", "party1", "raid7", "nameplate1" }) do
+            T.eq(Stubs.Listens("UNIT_POWER_FREQUENT", unit), false, unit)
+        end
+        shift(MANA)
+        T.eq(Stubs.Listens("UNIT_POWER_FREQUENT", "player"), false, "caster form again")
+        shift(ENERGY)
+        T.eq(Stubs.Listens("UNIT_POWER_FREQUENT", "player"), true, "cat form")
+        Stubs.DrawPlayerFrame(true)
+        Stubs.Fire("UNIT_ENTERED_VEHICLE", "player")
+        Stubs.RunTimers()
+        T.eq(Stubs.Listens("UNIT_POWER_FREQUENT", "player"), false, "in a vehicle")
+        Stubs.DrawPlayerFrame()
+        Stubs.Fire("UNIT_EXITED_VEHICLE", "player")
+        Stubs.RunTimers()
+        T.eq(Stubs.Listens("UNIT_POWER_FREQUENT", "player"), true, "out of the vehicle")
+        ns.Options:Set("druidManaBar", false)
+        Stubs.RunTimers()
+        T.eq(Stubs.Listens("UNIT_POWER_FREQUENT", "player"), false, "switched off")
+    end)
+
+    -- The last feature to hear the vehicle events for every unit, so this asks for all of QoL.
+    it("hears its wake-ups only for the player", function()
+        start({ druidManaBar = true })
+        for _, event in ipairs({ "UNIT_DISPLAYPOWER", "UNIT_MAXPOWER", "UNIT_ENTERED_VEHICLE", "UNIT_EXITING_VEHICLE",
+            "UNIT_EXITED_VEHICLE" }) do
+            T.eq(Stubs.Listens(event, "player"), true, event .. " player")
+            for _, unit in ipairs({ "party1", "raid7", "nameplate1" }) do
+                T.eq(Stubs.Listens(event, unit), false, event .. " " .. unit)
+            end
+        end
+    end)
+
+    it("sets its range when the maximum can have changed, not on a mana tick", function()
+        start({ druidManaBar = true })
+        local bar = manaBar()
+        local rangeSets = bar.rangeSets
+        tick(750)
+        T.eq(bar.value, 750)
+        T.eq(bar.rangeSets, rangeSets, "no range on a tick")
+        Stubs.state().units.player.maxMana = 2500
+        Stubs.Fire("UNIT_MAXPOWER", "player", "MANA")
+        Stubs.RunTimers()
+        T.eq(bar.maxValue, 2500, "a new maximum")
+    end)
+
+    it("leaves its texts alone on a mana tick when they show nothing", function()
+        start({ druidManaBar = true })
+        local before = texts("textSets")
+        tick(750)
+        T.eq(manaBar().value, 750)
+        T.same(texts("textSets"), before, "no text set")
+    end)
+
+    it("sets only the texts a mana tick changes", function()
+        start({ druidManaBar = true })
+        local cvars = Stubs.state().cvars
+        cvars.statusText, cvars.statusTextDisplay = "1", "BOTH"
+        Stubs.Fire("CVAR_UPDATE", "statusText", "1")
+        T.same(texts(), { CENTER = "", LEFT = "30%", RIGHT = "600" })
+        local before = texts("textSets")
+        tick(610)
+        T.same(texts(), { CENTER = "", LEFT = "31%", RIGHT = "610" })
+        T.same(texts("textSets"), { CENTER = before.CENTER, LEFT = before.LEFT + 1, RIGHT = before.RIGHT + 1 })
+        tick(612)
+        T.same(texts(), { CENTER = "", LEFT = "31%", RIGHT = "612" })
+        T.same(texts("textSets"), { CENTER = before.CENTER, LEFT = before.LEFT + 1, RIGHT = before.RIGHT + 2 },
+            "the percentage stays")
+        tick(Stubs.SECRET)
+        T.eq(manaBar().value, Stubs.SECRET)
+        T.same(texts(), { CENTER = "", LEFT = "", RIGHT = "" }, "no sums with secret mana")
+    end)
+
+    it("reads the Status Text setting when it changes, not on a mana tick", function()
+        start({ druidManaBar = true })
+        local state = Stubs.state()
+        state.cvars.statusText = "1"
+        Stubs.Fire("CVAR_UPDATE", "statusText", "1")
+        local reads = state.cvarReads
+        tick(750)
+        T.same(texts(), { CENTER = "750 / 2000", LEFT = "", RIGHT = "" })
+        T.eq(state.cvarReads, reads, "no setting read on a tick")
+        -- Changed while the bar hides: it shows the new setting when it comes back.
+        shift(MANA)
+        state.cvars.statusTextDisplay = "PERCENT"
+        Stubs.Fire("CVAR_UPDATE", "statusTextDisplay", "PERCENT")
+        shift(ENERGY)
+        T.same(texts(), { CENTER = "38%", LEFT = "", RIGHT = "" })
+    end)
+
+    it("never hears the mana with the option off or without mana", function()
+        start(nil, druid(ENERGY))
+        T.eq(Stubs.Listens("UNIT_POWER_FREQUENT", "player"), false, "option off")
+        start({ druidManaBar = true }, { isPlayer = true, class = "WARRIOR", powerType = RAGE, power = 50,
+            maxPower = 100 })
+        T.eq(Stubs.Listens("UNIT_POWER_FREQUENT", "player"), false, "a warrior")
     end)
 end)

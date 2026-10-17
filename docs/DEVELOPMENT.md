@@ -41,11 +41,11 @@ Forever beta. So:
 - Compare or compute with game values only after `ns.IsUsable(value)` (nil and secret values fail).
 - Register events through `ns.Events:On`; it skips events the client doesn't know.
 - Events about units (`UNIT_*`, first argument a unit) go through a unit listener, never through
-  `ns.Events:On` (`DruidManaBar` still does until #30 moves it):
-  `ns.Events:NewUnitListener(unit1[, unit2])` registers with `RegisterUnitEvent` on a frame of its
-  own, so the game drops every other unit's events before QoL wakes (in a raid with nameplates,
-  hundreds a second). It takes one or two units, all a feature needs so far; a feature that shows
-  more units makes more listeners. Make a listener once, at Init: frames are never freed.
+  `ns.Events:On`: `ns.Events:NewUnitListener(unit1[, unit2])` registers with `RegisterUnitEvent`
+  on a frame of its own, so the game drops every other unit's events before QoL wakes (in a raid
+  with nameplates, hundreds a second). It takes one or two units, all a feature needs so far; a
+  feature that shows more units makes more listeners. Make a listener once, at Init: frames are
+  never freed.
   `listener:On(event, handler)` skips an unknown event like `ns.Events:On` (one handler per event,
   a second `On` replaces it; handlers get `(event, ...)`), and `listener:Off(event)` unregisters it,
   for an event that only matters while something shows.
@@ -128,6 +128,15 @@ the rage or energy bar's mask (Blizzard switches it to `Unit_BarMask` for a thir
 by a pixel the frame art covers) and the bottom managed container (pet frame and the like), which
 Blizzard moves 10 down for its third bar. The text follows `TextStatusBar`: `statusText` shows it
 always or on hover, `statusTextDisplay` picks numbers, percent or both.
+
+The mana bar costs nothing while it hides and little on a mana tick. A "player" listener made at
+Init hears `UNIT_DISPLAYPOWER`, `UNIT_MAXPOWER` and the vehicle events; `UNIT_POWER_FREQUENT` goes
+on it in `Apply` when the bar shows and off when it hides, so with the option off, as a non-druid
+and in caster and travel form no mana event reaches QoL. A tick sets the value (passed as it
+is, never compared: it can be secret) and only the texts that changed, so with Status Text off and
+the bar not hovered it sets no text. The range is set in `Apply`, which `UNIT_MAXPOWER` wakes. The
+two Status Text CVars are read when the bar is made and on `CVAR_UPDATE` for them, not on a tick:
+the game's Status Text dropdown sets both with `SetCVar`, which fires it.
 
 Every Edit Mode frame is clamped to the screen (`EditModeSystemTemplate`), and Edit Mode makes the
 clamped rectangle the frame's selection box: `EditModeSystemMixin:UpdateClampOffsets` sets the clamp
@@ -695,8 +704,9 @@ Things only the real client can confirm:
   focus target.
 - Mana in bear and cat form (a druid): the mana bar follows casting and regeneration while
   shapeshifted (whether the server sends mana updates in a form), shifting in and out in combat
-  shows and hides it, the threat glow fits the frame in combat with and without the bar, and a
-  vehicle shows its own art. Something in the bottom container (a pet frame) isn't covered by it.
+  shows and hides it, the threat glow fits the frame in combat with and without the bar, a change
+  of the Status Text setting shows on the bar at once, and a vehicle shows its own art. Something
+  in the bottom container (a pet frame) isn't covered by it.
 - Frames past the screen edge, with Snap to Elements off: an action bar, the minimap and a unit frame
   dragged to each edge go up to 30 past it, also right after changing a setting of theirs in Edit
   Mode. After saving, a `/reload` and switching layouts (by hand and with AutoSetup on a resolution

@@ -140,7 +140,11 @@ local function newRegion(kind, parent, template)
     function region:EnableMouse(enabled) self.mouseEnabled = enabled end
     function region:SetEnabled(enabled) self.enabled = enabled and true or false end
     function region:IsEnabled() return self.enabled end
-    function region:SetText(text) self.text = text end
+    -- textSets counts the SetText calls.
+    function region:SetText(text)
+        self.text = text
+        self.textSets = (self.textSets or 0) + 1
+    end
     function region:SetFormattedText(format, ...) self.text = format:format(...) end
     function region:GetText() return self.text end
     -- 5 units a character, whatever the font.
@@ -631,7 +635,11 @@ local function install()
         if kind == "EditBox" then Stubs.MakeEditBox(frame) end
         if kind == "StatusBar" then
             function frame:SetStatusBarTexture(texture) self.statusBarTexture = texture end
-            function frame:SetMinMaxValues(minValue, maxValue) self.minValue, self.maxValue = minValue, maxValue end
+            -- rangeSets counts the SetMinMaxValues calls.
+            function frame:SetMinMaxValues(minValue, maxValue)
+                self.minValue, self.maxValue = minValue, maxValue
+                self.rangeSets = (self.rangeSets or 0) + 1
+            end
             function frame:GetMinMaxValues() return self.minValue or 0, self.maxValue or 1 end
             function frame:SetValue(value) self.value = value end
             function frame:GetValue() return self.value or 0 end
@@ -1085,9 +1093,12 @@ local function install()
         frame.wraps[script] = { header = header, pre = preBody, post = postBody }
     end
 
-    -- Settings the client keeps (C_CVar), as strings.
+    -- Settings the client keeps (C_CVar), as strings. cvarReads counts the GetCVar calls.
     G.C_CVar = {
-        GetCVar = function(name) return state.cvars[name] end,
+        GetCVar = function(name)
+            state.cvarReads = state.cvarReads + 1
+            return state.cvars[name]
+        end,
         GetCVarDefault = function(name) return state.cvarDefaults[name] end,
         SetCVar = function(name, value)
             state.cvars[name] = tostring(value)
@@ -1280,7 +1291,7 @@ function Stubs.Reset(options)
         atlases = { ["ui-hud-minimap-frame-generic-mask"] = { width = 215, height = 226 } },
         fonts = { GameFontNormal = { "Fonts\\FRIZQT__.TTF", 12, "" },
             WhiteNormalNumberFont = { "Fonts\\ARIALN.TTF", 10, "OUTLINE" } },
-        cvars = { chatClassColorOverride = "2" }, cvarDefaults = { chatClassColorOverride = "2" }, cvarSets = {},
+        cvars = { chatClassColorOverride = "2" }, cvarDefaults = { chatClassColorOverride = "2" }, cvarSets = {}, cvarReads = 0,
         shift = false,
         quest = { npc = "Creature-0-1-0-1-3139-0001", gossipActive = {}, gossipAvailable = {}, greetingActive = {},
             greetingAvailable = {}, autoAccept = false, completable = true, money = 0, choices = 0, calls = {} },
