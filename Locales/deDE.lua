@@ -71,8 +71,6 @@ L.HIDE_BAGS_BAR_TIP =
 "Blendet den Rucksack und die Taschenplätze aus. Deine Taschen-Tastenbelegungen funktionieren weiterhin."
 
 L.SECTION_COMBINED_BAGS = "Kombinierte Taschen"
-L.SHOW_COMBINED_BAG_SORT = "Sortierknopf anzeigen"
-L.SHOW_COMBINED_BAG_SORT_TIP = "Fügt der kombinierten Tasche den Sortieren-Knopf (Aufräumen) neben dem Suchfeld hinzu."
 L.COMBINED_BAG_TOP_LEFT = "Oben links beginnen"
 L.COMBINED_BAG_TOP_LEFT_TIP = "Zeigt den ersten Platz des Rucksacks oben links in der kombinierten Tasche und deine "
     .. "letzte Tasche unten, sodass das Sortieren den Ruhestein oben links ablegt. Nur mit Tastatur und Maus: Die "

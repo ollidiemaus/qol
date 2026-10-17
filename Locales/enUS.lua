@@ -72,8 +72,6 @@ L.HIDE_BAGS_BAR = "Bag bar"
 L.HIDE_BAGS_BAR_TIP = "Hides the backpack and bag slot buttons. Your bag key bindings still work."
 
 L.SECTION_COMBINED_BAGS = "Combined bags"
-L.SHOW_COMBINED_BAG_SORT = "Show the sort button"
-L.SHOW_COMBINED_BAG_SORT_TIP = "Adds the sort (clean up) button to the combined bag, next to the search box."
 L.COMBINED_BAG_TOP_LEFT = "Start at the top left"
 L.COMBINED_BAG_TOP_LEFT_TIP = "Shows the backpack's first slot in the top left corner of the combined bag and your "
     .. "last bag at the bottom, so sorting puts the hearthstone top left. With keyboard and mouse only: the "

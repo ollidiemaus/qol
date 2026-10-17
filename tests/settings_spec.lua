@@ -226,6 +226,17 @@ describe("settings pages", function()
         T.same(headers(minimap, "right"), { "Clock", "FPS and ping", "Buttons" })
     end)
 
+    it("offers only the top left start in the Combined bags section", function()
+        local ns = start()
+        local left = {}
+        for _, c in ipairs(pages(ns).interface.controls) do
+            if c.column == "left" then left[#left + 1] = c.key end
+        end
+        -- Between the Hide section's last row and the Player frame section's first.
+        T.same({ left[2], left[3], left[4] }, { "hideBagsBar", "combinedBagTopLeft", "druidManaBar" })
+        T.eq(control(ns, "showCombinedBagSort"), nil)
+    end)
+
     it("says what the mail bookmarks are above them, wrapped across the page", function()
         local ns = start()
         local text = pages(ns).mail.texts[1]

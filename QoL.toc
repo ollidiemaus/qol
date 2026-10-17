@@ -43,7 +43,6 @@ Features\HideFrames.lua
 Features\BuffTooltips.lua
 Features\CombatLog.lua
 Features\ChatClassColors.lua
-Features\CombinedBagSort.lua
 Features\CombinedBagLayout.lua
 Features\MailBookmarks.lua
 Features\ClassHealthBars.lua
