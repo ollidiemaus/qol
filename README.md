@@ -74,7 +74,7 @@ Hold **Shift** while talking to an NPC to do everything yourself that time.
 - **Square minimap,** framed in the bronze of Forever's round minimap or with a thin black line.
   Addons that put buttons around the minimap and ask for its shape place them along the square.
 - **Zone text above or below the minimap,** centered on the map's edge instead of in the bar at the
-  top.
+  top. Or keep it where the game puts it and tick **Hide zone text frame** for the bare zone name.
 - **Zone text, clock and coordinates in class color.** The zone text normally shows the color for
   friendly, hostile or contested territory.
 - **Font size of the zone text, the clock and FPS and ping,** from 9 to 24 or the game's own. With a

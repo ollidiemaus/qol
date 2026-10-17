@@ -13,7 +13,7 @@ local Options = ns.Options
 --     a corner or at the middle of the top or bottom edge. The calendar button can be hidden.
 --     Things that share a spot sit side by side, the zone text gets the room left in the middle,
 --     and the coordinates move under a row below. The zone text leaves the header bar, which then
---     goes to the hidden holder.
+--     goes to the hidden holder; at its default spot the header bar can go too.
 --   * Class colors for the zone text, the clock and the coordinates. The game colors the zone name
 --     by its PvP status each time the zone changes; the class color is put back right after.
 --   * Font sizes for the zone text, the clock and the FPS and ping. Their frames grow with a larger
@@ -27,7 +27,7 @@ ns.MinimapLayout = MinimapLayout
 local SQUARE, BORDER = "squareMinimap", "squareMinimapBorder"
 local ZONE_TEXT, CLASS_COLOR = "minimapZoneText", "minimapZoneTextClassColor"
 local CLOCK_COLOR, COORDS_COLOR = "minimapClockClassColor", "minimapCoordsClassColor"
-local CALENDAR = "hideMinimapCalendar"
+local CALENDAR, ZONE_TEXT_FRAME = "hideMinimapCalendar", "hideMinimapZoneTextFrame"
 local ZONE_TEXT_SIZE, CLOCK_SIZE = "minimapZoneTextSize", "minimapClockSize"
 local PERFORMANCE, PERFORMANCE_COLOR = "minimapPerformance", "minimapPerformanceClassColor"
 local PERFORMANCE_SIZE = "minimapPerformanceSize"
@@ -143,6 +143,13 @@ end
 -- The round frame around the map: Forever and retail draw it with these two textures.
 local function ringTextures()
     return MinimapCompassTexture, MinimapCompassTextureUnderlay
+end
+
+-- The zone text's frame: before Forever 1.60.1 the header bar BorderTop, since then the zone text
+-- button's own frame and mouse-over glow.
+local function zoneTextFrame(cluster)
+    local button = cluster.ZoneTextButton
+    return cluster.BorderTop, button and button.StateTexture, button and button.AddTexture
 end
 
 local function borderStyle()
@@ -455,8 +462,9 @@ function MinimapLayout:ApplyPositions()
             end
         end
     end
-    -- The header bar without its zone name has nothing left to frame.
-    setHidden(zoneTextMoved, cluster.BorderTop)
+    -- The header bar without its zone name has nothing left to frame, and at the default spot the
+    -- player may want the bare name.
+    setHidden(zoneTextMoved or Options:Get(ZONE_TEXT_FRAME), zoneTextFrame(cluster))
 
     local anchor, edgeWidth = edge()
     edgeWidth = screen(Minimap, edgeWidth)
@@ -673,7 +681,7 @@ function MinimapLayout.HasDayNight()
     return MinimapCluster ~= nil and type(MinimapCluster.DielFrame) == "table"
 end
 
-local LAYOUT_KEYS = { SQUARE, BORDER, CALENDAR, ZONE_TEXT_SIZE, CLOCK_SIZE, PERFORMANCE_SIZE }
+local LAYOUT_KEYS = { SQUARE, BORDER, CALENDAR, ZONE_TEXT_FRAME, ZONE_TEXT_SIZE, CLOCK_SIZE, PERFORMANCE_SIZE }
 for _, element in ipairs(MinimapLayout.ELEMENTS) do LAYOUT_KEYS[#LAYOUT_KEYS + 1] = element.key end
 
 local function apply()

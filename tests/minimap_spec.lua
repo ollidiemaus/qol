@@ -178,6 +178,61 @@ describe("minimap zone text", function()
     end)
 end)
 
+-- The zone text's frame as Forever 1.60.1 draws it: the button's own textures, no BorderTop.
+local function startWithoutBorderTop(savedOptions)
+    local ns = Stubs.LoadAddon()
+    -- false, not nil: a missing capitalized key on a stub frame answers a no-op method.
+    MinimapCluster.BorderTop = false
+    Stubs.Login(savedOptions)
+    return ns
+end
+
+local function frameShown()
+    return MinimapCluster.ZoneTextButton.StateTexture:IsVisible()
+end
+
+describe("minimap zone text frame", function()
+    it("leaves Forever's frame around the moved zone text out", function()
+        startWithoutBorderTop({ minimapZoneText = "above" })
+        T.falsy(frameShown())
+        T.truthy(MinimapZoneText:IsVisible())
+    end)
+
+    it("leaves the frame in place by default", function()
+        startWithoutBorderTop()
+        T.truthy(frameShown())
+    end)
+
+    it("leaves the frame and its glow out at the default spot when asked", function()
+        startWithoutBorderTop({ hideMinimapZoneTextFrame = true })
+        T.falsy(frameShown())
+        T.truthy(MinimapCluster.ZoneTextButton:IsVisible())
+        T.truthy(MinimapZoneText:IsVisible())
+        -- The game shows the glow on mouse-over; it stays out of sight.
+        MinimapCluster.ZoneTextButton.AddTexture:SetShown(true)
+        T.falsy(MinimapCluster.ZoneTextButton.AddTexture:IsVisible())
+    end)
+
+    it("brings the frame back when the option is turned off or the zone text goes home", function()
+        local ns = startWithoutBorderTop({ hideMinimapZoneTextFrame = true })
+        set(ns, "hideMinimapZoneTextFrame", false)
+        T.truthy(frameShown())
+        T.eq(MinimapCluster.ZoneTextButton.StateTexture:GetParent(), MinimapCluster.ZoneTextButton)
+        T.eq(MinimapCluster.ZoneTextButton.AddTexture:GetParent(), MinimapCluster.ZoneTextButton)
+        set(ns, "minimapZoneText", "below")
+        T.falsy(frameShown())
+        set(ns, "minimapZoneText", "default")
+        T.truthy(frameShown())
+    end)
+
+    it("leaves the older header bar out too", function()
+        local ns = start({ hideMinimapZoneTextFrame = true })
+        T.falsy(MinimapCluster.BorderTop:IsVisible())
+        set(ns, "hideMinimapZoneTextFrame", false)
+        T.truthy(MinimapCluster.BorderTop:IsVisible())
+    end)
+end)
+
 describe("minimap buttons", function()
     it("stay where the game puts them by default", function()
         start({ squareMinimap = true })

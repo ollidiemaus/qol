@@ -304,7 +304,11 @@ The square minimap replaces the minimap's mask and hides the round frame texture
 (`MinimapCompassTexture` and its underlay). Forever's minimap skin (`Blizzard_Minimap/Camelot/Skin.lua`)
 sets its round mask again when `rotateMinimap` changes, so a `CVAR_UPDATE` for it applies the square
 mask again; the hybrid minimap has a mask of its own (`HybridMinimap.CircleMask`). The zone text is
-the game's own `MinimapCluster.ZoneTextButton`, moved: it keeps its tooltip and click. The clock,
+the game's own `MinimapCluster.ZoneTextButton`, moved: it keeps its tooltip and click. Its frame
+goes to the hidden holder when it moves, or at its default spot when the player asks: before
+Forever 1.60.1 the separate `MinimapCluster.BorderTop`, since then the button's own `StateTexture`
+and `AddTexture` (the mouse-over glow, which the game shows with `SetShown` on every button state
+change, so `Hide()` wouldn't hold). Only the textures are reparented; the button is untouched. The clock,
 addon compartment, tracking button and day and night icon are moved the same way, into a row above
 or below a frame of ours around what is drawn of the minimap (the square and its border, or the
 round frame with its north triangle). The tracking button and the day and night icon can also go
@@ -766,7 +770,9 @@ Things only the real client can confirm:
 - Zone text and the clock, addon compartment, tracking button and day and night icon in every
   position, several in one spot, above and below a round and a square minimap, with and without
   coordinates, after an Edit Mode change of the minimap's size, and after a `/reload`; the tracking
-  menu and the addon compartment's menu still open from their new places. Class color after zone
+  menu and the addon compartment's menu still open from their new places. The zone text's frame
+  gone when it moves and with the option at its default spot, also on mouse-over; its click and
+  tooltip still working. Class color after zone
   changes and in combat, and on the clock and the coordinates.
 - The tracking button and the day and night icon inside the map: drawn above it, clear of the round
   frame and the bronze border in every corner, clickable there, and the mail icon (anchored to the

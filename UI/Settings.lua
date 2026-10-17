@@ -135,6 +135,9 @@ local function buildMinimap(page)
         { value = "above", label = L.ZONE_TEXT_ABOVE },
         { value = "below", label = L.ZONE_TEXT_BELOW },
     }, L.MINIMAP_ZONE_TEXT_TIP)
+    page:Checkbox("left", "hideMinimapZoneTextFrame", L.HIDE_MINIMAP_ZONE_TEXT_FRAME,
+        L.HIDE_MINIMAP_ZONE_TEXT_FRAME_TIP,
+        { indent = true, enabled = function() return Options:Get("minimapZoneText") == "default" end })
     page:Checkbox("left", "minimapZoneTextClassColor", L.MINIMAP_CLASS_COLOR, L.MINIMAP_ZONE_TEXT_CLASS_COLOR_TIP)
     page:Dropdown("left", "minimapZoneTextSize", L.FONT_SIZE, fontSizes(), L.MINIMAP_ZONE_TEXT_SIZE_TIP)
 

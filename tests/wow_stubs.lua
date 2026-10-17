@@ -802,12 +802,16 @@ local function install()
     G.BuffFrameTooltip = newRegion("Frame", G.UIParent)
 
     -- The minimap as Forever builds it: the cluster with its header bar and zone text button, the
-    -- container with the map, the round frame and the coordinates under the map.
+    -- container with the map, the round frame and the coordinates under the map. Since 1.60.1 the
+    -- header bar is the zone text button's own two textures (a spec removes BorderTop for that).
     G.MinimapCluster = newRegion("Frame", G.UIParent)
     local cluster = G.MinimapCluster
     cluster.BorderTop = newRegion("Frame", cluster)
     cluster.BorderTop:SetPoint("TOP", cluster, "TOP", 15, -4)
     cluster.ZoneTextButton = newRegion("Button", cluster)
+    cluster.ZoneTextButton.StateTexture = newRegion("Texture", cluster.ZoneTextButton)
+    cluster.ZoneTextButton.AddTexture = newRegion("Texture", cluster.ZoneTextButton)
+    cluster.ZoneTextButton.AddTexture:Hide()
     cluster.ZoneTextButton:SetSize(135, 12)
     cluster.ZoneTextButton:SetPoint("LEFT", cluster.BorderTop, "LEFT", 4, 0)
     G.MinimapZoneText = newRegion("FontString", cluster.ZoneTextButton)

@@ -529,6 +529,17 @@ describe("settings pages", function()
         T.truthy(border.widget:IsEnabled())
     end)
 
+    it("offers the zone text's frame only while the zone text is at its default spot", function()
+        local ns = start()
+        local frame, page = control(ns, "hideMinimapZoneTextFrame")
+        show(page)
+        T.eq(frame.kind, "checkbox")
+        T.truthy(frame.indent)
+        T.truthy(frame.widget:IsEnabled())
+        ns.Options:Set("minimapZoneText", "above")
+        T.falsy(frame.widget:IsEnabled())
+    end)
+
     it("offers font sizes for the zone text, the clock and FPS and ping, the game's own first", function()
         local ns = start()
         for _, key in ipairs({ "minimapZoneTextSize", "minimapClockSize", "minimapPerformanceSize" }) do
