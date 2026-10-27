@@ -8,7 +8,7 @@ local _, ns = ...
 --   * Boats, zeppelins, portals and the tram list where they go (to): an area (the stop's name) and
 --     the map a click opens. A line with several stops lists the next one first.
 --
--- Positions are Forever's own (build 1.60.1.70291, read through wago.tools and placed on the zone
+-- Positions are Forever's own (build 1.60.1.70630, read through wago.tools and placed on the zone
 -- maps with UiMapAssignment):
 --   * instance portals: Map.db2's corpse position of each instance, which retail's encounter journal
 --     also uses for its entrance pins. Naxxramas, floating above Plaguewood, has none; its position
