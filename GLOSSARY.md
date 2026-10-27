@@ -1,0 +1,22 @@
+# QoL
+
+A World of Warcraft addon of small quality-of-life changes, set up in a settings window of its own.
+
+## Language
+
+### Hidden settings
+
+**Hidden setting**:
+One of the game's own settings that the game's options don't show, or show with only part of the
+range it takes, so otherwise it's reached only through `/console`. The game keeps its value, not QoL.
+QoL's Advanced settings page is where they are changed.
+_Avoid_: CVar (in player text), console command, advanced setting (that's the page, not one setting)
+
+**Raid copy**:
+The game's second copy of a hidden setting, used in raids and battlegrounds while the game's Raid and
+Battleground graphics are on.
+_Avoid_: raid setting, RAID CVar
+
+**Game default**:
+The value the game itself gives a hidden setting when nobody has changed it.
+_Avoid_: default (alone, as QoL's options have defaults of their own), original value
