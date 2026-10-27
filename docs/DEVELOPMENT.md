@@ -591,6 +591,12 @@ All names use one font: the game's list draws dependent options smaller. A page 
 Defaults button, which asks with a second click: the game's confirmation dialog would spread taint.
 The game's "all settings" reset doesn't reach our pages any more, and they don't show up in the
 settings search. Tooltips are `GameTooltip`.
+A row with a value (all but key bindings and buttons) gets, sets and resets it with functions of
+its own (`control.get`, `control.set`, `control.reset`), and the Defaults button calls each row's
+`reset`. Given an option's key, a row is backed by `ns.Options` and the page follows
+`Options:Watch`; given `{ get, set, reset }` instead, it's backed by a value kept elsewhere, which
+the page reads whenever it refreshes. `get` gives what the control shows: a checkbox wants `true`
+or `false`.
 
 The history below is from the time the pages were in the game's settings; the workarounds it led to
 stay since they cost nothing.

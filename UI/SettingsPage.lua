@@ -12,8 +12,11 @@ local Options = ns.Options
 -- can't apply. A page that is one thing of its own below its title (the rings' editor) can have its
 -- switch in the title bar instead of the Defaults button ("title").
 --
--- Every control reads and writes ns.Options, and the page follows Options:Watch, so it also shows
--- changes made elsewhere. The window parents and shows the page, and refreshes it when it does.
+-- A row with a value (all but a key binding and a button) gets, sets and resets it with functions
+-- of its own, so the page and its Defaults button needn't know where the value is kept. An option's
+-- row keeps it in ns.Options, and the page follows Options:Watch, so it also shows changes made
+-- elsewhere; a row can be backed by something else instead. The window parents and shows the page,
+-- and refreshes it when it does.
 local Page = {}
 Page.__index = Page
 ns.SettingsPage = Page
@@ -101,7 +104,7 @@ function Page.New(title, options)
     return page
 end
 
--- Resets the page's options after a second click: the game asks before resetting too, with a
+-- Resets the page's rows after a second click: the game asks before resetting too, with a
 -- dialog of its own that addons can't use without spreading taint.
 function Page:CreateDefaultsButton()
     local button = CreateFrame("Button", nil, self.frame, "UIPanelButtonTemplate")
@@ -135,13 +138,13 @@ function Page:CreateDefaultsButton()
 end
 
 function Page:SetDefaults()
-    for key in pairs(self.keys) do
-        Options:Set(key, Options:GetDefault(key))
+    for _, control in ipairs(self.controls) do
+        if control.reset then control.reset() end
     end
     self:Refresh()
 end
 
--- Shows the options' values, and greys out what can't apply.
+-- Shows the rows' values, and greys out what can't apply.
 function Page:Refresh()
     local normal = fontColor(NORMAL_FONT_COLOR, 1, 0.82, 0)
     local grey = fontColor(GRAY_FONT_COLOR, 0.5, 0.5, 0.5)
@@ -152,20 +155,20 @@ function Page:Refresh()
         control.text:SetTextColor(color[1], color[2], color[3])
         control.widget:SetEnabled(enabled)
         if control.kind == "checkbox" then
-            control.widget:SetChecked(Options:Get(control.key) == true)
+            control.widget:SetChecked(control.get() == true)
         elseif control.kind == "slider" then
             control.refreshing = true
-            control.widget:SetValue(Options:Get(control.key))
+            control.widget:SetValue(control.get())
             control.refreshing = false
         elseif control.kind == "color" then
-            control.widget:SetColorRGB(Page.ParseColor(Options:Get(control.key)))
+            control.widget:SetColorRGB(Page.ParseColor(control.get()))
             control.widget:SetAlpha(enabled and 1 or 0.5)
         elseif control.kind == "binding" then
             control.refreshKeys(enabled)
         elseif control.kind == "dropdown" then
             control.widget:GenerateMenu()
         elseif control.kind == "text" and not control.widget:HasFocus() then
-            control.widget:SetText(Options:Get(control.key))
+            control.widget:SetText(control.get())
         end
     end
 end
@@ -242,10 +245,22 @@ function Page:Header(column, text, tooltip)
     self.headers[#self.headers + 1] = { column = column, text = text }
 end
 
+-- How an option's row gets, sets and resets its value: through ns.Options, by the option's key.
+local function optionBacking(key)
+    return {
+        get = function() return Options:Get(key) end,
+        set = function(value) Options:Set(key, value) end,
+        reset = function() Options:Set(key, Options:GetDefault(key)) end,
+    }
+end
+
 -- A row with an option's name, a hover highlight and its tooltip. label: the name, or a function
 -- giving it (asked again on each refresh). options: indent (below the option it belongs to), enabled
 -- (a function; the control is greyed out while it returns false), title (the tooltip's, instead of
--- the name). key: the option, nil for a key binding.
+-- the name). key: the option, or for a value kept elsewhere { get = function, set = function(value),
+-- reset = function }, where get gives what the control shows (a checkbox's true or false) and reset
+-- is what the Defaults button does; nil for a key binding or a button. The row gets, sets and resets
+-- its value with control.get, control.set and control.reset.
 local function optionRow(page, column, kind, key, label, tooltip, options)
     options = options or {}
     local row = newRow(page, column, ROW_HEIGHT)
@@ -265,8 +280,16 @@ local function optionRow(page, column, kind, key, label, tooltip, options)
     text:SetWordWrap(false)
     text:SetText(name())
 
+    local backing = key
+    if type(key) == "string" then
+        backing = optionBacking(key)
+        page.keys[key] = true
+    else
+        key = nil
+    end
     local control = { kind = kind, key = key, name = name, tooltip = tooltip, column = column, row = row,
         text = text, indent = options.indent == true, enabled = options.enabled, page = page }
+    if backing then control.get, control.set, control.reset = backing.get, backing.set, backing.reset end
     function control.title() return options.title or name() end
     function control.enter()
         highlight:Show()
@@ -280,7 +303,6 @@ local function optionRow(page, column, kind, key, label, tooltip, options)
     row:SetScript("OnEnter", control.enter)
     row:SetScript("OnLeave", control.leave)
     page.controls[#page.controls + 1] = control
-    if key then page.keys[key] = true end
     return control
 end
 
@@ -301,7 +323,7 @@ function Page:Checkbox(column, key, label, tooltip, options)
     local checkbox = CreateFrame("CheckButton", nil, control.row, "SettingsCheckboxTemplate")
     checkbox:SetScript("OnClick", function(button)
         local checked = button:GetChecked() and true or false
-        Options:Set(key, checked)
+        control.set(checked)
         playToggle(checked)
     end)
     checkbox:SetScript("OnEnter", control.enter)
@@ -314,9 +336,8 @@ function Page:Checkbox(column, key, label, tooltip, options)
     return control
 end
 
--- The choice after the option's value, back to the first after the last.
-local function nextChoice(key, choices)
-    local value = Options:Get(key)
+-- The choice after value, back to the first after the last.
+local function nextChoice(value, choices)
     for index, choice in ipairs(choices) do
         if choice.value == value then
             return choices[index % #choices + 1]
@@ -340,14 +361,14 @@ function Page:Dropdown(column, key, label, choices, tooltip, options)
         local create = root.CreateHighlightRadio or root.CreateRadio
         for _, choice in ipairs(choices) do
             create(root, choice.label,
-                function() return Options:Get(key) == choice.value end,
-                function() Options:Set(key, choice.value) end)
+                function() return control.get() == choice.value end,
+                function() control.set(choice.value) end)
         end
     end)
     local openMenu = dropdown.OpenMenu
     function dropdown:OpenMenu(...)
         if not ns.IsControllerUI() then return openMenu(self, ...) end
-        if self:IsEnabled() then Options:Set(key, nextChoice(key, choices).value) end
+        if self:IsEnabled() then control.set(nextChoice(control.get(), choices).value) end
     end
     dropdown:HookScript("OnEnter", control.enter)
     dropdown:HookScript("OnLeave", control.leave)
@@ -362,11 +383,11 @@ function Page:Slider(column, key, label, minValue, maxValue, format, tooltip, op
     local slider = CreateFrame("Frame", nil, control.row, "MinimalSliderWithSteppersTemplate")
     -- The template is taller than a row; at a row's height it doesn't take the mouse from the next.
     slider:SetSize(SLIDER_WIDTH, ROW_HEIGHT)
-    slider:Init(Options:Get(key), minValue, maxValue, maxValue - minValue, {
+    slider:Init(control.get(), minValue, maxValue, maxValue - minValue, {
         [MinimalSliderWithSteppersMixin.Label.Right] = function(value) return format(math.floor(value + 0.5)) end,
     })
     slider:RegisterCallback(MinimalSliderWithSteppersMixin.Event.OnValueChanged, function(_, value)
-        if not control.refreshing then Options:Set(key, math.floor(value + 0.5)) end
+        if not control.refreshing then control.set(math.floor(value + 0.5)) end
     end, control)
     for _, part in ipairs({ slider, slider.Slider, slider.Back, slider.Forward }) do
         part:HookScript("OnEnter", control.enter)
@@ -398,11 +419,11 @@ function Page:Color(column, key, label, tooltip, options)
     -- The template passes clicks on to its parent, the row, which would open the picker again.
     swatch:SetPropagateMouseClicks(false)
     local function pick()
-        local r, g, b = Page.ParseColor(Options:Get(key))
+        local r, g, b = Page.ParseColor(control.get())
         ColorPickerFrame:SetupColorPickerAndShow({
             r = r, g = g, b = b, hasOpacity = false,
-            swatchFunc = function() Options:Set(key, Page.FormatColor(ColorPickerFrame:GetColorRGB())) end,
-            cancelFunc = function() Options:Set(key, Page.FormatColor(ColorPickerFrame:GetPreviousValues())) end,
+            swatchFunc = function() control.set(Page.FormatColor(ColorPickerFrame:GetColorRGB())) end,
+            cancelFunc = function() control.set(Page.FormatColor(ColorPickerFrame:GetPreviousValues())) end,
         })
     end
     swatch:SetScript("OnClick", pick)
@@ -585,13 +606,13 @@ function Page:TextBox(column, key, label, tooltip, options)
     box:SetAutoFocus(false)
     box:SetScript("OnEnterPressed", box.ClearFocus)
     box:SetScript("OnEscapePressed", function()
-        box:SetText(Options:Get(key))
+        box:SetText(control.get())
         box:ClearFocus()
     end)
     box:SetScript("OnEditFocusLost", function()
         box:HighlightText(0, 0)
-        Options:Set(key, strtrim(box:GetText() or ""))
-        box:SetText(Options:Get(key))
+        control.set(strtrim(box:GetText() or ""))
+        box:SetText(control.get())
     end)
     box:SetScript("OnEnter", control.enter)
     box:SetScript("OnLeave", control.leave)
