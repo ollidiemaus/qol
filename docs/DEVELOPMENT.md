@@ -295,7 +295,7 @@ dark brown body darker towards the bottom, a black outline. The client has no ze
 that kind. All three were made with small numpy scripts, not kept in the repository.
 
 The square minimap replaces the minimap's mask and hides the round frame textures
-(`MinimapCompassTexture` and its underlay). Forever's minimap skin (`Blizzard_Minimap/Camelot/Skin.lua`)
+(`MinimapCompassTexture` and its underlay). Forever's minimap code (`Blizzard_Minimap/Camelot/Minimap.lua`)
 sets its round mask again when `rotateMinimap` changes, so a `CVAR_UPDATE` for it applies the square
 mask again; the hybrid minimap has a mask of its own (`HybridMinimap.CircleMask`). The zone text is
 the game's own `MinimapCluster.ZoneTextButton`, moved: it keeps its tooltip and click. Its frame
