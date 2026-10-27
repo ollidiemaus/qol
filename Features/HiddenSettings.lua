@@ -12,7 +12,8 @@ ns.HiddenSettings = HiddenSettings
 
 -- In the page's order. kind: "slider" (min to max in steps of step) or "checkbox" ("1" or "0").
 -- The ranges were measured in Forever's client (2026-10-27): the game quietly ignores a value
--- outside them. Ground clutter fade takes any value, but goes no further than the distance.
+-- outside them. Ground clutter fade takes any value, but goes no further than the distance. The
+-- camera distance goes to 2.6, past the 2.0 where the game's own Max Camera Distance slider stops.
 HiddenSettings.SETTINGS = {
     { cvar = "groundEffectDist", label = L.GROUND_CLUTTER_DISTANCE, tooltip = L.GROUND_CLUTTER_DISTANCE_TIP,
         kind = "slider", min = 40, max = 500, step = 1, section = L.SECTION_HIDDEN_GRAPHICS },
@@ -24,6 +25,8 @@ HiddenSettings.SETTINGS = {
         kind = "slider", min = 0, max = 3, step = 1, section = L.SECTION_HIDDEN_GRAPHICS },
     { cvar = "ResampleAlwaysSharpen", label = L.ALWAYS_SHARPEN, tooltip = L.ALWAYS_SHARPEN_TIP,
         kind = "checkbox", section = L.SECTION_HIDDEN_GRAPHICS },
+    { cvar = "cameraDistanceMaxZoomFactor", label = L.MAX_CAMERA_DISTANCE, tooltip = L.MAX_CAMERA_DISTANCE_TIP,
+        kind = "slider", min = 1, max = 2.6, step = 0.1, section = L.SECTION_HIDDEN_CAMERA },
 }
 
 local byCVar = {}

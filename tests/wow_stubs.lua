@@ -1314,12 +1314,14 @@ function Stubs.Reset(options)
         -- and Always sharpen have none), and their raid copies.
         cvars = { chatClassColorOverride = "2", groundEffectDist = "70", groundEffectFade = "70",
             groundEffectDensity = "16", weatherDensity = "2", ResampleAlwaysSharpen = "0",
-            RAIDgroundEffectDist = "70", RAIDgroundEffectFade = "70", RAIDgroundEffectDensity = "16",
+            cameraDistanceMaxZoomFactor = "1.9", RAIDgroundEffectDist = "70", RAIDgroundEffectFade = "70", RAIDgroundEffectDensity = "16",
             RAIDweatherDensity = "2" },
-        cvarRanges = { groundEffectDist = { 40, 500 }, groundEffectDensity = { 16, 256 }, weatherDensity = { 0, 3 } },
+        cvarRanges = { groundEffectDist = { 40, 500 }, groundEffectDensity = { 16, 256 }, weatherDensity = { 0, 3 },
+            cameraDistanceMaxZoomFactor = { 1, 2.6 } },
         -- The hidden settings' game defaults: each starts at its own.
         cvarDefaults = { chatClassColorOverride = "2", groundEffectDist = "70", groundEffectFade = "70",
-            groundEffectDensity = "16", weatherDensity = "2", ResampleAlwaysSharpen = "0" }, cvarSets = {}, cvarReads = 0,
+            groundEffectDensity = "16", weatherDensity = "2", ResampleAlwaysSharpen = "0",
+            cameraDistanceMaxZoomFactor = "1.9" }, cvarSets = {}, cvarReads = 0,
         shift = false,
         quest = { npc = "Creature-0-1-0-1-3139-0001", gossipActive = {}, gossipAvailable = {}, greetingActive = {},
             greetingAvailable = {}, autoAccept = false, completable = true, money = 0, choices = 0, calls = {} },

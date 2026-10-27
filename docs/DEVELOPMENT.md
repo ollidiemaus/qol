@@ -586,8 +586,10 @@ box's text, which the game doesn't. A text row trims what's typed. A slider's bo
 page's, in place of the slider's value text) takes a number, set through the slider so it goes
 where a dragged value does: rounded to the row's `step`, out of range to the nearest end, and
 anything else, or a number that rounds to the value, sets nothing. It shows as many decimals as the
-step. Typing into either kind in Forever's controller interface (the Steam Deck's on-screen
-keyboard) isn't tried yet.
+step. A fractional step (Max camera distance's 0.1) rounds through those decimals, so stepping or
+typing never sets a value like `1.9000000001`, and halfway rounds up with room for float error
+(`2.05` is `2.1`, though `(2.05 - 1) / 0.1` comes out just under 10.5). Typing into either kind in
+Forever's controller interface (the Steam Deck's on-screen keyboard) isn't tried yet.
 A page can start with a few lines that say what its options are for (`Page:Text`, the Mail page's):
 the font string gets the column's width from `SettingsWindow.PAGE_WIDTH`, so its wrapped height
 (`GetStringHeight`) is known while the page is built, before the window lays it out.
@@ -619,13 +621,15 @@ when the client knows none.
 
 - **The CVar is the only truth.** There are no option keys and no saved data for these, and nothing
   is written at login: the game keeps the values as it would after `/console`. Don't "fix" this into
-  a QoL copy that is applied at login: the game's own graphics settings (its Ground Clutter slider,
-  a quality preset) write some of these CVars too, so a copy would drift from what the game uses
-  and then overwrite the player's later choice.
+  a QoL copy that is applied at login: the game's own settings (its Ground Clutter slider, a
+  graphics quality preset, its Max Camera Distance slider) write some of these CVars too, so a copy
+  would drift from what the game uses and then overwrite the player's later choice.
 - **Read back after every set.** The game quietly ignores a value outside a CVar's range (no error,
   no clamping), so after each `SetCVar` the page refreshes and shows what `GetCVar` returns: a
   refused value shows the old one. The sliders cover exactly the ranges measured in Forever's client
-  (2026-10-27). Sets happen at once, in combat too: these CVars aren't protected.
+  (2026-10-27). `cameraDistanceMaxZoomFactor` takes 1.0 to 2.6 there, while the game's own Max Camera
+  Distance slider (`Camelot/ControlsOverrides.lua`) stops at 2.0 and moving it sets 2.0 or lower.
+  Sets happen at once, in combat too: these CVars aren't protected.
 - **The raid copies stay alone.** `RAIDgroundEffectDist` and the rest are the game's, used while its
   Raid and Battleground graphics are on; the page never writes them, and its intro says raids and
   battlegrounds use those instead.

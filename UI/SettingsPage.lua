@@ -354,11 +354,14 @@ local function place(control, widget, rightSpace)
     control.widget = widget
 end
 
+-- How far apart two numbers may be and count as equal: the float error in a step like 0.1.
+local FLOAT_ERROR = 1e-9
+
 -- The number of decimals a slider's step has: none for whole steps, at most 6 (to allow for the
 -- float error in a step like 0.1).
 local function decimalsOf(step)
     local decimals = 0
-    while decimals < 6 and math.abs(step * 10 ^ decimals - math.floor(step * 10 ^ decimals + 0.5)) > 1e-9 do
+    while decimals < 6 and math.abs(step * 10 ^ decimals - math.floor(step * 10 ^ decimals + 0.5)) > FLOAT_ERROR do
         decimals = decimals + 1
     end
     return decimals
@@ -459,9 +462,10 @@ function Page:Slider(column, key, label, minValue, maxValue, format, tooltip, op
     local step = options and options.step or 1
     local decimals = decimalsOf(step)
     local function show(value) return string.format("%." .. decimals .. "f", value) end
-    -- To the nearest step, through show so 0.1 steps don't drift (0.30000000000000004).
+    -- To the nearest step, through show so 0.1 steps don't drift (0.30000000000000004). Halfway goes
+    -- up, with room for the float error that puts 2.05 just below it ((2.05 - 1) / 0.1 is 10.4999...).
     local function round(value)
-        value = minValue + math.floor((value - minValue) / step + 0.5) * step
+        value = minValue + math.floor((value - minValue) / step + 0.5 + FLOAT_ERROR) * step
         return math.max(minValue, math.min(maxValue, tonumber(show(value))))
     end
     local slider = CreateFrame("Frame", nil, control.row, "MinimalSliderWithSteppersTemplate")

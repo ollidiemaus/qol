@@ -69,16 +69,17 @@ describe("advanced settings page", function()
             "Raid and Battleground graphics" }) do
             T.truthy(intro:find(words, 1, true), "the intro says " .. words)
         end
-        T.eq(#p.headers, 1)
+        T.eq(#p.headers, 2)
         T.same({ p.headers[1].column, p.headers[1].text }, { "wide", "Graphics" })
+        T.same({ p.headers[2].column, p.headers[2].text }, { "wide", "Camera" })
         T.same(labels(ns), { "Ground clutter distance", "Ground clutter fade", "Ground clutter density",
-            "Weather density", "Always sharpen" })
+            "Weather density", "Always sharpen", "Max camera distance" })
         local kinds = {}
         for _, c in ipairs(p.controls) do
             T.eq(c.column, "wide", c.name())
             kinds[#kinds + 1] = c.kind
         end
-        T.same(kinds, { "slider", "slider", "slider", "slider", "checkbox" })
+        T.same(kinds, { "slider", "slider", "slider", "slider", "checkbox", "slider" })
         T.truthy(p:Height() <= ns.SettingsPage.MAX_HEIGHT, "fits without scrolling")
     end)
 
@@ -143,7 +144,7 @@ describe("advanced settings page", function()
         T.eq(state.cvars.groundEffectDist, "70")
     end)
 
-    it("says the game default on Reset's tooltip, and that the game's graphics settings may set another", function()
+    it("says the game default on Reset's tooltip, and that the game's own settings may set another", function()
         local ns, state = start(function(s) s.cvarDefaults.groundEffectDist = "100" end)
         show(ns)
         local reset = row(ns, "Ground clutter distance").resetButton
@@ -151,7 +152,7 @@ describe("advanced settings page", function()
         T.eq(GameTooltip.lines[1].text, "Reset")
         local tip = GameTooltip.lines[2].text
         T.truthy(tip:find("Back to the game default: 100", 1, true), tip)
-        T.truthy(tip:find("graphics settings", 1, true), tip)
+        T.truthy(tip:find("own settings may set", 1, true), tip)
         reset:RunScript("OnLeave")
         state.cvars.ResampleAlwaysSharpen = "1"
         row(ns, "Always sharpen").resetButton:RunScript("OnEnter")
@@ -212,6 +213,9 @@ describe("advanced settings page", function()
             local c = row(ns, label)
             T.same({ c.widget.minValue, c.widget.maxValue, c.widget.step }, { range[1], range[2], 1 }, label)
         end
+        local camera = row(ns, "Max camera distance")
+        T.same({ camera.widget.minValue, camera.widget.maxValue }, { 1, 2.6 })
+        T.truthy(math.abs(camera.widget.step - 0.1) < 1e-9, "Max camera distance steps 0.1")
         local c = row(ns, "Ground clutter density")
         T.eq(c.widget:GetValue(), 16)
         T.eq(c.box.template, "InputBoxTemplate")
@@ -225,6 +229,47 @@ describe("advanced settings page", function()
         T.eq(c.box:GetText(), "120")
         c.widget.Back:Click()
         T.eq(state.cvars.groundEffectDensity, "119")
+    end)
+
+    it("steps the camera distance by 0.1 with its arrows and slider, never drifting off one decimal", function()
+        local ns, state = start()
+        show(ns)
+        local c = row(ns, "Max camera distance")
+        T.eq(c.box:GetText(), "1.9")
+        c.widget.Forward:Click()
+        T.eq(tonumber(state.cvars.cameraDistanceMaxZoomFactor), 2)
+        T.eq(c.box:GetText(), "2.0")
+        for _ = 1, 10 do c.widget.Forward:Click() end
+        T.eq(state.cvars.cameraDistanceMaxZoomFactor, "2.6", "stops at the end")
+        T.eq(c.box:GetText(), "2.6")
+        for _ = 1, 7 do c.widget.Back:Click() end
+        T.eq(state.cvars.cameraDistanceMaxZoomFactor, "1.9")
+        c.widget:SetValue(2.3400000001)
+        T.eq(state.cvars.cameraDistanceMaxZoomFactor, "2.3")
+        T.eq(c.box:GetText(), "2.3")
+        c.resetButton:Click()
+        T.eq(state.cvars.cameraDistanceMaxZoomFactor, "1.9", "Reset puts back the game default")
+        T.eq(c.box:GetText(), "1.9")
+        T.falsy(c.resetButton:IsEnabled())
+        for _, set in ipairs(state.cvarSets) do
+            T.truthy(set:match("^cameraDistanceMaxZoomFactor=%d$") or set:match("^cameraDistanceMaxZoomFactor=%d%.%d$"),
+                set .. " has at most one decimal")
+        end
+    end)
+
+    it("shows the camera distance's box with one decimal, rounding a typed number to it and into range", function()
+        local ns, state = start(function(s) s.cvars.cameraDistanceMaxZoomFactor = "1.900000" end)
+        show(ns)
+        local c = row(ns, "Max camera distance")
+        T.eq(c.box:GetText(), "1.9", "the game's trailing zeros left out")
+        for _, case in ipairs({ { "2.37", 2.4, "2.4" }, { "9", 2.6, "2.6" }, { "0.2", 1, "1.0" },
+            { "-3", 1, "1.0" }, { "2.05", 2.1, "2.1" }, { "1.5", 1.5, "1.5" } }) do
+            Stubs.Type(c.box, case[1])
+            c.box:RunScript("OnEnterPressed")
+            T.eq(tonumber(state.cvars.cameraDistanceMaxZoomFactor), case[2], case[1])
+            T.eq(c.box:GetText(), case[3], case[1])
+            T.eq(c.widget:GetValue(), case[2], case[1])
+        end
     end)
 
     it("sets a value typed into the box once it loses the keyboard, put back on Escape", function()
@@ -388,13 +433,13 @@ describe("advanced settings page", function()
     it("leaves out a row whose setting the client doesn't know", function()
         local ns = start(function(state) state.cvars.weatherDensity = nil end)
         T.same(labels(ns), { "Ground clutter distance", "Ground clutter fade", "Ground clutter density",
-            "Always sharpen" })
+            "Always sharpen", "Max camera distance" })
     end)
 
     it("leaves the page out of the list on a client that knows none of the settings", function()
         local ns = start(function(state)
             for _, cvar in ipairs({ "groundEffectDist", "groundEffectFade", "groundEffectDensity", "weatherDensity",
-                "ResampleAlwaysSharpen" }) do
+                "ResampleAlwaysSharpen", "cameraDistanceMaxZoomFactor" }) do
                 state.cvars[cvar] = nil
             end
         end)
@@ -418,7 +463,7 @@ describe("advanced settings page", function()
         for _, c in ipairs(page(ns).controls) do
             if c.kind == "slider" then c.widget.Forward:Click() else c.widget:Click() end
         end
-        T.eq(#state.cvarSets, 5)
+        T.eq(#state.cvarSets, 6)
         for _, set in ipairs(state.cvarSets) do T.falsy(set:find("^RAID"), set) end
         T.eq(state.cvars.RAIDgroundEffectDist, "70")
     end)
@@ -432,6 +477,7 @@ describe("advanced settings page", function()
             ["Ground clutter density"] = { "how thick", "frame rate" },
             ["Weather density"] = { "rain and snow", "0 (least)", "3 (most)" },
             ["Always sharpen"] = { "isn't upscaling", "Resample Sharpness" },
+            ["Max camera distance"] = { "zoom out", "Max Camera Distance slider", "2.0" },
         }
         for label, words in pairs(tips) do
             local c = row(ns, label)
