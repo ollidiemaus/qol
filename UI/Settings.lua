@@ -285,7 +285,8 @@ local function buildAdvanced(page)
         if setting.kind == "checkbox" then
             page:Checkbox("wide", backing, setting.label, setting.tooltip)
         else
-            page:Slider("wide", backing, setting.label, setting.min, setting.max, tostring, setting.tooltip)
+            page:Slider("wide", backing, setting.label, setting.min, setting.max, nil, setting.tooltip,
+                { step = setting.step, textBox = true })
         end
     end
     -- A change through /console, the game's options or another addon. The window refreshes the page

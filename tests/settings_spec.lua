@@ -333,6 +333,33 @@ describe("settings pages", function()
         T.falsy(control(ns, "mailBookmark6").widget.nextEditBox)
     end)
 
+    it("shows a slider's box with its step's decimals, and greys it out with its row", function()
+        local ns = start()
+        local value, on = 1.2, true
+        local page = ns.SettingsPage.New("Test")
+        local c = page:Slider("wide", { get = function() return value end, set = function(v) value = v end },
+            "Zoom", 0, 2, nil, nil, { step = 0.1, textBox = true, enabled = function() return on end })
+        page:Refresh()
+        T.eq(c.widget.step, 0.1)
+        T.eq(c.box:GetText(), "1.2")
+        Stubs.Type(c.box, "1.66")
+        c.box:RunScript("OnEnterPressed")
+        T.eq(value, 1.7)
+        T.eq(c.box:GetText(), "1.7")
+        c.widget.Back:Click()
+        T.eq(c.box:GetText(), "1.6")
+        value = 1
+        page:Refresh()
+        T.eq(c.box:GetText(), "1.0")
+        T.truthy(c.box.enabled)
+        T.same(c.box.textColor, { 1, 1, 1 })
+        on = false
+        page:Refresh()
+        T.falsy(c.box.enabled)
+        T.falsy(c.widget.enabled)
+        T.same(c.box.textColor, { 0.5, 0.5, 0.5 })
+    end)
+
     it("keeps what is being typed when the page shows a change", function()
         local ns = start()
         local c, page = control(ns, "mailBookmark2")

@@ -577,10 +577,17 @@ with the rings' editor below it), each an option's name with a control from the 
 templates (`SettingsCheckboxTemplate`, `WowStyle2DropdownTemplate`,
 `MinimalSliderWithSteppersTemplate`, `ColorSwatchTemplate` opening `ColorPickerFrame`,
 `InputBoxTemplate` for a name), so they look like the game's pages and fit without scrolling
-(`SettingsPage.MAX_HEIGHT`, checked by the tests). A text row saves when its box loses the keyboard
-(Enter, Tab, a click elsewhere), trimmed, and Escape puts the saved text back; Tab goes on to the
-page's next text row through the template's own `nextEditBox` and `previousEditBox`. A refresh
-leaves a box alone while it has the keyboard. Not yet tried in Forever's controller interface.
+(`SettingsPage.MAX_HEIGHT`, checked by the tests). Every input box (a text row's, a slider's with
+`textBox`) is built by one helper and behaves the same: what's typed is set when the box loses the
+keyboard (Enter, Tab, a click elsewhere), and then, and on Escape, the box shows what the row has
+again; Tab goes on to the page's next box through the template's own `nextEditBox` and
+`previousEditBox`. A refresh leaves a box alone while it has the keyboard, and greys a disabled
+box's text, which the game doesn't. A text row trims what's typed. A slider's box (the Advanced
+page's, in place of the slider's value text) takes a number, set through the slider so it goes
+where a dragged value does: rounded to the row's `step`, out of range to the nearest end, and
+anything else, or a number that rounds to the value, sets nothing. It shows as many decimals as the
+step. Typing into either kind in Forever's controller interface (the Steam Deck's on-screen
+keyboard) isn't tried yet.
 A page can start with a few lines that say what its options are for (`Page:Text`, the Mail page's):
 the font string gets the column's width from `SettingsWindow.PAGE_WIDTH`, so its wrapped height
 (`GetStringHeight`) is known while the page is built, before the window lays it out.
@@ -626,8 +633,8 @@ when the client knows none.
 - **Taint-safe.** The page touches no Blizzard frame: it only calls `SetCVar` and `GetCVar` on
   CVars that aren't protected, from our own window.
 - The page has no Defaults button yet: one that resets nothing would mislead. It comes with the
-  rows' Reset to the game default. `Page:Slider` still takes whole numbers in steps of one, which
-  is every row's `step` so far.
+  rows' Reset to the game default. Each slider row passes its `step` to `Page:Slider`, and has a
+  box to type an exact value (see the input boxes above).
 
 The history below is from the time the pages were in the game's settings; the workarounds it led to
 stay since they cost nothing.

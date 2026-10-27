@@ -633,6 +633,16 @@ local function install()
             frame:SetScript("OnLeave", function() G.GameTooltip:Hide() end)
         end
         if kind == "EditBox" then Stubs.MakeEditBox(frame) end
+        -- The template's Tab, as Forever's EditBox_OnTabPressed: the previous box with Shift, else the next.
+        if template == "InputBoxTemplate" then
+            frame:SetScript("OnTabPressed", function(self)
+                if self.previousEditBox and G.IsShiftKeyDown() then
+                    self.previousEditBox:SetFocus()
+                elseif self.nextEditBox then
+                    self.nextEditBox:SetFocus()
+                end
+            end)
+        end
         if kind == "StatusBar" then
             function frame:SetStatusBarTexture(texture) self.statusBarTexture = texture end
             -- rangeSets counts the SetMinMaxValues calls.

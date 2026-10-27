@@ -33,6 +33,8 @@ local LABEL_GAP = 8       -- between a name and its control
 local DROPDOWN_WIDTH = 160
 local SLIDER_WIDTH = 250
 local SLIDER_VALUE_ROOM = 50 -- right of a slider in a column, for its value
+local NUMBER_WIDTH = 36      -- a slider's box for its value, in that room
+local BOX_ART_LEFT = 5       -- InputBoxTemplate's left edge art reaches this far left of the box
 local WIDE_CONTROL_X = -80   -- in a wide row the control starts there from the middle, as on the game's list
 local TITLE_ROW_Y, TITLE_ROW_RIGHT, TITLE_ROW_WIDTH = 14, 28, 300 -- an option in the title bar
 local KEY_WIDTH, KEY_HEIGHT = 160, 22 -- a key binding's buttons, as in the game's Key Bindings
@@ -148,6 +150,7 @@ end
 function Page:Refresh()
     local normal = fontColor(NORMAL_FONT_COLOR, 1, 0.82, 0)
     local grey = fontColor(GRAY_FONT_COLOR, 0.5, 0.5, 0.5)
+    local white = fontColor(HIGHLIGHT_FONT_COLOR, 1, 1, 1)
     for _, control in ipairs(self.controls) do
         local enabled = control.enabled == nil or control.enabled() == true
         local color = enabled and normal or grey
@@ -167,8 +170,13 @@ function Page:Refresh()
             control.refreshKeys(enabled)
         elseif control.kind == "dropdown" then
             control.widget:GenerateMenu()
-        elseif control.kind == "text" and not control.widget:HasFocus() then
-            control.widget:SetText(control.get())
+        end
+        if control.box then
+            -- A disabled box doesn't grey its text itself.
+            local boxColor = enabled and white or grey
+            control.box:SetEnabled(enabled)
+            control.box:SetTextColor(boxColor[1], boxColor[2], boxColor[3])
+            if not control.box:HasFocus() then control.box:SetText(control.boxCurrent()) end
         end
     end
 end
@@ -318,6 +326,44 @@ local function place(control, widget, rightSpace)
     control.widget = widget
 end
 
+-- The number of decimals a slider's step has: none for whole steps, at most 6 (to allow for the
+-- float error in a step like 0.1).
+local function decimalsOf(step)
+    local decimals = 0
+    while decimals < 6 and math.abs(step * 10 ^ decimals - math.floor(step * 10 ^ decimals + 0.5)) > 1e-9 do
+        decimals = decimals + 1
+    end
+    return decimals
+end
+
+-- A row's input box, which commit(text) reads when it loses the keyboard (Enter, Tab, a click
+-- elsewhere); then, and on Escape, it shows current() again, what the row now has. A refresh leaves it
+-- alone while it has the keyboard. Tab and Shift+Tab go on to the page's next and previous box (the
+-- template's EditBox_OnTabPressed reads nextEditBox and previousEditBox).
+local function newTextBox(page, control, width, commit, current)
+    local box = CreateFrame("EditBox", nil, control.row, "InputBoxTemplate")
+    box:SetSize(width, TEXT_HEIGHT)
+    box:SetAutoFocus(false)
+    box:SetScript("OnEnterPressed", box.ClearFocus)
+    box:SetScript("OnEscapePressed", function()
+        box:SetText(current())
+        box:ClearFocus()
+    end)
+    box:SetScript("OnEditFocusLost", function()
+        box:HighlightText(0, 0)
+        commit(box:GetText() or "")
+        box:SetText(current())
+    end)
+    box:SetScript("OnEnter", control.enter)
+    box:SetScript("OnLeave", control.leave)
+    if page.lastTextBox then
+        page.lastTextBox.nextEditBox, box.previousEditBox = box, page.lastTextBox
+    end
+    page.lastTextBox = box
+    control.box, control.boxCurrent = box, current
+    return box
+end
+
 function Page:Checkbox(column, key, label, tooltip, options)
     local control = optionRow(self, column, "checkbox", key, label, tooltip, options)
     local checkbox = CreateFrame("CheckButton", nil, control.row, "SettingsCheckboxTemplate")
@@ -376,24 +422,46 @@ function Page:Dropdown(column, key, label, choices, tooltip, options)
     return control
 end
 
--- A whole number from minValue to maxValue, one step per click on its arrows. format turns the
--- value into the text shown right of the slider (L.PIXELS, for one).
+-- A value from minValue to maxValue in steps of options.step (1 when not given), one step per click
+-- on its arrows. format turns the value into the text shown right of the slider (L.PIXELS, for one).
+-- With options.textBox (and no format) the value is in a box there instead, where an exact one can be typed: a
+-- number is set to the nearest step in range, anything else puts back the value.
 function Page:Slider(column, key, label, minValue, maxValue, format, tooltip, options)
     local control = optionRow(self, column, "slider", key, label, tooltip, options)
+    local step = options and options.step or 1
+    local decimals = decimalsOf(step)
+    local function show(value) return string.format("%." .. decimals .. "f", value) end
+    -- To the nearest step, through show so 0.1 steps don't drift (0.30000000000000004).
+    local function round(value)
+        value = minValue + math.floor((value - minValue) / step + 0.5) * step
+        return math.max(minValue, math.min(maxValue, tonumber(show(value))))
+    end
     local slider = CreateFrame("Frame", nil, control.row, "MinimalSliderWithSteppersTemplate")
     -- The template is taller than a row; at a row's height it doesn't take the mouse from the next.
     slider:SetSize(SLIDER_WIDTH, ROW_HEIGHT)
-    slider:Init(control.get(), minValue, maxValue, maxValue - minValue, {
-        [MinimalSliderWithSteppersMixin.Label.Right] = function(value) return format(math.floor(value + 0.5)) end,
-    })
+    local formatters = {}
+    if format and not (options and options.textBox) then
+        formatters[MinimalSliderWithSteppersMixin.Label.Right] = function(value) return format(round(value)) end
+    end
+    slider:Init(control.get(), minValue, maxValue, math.floor((maxValue - minValue) / step + 0.5), formatters)
     slider:RegisterCallback(MinimalSliderWithSteppersMixin.Event.OnValueChanged, function(_, value)
-        if not control.refreshing then control.set(math.floor(value + 0.5)) end
+        if control.refreshing then return end
+        control.set(round(value))
+        if control.box then control.box:SetText(control.boxCurrent()) end
     end, control)
     for _, part in ipairs({ slider, slider.Slider, slider.Back, slider.Forward }) do
         part:HookScript("OnEnter", control.enter)
         part:HookScript("OnLeave", control.leave)
     end
     place(control, slider, SLIDER_VALUE_ROOM)
+    if options and options.textBox then
+        -- Through the slider, so a typed value goes where a dragged one does; the same value sets nothing.
+        local box = newTextBox(self, control, NUMBER_WIDTH, function(text)
+            local number = tonumber(strtrim(text))
+            if number then slider:SetValue(round(number)) end
+        end, function() return show(control.get()) end)
+        box:SetPoint("LEFT", slider, "RIGHT", LABEL_GAP + BOX_ART_LEFT, 0)
+    end
     return control
 end
 
@@ -595,31 +663,10 @@ function Page:Binding(column, command, label, tooltip, options)
     return control
 end
 
--- A line of text (a character's name), in the game's input box. It's saved when the box loses the
--- keyboard (Enter, Tab, a click elsewhere) without spaces around it; Escape puts back what was saved.
--- Tab and Shift+Tab go on to the page's next and previous text rows (the template's
--- EditBox_OnTabPressed reads nextEditBox and previousEditBox).
+-- A line of text (a character's name), in the game's input box. It's saved without spaces around it.
 function Page:TextBox(column, key, label, tooltip, options)
     local control = optionRow(self, column, "text", key, label, tooltip, options)
-    local box = CreateFrame("EditBox", nil, control.row, "InputBoxTemplate")
-    box:SetSize(TEXT_WIDTH, TEXT_HEIGHT)
-    box:SetAutoFocus(false)
-    box:SetScript("OnEnterPressed", box.ClearFocus)
-    box:SetScript("OnEscapePressed", function()
-        box:SetText(control.get())
-        box:ClearFocus()
-    end)
-    box:SetScript("OnEditFocusLost", function()
-        box:HighlightText(0, 0)
-        control.set(strtrim(box:GetText() or ""))
-        box:SetText(control.get())
-    end)
-    box:SetScript("OnEnter", control.enter)
-    box:SetScript("OnLeave", control.leave)
-    if self.lastTextBox then
-        self.lastTextBox.nextEditBox, box.previousEditBox = box, self.lastTextBox
-    end
-    self.lastTextBox = box
+    local box = newTextBox(self, control, TEXT_WIDTH, function(text) control.set(strtrim(text)) end, control.get)
     place(control, box)
     return control
 end
