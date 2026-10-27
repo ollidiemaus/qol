@@ -1109,16 +1109,18 @@ local function install()
             return state.cvars[name]
         end,
         GetCVarDefault = function(name) return state.cvarDefaults[name] end,
-        -- Its second value is the default too, as the game's: value, defaultValue, ...
+        -- As the game's: value, defaultValue, isStoredServerAccount, isStoredServerCharacter,
+        -- isLockedFromUser, isSecure (state.cvarSecure: the game won't change it in combat), isReadOnly.
         GetCVarInfo = function(name)
             if state.cvars[name] == nil then return nil end
-            return state.cvars[name], state.cvarDefaults[name]
+            return state.cvars[name], state.cvarDefaults[name], false, false, false,
+                state.cvarSecure[name] == true, false
         end,
-        -- As the game: a setting it doesn't know, or a value outside the setting's range
-        -- (state.cvarRanges), is quietly ignored. Every call is recorded.
+        -- As the game: a setting it doesn't know, a value outside the setting's range
+        -- (state.cvarRanges) or a secure setting in combat is quietly ignored. Every call is recorded.
         SetCVar = function(name, value)
             table.insert(state.cvarSets, name .. "=" .. tostring(value))
-            if state.cvars[name] == nil then return end
+            if state.cvars[name] == nil or (state.cvarSecure[name] and state.combat) then return end
             local range, number = state.cvarRanges[name], tonumber(value)
             if range and not (number and number >= range[1] and number <= range[2]) then return end
             state.cvars[name] = tostring(value)
@@ -1321,7 +1323,7 @@ function Stubs.Reset(options)
         -- The hidden settings' game defaults: each starts at its own.
         cvarDefaults = { chatClassColorOverride = "2", groundEffectDist = "70", groundEffectFade = "70",
             groundEffectDensity = "16", weatherDensity = "2", ResampleAlwaysSharpen = "0",
-            cameraDistanceMaxZoomFactor = "1.9" }, cvarSets = {}, cvarReads = 0,
+            cameraDistanceMaxZoomFactor = "1.9" }, cvarSecure = {}, cvarSets = {}, cvarReads = 0,
         shift = false,
         quest = { npc = "Creature-0-1-0-1-3139-0001", gossipActive = {}, gossipAvailable = {}, greetingActive = {},
             greetingAvailable = {}, autoAccept = false, completable = true, money = 0, choices = 0, calls = {} },

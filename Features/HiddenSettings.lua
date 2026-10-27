@@ -50,8 +50,23 @@ function HiddenSettings.IsKnown(cvar)
     return HiddenSettings.Get(cvar) ~= nil
 end
 
--- Sets it at once, in combat too. The game may refuse it and keep the old value, so read it back
--- with Get.
+-- Whether the game won't change it in combat: the secure flag, the sixth value of
+-- C_CVar.GetCVarInfo. False on a client without it.
+function HiddenSettings.IsProtected(cvar)
+    local info = C_CVar and C_CVar.GetCVarInfo
+    if type(info) ~= "function" then return false end
+    local ok, _, _, _, _, _, isSecure = pcall(info, cvar)
+    return ok and isSecure == true
+end
+
+-- Whether the game takes a change to it, in combat or out: always, but a protected one in combat.
+-- The caller says whether it's in combat, as PLAYER_REGEN_DISABLED comes before InCombatLockdown.
+function HiddenSettings.CanChange(cvar, inCombat)
+    return not (inCombat and HiddenSettings.IsProtected(cvar))
+end
+
+-- Sets it at once, in combat too (the page leaves a protected one alone then). The game may
+-- refuse it and keep the old value, so read it back with Get.
 function HiddenSettings.Set(cvar, value)
     call("SetCVar", cvar, tostring(value))
 end

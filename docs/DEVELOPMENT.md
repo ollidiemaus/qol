@@ -629,7 +629,15 @@ when the client knows none.
   refused value shows the old one. The sliders cover exactly the ranges measured in Forever's client
   (2026-10-27). `cameraDistanceMaxZoomFactor` takes 1.0 to 2.6 there, while the game's own Max Camera
   Distance slider (`Camelot/ControlsOverrides.lua`) stops at 2.0 and moving it sets 2.0 or lower.
-  Sets happen at once, in combat too: these CVars aren't protected.
+  Sets happen at once, in combat too: none of these CVars is protected.
+- **Protected in combat.** A CVar `C_CVar.GetCVarInfo` marks secure (its sixth value, `isSecure`)
+  is one the game won't change in combat; `HiddenSettings.CanChange` is false for one of those in
+  combat. The page tracks combat itself, from `PLAYER_REGEN_DISABLED` (which comes while
+  `InCombatLockdown` is still false) to `PLAYER_REGEN_ENABLED`, and refreshes on both while it's
+  shown. A row's `canChange` is its `enabled`, so the name, slider or checkbox, box and Reset grey
+  out, and it guards the row's set and reset: Defaults leaves it alone, and a box typed into as
+  combat starts writes nothing when it loses the keyboard. Every other row still sets at once. None
+  of the six is expected to be secure in Forever's client; this guards later rows and other clients.
 - **The raid copies stay alone.** `RAIDgroundEffectDist` and the rest are the game's, used while its
   Raid and Battleground graphics are on; the page never writes them, and its intro says raids and
   battlegrounds use those instead.

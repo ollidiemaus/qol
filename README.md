@@ -238,7 +238,8 @@ The **Camera** section after them has:
 - **Max camera distance:** how far the camera can zoom out (1.0 to 2.6, in steps of 0.1). The game's
   own Max Camera Distance slider stops at 2.0; moving it brings this back to 2.0 or lower.
 
-Each slider covers exactly the range the game takes, and changes apply at once, in combat too. The
+Each slider covers exactly the range the game takes, and changes apply at once, in combat too (a
+setting the game itself won't change in combat is greyed out until combat ends). The
 box next to a slider shows its value; type an exact one there and press Enter or Tab (Escape puts
 it back). A number outside the range is set to its nearest end. **Reset** at the end of a row puts
 that setting back to the game's own default, and is greyed out while it's already there, so you

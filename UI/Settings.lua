@@ -250,26 +250,29 @@ end
 
 -- How a hidden setting's row gets, sets and resets the game's value, and its game default. After
 -- each set the page shows what the game kept, so a value it refused shows the old one; the Defaults
--- button refreshes the page after resetting every row.
-local function hiddenBacking(page, setting)
+-- button refreshes the page after resetting every row. canChange: whether the game takes a change
+-- now (inCombat: whether the page is in combat); the row is greyed out, and sets and resets
+-- nothing, while it doesn't, so a box typed into as combat starts writes nothing either.
+local function hiddenBacking(page, setting, inCombat)
     local Hidden = ns.HiddenSettings
     local cvar = setting.cvar
     local backing = {
-        reset = function() Hidden.Reset(cvar) end,
+        canChange = function() return Hidden.CanChange(cvar, inCombat()) end,
         isDefault = function() return Hidden.IsAtGameDefault(cvar) end,
     }
+    backing.reset = function()
+        if backing.canChange() then Hidden.Reset(cvar) end
+    end
+    local function set(value)
+        if backing.canChange() then Hidden.Set(cvar, value) end
+        page:Refresh()
+    end
     if setting.kind == "checkbox" then
         backing.get = function() return Hidden.Get(cvar) == "1" end
-        backing.set = function(checked)
-            Hidden.Set(cvar, checked and "1" or "0")
-            page:Refresh()
-        end
+        backing.set = function(checked) set(checked and "1" or "0") end
     else
         backing.get = function() return tonumber(Hidden.Get(cvar)) or setting.min end
-        backing.set = function(value)
-            Hidden.Set(cvar, value)
-            page:Refresh()
-        end
+        backing.set = set
     end
     return backing
 end
@@ -288,13 +291,17 @@ end
 -- page for each part of the game (Features/HiddenSettings.lua), those this client knows.
 local function buildAdvanced(page)
     page:Text("wide", L.ADVANCED_INTRO)
+    -- From PLAYER_REGEN_DISABLED, which comes while InCombatLockdown is still false, to
+    -- PLAYER_REGEN_ENABLED.
+    local combat = false
+    local function inCombat() return combat or InCombatLockdown() end
     local section
     for _, setting in ipairs(ns.HiddenSettings.Known()) do
         if setting.section ~= section then
             section = setting.section
             page:Header("wide", section)
         end
-        local backing = hiddenBacking(page, setting)
+        local backing = hiddenBacking(page, setting, inCombat)
         -- The game default, from the game, ends the row's tooltip and is on its Reset button's.
         local gameDefault = gameDefaultText(setting)
         local tooltip, resetTooltip = setting.tooltip, nil
@@ -302,7 +309,7 @@ local function buildAdvanced(page)
             tooltip = tooltip .. "\n\n" .. L.GAME_DEFAULT:format(gameDefault)
             resetTooltip = L.RESET_TO_GAME_DEFAULT_TIP:format(gameDefault)
         end
-        local options = { resetButton = true, resetTooltip = resetTooltip }
+        local options = { resetButton = true, resetTooltip = resetTooltip, enabled = backing.canChange }
         if setting.kind == "checkbox" then
             page:Checkbox("wide", backing, setting.label, tooltip, options)
         else
@@ -315,6 +322,13 @@ local function buildAdvanced(page)
     ns.Events:On("CVAR_UPDATE", function(_, cvar)
         if page.frame:IsVisible() and ns.HiddenSettings.Find(cvar) then page:Refresh() end
     end)
+    -- A protected setting's row greys out in combat and comes back after it.
+    local function combatChanged(inCombatNow)
+        combat = inCombatNow
+        if page.frame:IsVisible() then page:Refresh() end
+    end
+    ns.Events:On("PLAYER_REGEN_DISABLED", function() combatChanged(true) end)
+    ns.Events:On("PLAYER_REGEN_ENABLED", function() combatChanged(false) end)
 end
 
 -- The window's pages, in the order of its list. available: whether the page has anything to change
