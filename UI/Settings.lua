@@ -4,12 +4,14 @@ local Options = ns.Options
 
 -- Quality of Life's settings: a window of our own (UI/SettingsWindow.lua), which /qol opens, with a
 -- page for each part of the game: Automation, Interface, Chat, Mail, Action Bars, Minimap, World map
--- (on Forever's maps), Viewport, Ring and, on Forever (which has the controller action bar), Controller.
+-- (on Forever's maps), Viewport, Ring, on Forever (which has the controller action bar) Controller,
+-- and Advanced settings, the game's hidden settings.
 -- Under Options > AddOns there's only the information page (UI/InfoPage.lua), with a button that
 -- opens the window. The game's settings have nothing of ours to change: on Forever, with the
 -- controller interface on, the game stopped responding now and then when they closed after a
--- change (see docs/DEVELOPMENT.md). The pages only read and write ns.Options, and the features react
--- through Options:Watch.
+-- change (see docs/DEVELOPMENT.md). The pages read and write ns.Options, and the features react
+-- through Options:Watch; the Advanced settings page reads and writes the game's own values through
+-- ns.HiddenSettings.
 local SettingsPanel = {}
 ns.SettingsPanel = SettingsPanel
 
@@ -246,6 +248,53 @@ local function buildViewport(page)
     end
 end
 
+-- How a hidden setting's row gets and sets the game's value. After each set the page shows what
+-- the game kept, so a value it refused shows the old one. No reset: the page has no Defaults yet.
+local function hiddenBacking(page, setting)
+    local Hidden = ns.HiddenSettings
+    local cvar = setting.cvar
+    if setting.kind == "checkbox" then
+        return {
+            get = function() return Hidden.Get(cvar) == "1" end,
+            set = function(checked)
+                Hidden.Set(cvar, checked and "1" or "0")
+                page:Refresh()
+            end,
+        }
+    end
+    return {
+        get = function() return tonumber(Hidden.Get(cvar)) or setting.min end,
+        set = function(value)
+            Hidden.Set(cvar, value)
+            page:Refresh()
+        end,
+    }
+end
+
+-- Advanced settings page: what the game's hidden settings are, then a section of rows across the
+-- page for each part of the game (Features/HiddenSettings.lua), those this client knows.
+local function buildAdvanced(page)
+    page:Text("wide", L.ADVANCED_INTRO)
+    local section
+    for _, setting in ipairs(ns.HiddenSettings.Known()) do
+        if setting.section ~= section then
+            section = setting.section
+            page:Header("wide", section)
+        end
+        local backing = hiddenBacking(page, setting)
+        if setting.kind == "checkbox" then
+            page:Checkbox("wide", backing, setting.label, setting.tooltip)
+        else
+            page:Slider("wide", backing, setting.label, setting.min, setting.max, tostring, setting.tooltip)
+        end
+    end
+    -- A change through /console, the game's options or another addon. The window refreshes the page
+    -- each time it shows it too, in case the game doesn't send this for every change.
+    ns.Events:On("CVAR_UPDATE", function(_, cvar)
+        if page.frame:IsVisible() and ns.HiddenSettings.Find(cvar) then page:Refresh() end
+    end)
+end
+
 -- The window's pages, in the order of its list. available: whether the page has anything to change
 -- on this client; defaults: false for a page without a Defaults button.
 local PAGES = {
@@ -264,6 +313,10 @@ local PAGES = {
     -- Only Forever has the controller action bar; on retail there's nothing for it to change.
     { key = "controller", title = L.CATEGORY_CONTROLLER, build = buildController,
         available = function() return GamepadMainActionBarFrame ~= nil end },
+    -- No Defaults button until the rows can go back to the game default. Only where the client
+    -- knows a hidden setting.
+    { key = "advanced", title = L.CATEGORY_ADVANCED, build = buildAdvanced, defaults = false,
+        available = function() return #ns.HiddenSettings.Known() > 0 end },
 }
 
 function SettingsPanel:Init()

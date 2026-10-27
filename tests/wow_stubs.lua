@@ -1099,9 +1099,14 @@ local function install()
             return state.cvars[name]
         end,
         GetCVarDefault = function(name) return state.cvarDefaults[name] end,
+        -- As the game: a setting it doesn't know, or a value outside the setting's range
+        -- (state.cvarRanges), is quietly ignored. Every call is recorded.
         SetCVar = function(name, value)
-            state.cvars[name] = tostring(value)
             table.insert(state.cvarSets, name .. "=" .. tostring(value))
+            if state.cvars[name] == nil then return end
+            local range, number = state.cvarRanges[name], tonumber(value)
+            if range and not (number and number >= range[1] and number <= range[2]) then return end
+            state.cvars[name] = tostring(value)
         end,
     }
 
@@ -1290,7 +1295,14 @@ function Stubs.Reset(options)
         atlases = { ["ui-hud-minimap-frame-generic-mask"] = { width = 215, height = 226 } },
         fonts = { GameFontNormal = { "Fonts\\FRIZQT__.TTF", 12, "" },
             WhiteNormalNumberFont = { "Fonts\\ARIALN.TTF", 10, "OUTLINE" } },
-        cvars = { chatClassColorOverride = "2" }, cvarDefaults = { chatClassColorOverride = "2" }, cvarSets = {}, cvarReads = 0,
+        -- The hidden settings with their ranges, measured in Forever's client (ground clutter fade
+        -- and Always sharpen have none), and their raid copies.
+        cvars = { chatClassColorOverride = "2", groundEffectDist = "70", groundEffectFade = "70",
+            groundEffectDensity = "16", weatherDensity = "2", ResampleAlwaysSharpen = "0",
+            RAIDgroundEffectDist = "70", RAIDgroundEffectFade = "70", RAIDgroundEffectDensity = "16",
+            RAIDweatherDensity = "2" },
+        cvarRanges = { groundEffectDist = { 40, 500 }, groundEffectDensity = { 16, 256 }, weatherDensity = { 0, 3 } },
+        cvarDefaults = { chatClassColorOverride = "2" }, cvarSets = {}, cvarReads = 0,
         shift = false,
         quest = { npc = "Creature-0-1-0-1-3139-0001", gossipActive = {}, gossipAvailable = {}, greetingActive = {},
             greetingAvailable = {}, autoAccept = false, completable = true, money = 0, choices = 0, calls = {} },

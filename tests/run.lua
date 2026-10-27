@@ -8,7 +8,7 @@ local SPECS = {
     "combatlog", "chatclasscolors", "combinedbaglayout", "mailbookmarks", "classhealthbars",
     "druidmanabar", "screenedge", "minimap",
     "mappins", "viewport", "actionbars", "buttonborders", "barpaging", "backbuttons", "ring", "reloadcommand",
-    "settings", "locales",
+    "settings", "advancedsettings", "locales",
 }
 
 for _, name in ipairs(SPECS) do

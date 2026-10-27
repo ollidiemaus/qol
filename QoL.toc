@@ -60,6 +60,7 @@ Features\Ring.lua
 Features\RingPicker.lua
 Features\RingEditor.lua
 Features\ReloadCommand.lua
+Features\HiddenSettings.lua
 
 UI\SettingsPage.lua
 UI\SettingsWindow.lua

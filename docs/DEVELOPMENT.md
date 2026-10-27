@@ -569,8 +569,8 @@ settings are open, and closing our window is a plain `Hide` of a frame of ours.
 
 The options are grouped by part of the game: Automation (merchant and quests), Interface
 (the bars to hide, the combined bags, tooltips, health bars), Chat (the chat window, `/rl`), Mail
-(the bookmarks' names), Action Bars, Minimap, World map (only where `MapPins.IsAvailable()`), Viewport, Ring and Controller (only
-on Forever). Every page is built by `UI/SettingsPage.lua`: two columns of rows, or rows across the
+(the bookmarks' names), Action Bars, Minimap, World map (only where `MapPins.IsAvailable()`), Viewport, Ring, Controller (only
+on Forever) and Advanced settings (below). Every page is built by `UI/SettingsPage.lua`: two columns of rows, or rows across the
 page (`"wide"`, the Viewport page, as its sliders need the room, and the World map page, with two),
 or an option in the title bar instead of the Defaults button (`"title"`, the Ring page's switch,
 with the rings' editor below it), each an option's name with a control from the game's own
@@ -597,6 +597,37 @@ its own (`control.get`, `control.set`, `control.reset`), and the Defaults button
 `Options:Watch`; given `{ get, set, reset }` instead, it's backed by a value kept elsewhere, which
 the page reads whenever it refreshes. `get` gives what the control shows: a checkbox wants `true`
 or `false`.
+
+The Advanced settings page (last in the list) changes the game's **hidden settings**
+(`Features/HiddenSettings.lua`, see `GLOSSARY.md`): CVars the game's options don't show, or show
+with only part of their range. The module holds them as one table in the page's order (CVar, label
+and tooltip, kind, range, step, section) and owns reading, setting and reading back through
+`C_CVar`, falling back to the global functions, where a CVar the client doesn't know reads as nil.
+Adding a row takes a table entry and its strings; the page builds a wide row per known setting
+(sliders need the room) under a header per section, and leaves out unknown ones, the page itself
+when the client knows none.
+
+- **The CVar is the only truth.** There are no option keys and no saved data for these, and nothing
+  is written at login: the game keeps the values as it would after `/console`. Don't "fix" this into
+  a QoL copy that is applied at login: the game's own graphics settings (its Ground Clutter slider,
+  a quality preset) write some of these CVars too, so a copy would drift from what the game uses
+  and then overwrite the player's later choice.
+- **Read back after every set.** The game quietly ignores a value outside a CVar's range (no error,
+  no clamping), so after each `SetCVar` the page refreshes and shows what `GetCVar` returns: a
+  refused value shows the old one. The sliders cover exactly the ranges measured in Forever's client
+  (2026-10-27). Sets happen at once, in combat too: these CVars aren't protected.
+- **The raid copies stay alone.** `RAIDgroundEffectDist` and the rest are the game's, used while its
+  Raid and Battleground graphics are on; the page never writes them, and its intro says raids and
+  battlegrounds use those instead.
+- **Following changes.** The window refreshes the page each time it shows it, and while it's shown the
+  page refreshes on `CVAR_UPDATE` for a CVar in the table (`/console`, the game's options, another
+  addon). Whether Forever's client sends `CVAR_UPDATE` for every `SetCVar` isn't confirmed; the
+  refresh on showing is the fallback.
+- **Taint-safe.** The page touches no Blizzard frame: it only calls `SetCVar` and `GetCVar` on
+  CVars that aren't protected, from our own window.
+- The page has no Defaults button yet: one that resets nothing would mislead. It comes with the
+  rows' Reset to the game default. `Page:Slider` still takes whole numbers in steps of one, which
+  is every row's `step` so far.
 
 The history below is from the time the pages were in the game's settings; the workarounds it led to
 stay since they cost nothing.

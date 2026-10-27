@@ -220,6 +220,25 @@ Edit Mode, and keep their place in its compact layout.
 refresh for a few seconds. **Hide new buff tooltips** keeps those away; a buff you select or point
 at still shows its tooltip.
 
+### Advanced settings
+
+Settings the game has but its options don't show, so far only reached by typing `/console`
+commands, each on a row of its own with a description when you point at it:
+
+- **Ground clutter distance:** how far away grass and small plants are drawn (40 to 500 yards).
+- **Ground clutter fade:** how softly grass fades in at the edge of that distance (40 to 500).
+- **Ground clutter density:** how thick grass and small plants grow (16 to 256).
+- **Weather density:** how much rain and snow falls (0 to 3).
+- **Always sharpen:** sharpens the image even when the game isn't upscaling it; the game's Resample
+  Sharpness slider sets how much.
+
+Each slider covers exactly the range the game takes, and changes apply at once, in combat too. The
+game keeps these values, as it would with `/console`; Quality of Life saves nothing of its own and
+shows what the game has every time you open the page. The game's own graphics settings can set some
+of them again (moving its Ground Clutter slider changes the ground clutter rows), and in raids and
+battlegrounds the game uses its Raid and Battleground graphics instead, while those are on. A
+setting your client doesn't have isn't shown.
+
 ## Settings
 
 Type `/qol` (or `/qualityoflife`): the settings open in a window of their own, in Forever's bronze
@@ -240,6 +259,7 @@ The pages:
 - **Mail:** the bookmarks' names.
 - **Action Bars**, **Minimap**, **World map** (on Forever), **Viewport**, **Ring** and **Controller**
   (on Forever).
+- **Advanced settings:** the game's hidden graphics settings, last in the list.
 
 Every page fits without scrolling, most in two columns. With a controller, the
 arrows next to a viewport margin move it one pixel per press. In Forever's controller interface a
