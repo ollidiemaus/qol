@@ -560,7 +560,7 @@ local function install()
     G.unpack = G.unpack or table.unpack
     G.GetLocale = function() return state.locale end
     G.GetMoneyString = function(copper) return tostring(copper) .. "c" end
-    G.SELL_PRICE = "Sell Price"
+    G.NORMAL_FONT_COLOR = { r = 1, g = 0.82, b = 0 }
     G.NUM_BAG_SLOTS = 4
     G.NUM_TOTAL_EQUIPPED_BAG_SLOTS = 5
     G.DEFAULT_CHAT_FRAME = { AddMessage = function(_, text) state.messages[#state.messages + 1] = text end }

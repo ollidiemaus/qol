@@ -20,3 +20,10 @@ _Avoid_: raid setting, RAID CVar
 **Game default**:
 The value the game itself gives a hidden setting when nobody has changed it.
 _Avoid_: default (alone, as QoL's options have defaults of their own), original value
+
+### Tooltips
+
+**Vendor price**:
+What a merchant pays for an item, shown on its tooltip: for one item, or with Shift held for the
+whole stack.
+_Avoid_: sell price (that's the game's own tooltip line), merchant price

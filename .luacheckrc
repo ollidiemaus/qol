@@ -49,7 +49,7 @@ read_globals = {
     "GetMacroSpell", "GetMacroItem", "PickupMacro", "GetNumMacros", "MAX_ACCOUNT_MACROS", "GetInventoryItemID",
     "GetFlyoutInfo", "GetFlyoutSlotInfo", "SPELLBOOK_FONT_COLOR",
     -- Strings and formatting
-    "GetLocale", "GetMoneyString", "SELL_PRICE", "AbbreviateLargeNumbers",
+    "GetLocale", "GetMoneyString", "AbbreviateLargeNumbers",
     -- Units
     "UnitIsPlayer", "UnitTreatAsPlayerForDisplay", "UnitClass", "UnitGUID", "UnitName", "GetNormalizedRealmName",
     "RegionalUniqueNamesEnabled", "RAID_CLASS_COLORS",

@@ -33,8 +33,8 @@ Hold **Shift** while talking to an NPC to do everything yourself that time.
 ### Tooltips
 
 - **IDs:** spell, item, buff and debuff, NPC, quest, currency and achievement IDs in their tooltips.
-- **Vendor price:** what an item sells for, everywhere, not just while a merchant is open. For a
-  stack in your bags you see the whole stack's price and the price of one.
+- **Vendor price:** what an item sells for, everywhere, not just while a merchant is open, as a
+  `Vendor` line with the price of one. Hold Shift for the whole stack.
 
 ### Interface
 

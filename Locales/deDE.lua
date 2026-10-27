@@ -59,7 +59,7 @@ L.TOOLTIP_IDS_TIP = "Zeigt die ID von Zaubern, Gegenständen, Stärkungs- und Sc
     .. "Währungen und Erfolgen in ihren Tooltips."
 L.TOOLTIP_SELL_PRICE = "Händlerpreis anzeigen"
 L.TOOLTIP_SELL_PRICE_TIP = "Zeigt, wofür ein Gegenstand beim Händler verkauft wird, auch ohne geöffneten Händler. "
-    .. "Bei einem Stapel der Preis des ganzen Stapels."
+    .. "Umschalt gedrückt halten für den ganzen Stapel."
 
 L.SECTION_HIDE = "Ausblenden"
 L.HIDE_MICRO_MENU = "Systemleiste"
@@ -366,5 +366,5 @@ L.MAP_TRAM = "Tiefenbahn"
 L.MAP_PLACE_IN_ZONE = "%s (%s)"
 L.MAP_CLICK_TO_OPEN = "Klicken, um die Karte von %s zu öffnen"
 
-L.SELL_PRICE = "Verkaufspreis"
-L.SELL_PRICE_STACK = "%s (je %s)"
+L.VENDOR = "Händler"
+L.VENDOR_STACK = "%s x%d"

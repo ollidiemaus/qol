@@ -215,6 +215,13 @@ and its tab is scaled down to 0.001: the dock gives every tab its parent, width 
 each update (each tab hangs on the right edge of the one before), but never its scale, so the tab
 takes no room and the next tab closes the gap.
 
+The vendor price line reads Shift (`IsShiftKeyDown`) once, while the tooltip data processor builds
+the item tooltip, and QoL never listens for modifier changes or refreshes a tooltip itself: that
+would call the game's tooltip rebuild (`RefreshData`, `SetBagItem`, ...) from insecure code, which
+can blank tooltips holding secret lines. Bag, bank and merchant buttons rebuild their own tooltip
+about every 0.2 s while hovered, so the line flips there anyway; a chat link or quest reward keeps
+what it showed when it opened.
+
 The tooltips Forever's controller interface shows for new buffs come from the buff frame
 (`BuffFrameMixin:Update` queues each aura gained or refreshed, `ShowNextAuraForTooltip` shows it
 for 4 seconds) in `BuffFrameTooltip`, which nothing else uses: pointing at a buff or selecting it
@@ -789,8 +796,10 @@ Things only the real client can confirm:
 - Hiding the system bar leaves the main action bar where it was (on Forever it is anchored to the
   micro menu), and the micro menu still shows on the vehicle bar.
 - Junk selling and repairs (including guild repairs) at a merchant.
-- The vendor price of a stack in your bags shows the stack total with and without a merchant open,
-  and only once (the game's own sell price line is replaced, not doubled).
+- The vendor price of a stack in your bags shows the price of one, and `Vendor x<count>` with the
+  stack total while Shift is held (pressing Shift while pointing flips it within a moment), with
+  and without a merchant open, and only once (the game's own sell price line is replaced, not
+  doubled).
 - Class-colored health bars: the shading matches the default bar, an NPC target (and a rare or
   "minus" one) shows the default green, switching targets in combat recolors at once, and turning
   an option off brings the green back without a `/reload`. Also on the target of target, focus and

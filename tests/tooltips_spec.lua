@@ -19,34 +19,53 @@ local function lineTexts(tooltip)
 end
 
 describe("item tooltips", function()
-    it("show the sell price, and the item ID when IDs are on", function()
+    it("show the vendor price, and the item ID when IDs are on", function()
         local _, state = start(IDS)
         state.prices[1234] = 75
         local tooltip = Stubs.ShowTooltip("Item", { id = 1234, lines = {} })
-        T.same(lineTexts(tooltip), { "Sell Price: 75c", "Item ID = 1234" })
+        T.same(lineTexts(tooltip), { "Vendor = 75c", "Item ID = 1234" })
     end)
 
-    it("price a bag stack by the stack size in that bag slot", function()
+    it("show the price of one for a stack until Shift is held", function()
         start()
-        Stubs.SetBags({ { bag = 2, slot = 7, itemID = 4536, quality = 1, count = 6, price = 1 } })
+        Stubs.SetBags({ { bag = 2, slot = 7, itemID = 4536, quality = 1, count = 6, price = 2 } })
+        local tooltip = Stubs.ShowTooltip("Item", { id = 4536, lines = {} }, Stubs.BagTooltip(2, 7, {}))
+        T.same(lineTexts(tooltip), { "Vendor = 2c" })
+    end)
+
+    it("price a bag stack by the stack size in that bag slot while Shift is held", function()
+        local _, state = start()
+        Stubs.SetBags({ { bag = 2, slot = 7, itemID = 4536, quality = 1, count = 6, price = 2 } })
+        state.shift = true
         -- No count on the owner: a bag addon's button, for example.
         local tooltip = Stubs.ShowTooltip("Item", { id = 4536, lines = {} }, Stubs.BagTooltip(2, 7, {}))
-        T.same(lineTexts(tooltip), { "Sell Price: 6c (1c each)" })
+        T.same(lineTexts(tooltip), { "Vendor x6 = 12c" })
     end)
 
     it("price a stack by the count on the hovered button elsewhere", function()
         local _, state = start()
         state.prices[1234] = 75
-        local tooltip = Stubs.ShowTooltip("Item", { id = 1234, lines = {} }, Stubs.NewTooltip({ count = 20 }))
-        T.eq(lineTexts(tooltip)[1], "Sell Price: 1500c (75c each)")
+        local data = { id = 1234, lines = {} }
+        T.same(lineTexts(Stubs.ShowTooltip("Item", data, Stubs.NewTooltip({ count = 20 }))), { "Vendor = 75c" })
+        state.shift = true
+        T.same(lineTexts(Stubs.ShowTooltip("Item", data, Stubs.NewTooltip({ count = 20 }))), { "Vendor x20 = 1500c" })
     end)
 
-    it("replace the game's own sell price line, so a stack shows its total", function()
-        start()
+    it("show a single item the same with Shift held", function()
+        local _, state = start()
+        state.prices[1234] = 75
+        state.shift = true
+        local tooltip = Stubs.ShowTooltip("Item", { id = 1234, lines = {} }, Stubs.NewTooltip({ count = 1 }))
+        T.same(lineTexts(tooltip), { "Vendor = 75c" })
+    end)
+
+    it("replace the game's own sell price line with the vendor price", function()
+        local _, state = start()
         Stubs.SetBags({ { bag = 0, slot = 3, itemID = 4536, quality = 1, count = 6, price = 1 } })
         local data = { id = 4536, lines = { { type = 11, price = 1 } } }
-        local tooltip = Stubs.ShowTooltip("Item", data, Stubs.BagTooltip(0, 3))
-        T.same(lineTexts(tooltip), { "Sell Price: 6c (1c each)" })
+        T.same(lineTexts(Stubs.ShowTooltip("Item", data, Stubs.BagTooltip(0, 3))), { "Vendor = 1c" })
+        state.shift = true
+        T.same(lineTexts(Stubs.ShowTooltip("Item", data, Stubs.BagTooltip(0, 3))), { "Vendor x6 = 6c" })
     end)
 
     it("keep the game's line for a price range", function()

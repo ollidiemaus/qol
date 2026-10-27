@@ -40,8 +40,8 @@ end
 
 -- The game adds its own sell price line in some places (at a merchant, at least), and it can show
 -- the price of a single item for a whole stack. Where we can price the item ourselves, that line is
--- dropped in favor of ours (see onGameSellPriceLine), so there's always one line with the stack
--- total. Set by Init when the client lets us drop lines.
+-- dropped in favor of our vendor price (see onGameSellPriceLine), so there's always one line that
+-- follows the Shift rule. Set by Init when the client lets us drop lines.
 local replacesGameLine = false
 
 local function sellPriceLineType()
@@ -98,7 +98,7 @@ function Tooltips.StackCount(tooltip)
 end
 
 -- Total, unit price and count for an item tooltip, or nil when there's nothing to show.
-local function sellPrice(tooltip, itemID)
+local function vendorPrice(tooltip, itemID)
     if tooltip.isShopping then return nil end
     if not ns.IsUsable(itemID) or not (C_Item and C_Item.GetItemInfo) then return nil end
     local price = select(11, C_Item.GetItemInfo(itemID))
@@ -112,22 +112,24 @@ local function onGameSellPriceLine(tooltip, lineData)
     if not Options:Get("tooltipSellPrice") or isPriceRange(lineData) then return false end
     local info = tooltipInfo(tooltip)
     local data = info and info.tooltipData
-    return data ~= nil and sellPrice(tooltip, data.id) ~= nil
+    return data ~= nil and vendorPrice(tooltip, data.id) ~= nil
 end
 
-function Tooltips.AddSellPrice(tooltip, data)
+function Tooltips.AddVendorPrice(tooltip, data)
     if not Options:Get("tooltipSellPrice") or keptGameLine(data) then return end
-    local total, price, count = sellPrice(tooltip, data.id)
+    local total, price, count = vendorPrice(tooltip, data.id)
     if not total then return end
-    local text = ns.FormatMoney(total)
-    if count > 1 then
-        text = L.SELL_PRICE_STACK:format(text, ns.FormatMoney(price))
+    -- Shift is read only here, never watched: DEVELOPMENT.md says why the tooltip isn't refreshed.
+    local label, shown = L.VENDOR, price
+    if count > 1 and IsShiftKeyDown() then
+        label, shown = L.VENDOR_STACK:format(L.VENDOR, count), total
     end
-    tooltip:AddLine((SELL_PRICE or L.SELL_PRICE) .. ": " .. text, 1, 1, 1)
+    local gold = NORMAL_FONT_COLOR
+    tooltip:AddDoubleLine(label, ns.FormatMoney(shown), gold.r, gold.g, gold.b, 1, 1, 1)
 end
 
 local function onItem(tooltip, data)
-    Tooltips.AddSellPrice(tooltip, data)
+    Tooltips.AddVendorPrice(tooltip, data)
     if Options:Get("tooltipIDs") then
         addID(tooltip, L.ID_ITEM, data.id)
     end

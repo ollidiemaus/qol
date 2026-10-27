@@ -62,7 +62,7 @@ L.TOOLTIP_IDS_TIP = "Adds the ID of spells, items, buffs and debuffs, NPCs, ques
     .. "to their tooltips."
 L.TOOLTIP_SELL_PRICE = "Show vendor price"
 L.TOOLTIP_SELL_PRICE_TIP = "Shows what an item sells for at a merchant, also when no merchant is open. "
-    .. "For a stack, the price of the whole stack."
+    .. "Hold Shift for the whole stack."
 
 L.SECTION_HIDE = "Hide"
 L.HIDE_MICRO_MENU = "System bar"
@@ -363,6 +363,6 @@ L.MAP_TRAM = "Deeprun Tram"
 L.MAP_PLACE_IN_ZONE = "%s (%s)"
 L.MAP_CLICK_TO_OPEN = "Click to open the map of %s"
 
--- Used only when the game doesn't provide its own SELL_PRICE text.
-L.SELL_PRICE = "Sell Price"
-L.SELL_PRICE_STACK = "%s (%s each)"
+-- The vendor price line's label in item tooltips, and with Shift held over a stack: "Vendor x5".
+L.VENDOR = "Vendor"
+L.VENDOR_STACK = "%s x%d"
