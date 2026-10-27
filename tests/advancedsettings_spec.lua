@@ -82,9 +82,123 @@ describe("advanced settings page", function()
         T.truthy(p:Height() <= ns.SettingsPage.MAX_HEIGHT, "fits without scrolling")
     end)
 
-    it("has no Defaults button yet", function()
-        local ns = start()
-        T.eq(page(ns).defaultsButton, nil)
+    it("puts a setting back to its game default with its Reset button, greyed out while it's there", function()
+        local ns, state = start()
+        show(ns)
+        local distance = row(ns, "Ground clutter distance")
+        T.eq(distance.resetButton:GetText(), "Reset")
+        T.falsy(distance.resetButton:IsEnabled(), "greyed out at the default")
+        distance.widget.Forward:Click()
+        T.eq(state.cvars.groundEffectDist, "71")
+        T.truthy(distance.resetButton:IsEnabled(), "away from the default")
+        distance.resetButton:Click()
+        T.eq(state.cvars.groundEffectDist, "70")
+        T.eq(distance.widget:GetValue(), 70)
+        T.eq(distance.box:GetText(), "70")
+        T.falsy(distance.resetButton:IsEnabled())
+
+        local sharpen = row(ns, "Always sharpen")
+        T.falsy(sharpen.resetButton:IsEnabled())
+        sharpen.widget:Click()
+        T.eq(state.cvars.ResampleAlwaysSharpen, "1")
+        T.truthy(sharpen.resetButton:IsEnabled())
+        sharpen.resetButton:Click()
+        T.eq(state.cvars.ResampleAlwaysSharpen, "0")
+        T.falsy(sharpen.widget:GetChecked())
+        T.falsy(sharpen.resetButton:IsEnabled())
+    end)
+
+    it("shows what the game kept after a Reset", function()
+        local ns, state = start()
+        show(ns)
+        local density = row(ns, "Ground clutter density")
+        density.widget.Forward:Click()
+        -- A default the game itself refuses.
+        state.cvarDefaults.groundEffectDensity = "1000"
+        density.resetButton:Click()
+        T.eq(state.cvars.groundEffectDensity, "17")
+        T.eq(density.box:GetText(), "17")
+    end)
+
+    it("counts a value equal to the game default but formatted differently as at the default", function()
+        local ns, state = start(function(s)
+            s.cvars.groundEffectDist = "70.000000"
+            s.cvarDefaults.weatherDensity = "2.0"
+        end)
+        show(ns)
+        T.falsy(row(ns, "Ground clutter distance").resetButton:IsEnabled())
+        T.falsy(row(ns, "Weather density").resetButton:IsEnabled())
+        state.cvars.groundEffectFade = "70.5"
+        page(ns):Refresh()
+        T.truthy(row(ns, "Ground clutter fade").resetButton:IsEnabled())
+    end)
+
+    it("takes the game default from GetCVarInfo on a client without GetCVarDefault", function()
+        local ns, state = start(function() C_CVar.GetCVarDefault = nil end)
+        show(ns)
+        local distance = row(ns, "Ground clutter distance")
+        distance.widget.Forward:Click()
+        T.truthy(distance.resetButton:IsEnabled())
+        distance.resetButton:Click()
+        T.eq(state.cvars.groundEffectDist, "70")
+    end)
+
+    it("says the game default on Reset's tooltip, and that the game's graphics settings may set another", function()
+        local ns, state = start(function(s) s.cvarDefaults.groundEffectDist = "100" end)
+        show(ns)
+        local reset = row(ns, "Ground clutter distance").resetButton
+        reset:RunScript("OnEnter")
+        T.eq(GameTooltip.lines[1].text, "Reset")
+        local tip = GameTooltip.lines[2].text
+        T.truthy(tip:find("Back to the game default: 100", 1, true), tip)
+        T.truthy(tip:find("graphics settings", 1, true), tip)
+        reset:RunScript("OnLeave")
+        state.cvars.ResampleAlwaysSharpen = "1"
+        row(ns, "Always sharpen").resetButton:RunScript("OnEnter")
+        T.truthy(GameTooltip.lines[2].text:find("Back to the game default: Off", 1, true))
+    end)
+
+    it("ends each row's tooltip with its game default, from the game", function()
+        local ns = start(function(s)
+            s.cvarDefaults.groundEffectFade = "1.900000"
+            s.cvarDefaults.ResampleAlwaysSharpen = "1"
+        end)
+        show(ns)
+        local expected = {
+            ["Ground clutter distance"] = "Game default: 70",
+            ["Ground clutter fade"] = "Game default: 1.9",
+            ["Ground clutter density"] = "Game default: 16",
+            ["Weather density"] = "Game default: 2",
+            ["Always sharpen"] = "Game default: On",
+        }
+        for label, ending in pairs(expected) do
+            local c = row(ns, label)
+            c.row:RunScript("OnEnter")
+            local tip = GameTooltip.lines[2].text
+            T.eq(tip:sub(-#ending), ending, label)
+            c.row:RunScript("OnLeave")
+        end
+    end)
+
+    it("sets every row back to its game default after the Defaults button's second click", function()
+        local ns, state = start()
+        local p = show(ns)
+        for _, c in ipairs(p.controls) do
+            if c.kind == "slider" then c.widget.Forward:Click() else c.widget:Click() end
+        end
+        local changed = copy(state.cvars)
+        local button = p.defaultsButton
+        button:Click()
+        T.eq(button:GetText(), "Sure?")
+        T.same(state.cvars, changed, "nothing after one click")
+        button:Click()
+        T.eq(state.cvars.groundEffectDist, "70")
+        T.eq(state.cvars.groundEffectFade, "70")
+        T.eq(state.cvars.groundEffectDensity, "16")
+        T.eq(state.cvars.weatherDensity, "2")
+        T.eq(state.cvars.ResampleAlwaysSharpen, "0")
+        for _, c in ipairs(p.controls) do T.falsy(c.resetButton:IsEnabled(), c.name()) end
+        T.eq(state.cvars.RAIDgroundEffectDist, "70", "the raid copies stay alone")
     end)
 
     it("covers exactly each setting's range with its slider, one step per arrow, its value in a box next to it", function()

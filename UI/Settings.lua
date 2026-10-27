@@ -248,27 +248,40 @@ local function buildViewport(page)
     end
 end
 
--- How a hidden setting's row gets and sets the game's value. After each set the page shows what
--- the game kept, so a value it refused shows the old one. No reset: the page has no Defaults yet.
+-- How a hidden setting's row gets, sets and resets the game's value, and its game default. After
+-- each set the page shows what the game kept, so a value it refused shows the old one; the Defaults
+-- button refreshes the page after resetting every row.
 local function hiddenBacking(page, setting)
     local Hidden = ns.HiddenSettings
     local cvar = setting.cvar
+    local backing = {
+        reset = function() Hidden.Reset(cvar) end,
+        isDefault = function() return Hidden.IsAtGameDefault(cvar) end,
+    }
     if setting.kind == "checkbox" then
-        return {
-            get = function() return Hidden.Get(cvar) == "1" end,
-            set = function(checked)
-                Hidden.Set(cvar, checked and "1" or "0")
-                page:Refresh()
-            end,
-        }
-    end
-    return {
-        get = function() return tonumber(Hidden.Get(cvar)) or setting.min end,
-        set = function(value)
+        backing.get = function() return Hidden.Get(cvar) == "1" end
+        backing.set = function(checked)
+            Hidden.Set(cvar, checked and "1" or "0")
+            page:Refresh()
+        end
+    else
+        backing.get = function() return tonumber(Hidden.Get(cvar)) or setting.min end
+        backing.set = function(value)
             Hidden.Set(cvar, value)
             page:Refresh()
-        end,
-    }
+        end
+    end
+    return backing
+end
+
+-- A hidden setting's game default as its row shows it: On or Off, or the number without the
+-- trailing zeros the game may add (1.900000).
+local function gameDefaultText(setting)
+    local gameDefault = ns.HiddenSettings.GetGameDefault(setting.cvar)
+    if gameDefault == nil then return nil end
+    if setting.kind == "checkbox" then return tonumber(gameDefault) == 1 and L.ON or L.OFF end
+    local number = tonumber(gameDefault)
+    return number and ("%g"):format(number) or gameDefault
 end
 
 -- Advanced settings page: what the game's hidden settings are, then a section of rows across the
@@ -282,11 +295,19 @@ local function buildAdvanced(page)
             page:Header("wide", section)
         end
         local backing = hiddenBacking(page, setting)
+        -- The game default, from the game, ends the row's tooltip and is on its Reset button's.
+        local gameDefault = gameDefaultText(setting)
+        local tooltip, resetTooltip = setting.tooltip, nil
+        if gameDefault then
+            tooltip = tooltip .. "\n\n" .. L.GAME_DEFAULT:format(gameDefault)
+            resetTooltip = L.RESET_TO_GAME_DEFAULT_TIP:format(gameDefault)
+        end
+        local options = { resetButton = true, resetTooltip = resetTooltip }
         if setting.kind == "checkbox" then
-            page:Checkbox("wide", backing, setting.label, setting.tooltip)
+            page:Checkbox("wide", backing, setting.label, tooltip, options)
         else
-            page:Slider("wide", backing, setting.label, setting.min, setting.max, nil, setting.tooltip,
-                { step = setting.step, textBox = true })
+            options.step, options.textBox = setting.step, true
+            page:Slider("wide", backing, setting.label, setting.min, setting.max, nil, tooltip, options)
         end
     end
     -- A change through /console, the game's options or another addon. The window refreshes the page
@@ -314,9 +335,9 @@ local PAGES = {
     -- Only Forever has the controller action bar; on retail there's nothing for it to change.
     { key = "controller", title = L.CATEGORY_CONTROLLER, build = buildController,
         available = function() return GamepadMainActionBarFrame ~= nil end },
-    -- No Defaults button until the rows can go back to the game default. Only where the client
-    -- knows a hidden setting.
-    { key = "advanced", title = L.CATEGORY_ADVANCED, build = buildAdvanced, defaults = false,
+    -- Only where the client knows a hidden setting. Its Defaults button puts them back to the game's
+    -- defaults.
+    { key = "advanced", title = L.CATEGORY_ADVANCED, build = buildAdvanced,
         available = function() return #ns.HiddenSettings.Known() > 0 end },
 }
 

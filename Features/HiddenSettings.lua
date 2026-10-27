@@ -53,6 +53,35 @@ function HiddenSettings.Set(cvar, value)
     call("SetCVar", cvar, tostring(value))
 end
 
+-- The game's own default, a string; nil where the client doesn't say. From GetCVarDefault, or the
+-- second value of C_CVar.GetCVarInfo on a client without it, never from QoL.
+function HiddenSettings.GetGameDefault(cvar)
+    local gameDefault = call("GetCVarDefault", cvar)
+    if gameDefault ~= nil then return gameDefault end
+    local info = C_CVar and C_CVar.GetCVarInfo
+    if type(info) ~= "function" then return nil end
+    local ok, _, infoGameDefault = pcall(info, cvar)
+    if ok then return infoGameDefault end
+    return nil
+end
+
+-- Whether the game's value is its default, as numbers where both are: the game formats them
+-- inconsistently ("1.9" and "1.900000"). True where the client doesn't say its default.
+function HiddenSettings.IsAtGameDefault(cvar)
+    local gameDefault = HiddenSettings.GetGameDefault(cvar)
+    if gameDefault == nil then return true end
+    local value = HiddenSettings.Get(cvar)
+    local number, gameDefaultNumber = tonumber(value), tonumber(gameDefault)
+    if number and gameDefaultNumber then return number == gameDefaultNumber end
+    return value == gameDefault
+end
+
+-- Sets it to the game's default; like Set, read back what the game kept.
+function HiddenSettings.Reset(cvar)
+    local gameDefault = HiddenSettings.GetGameDefault(cvar)
+    if gameDefault ~= nil then HiddenSettings.Set(cvar, gameDefault) end
+end
+
 -- The setting for a CVar, nil for one that isn't a hidden setting.
 function HiddenSettings.Find(cvar)
     return byCVar[cvar]

@@ -39,6 +39,7 @@ local WIDE_CONTROL_X = -80   -- in a wide row the control starts there from the 
 local TITLE_ROW_Y, TITLE_ROW_RIGHT, TITLE_ROW_WIDTH = 14, 28, 300 -- an option in the title bar
 local KEY_WIDTH, KEY_HEIGHT = 160, 22 -- a key binding's buttons, as in the game's Key Bindings
 local BUTTON_WIDTH, BUTTON_HEIGHT = 160, 22
+local RESET_WIDTH = 96   -- a row's Reset button, at the end of a wide row (as wide as Defaults)
 local TEXT_WIDTH, TEXT_HEIGHT = 160, 20
 local TEXT_TOP = 12      -- above a paragraph, between it and the title's divider
 local CONFIRM_SECONDS = 3
@@ -171,6 +172,9 @@ function Page:Refresh()
         elseif control.kind == "dropdown" then
             control.widget:GenerateMenu()
         end
+        if control.resetButton then
+            control.resetButton:SetEnabled(enabled and not (control.isDefault and control.isDefault()))
+        end
         if control.box then
             -- A disabled box doesn't grey its text itself.
             local boxColor = enabled and white or grey
@@ -265,10 +269,12 @@ end
 -- A row with an option's name, a hover highlight and its tooltip. label: the name, or a function
 -- giving it (asked again on each refresh). options: indent (below the option it belongs to), enabled
 -- (a function; the control is greyed out while it returns false), title (the tooltip's, instead of
--- the name). key: the option, or for a value kept elsewhere { get = function, set = function(value),
--- reset = function }, where get gives what the control shows (a checkbox's true or false) and reset
--- is what the Defaults button does; nil for a key binding or a button. The row gets, sets and resets
--- its value with control.get, control.set and control.reset.
+-- the name), resetButton (a Reset button at the end of the row, which resets just this one; its
+-- tooltip says resetTooltip). key: the option, or for a value kept elsewhere { get = function,
+-- set = function(value), reset = function, isDefault = function }, where get gives what the control
+-- shows (a checkbox's true or false), reset is what the Defaults button does and isDefault whether
+-- the value is already what reset sets (Reset is greyed out then); nil for a key binding or a
+-- button. The row gets, sets and resets its value with control.get, control.set and control.reset.
 local function optionRow(page, column, kind, key, label, tooltip, options)
     options = options or {}
     local row = newRow(page, column, ROW_HEIGHT)
@@ -297,7 +303,10 @@ local function optionRow(page, column, kind, key, label, tooltip, options)
     end
     local control = { kind = kind, key = key, name = name, tooltip = tooltip, column = column, row = row,
         text = text, indent = options.indent == true, enabled = options.enabled, page = page }
-    if backing then control.get, control.set, control.reset = backing.get, backing.set, backing.reset end
+    if backing then
+        control.get, control.set, control.reset = backing.get, backing.set, backing.reset
+        control.isDefault = backing.isDefault
+    end
     function control.title() return options.title or name() end
     function control.enter()
         highlight:Show()
@@ -310,6 +319,25 @@ local function optionRow(page, column, kind, key, label, tooltip, options)
     row:EnableMouse(true)
     row:SetScript("OnEnter", control.enter)
     row:SetScript("OnLeave", control.leave)
+    if options.resetButton then
+        local button = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
+        button:SetSize(RESET_WIDTH, BUTTON_HEIGHT)
+        button:SetPoint("RIGHT", row, "RIGHT")
+        local resetText = RESET or L.RESET
+        button:SetText(resetText)
+        button:SetScript("OnClick", function()
+            control.reset()
+            page:Refresh()
+        end)
+        -- Its tooltip says where it goes, so it shows while greyed out too.
+        if button.SetMotionScriptsWhileDisabled then button:SetMotionScriptsWhileDisabled(true) end
+        button:SetScript("OnEnter", function()
+            highlight:Show()
+            showTooltip(button, resetText, options.resetTooltip)
+        end)
+        button:SetScript("OnLeave", control.leave)
+        control.resetButton = button
+    end
     page.controls[#page.controls + 1] = control
     return control
 end

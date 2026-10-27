@@ -306,6 +306,13 @@ L.ADVANCED_INTRO = "These are the game's own settings that its options don't sho
     .. "would with /console; Quality of Life saves nothing of its own. The game's own graphics settings can set "
     .. "some of them again. In raids and battlegrounds the game uses its Raid and Battleground graphics instead, "
     .. "while those are on."
+-- A row's Reset button. Used only when the game doesn't provide its own RESET text.
+L.RESET = "Reset"
+L.ON = "On"
+L.OFF = "Off"
+L.GAME_DEFAULT = "Game default: %s"
+L.RESET_TO_GAME_DEFAULT_TIP = "Back to the game default: %s. The game's own graphics settings may set a "
+    .. "different value, and moving them sets it again."
 L.SECTION_HIDDEN_GRAPHICS = "Graphics"
 L.GROUND_CLUTTER_DISTANCE = "Ground clutter distance"
 L.GROUND_CLUTTER_DISTANCE_TIP = "How far away grass and small plants are drawn, in yards. Higher costs frame rate."

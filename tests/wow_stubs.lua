@@ -1109,6 +1109,11 @@ local function install()
             return state.cvars[name]
         end,
         GetCVarDefault = function(name) return state.cvarDefaults[name] end,
+        -- Its second value is the default too, as the game's: value, defaultValue, ...
+        GetCVarInfo = function(name)
+            if state.cvars[name] == nil then return nil end
+            return state.cvars[name], state.cvarDefaults[name]
+        end,
         -- As the game: a setting it doesn't know, or a value outside the setting's range
         -- (state.cvarRanges), is quietly ignored. Every call is recorded.
         SetCVar = function(name, value)
@@ -1312,7 +1317,9 @@ function Stubs.Reset(options)
             RAIDgroundEffectDist = "70", RAIDgroundEffectFade = "70", RAIDgroundEffectDensity = "16",
             RAIDweatherDensity = "2" },
         cvarRanges = { groundEffectDist = { 40, 500 }, groundEffectDensity = { 16, 256 }, weatherDensity = { 0, 3 } },
-        cvarDefaults = { chatClassColorOverride = "2" }, cvarSets = {}, cvarReads = 0,
+        -- The hidden settings' game defaults: each starts at its own.
+        cvarDefaults = { chatClassColorOverride = "2", groundEffectDist = "70", groundEffectFade = "70",
+            groundEffectDensity = "16", weatherDensity = "2", ResampleAlwaysSharpen = "0" }, cvarSets = {}, cvarReads = 0,
         shift = false,
         quest = { npc = "Creature-0-1-0-1-3139-0001", gossipActive = {}, gossipAvailable = {}, greetingActive = {},
             greetingAvailable = {}, autoAccept = false, completable = true, money = 0, choices = 0, calls = {} },

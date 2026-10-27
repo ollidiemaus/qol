@@ -234,7 +234,10 @@ commands, each on a row of its own with a description when you point at it:
 
 Each slider covers exactly the range the game takes, and changes apply at once, in combat too. The
 box next to a slider shows its value; type an exact one there and press Enter or Tab (Escape puts
-it back). A number outside the range is set to its nearest end. The
+it back). A number outside the range is set to its nearest end. **Reset** at the end of a row puts
+that setting back to the game's own default, and is greyed out while it's already there, so you
+see at a glance what you've changed; pointing at a row or its Reset shows the game default.
+**Defaults** at the top puts every row back at once (click twice to confirm). The
 game keeps these values, as it would with `/console`; Quality of Life saves nothing of its own and
 shows what the game has every time you open the page. The game's own graphics settings can set some
 of them again (moving its Ground Clutter slider changes the ground clutter rows), and in raids and

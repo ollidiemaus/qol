@@ -603,7 +603,10 @@ its own (`control.get`, `control.set`, `control.reset`), and the Defaults button
 `reset`. Given an option's key, a row is backed by `ns.Options` and the page follows
 `Options:Watch`; given `{ get, set, reset }` instead, it's backed by a value kept elsewhere, which
 the page reads whenever it refreshes. `get` gives what the control shows: a checkbox wants `true`
-or `false`.
+or `false`. A row made with the `resetButton` option ends with a Reset button (`UIPanelButtonTemplate`,
+at the row's right end, so they line up below each other) that calls just its own `reset`, greyed
+out while the backing's `isDefault()` says it's already there; its tooltip (`resetTooltip`) shows
+while it's greyed out too.
 
 The Advanced settings page (last in the list) changes the game's **hidden settings**
 (`Features/HiddenSettings.lua`, see `GLOSSARY.md`): CVars the game's options don't show, or show
@@ -632,8 +635,12 @@ when the client knows none.
   refresh on showing is the fallback.
 - **Taint-safe.** The page touches no Blizzard frame: it only calls `SetCVar` and `GetCVar` on
   CVars that aren't protected, from our own window.
-- The page has no Defaults button yet: one that resets nothing would mislead. It comes with the
-  rows' Reset to the game default. Each slider row passes its `step` to `Page:Slider`, and has a
+- **The game default comes from the game.** Each row's Reset and the page's Defaults set the CVar to
+  `GetCVarDefault` (on a client without it, `C_CVar.GetCVarInfo`'s second value), never to a value
+  of ours; the row's tooltip ends with the same default and Reset's tooltip shows it. Whether it's
+  at the default is compared as numbers, as the game formats them inconsistently (`1.9` and
+  `1.900000`); a client that doesn't say a default leaves Reset greyed out and the tooltips without
+  it. Reset reads back like any set. Each slider row passes its `step` to `Page:Slider`, and has a
   box to type an exact value (see the input boxes above).
 
 The history below is from the time the pages were in the game's settings; the workarounds it led to
