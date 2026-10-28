@@ -21,6 +21,16 @@ _Avoid_: raid setting, RAID CVar
 The value the game itself gives a hidden setting when nobody has changed it.
 _Avoid_: default (alone, as QoL's options have defaults of their own), original value
 
+**Draw distance**:
+How far away the game draws the world and the objects in it. The Advanced settings page has a
+section of that name for the hidden settings that change it.
+_Avoid_: view distance (that's the game's own slider, which sets some of them), far clip
+
+**Game slider**:
+One of the game's own graphics sliders that sets several hidden settings at once whenever it's moved:
+View Distance, Environment Detail and Ground Clutter.
+_Avoid_: proxy, index CVar, Graphics Quality (that's the preset that moves all of them)
+
 ### Tooltips
 
 **Vendor price**:
