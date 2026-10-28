@@ -15,10 +15,15 @@ globals = {
     "hash_SlashCmdList",
     "GetMinimapShape", -- answers "SQUARE" while the minimap is square
     "BINDING_HEADER_QOL", -- Bindings.xml's header; BackButtons.lua names its bindings through _G
+    "ClickCastFrames", -- the shared click casting table and header, when no other addon has them
+    "ClickCastHeader",
 }
 
 -- WoW API the addon reads. Keep this list explicit: an unexpected global is usually a typo.
 read_globals = {
+    -- Click casting
+    "C_ClickBindings", "GetStringFromModifiers", "SHIFT_KEY_TEXT", "CTRL_KEY_TEXT", "ALT_KEY_TEXT",
+    "PartyFrame", "CompactUnitFrame_SetUpFrame", "hooksecurefunc", "SecureHandlerSetFrameRef",
     -- Lua extensions in the WoW client
     "issecretvalue", "strsplit", "strtrim", "date",
     -- Frames and UI

@@ -24,18 +24,6 @@ local TAB_GAP = 2
 local ICON_SIZE = 50 -- the inside of the tab art (SidePanelTabButtonMixin's interior)
 local UNKNOWN_ICON = "Interface\\MailFrame\\Mail-Icon"
 
--- "name-realm" in lower case, one space between Forever's name and surname, and the realm as
--- GetNormalizedRealmName writes it (no spaces or dashes), so "Bankalt", "bankalt" and
--- "Bankalt-Your Realm" are the same character. A name without a realm is on the player's realm.
-local function characterKey(text)
-    local name, realm = text:match("^([^%-]+)%-(.+)$")
-    if not name then
-        name, realm = text, GetNormalizedRealmName and GetNormalizedRealmName() or ""
-    end
-    name = strtrim(name):gsub("%s+", " ")
-    return (name .. "-" .. realm:gsub("[%s%-]", "")):lower()
-end
-
 local function characters()
     local db = ns.db
     if not db then return {} end
@@ -43,22 +31,9 @@ local function characters()
     return db.characters
 end
 
--- The player's name as To takes it. On Forever every character has a surname and first names
--- repeat: UnitName gives the surname where retail gives the realm, and the full name is both with
--- a space between (NameUtil.FormatUnitNameForDisplay).
-local function playerKey()
-    local name, surname = UnitName("player")
-    if not ns.IsUsable(name) then return nil end
-    if RegionalUniqueNamesEnabled and RegionalUniqueNamesEnabled() and ns.IsUsable(surname) and surname ~= ""
-        and not name:find(" ", 1, true) then
-        name = name .. " " .. surname
-    end
-    return characterKey(name)
-end
-
 -- Keeps the class of the character that logged in, for its icon on the others' tabs.
 local function remember()
-    local key = playerKey()
+    local key = ns.PlayerKey()
     local _, class = UnitClass("player")
     if key and ns.IsUsable(class) then characters()[key] = class end
 end
@@ -67,11 +42,11 @@ end
 -- send mail to yourself).
 local function bookmarks()
     local names, seen = {}, {}
-    local player = playerKey()
+    local player = ns.PlayerKey()
     if player then seen[player] = true end
     for _, key in ipairs(KEYS) do
         local name = Options:Get(key)
-        local id = name ~= "" and characterKey(name)
+        local id = name ~= "" and ns.CharacterKey(name)
         if id and not seen[id] then
             seen[id] = true
             names[#names + 1] = name
@@ -103,7 +78,7 @@ local function newTab()
 end
 
 local function setIcon(tab, name)
-    local class = characters()[characterKey(name)]
+    local class = characters()[ns.CharacterKey(name)]
     if type(class) == "string" then
         tab.Icon:SetAtlas("classicon-" .. class:lower())
     else

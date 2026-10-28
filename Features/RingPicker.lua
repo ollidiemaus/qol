@@ -2,12 +2,13 @@ local _, ns = ...
 local L = ns.L
 local Entries = ns.RingEntries
 
--- The ring editor's list of what this character can put on a ring, laid out like Forever's spell
--- book: tabs for spells, items, toys, mounts and macros in the page's dark top bar, a search box,
--- and two columns of entries on parchment, a page at a time, with the spell book's page buttons
--- (the mouse wheel turns pages too). A click puts an entry on the ring, or takes it off when it's
--- already there (it has a check mark); dragging one puts it on the cursor, to drop on a slot.
--- Also the parchment's look, for the editor around it: ink, and the spell book's fonts.
+-- The list of what this character has, laid out like Forever's spell book: tabs for its kinds
+-- (spells, items, toys, mounts and macros) in the page's dark top bar, a search box, and two
+-- columns of entries on parchment, a page at a time, with the spell book's page buttons (the mouse
+-- wheel turns pages too). The page that makes it says what a click does and what the check mark
+-- means; on the Ring page a click puts an entry on the ring, or takes it off when it's already
+-- there. Dragging one puts it on the cursor. Also the parchment's look, for the pages around it:
+-- ink, and the spell book's fonts.
 local Picker = {}
 ns.RingPicker = Picker
 
@@ -27,8 +28,9 @@ local INK = { 0.18, 0.106, 0.059 }
 local CHECK = "Interface\\Buttons\\UI-CheckBox-Check"
 local PAGE_ART = "Interface\\Buttons\\UI-SpellbookIcon-%sPage-%s"
 
-local list, rows, tabs, search, pageText, previous, nextPage, empty, actions
-local shown = { kind = "spell", query = "", page = 1, entries = {} }
+-- One list on a page: Picker.Create makes it.
+local List = {}
+List.__index = List
 
 -- Ink on paper: dark brown, a little lighter when faded, without the font's shadow (it blurs dark
 -- text on paper).
@@ -52,20 +54,62 @@ function Picker.Atlas(texture, ...)
     return false
 end
 
+-- Forever's spell book page (a single one, the condensed spell book's): its dark top bar and the
+-- parchment's rims, as shares of its size (measured from interface/spellbook of client 1.60.1).
+-- Without it, the same bar over plain parchment.
+local PAGE = "spellbook-page-condensed-c60"
+local BAR = 0.081
+local RIMS = { top = 0.094, bottom = 0.026, left = 0.03, right = 0.026 }
+local BAR_COLOR = { 0.11, 0.08, 0.05 }
+local PAPER, PAPER_EDGE = { 0.94, 0.88, 0.74 }, { 0.78, 0.68, 0.50 }
+
+local function fill(parent, color, layer)
+    local texture = parent:CreateTexture(nil, layer)
+    texture:SetColorTexture(color[1], color[2], color[3])
+    return texture
+end
+
+-- The spell book page a page's editor stands on, on the settings page below its title (top down
+-- from its top), width × height. Returns it and where its parchment lies, in pixels from its edges
+-- (bar: the top bar's height).
+function Picker.NewPage(name, parent, top, width, height)
+    local page = CreateFrame("Frame", name, parent)
+    page:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, -top)
+    page:SetSize(width, height)
+    local edges = {
+        bar = math.floor(height * BAR + 0.5),
+        top = math.floor(height * RIMS.top + 0.5), bottom = math.floor(height * RIMS.bottom + 0.5),
+        left = math.floor(width * RIMS.left + 0.5), right = math.floor(width * RIMS.right + 0.5),
+    }
+    local art = page:CreateTexture(nil, "BACKGROUND")
+    art:SetAllPoints()
+    if not Picker.Atlas(art, PAGE) then
+        art:SetColorTexture(PAPER_EDGE[1], PAPER_EDGE[2], PAPER_EDGE[3])
+        local paper = fill(page, PAPER, "BORDER")
+        paper:SetPoint("TOPLEFT", edges.left, -edges.top)
+        paper:SetPoint("BOTTOMRIGHT", -edges.right, edges.bottom)
+        local bar = fill(page, BAR_COLOR, "BORDER")
+        bar:SetPoint("TOPLEFT")
+        bar:SetPoint("TOPRIGHT")
+        bar:SetHeight(edges.bar)
+    end
+    return page, edges
+end
+
 ---------------------------------------------------------------------------------------------------
 -- Showing the list
 ---------------------------------------------------------------------------------------------------
 
 local function perPage() return Picker.COLUMNS * Picker.ROWS end
 
-local function pages() return math.max(1, math.ceil(#shown.entries / perPage())) end
+local function pages(shown) return math.max(1, math.ceil(#shown.entries / perPage())) end
 
--- Draws the shown page, with a check mark on what's on the ring already.
-function Picker.Draw()
-    if not list then return end
-    shown.page = math.max(1, math.min(shown.page, pages()))
+-- Draws the shown page, with a check mark on what the page has already.
+function List:Draw()
+    local shown = self.shown
+    shown.page = math.max(1, math.min(shown.page, pages(shown)))
     local first = (shown.page - 1) * perPage()
-    for index, row in ipairs(rows) do
+    for index, row in ipairs(self.rows) do
         local entry = shown.entries[first + index]
         row.entry = entry
         row:SetShown(entry ~= nil)
@@ -79,19 +123,19 @@ function Picker.Draw()
             row.name:ClearAllPoints()
             row.name:SetPoint("LEFT", row.icon, "RIGHT", 10, y)
             row.name:SetPoint("RIGHT", row, "RIGHT", -4, y)
-            row.check:SetShown(actions.has(entry))
+            row.check:SetShown(self.handlers.has(entry))
         end
     end
-    pageText:SetText(L.RING_PAGE:format(shown.page, pages()))
-    previous:SetEnabled(shown.page > 1)
-    nextPage:SetEnabled(shown.page < pages())
+    self.pageText:SetText(L.RING_PAGE:format(shown.page, pages(shown)))
+    self.previous:SetEnabled(shown.page > 1)
+    self.nextPage:SetEnabled(shown.page < pages(shown))
     local none = shown.kind == "toy" and L.RING_LIST_EMPTY_TOYS or L.RING_LIST_EMPTY
-    empty:SetText(#shown.entries > 0 and "" or (shown.query ~= "" and L.RING_LIST_NO_MATCH or none))
+    self.empty:SetText(#shown.entries > 0 and "" or (shown.query ~= "" and L.RING_LIST_NO_MATCH or none))
 end
 
 -- Reads again what this character has of the shown kind, through the search.
-function Picker.Fill()
-    if not list then return end
+function List:Fill()
+    local shown = self.shown
     local query = strtrim(shown.query):lower()
     shown.entries = {}
     for _, entry in ipairs(Entries.Owned(shown.kind)) do
@@ -99,23 +143,36 @@ function Picker.Fill()
             shown.entries[#shown.entries + 1] = entry
         end
     end
-    Picker.Draw()
+    self:Draw()
 end
 
-local function turn(step)
-    shown.page = shown.page + step
-    Picker.Draw()
+function List:Turn(step)
+    self.shown.page = self.shown.page + step
+    self:Draw()
 end
 
-local function selectTab(kind)
-    for _, tab in ipairs(tabs) do tab:SetTabSelected(tab.kind == kind) end
+function List:SelectTab(kind)
+    for _, tab in ipairs(self.tabs) do tab:SetTabSelected(tab.kind == kind) end
 end
 
 -- Shows a kind's tab, from its first page.
-local function showKind(kind)
-    shown.kind, shown.page = kind, 1
-    selectTab(kind)
-    Picker.Fill()
+function List:ShowKind(kind)
+    self.shown.kind, self.shown.page = kind, 1
+    self:SelectTab(kind)
+    self:Fill()
+end
+
+-- The entry of the row under the mouse, or nil.
+function List:EntryUnderMouse()
+    for _, row in ipairs(self.rows) do
+        if row.entry and row:IsVisible() and row:IsMouseOver() then return row.entry end
+    end
+    return nil
+end
+
+-- The page was left: no more typing into the search box.
+function List:Hide()
+    self.search:ClearFocus()
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -125,7 +182,7 @@ end
 local function onRowEnter(row)
     GameTooltip:SetOwner(row, "ANCHOR_RIGHT")
     Entries.Tooltip(GameTooltip, row.entry)
-    GameTooltip:AddLine(actions.has(row.entry) and L.RING_LIST_REMOVE or L.RING_LIST_ADD, 0, 1, 0, true)
+    GameTooltip:AddLine(row.list.handlers.hint(row.entry), 0, 1, 0, true)
     GameTooltip:Show()
 end
 
@@ -133,15 +190,17 @@ local function onRowLeave(row)
     if GameTooltip:IsOwned(row) then GameTooltip:Hide() end
 end
 
-local function newRow(index)
-    local row = CreateFrame("Button", nil, list)
-    row:SetSize(math.floor(list:GetWidth() / Picker.COLUMNS), Picker.ROW_HEIGHT)
+local function newRow(self, index)
+    local parent = self.frame
+    local row = CreateFrame("Button", nil, parent)
+    row.list = self
+    row:SetSize(math.floor(parent:GetWidth() / Picker.COLUMNS), Picker.ROW_HEIGHT)
     -- Down the first column, then the second, like the spell book.
     local column, line = math.floor((index - 1) / Picker.ROWS), (index - 1) % Picker.ROWS
-    row:SetPoint("TOPLEFT", list, "TOPLEFT", column * row:GetWidth(), -line * Picker.ROW_HEIGHT)
-    row:RegisterForClicks("LeftButtonUp")
+    row:SetPoint("TOPLEFT", parent, "TOPLEFT", column * row:GetWidth(), -line * Picker.ROW_HEIGHT)
+    row:RegisterForClicks(unpack(self.handlers.clicks))
     row:RegisterForDrag("LeftButton")
-    row:SetScript("OnClick", function() actions.toggle(row.entry) end)
+    row:SetScript("OnClick", function(_, mouseButton) self.handlers.click(row.entry, mouseButton) end)
     row:SetScript("OnDragStart", function()
         if not InCombatLockdown() then Entries.Pickup(row.entry) end
     end)
@@ -206,17 +265,19 @@ end
 -- parchment's top edge, rise above the column's top: from its left edge, or ending at its right one
 -- when they're wider. A strip of ours stands in for the game's tab system: a tab calls its parent's
 -- SetTab when clicked.
-local function newTabs(column, rise)
+local function newTabs(self, column, rise)
     local strip = CreateFrame("Frame", nil, column)
     strip:SetAllPoints()
-    function strip:GetTabWidthConstraints() return nil, nil end
-    function strip:PlayTabSelectSound()
+    strip.GetTabWidthConstraints = function() return nil, nil end
+    strip.PlayTabSelectSound = function()
         if PlaySound and SOUNDKIT then PlaySound(SOUNDKIT.IG_CHARACTER_INFO_TAB) end
     end
-    function strip:SetTab(id) showKind(KINDS[id]) end
-    tabs = {}
+    local kinds = self.handlers.kinds
+    strip.SetTab = function(_, id) self:ShowKind(kinds[id]) end
+    local tabs = {}
+    self.tabs = tabs
     local width = -1
-    for index, kind in ipairs(KINDS) do
+    for index, kind in ipairs(kinds) do
         local tab = CreateFrame("Button", nil, strip, "TabSystemTopButtonTemplate")
         tab.kind = kind
         tab:Init(index, LABELS[kind])
@@ -227,49 +288,60 @@ local function newTabs(column, rise)
     tabs[1]:SetPoint("BOTTOMLEFT", column, "TOPLEFT", math.min(0, column:GetWidth() - width), rise)
 end
 
--- Builds the list into column (a frame on the parchment, its size set), with its tabs on the
--- parchment's top edge, rise above the column. handlers: has(entry), whether it's on the ring;
--- toggle(entry), put it on or take it off.
+-- Builds a list into column (a frame on the parchment, its size set), with its tabs on the
+-- parchment's top edge, rise above the column, and returns it. handlers: has(entry), whether the
+-- page has it (the check mark); toggle(entry), what a left click does (the Ring page puts it on or
+-- takes it off). A page can also give: kinds, the tabs (all by default); click(entry, mouseButton)
+-- for the clicks it registers (clicks, the arguments of RegisterForClicks); hint(entry), the
+-- tooltip's last line; wheel(delta), true when it took the wheel (else it turns the page).
 function Picker.Create(column, rise, handlers)
-    actions = handlers
-    search = CreateFrame("EditBox", nil, column, "SearchBoxTemplate")
+    local self = setmetatable({ handlers = handlers, shown = { query = "", page = 1, entries = {} } }, List)
+    handlers.kinds = handlers.kinds or KINDS
+    handlers.clicks = handlers.clicks or { "LeftButtonUp" }
+    handlers.click = handlers.click or function(entry) handlers.toggle(entry) end
+    handlers.hint = handlers.hint or function(entry)
+        return handlers.has(entry) and L.RING_LIST_REMOVE or L.RING_LIST_ADD
+    end
+    self.shown.kind = handlers.kinds[1]
+    column.list = self
+    local search = CreateFrame("EditBox", nil, column, "SearchBoxTemplate")
+    self.search = search
     search:SetPoint("TOPLEFT", 6, 0)
     search:SetPoint("TOPRIGHT", 0, 0)
     search:SetHeight(SEARCH_HEIGHT)
     search:SetAutoFocus(false)
     search:HookScript("OnTextChanged", function(box)
-        shown.query, shown.page = box:GetText() or "", 1
-        Picker.Fill()
+        self.shown.query, self.shown.page = box:GetText() or "", 1
+        self:Fill()
     end)
 
-    list = CreateFrame("Frame", nil, column)
-    list:SetPoint("TOPLEFT", 0, -(SEARCH_HEIGHT + 8))
-    list:SetSize(column:GetWidth(), Picker.ROWS * Picker.ROW_HEIGHT)
-    list:EnableMouseWheel(true)
-    list:SetScript("OnMouseWheel", function(_, delta) turn(delta > 0 and -1 or 1) end)
-    rows = {}
-    for index = 1, perPage() do rows[index] = newRow(index) end
-    empty = list:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-    empty:SetPoint("TOP", 0, -24)
-    Picker.Ink(empty, true)
+    local frame = CreateFrame("Frame", nil, column)
+    self.frame = frame
+    frame:SetPoint("TOPLEFT", 0, -(SEARCH_HEIGHT + 8))
+    frame:SetSize(column:GetWidth(), Picker.ROWS * Picker.ROW_HEIGHT)
+    frame:EnableMouseWheel(true)
+    frame:SetScript("OnMouseWheel", function(_, delta)
+        if not (handlers.wheel and handlers.wheel(delta)) then self:Turn(delta > 0 and -1 or 1) end
+    end)
+    self.rows = {}
+    for index = 1, perPage() do self.rows[index] = newRow(self, index) end
+    self.empty = frame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    self.empty:SetPoint("TOP", 0, -24)
+    Picker.Ink(self.empty, true)
 
     -- "Page 2/3" and the page buttons at the bottom right, as in the spell book.
-    nextPage = Picker.PageButton(column, "Next", function() turn(1) end)
-    nextPage:SetPoint("BOTTOMRIGHT", column, "BOTTOMRIGHT", 0, 0)
-    previous = Picker.PageButton(column, "Prev", function() turn(-1) end)
-    previous:SetPoint("RIGHT", nextPage, "LEFT", -4, 0)
-    pageText = column:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-    pageText:SetPoint("RIGHT", previous, "LEFT", -8, 0)
-    Picker.Ink(pageText)
+    self.nextPage = Picker.PageButton(column, "Next", function() self:Turn(1) end)
+    self.nextPage:SetPoint("BOTTOMRIGHT", column, "BOTTOMRIGHT", 0, 0)
+    self.previous = Picker.PageButton(column, "Prev", function() self:Turn(-1) end)
+    self.previous:SetPoint("RIGHT", self.nextPage, "LEFT", -4, 0)
+    self.pageText = column:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    self.pageText:SetPoint("RIGHT", self.previous, "LEFT", -8, 0)
+    Picker.Ink(self.pageText)
 
-    -- Filled when the Ring page is shown.
-    newTabs(column, rise)
-    selectTab(shown.kind)
-    column.search, column.rows, column.tabs, column.empty = search, rows, tabs, empty
-    column.previous, column.next, column.page = previous, nextPage, pageText
-end
-
--- The Ring page was left: no more typing into the search box.
-function Picker.Hide()
-    if search then search:ClearFocus() end
+    -- Filled when the page is shown.
+    newTabs(self, column, rise)
+    self:SelectTab(self.shown.kind)
+    column.search, column.rows, column.tabs, column.empty = search, self.rows, self.tabs, self.empty
+    column.previous, column.next, column.page = self.previous, self.nextPage, self.pageText
+    return self
 end

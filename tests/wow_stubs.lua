@@ -22,6 +22,7 @@ end
 local function newRegion(kind, parent, template)
     local region = { kind = kind, parent = parent, template = template, shown = true, points = {}, width = 0,
         height = 0, events = {}, scripts = {}, hooks = {}, effectiveScale = 1, enabled = true }
+    function region:GetName() return self.name end
     function region:SetParent(newParent)
         if state.combat and self.protected then
             error("ADDON_ACTION_BLOCKED: SetParent on a protected frame in combat")
@@ -138,6 +139,16 @@ local function newRegion(kind, parent, template)
     end
     function region:SetMouseClickEnabled(enabled) self.mouseClickEnabled = enabled end
     function region:EnableMouse(enabled) self.mouseEnabled = enabled end
+    function region:EnableMouseWheel(enabled) self.mouseWheel = enabled end
+    -- Whether the mouse is over it (Stubs.Hover), or over a region in it.
+    function region:IsMouseOver()
+        local node = state.mouseOver
+        while node do
+            if node == self then return true end
+            node = node.parent
+        end
+        return false
+    end
     function region:SetEnabled(enabled) self.enabled = enabled and true or false end
     function region:IsEnabled() return self.enabled end
     -- textSets counts the SetText calls.
@@ -452,6 +463,36 @@ local function newHealthBar(unit)
     }), raw
 end
 
+-- A secure frame: protected, and so are the frames it is a child of. Its attributes, points and
+-- visibility can't change in combat; a change runs its OnAttributeChanged.
+local function makeSecure(frame)
+    local node = frame
+    while node do
+        node.protected = true
+        node = node.parent
+    end
+    frame.attributes = {}
+    function frame:SetAttribute(attribute, value)
+        if state.combat then error("ADDON_ACTION_BLOCKED: SetAttribute on a protected frame in combat") end
+        self.attributes[attribute] = value
+        if self.scripts.OnAttributeChanged then self.scripts.OnAttributeChanged(self, attribute, value) end
+    end
+    function frame:GetAttribute(attribute) return self.attributes[attribute] end
+    function frame:RegisterForClicks(...) self.clicks = { ... } end
+end
+
+-- A unit frame as SecureUnitButton_OnLoad sets it up: the game's Target on a left click and its
+-- menu on a right click (with any modifiers), acting on release.
+local function newUnitButton(unit, name)
+    local frame = newRegion("Button", nil)
+    makeSecure(frame)
+    frame.name, frame.unit = name, unit
+    frame.attributes = { unit = unit, ["*type1"] = "target", ["*type2"] = "menu" }
+    frame.clicks = { "AnyUp" }
+    if name then _G[name] = frame end
+    return frame
+end
+
 -- The player frame as Mainline's PlayerFrame.xml builds it, as far as the addon looks at it: the
 -- art (PlayerFrameContainer: the frame texture and the threat glow, FrameFlash), the protected
 -- frame the bars sit on (PlayerFrameContent.PlayerFrameContentMain) and the fields
@@ -462,22 +503,24 @@ local GLOW_ATLAS = { player = "UI-HUD-UnitFrame-Player-PortraitOn-InCombat",
     vehicle = "UI-HUD-UnitFrame-Player-PortraitOn-Vehicle-InCombat" }
 local GLOW_OFFSET = { player = { -1.5, 1 }, vehicle = { -3.5, 1 } }
 
-local function newPlayerFrame(healthBar)
+local function newPlayerFrame(raw)
     local container = newRegion("Frame", nil)
     local main = newRegion("Frame", nil)
     main.protected = true
-    local raw = { unit = "player", healthbar = healthBar, state = "player", PlayerFrameContainer = container,
-        PlayerFrameContent = { PlayerFrameContentMain = main } }
+    raw.state, raw.PlayerFrameContainer = "player", container
+    raw.PlayerFrameContent = { PlayerFrameContentMain = main }
     container.FrameTexture = container:CreateTexture()
     container.FrameTexture:SetAtlas("UI-HUD-UnitFrame-Player-PortraitOn")
     container.FrameFlash = container:CreateTexture()
     container.FrameFlash:SetAtlas(GLOW_ATLAS.player)
     container.FrameFlash:SetPoint("CENTER", container, "CENTER", -1.5, 1)
     state.playerFrame = raw
-    return setmetatable({}, {
+    local frame = setmetatable({}, {
         __index = raw,
         __newindex = function(_, key) error("the addon wrote player frame field " .. tostring(key)) end,
     })
+    state.rawFrames[frame] = raw
+    return frame
 end
 
 -- The world map: its canvas (1000 x 667 at zoom 1), its data providers and the map it shows.
@@ -570,26 +613,13 @@ local function install()
 
     G.CreateFrame = function(kind, name, parent, template)
         local frame = newRegion(kind or "Frame", parent, template)
-        if name then G[name] = frame end
+        if name then G[name], frame.name = frame, name end
         if template == "MinimalSliderWithSteppersTemplate" then Stubs.BuildSlider(frame) end
         if template == "ColorSwatchTemplate" then
             function frame:SetColorRGB(r, g, b) self.color = { r, g, b } end
         end
-        -- A secure button or handler is protected, and so are the frames it is a child of: their
-        -- attributes, points and visibility can't change in combat.
         if template and (template:find("SecureActionButtonTemplate") or template:find("SecureHandler")) then
-            local node = frame
-            while node do
-                node.protected = true
-                node = node.parent
-            end
-            frame.attributes = {}
-            function frame:SetAttribute(attribute, value)
-                if state.combat then error("ADDON_ACTION_BLOCKED: SetAttribute on a protected frame in combat") end
-                self.attributes[attribute] = value
-            end
-            function frame:GetAttribute(attribute) return self.attributes[attribute] end
-            function frame:RegisterForClicks(...) self.clicks = { ... } end
+            makeSecure(frame)
         end
         -- The game's key binding button: SetSelected lights it while it waits for a key.
         if template == "KeyBindingFrameBindingButtonTemplate" then
@@ -882,7 +912,7 @@ local function install()
         return (unpack or table.unpack)(keys)
     end
     G.GetBindingAction = function(key, checkOverride)
-        local override = checkOverride and state.overrides[key]
+        local override = checkOverride and (state.priorityOverrides[key] or state.overrides[key])
         if override then return override.command end
         return state.bindings[key] or ""
     end
@@ -902,7 +932,10 @@ local function install()
     G.NOT_BOUND = "Not Bound"
     local metaKeys = { LSHIFT = true, RSHIFT = true, LCTRL = true, RCTRL = true, LALT = true, RALT = true }
     G.IsKeyPressIgnoredForBinding = function(key) return metaKeys[key] == true end
-    G.CreateKeyChordStringUsingMetaKeyState = function(key) return (state.shift and "SHIFT-" or "") .. key end
+    G.CreateKeyChordStringUsingMetaKeyState = function(key)
+        return (state.alt and "ALT-" or "") .. (state.ctrl and "CTRL-" or "") .. (state.shift and "SHIFT-" or "")
+            .. (state.meta and "META-" or "") .. key
+    end
     local function override(owner, key, command)
         if state.combat then error("ADDON_ACTION_BLOCKED: binding changed in combat") end
         state.overrides[key] = command and { owner = owner, command = command } or nil
@@ -914,9 +947,32 @@ local function install()
     end
     G.ClearOverrideBindings = function(owner)
         if state.combat then error("ADDON_ACTION_BLOCKED: binding changed in combat") end
-        for _, key in ipairs(sortedKeys(state.overrides)) do
-            if state.overrides[key].owner == owner then state.overrides[key] = nil end
+        for _, map in ipairs({ state.overrides, state.priorityOverrides }) do
+            for _, key in ipairs(sortedKeys(map)) do
+                if map[key].owner == owner then map[key] = nil end
+            end
         end
+    end
+
+    -- The game's own Click Casting: state.clickBindings is its profile, { type, actionID, button,
+    -- modifiers }. Modifiers are bits here (Shift 1, Ctrl 2, Alt 4), named by GetStringFromModifiers.
+    G.Enum.ClickBindingType = { None = 0, Spell = 1, Macro = 2, Interaction = 3, PetAction = 4 }
+    G.Enum.ClickBindingInteraction = { Target = 1, OpenContextMenu = 2 }
+    G.C_ClickBindings = {
+        GetProfileInfo = function()
+            local copy = {}
+            for index, info in ipairs(state.clickBindings) do
+                copy[index] = { type = info.type, actionID = info.actionID, button = info.button, modifiers = info.modifiers }
+            end
+            return copy
+        end,
+    }
+    G.GetStringFromModifiers = function(modifiers)
+        local names = {}
+        for _, pair in ipairs({ { 4, "ALT" }, { 2, "CTRL" }, { 1, "SHIFT" } }) do
+            if modifiers % (pair[1] * 2) >= pair[1] then names[#names + 1] = pair[2] end
+        end
+        return table.concat(names, "-")
     end
 
     -- The controller interface's own bindings: state.gamepadBindings[key] = command.
@@ -1108,9 +1164,16 @@ local function install()
     G.math.atan2 = G.math.atan2 or function(y, x) return math.atan(y, x) end
     -- Secure handlers: the wrapped snippets, which Stubs.SecureClick runs.
     G.SecureHandlerWrapScript = function(frame, script, header, preBody, postBody)
+        if state.combat then error("ADDON_ACTION_BLOCKED: script wrapped in combat") end
+        frame = state.rawFrames[frame] or frame
         frame.wraps = frame.wraps or {}
         frame.wraps[script] = { header = header, pre = preBody, post = postBody }
     end
+    -- A frame reference is the frame's handle.
+    G.SecureHandlerSetFrameRef = function(frame, label, ref)
+        frame:SetAttribute("frameref-" .. label, Stubs.Handle(state.rawFrames[ref] or ref))
+    end
+    G.SecureHandlerExecute = function(frame, body, ...) return Stubs.Execute(frame, body, ...) end
 
     -- Settings the client keeps (C_CVar), as strings. cvarReads counts the GetCVar calls.
     G.C_CVar = {
@@ -1150,6 +1213,8 @@ local function install()
     local quest = function() return state.quest end
     local function record(call) table.insert(state.quest.calls, call) end
     G.IsShiftKeyDown = function() return state.shift end
+    G.IsControlKeyDown = function() return state.ctrl end
+    G.IsAltKeyDown = function() return state.alt end
     G.UnitGUID = function(unit) if unit == "npc" then return quest().npc end return nil end
     G.C_GossipInfo = {
         GetActiveQuests = function() return quest().gossipActive end,
@@ -1258,15 +1323,38 @@ local function install()
         WARRIOR = { r = 0.78, g = 0.61, b = 0.43 },
     }
 
-    -- Unit frames, each with the health bar UnitFrame_Initialize stores in frame.healthbar.
-    state.healthBars = {}
+    -- Unit frames (secure unit buttons), each with the health bar UnitFrame_Initialize stores in
+    -- frame.healthbar. state.rawFrames maps a read-only frame (PlayerFrame) to the frame under it.
+    state.healthBars, state.rawFrames = {}, {}
     for name, unit in pairs({ PlayerFrame = "player", TargetFrame = "target", TargetFrameToT = "targettarget",
         FocusFrame = "focus", FocusFrameToT = "focustarget" }) do
         local bar, raw = newHealthBar(unit)
         state.healthBars[name] = raw
-        G[name] = { unit = unit, healthbar = bar }
+        newUnitButton(unit, name).healthbar = bar
     end
-    G.PlayerFrame = newPlayerFrame(G.PlayerFrame.healthbar)
+    G.PlayerFrame = newPlayerFrame(G.PlayerFrame)
+    newUnitButton("pet", "PetFrame")
+    -- The party frames from PartyFrame's pool (state.partyFrames, each with its pet's frame), and
+    -- the boss frames.
+    state.partyFrames = {}
+    local active = {}
+    for index = 1, 4 do
+        local member = newUnitButton("party" .. index)
+        member.PetFrame = newUnitButton("partypet" .. index)
+        state.partyFrames[index], active[member] = member, true
+    end
+    G.PartyFrame = { PartyMemberFramePool = { EnumerateActive = function() return pairs(active) end } }
+    for index = 1, 5 do newUnitButton("boss" .. index, "Boss" .. index .. "TargetFrame") end
+    -- The raid-style frames' setup (Stubs.NewRaidFrame), and secure hooks on a function.
+    G.CompactUnitFrame_SetUpFrame = noop
+    G.hooksecurefunc = function(target, name, hook)
+        if type(target) == "string" then target, name, hook = G, target, name end
+        local original = target[name]
+        target[name] = function(...)
+            original(...)
+            hook(...)
+        end
+    end
 
     -- Action bar layout helpers: record what the addon asks for.
     G.GridLayoutUtil = {
@@ -1304,7 +1392,9 @@ local ADDON_GLOBALS = {
     "TimeManagerClockTicker", "QoLNoAction", "ColorPickerFrame", "SettingsPanel", "GameMenuFrame",
     "GamepadMainActionBarFrame", "BINDING_HEADER_QOL",
     "QoLRing", "QoLRingButton", "QoLRingEditor", "QoLSettings",
+    "QoLClickCast", "QoLClickCastKeys", "QoLClickCastClicks", "QoLClickCastEditor", "ClickCastFrames", "ClickCastHeader",
 }
+for index = 1, 5 do ADDON_GLOBALS[#ADDON_GLOBALS + 1] = "ArenaEnemyMatchFrame" .. index end
 for index = 1, 4 do
     ADDON_GLOBALS[#ADDON_GLOBALS + 1] = "QoLBackButton" .. index
     ADDON_GLOBALS[#ADDON_GLOBALS + 1] = "BINDING_NAME_CLICK QoLBackButton" .. index .. ":LeftButton"
@@ -1346,7 +1436,7 @@ function Stubs.Reset(options)
     state = {
         locale = options.locale or "enUS",
         version = options.version, loadedAddons = {},
-        regions = {}, timers = {}, delayed = {}, messages = {}, registry = {}, postCalls = {}, linePreCalls = {},
+        restricted = 0, regions = {}, timers = {}, delayed = {}, messages = {}, registry = {}, postCalls = {}, linePreCalls = {},
         unknownEvents = options.unknownEvents or {},
         combat = false,
         interfaceStyle = 0,
@@ -1397,8 +1487,13 @@ function Stubs.Reset(options)
             ["SHIFT-1"] = "ACTIONPAGE1", ["SHIFT-2"] = "ACTIONPAGE2", ["SHIFT-3"] = "ACTIONPAGE3",
             ["SHIFT-4"] = "ACTIONPAGE4", ["SHIFT-5"] = "ACTIONPAGE5", ["SHIFT-6"] = "ACTIONPAGE6",
             ["SHIFT-MOUSEWHEELUP"] = "PREVIOUSACTIONPAGE", ["SHIFT-MOUSEWHEELDOWN"] = "NEXTACTIONPAGE",
+            W = "MOVEFORWARD", S = "MOVEBACKWARD", A = "TURNLEFT", D = "TURNRIGHT", Q = "STRAFELEFT",
+            E = "STRAFERIGHT", SPACE = "JUMP",
         },
-        overrides = {}, overrideCalls = 0, gamepadBindings = {}, bindingSaves = {},
+        -- The game's Click Casting as it starts: Target on a left click, its menu on a right click.
+        clickBindings = { { type = 3, actionID = 1, button = "LeftButton", modifiers = 0 },
+            { type = 3, actionID = 2, button = "RightButton", modifiers = 0 } },
+        overrides = {}, priorityOverrides = {}, overrideCalls = 0, gamepadBindings = {}, bindingSaves = {},
         actions = {}, modifiedClicks = {}, placed = {}, settingValues = {},
         spells = {}, items = {}, toys = {}, mounts = {}, macros = {}, flyouts = {}, equipped = {},
         -- The cursor in UI units, the controller's sticks (nil: no controller) and the actions
@@ -1524,6 +1619,47 @@ function Stubs.TypeKey(key)
     return true
 end
 
+-- The mouse moving onto a region (nil: onto the game world): OnLeave runs on the one it was over,
+-- OnEnter on this one.
+function Stubs.Hover(region)
+    local was = state.mouseOver
+    if was == region then return end
+    state.mouseOver = region
+    if was then was:RunScript("OnLeave") end
+    if region then region:RunScript("OnEnter") end
+end
+
+-- The shown frame that takes the mouse's script: one that covers the screen (SetAllPoints on
+-- UIParent) and takes the mouse, the highest strata first; else the region under the mouse, or the
+-- first one around it with the script.
+local function mouseTaker(script, enabled)
+    local takers = {}
+    for _, region in ipairs(state.regions) do
+        local first, second = region.points[1], region.points[2]
+        if region[enabled] and region.scripts[script] and region:IsVisible() and #region.points == 2
+            and first[2] == _G.UIParent and second[2] == _G.UIParent then
+            takers[#takers + 1] = region
+        end
+    end
+    table.sort(takers, function(a, b) return STRATA[a:GetFrameStrata()] > STRATA[b:GetFrameStrata()] end)
+    if takers[1] then return takers[1] end
+    local node = state.mouseOver
+    while node and not (node.scripts[script] and node:IsVisible()) do node = node.parent end
+    return node
+end
+
+-- A mouse button ("LeftButton", "Button4", ...) pressed: OnMouseDown on the frame that takes it.
+function Stubs.PressMouse(button)
+    local taker = mouseTaker("OnMouseDown", "mouseEnabled")
+    if taker then taker:RunScript("OnMouseDown", button) end
+end
+
+-- The mouse wheel turned (1 up, -1 down): OnMouseWheel on the frame that takes it.
+function Stubs.TurnWheel(delta)
+    local taker = mouseTaker("OnMouseWheel", "mouseWheel")
+    if taker then taker:RunScript("OnMouseWheel", delta) end
+end
+
 -- A controller button pressed, taken by every shown frame with an OnGamePadButtonDown.
 function Stubs.PressGamePadButton(key)
     for _, region in ipairs(state.regions) do
@@ -1575,17 +1711,68 @@ local function setShownSecurely(region, shown)
     end
 end
 
+local handles = setmetatable({}, { __mode = "k" })
+local runSnippet
+
+-- A handle is no frame outside secure code: insecure code that gets one (an attribute, the value
+-- OnAttributeChanged gets) can't use it.
+-- One handle per frame, as in the game, so snippets can compare them.
+local handleOf = setmetatable({}, { __mode = "k" })
 local function frameHandle(region)
-    local handle = {}
-    function handle:GetAttribute(name) return region.attributes[name] end
-    function handle:SetAttribute(name, value) region.attributes[name] = value end
-    function handle:Show() setShownSecurely(region, true) end
-    function handle:Hide() setShownSecurely(region, false) end
-    function handle:IsShown() return region.shown end
-    function handle:GetWidth() return region.width end
-    function handle:ClearAllPoints() region.points, region.center = {}, nil end
+    if handleOf[region] then return handleOf[region] end
+    local methods = {}
+    local handle = setmetatable({}, {
+        __index = function(_, key)
+            if state.restricted == 0 then error("a frame handle used outside secure code: " .. tostring(key)) end
+            return methods[key]
+        end,
+    })
+    handles[handle], handleOf[region] = region, handle
+    -- A frame set as an attribute by insecure code reads as nil here; a handle stays a handle, to
+    -- insecure code too.
+    function methods:GetAttribute(name)
+        local value = region.attributes[name]
+        if type(value) == "table" and not handles[value] then return nil end
+        return value
+    end
+    -- OnAttributeChanged is insecure code.
+    function methods:SetAttribute(name, value)
+        region.attributes[name] = value
+        local script = region.scripts.OnAttributeChanged
+        if script then
+            local depth = state.restricted
+            state.restricted = 0
+            script(region, name, value)
+            state.restricted = depth
+        end
+    end
+    function methods:GetFrameRef(label)
+        local ref = region.attributes["frameref-" .. label]
+        return handles[ref] and ref or nil
+    end
+    function methods:GetName() return region.name end
+    function methods:RunAttribute(name, ...) return runSnippet(region, region, region.attributes[name], ...) end
+    -- Bindings a snippet makes, owned by its frame: priority ones win over the others.
+    function methods:SetBindingClick(priority, key, target, mouseButton)
+        target = handles[target] or target
+        local map = priority and state.priorityOverrides or state.overrides
+        map[key] = { owner = region, command = "CLICK " .. (type(target) == "string" and target or target.name)
+            .. ":" .. (mouseButton or "LeftButton") }
+    end
+    function methods:ClearBindings()
+        for _, map in ipairs({ state.overrides, state.priorityOverrides }) do
+            for key, entry in pairs(map) do
+                if entry.owner == region then map[key] = nil end
+            end
+        end
+    end
+    function methods:Show() setShownSecurely(region, true) end
+    function methods:Hide() setShownSecurely(region, false) end
+    function methods:IsShown() return region.shown end
+    function methods:GetWidth() return region.width end
+    function methods:ClearAllPoints() region.points, region.center = {}, nil end
     -- Points are kept as the frame's middle, for GetCenter and GetMousePosition.
-    function handle:SetPoint(point, relativeTo, relativePoint, x, y)
+    function methods:SetPoint(point, relativeTo, relativePoint, x, y)
         assert(point == "CENTER", "only CENTER points")
         if relativeTo == "$cursor" then
             region.center = { state.cursorX, state.cursorY }
@@ -1597,7 +1784,7 @@ local function frameHandle(region)
         region.points[#region.points + 1] = { point, relativeTo, relativePoint, x or 0, y or 0 }
     end
     -- The cursor relative to the frame, 0 to 1 across it, or nil outside it.
-    function handle:GetMousePosition()
+    function methods:GetMousePosition()
         local x = (state.cursorX - region.center[1]) / region.width + 0.5
         local y = (state.cursorY - region.center[2]) / region.height + 0.5
         if x < 0 or x > 1 or y < 0 or y > 1 then return nil end
@@ -1606,28 +1793,69 @@ local function frameHandle(region)
     return handle
 end
 
+local function leaveSnippet(...)
+    state.restricted = state.restricted - 1
+    return ...
+end
+
 local function compile(body, env)
     if setfenv then return setfenv(assert(loadstring(body)), env) end
     return assert(load(body, "snippet", "t", env))
 end
 
 -- The restricted environment, one per header as in the game, with owner its handle.
-local function runSnippet(header, frame, body, ...)
+function runSnippet(header, frame, body, ...)
     header.snippetEnv = header.snippetEnv or {
         owner = frameHandle(header), math = math, string = string, tostring = tostring, tonumber = tonumber,
         strmatch = string.match, GetGamePadState = function() return state.gamepad end,
     }
     local chunk = compile("local self, button, down = ...\n" .. body, header.snippetEnv)
-    return chunk(frameHandle(frame), ...)
+    state.restricted = state.restricted + 1
+    return leaveSnippet(chunk(frameHandle(frame), ...))
 end
 
--- A secure attribute as SecureButton_GetModifiedAttribute finds it without modifiers held.
+function Stubs.Handle(region) return frameHandle(region) end
+
+-- A snippet run on a frame's handle (SecureHandlerExecute), as a secure header's own code runs.
+function Stubs.Execute(frame, body, ...)
+    return runSnippet(frame, frame, body, ...)
+end
+
+-- A secure attribute as SecureButton_GetModifiedAttribute finds it with the modifiers held.
 local function modifiedAttribute(button, name, suffix)
     local attributes = button.attributes
-    for _, key in ipairs({ name .. suffix, "*" .. name .. suffix, name .. "*", "*" .. name .. "*", name }) do
+    local prefix = (state.alt and "alt-" or "") .. (state.ctrl and "ctrl-" or "") .. (state.shift and "shift-" or "")
+    for _, key in ipairs({ prefix .. name .. suffix, "*" .. name .. suffix, prefix .. name .. "*", "*" .. name .. "*", name }) do
         if attributes[key] ~= nil then return attributes[key] end
     end
     return nil
+end
+
+local SUFFIXES = { LeftButton = "1", RightButton = "2", MiddleButton = "3", Button4 = "4", Button5 = "5" }
+local MENUS = { menu = true, togglemenu = true }
+
+local function used(action)
+    state.usedActions[#state.usedActions + 1] = action
+end
+
+-- The action the button's attributes give the click, with the unit it's used on: "spell:774 on
+-- party1", "target on party1", "menu on party1". A click type clicks its clickbutton, as
+-- Button:Click does (going up).
+local function useAction(button, mouseButton)
+    local suffix = SUFFIXES[mouseButton] or ("-" .. mouseButton)
+    local actionType = modifiedAttribute(button, "type", suffix)
+    local unit = modifiedAttribute(button, "unit", suffix)
+    local on = unit and (" on " .. unit) or ""
+    if actionType == "action" then
+        used(modifiedAttribute(button, "action", suffix))
+    elseif actionType == "click" then
+        local delegate = modifiedAttribute(button, "clickbutton", suffix)
+        if delegate then Stubs.SecureClick(delegate, false, mouseButton) end
+    elseif actionType == "target" or MENUS[actionType] then
+        used((MENUS[actionType] and "menu" or "target") .. on)
+    elseif actionType then
+        used(actionType .. ":" .. tostring(modifiedAttribute(button, actionType, suffix)) .. on)
+    end
 end
 
 -- One half of a click on a secure action button, as a CLICK binding sends it (key down, then up):
@@ -1644,18 +1872,89 @@ function Stubs.SecureClick(button, down, mouseButton)
     end
     local onDown = button.attributes.useOnKeyDown ~= false
     if onDown ~= (down == true) then return end
-    local suffix = mouseButton == "LeftButton" and "1" or ("-" .. mouseButton)
-    local actionType = modifiedAttribute(button, "type", suffix)
-    if actionType == "action" then
-        state.usedActions[#state.usedActions + 1] = modifiedAttribute(button, "action", suffix)
-    elseif actionType then
-        state.usedActions[#state.usedActions + 1] = actionType .. ":" .. tostring(modifiedAttribute(button, actionType, suffix))
+    useAction(button, mouseButton)
+end
+
+-- A click on a unit frame let go over it, as SecureUnitButton_OnClick takes it: the game's Click
+-- Casting first (its spells, macros and pet actions win, recorded as "game:<actionID> on party1";
+-- its Target and menu clicks read the attributes of the button they belong to), then the frame's
+-- attributes. A Target or menu click the game doesn't bind does nothing.
+function Stubs.ClickUnitFrame(frame, mouseButton)
+    frame = state.rawFrames[frame] or frame
+    mouseButton = mouseButton or "LeftButton"
+    local types = _G.Enum.ClickBindingType
+    local modifiers = (state.shift and 1 or 0) + (state.ctrl and 2 or 0) + (state.alt and 4 or 0)
+    local kind = types.None
+    for _, info in ipairs(state.clickBindings) do
+        if info.button == mouseButton and info.modifiers == modifiers then
+            kind = info.type
+            if kind == types.Interaction then
+                mouseButton = info.actionID == _G.Enum.ClickBindingInteraction.Target and "LeftButton" or "RightButton"
+            elseif kind ~= types.None then
+                return used("game:" .. info.actionID .. " on " .. frame.attributes.unit)
+            end
+        end
     end
+    local actionType = modifiedAttribute(frame, "type", SUFFIXES[mouseButton] or ("-" .. mouseButton))
+    if (actionType == "target" or MENUS[actionType]) and kind == types.None then return end
+    useAction(frame, mouseButton)
+end
+
+-- The mouse moving onto a frame or off it: its wrapped OnEnter or OnLeave snippet runs.
+local function runWrap(frame, script)
+    frame = state.rawFrames[frame] or frame
+    local wrap = frame.wraps and frame.wraps[script]
+    if wrap and wrap.pre then runSnippet(wrap.header, frame, wrap.pre) end
+end
+function Stubs.PointAt(frame) runWrap(frame, "OnEnter") end
+function Stubs.PointAway(frame) runWrap(frame, "OnLeave") end
+
+-- A unit frame the game's own secure code hides (no unit any more), in combat too: its wrapped
+-- OnHide snippet runs.
+function Stubs.HideUnitFrame(frame)
+    frame = state.rawFrames[frame] or frame
+    frame.shown = false
+    runWrap(frame, "OnHide")
+end
+
+-- Holds Shift, Ctrl, Alt and the Mac's Cmd as named ("SHIFT", "CTRL", "ALT", "META"); none lets them
+-- all go.
+function Stubs.Hold(...)
+    state.shift, state.ctrl, state.alt, state.meta = false, false, false, false
+    for _, modifier in ipairs({ ... }) do
+        state[({ SHIFT = "shift", CTRL = "ctrl", ALT = "alt", META = "meta" })[modifier]] = true
+    end
+end
+
+-- A raid-style frame for the unit as the game makes it (through CompactUnitFrame_SetUpFrame).
+function Stubs.NewRaidFrame(unit)
+    local frame = newUnitButton(unit)
+    _G.CompactUnitFrame_SetUpFrame(frame, noop)
+    return frame
+end
+
+-- A nameplate's unit frame, set up as the raid-style frames are.
+function Stubs.NewNamePlate(index)
+    local frame = newRegion("Button", nil)
+    frame.name, frame.unit = "NamePlate" .. index .. "UnitFrame", "nameplate" .. index
+    _G.CompactUnitFrame_SetUpFrame(frame, noop)
+    return frame
+end
+
+-- Forever's arena frames, loaded on demand.
+function Stubs.LoadArenaUI()
+    for index = 1, 5 do newUnitButton("arena" .. index, "ArenaEnemyMatchFrame" .. index) end
+    Stubs.Fire("ADDON_LOADED", "Blizzard_Deprecated_ArenaUI")
+end
+
+-- A unit frame of another addon, a secure unit button of its own.
+function Stubs.NewUnitButton(unit, name)
+    return newUnitButton(unit, name)
 end
 
 -- A key with an override binding that clicks a button, going down (true), up (false) or both (nil).
 function Stubs.PressOverride(key, down)
-    local entry = assert(state.overrides[key], "an override binding for " .. key)
+    local entry = assert(state.priorityOverrides[key] or state.overrides[key], "an override binding for " .. key)
     local name, mouseButton = entry.command:match("^CLICK ([^:]+):(.+)$")
     local button = assert(_G[name], name)
     if down ~= false then Stubs.SecureClick(button, true, mouseButton) end
@@ -1691,11 +1990,11 @@ function Stubs.SetCombat(inCombat)
     end
 end
 
--- Loads the saved variables (options, rings, the characters seen), logs in and lets every deferred
--- change run.
-function Stubs.Login(savedOptions, savedRings, savedCharacters)
-    _G.QoLDB = (savedOptions or savedRings or savedCharacters)
-        and { options = savedOptions, rings = savedRings, characters = savedCharacters } or nil
+-- Loads the saved variables (options, rings, the characters seen, click casting's bindings), logs
+-- in and lets every deferred change run.
+function Stubs.Login(savedOptions, savedRings, savedCharacters, savedClickCast)
+    _G.QoLDB = (savedOptions or savedRings or savedCharacters or savedClickCast)
+        and { options = savedOptions, rings = savedRings, characters = savedCharacters, clickCast = savedClickCast } or nil
     Stubs.Fire("ADDON_LOADED", "QoL")
     Stubs.Fire("PLAYER_LOGIN")
     Stubs.Fire("PLAYER_ENTERING_WORLD")

@@ -100,7 +100,7 @@ describe("settings pages", function()
         T.eq(QoLSettings.template, "PortraitFrameFlatTemplate")
         T.eq(QoLSettings.titleText, "Quality of Life")
         T.same(listed(ns), { "Automation", "Interface", "Chat", "Mail", "Action Bars", "Minimap", "World map",
-            "Viewport", "Ring", "Advanced settings" })
+            "Viewport", "Ring", "Click casting", "Advanced settings" })
         for key, page in pairs(pages(ns)) do
             T.eq(page.frame:GetParent(), window.container, key)
         end
@@ -185,8 +185,8 @@ describe("settings pages", function()
     it("adds a Controller page on Forever, for the controller action bar", function()
         local ns = start(nil, true)
         local names = listed(ns)
-        T.eq(#names, 11)
-        T.eq(names[10], "Controller")
+        T.eq(#names, 12)
+        T.eq(names[11], "Controller")
         T.same(headers(pages(ns).controller, "left"), { "Back buttons" })
         T.same(headers(pages(ns).controller, "right"), { "Buffs" })
         T.same(headers(pages(ns).controller, "wide"), { "Keys" })
@@ -785,7 +785,7 @@ describe("settings pages", function()
         T.same(info.sections, { "Commands", "More addons by ollidiemaus" })
         local commands = {}
         for _, entry in ipairs(info.entries) do commands[#commands + 1] = entry.label:GetText() end
-        T.same(commands, { "/qol", "/qol ring", "/rl" })
+        T.same(commands, { "/qol", "/qol ring", "/qol click", "/rl" })
         T.eq(info.defaultsButton, nil, "nothing on it to reset")
     end)
 

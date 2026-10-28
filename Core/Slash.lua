@@ -17,6 +17,10 @@ SlashCmdList.QOL = function(message)
         ns.SettingsPanel:Toggle("ring")
         return
     end
+    if command == "click" then
+        ns.SettingsPanel:Toggle("clickCast")
+        return
+    end
     if command == "probe" then
         ns.HiddenSettingsProbe.Run()
         return

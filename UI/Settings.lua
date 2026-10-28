@@ -203,6 +203,20 @@ local function buildRing(page)
     end
 end
 
+-- Click casting page (also /qol click): the switch in the title bar, and below it, on a page of the
+-- spell book, the bindings' editor (Features/ClickCastEditor.lua), which follows the page when it's
+-- shown.
+local function buildClickCast(page)
+    page:Checkbox("title", "clickCast", L.CLICK_CAST, L.CLICK_CAST_TIP)
+    local Window, top = ns.SettingsWindow, ns.SettingsPage.TOP
+    ns.ClickCastEditor:Create(page.frame, top, Window.PAGE_WIDTH, Window.PAGE_HEIGHT - top)
+    local refresh = page.Refresh
+    function page:Refresh()
+        refresh(self)
+        ns.ClickCastEditor:Refresh()
+    end
+end
+
 -- Controller page: the back buttons and the bar whose slots they use next to the buff tooltips,
 -- then the back buttons' keys across the page (as in Key Bindings > AddOns), each named by its slot
 -- on that bar.
@@ -382,6 +396,8 @@ local PAGES = {
     { key = "viewport", title = L.CATEGORY_VIEWPORT, build = buildViewport },
     -- Its only option is the switch: no Defaults button, as resetting it would turn the rings off.
     { key = "ring", title = L.CATEGORY_RING, build = buildRing, defaults = false },
+    -- Likewise: resetting its switch would turn click casting off.
+    { key = "clickCast", title = L.CATEGORY_CLICK_CAST, build = buildClickCast, defaults = false },
     -- Only Forever has the controller action bar; on retail there's nothing for it to change.
     { key = "controller", title = L.CATEGORY_CONTROLLER, build = buildController,
         available = function() return GamepadMainActionBarFrame ~= nil end },

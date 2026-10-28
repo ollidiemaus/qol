@@ -497,13 +497,6 @@ local function scheduleRefresh()
     if art and art:IsVisible() then ns.Later("ringArt", refresh, true) end
 end
 
--- What changes the entries a character can use: spells learned, items gained or used up, toys,
--- mounts and macros made or renamed.
-Ring.KNOWN_EVENTS = {
-    "SPELLS_CHANGED", "BAG_UPDATE_DELAYED", "PLAYER_EQUIPMENT_CHANGED", "UPDATE_MACROS", "NEW_TOY_ADDED",
-    "TOYS_UPDATED", "NEW_MOUNT_ADDED", "COMPANION_LEARNED",
-}
-
 -- What changes an entry's look: the action buttons' events, and item cooldowns.
 Ring.REFRESH_EVENTS = { "BAG_UPDATE_COOLDOWN" }
 for _, event in ipairs(ns.Buttons.REFRESH_EVENTS) do
@@ -513,7 +506,7 @@ end
 function Ring:Init()
     clean()
     Options:Watch({ KEY }, schedule)
-    for _, event in ipairs(Ring.KNOWN_EVENTS) do
+    for _, event in ipairs(Entries.KNOWN_EVENTS) do
         ns.Events:On(event, function()
             if isOn() then schedule() end
         end)

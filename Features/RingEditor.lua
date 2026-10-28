@@ -39,16 +39,7 @@ local BUTTON_WIDTH, BUTTON_HEIGHT = 120, 22
 local INSET = 8
 local CONFIRM_SECONDS = 3
 
--- Forever's spell book page (a single one, the condensed spell book's): its dark top bar and the
--- parchment's rims, as shares of its size (measured from interface/spellbook of client 1.60.1).
--- Without it, the same bar over plain parchment.
-local PAGE = "spellbook-page-condensed-c60"
-local BAR = 0.081
-local RIMS = { top = 0.094, bottom = 0.026, left = 0.03, right = 0.026 }
-local BAR_COLOR = { 0.11, 0.08, 0.05 }
-local PAPER, PAPER_EDGE = { 0.94, 0.88, 0.74 }, { 0.78, 0.68, 0.50 }
-
-local editor, listener
+local editor, listener, picker
 -- The ring shown, by its place in the list; the box waiting for a key ("mouse" or "stick").
 local current = 1
 local waiting
@@ -112,7 +103,7 @@ local function render()
         showKey(box, ring()[aim])
         box:SetSelected(waiting == aim)
     end
-    Picker.Draw()
+    if picker then picker:Draw() end
 end
 
 -- The rings changed: show it, and let the ring follow.
@@ -366,38 +357,6 @@ local function newButton(parent, text, width, onClick)
     return button
 end
 
-local function fill(parent, color, layer)
-    local texture = parent:CreateTexture(nil, layer)
-    texture:SetColorTexture(color[1], color[2], color[3])
-    return texture
-end
-
--- The spell book page, on the settings page below its title (top down from its top), width ×
--- height. Returns where its parchment lies, in pixels from its edges (bar: the top bar's height).
-local function newPage(parent, top, width, height)
-    editor = CreateFrame("Frame", "QoLRingEditor", parent)
-    editor:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, -top)
-    editor:SetSize(width, height)
-    local edges = {
-        bar = math.floor(height * BAR + 0.5),
-        top = math.floor(height * RIMS.top + 0.5), bottom = math.floor(height * RIMS.bottom + 0.5),
-        left = math.floor(width * RIMS.left + 0.5), right = math.floor(width * RIMS.right + 0.5),
-    }
-    local art = editor:CreateTexture(nil, "BACKGROUND")
-    art:SetAllPoints()
-    if not Picker.Atlas(art, PAGE) then
-        art:SetColorTexture(PAPER_EDGE[1], PAPER_EDGE[2], PAPER_EDGE[3])
-        local paper = fill(editor, PAPER, "BORDER")
-        paper:SetPoint("TOPLEFT", edges.left, -edges.top)
-        paper:SetPoint("BOTTOMRIGHT", -edges.right, edges.bottom)
-        local bar = fill(editor, BAR_COLOR, "BORDER")
-        bar:SetPoint("TOPLEFT")
-        bar:SetPoint("TOPRIGHT")
-        bar:SetHeight(edges.bar)
-    end
-    return edges
-end
-
 -- The left column, width wide: which ring it is with arrows to the others, the ring, its keys, the
 -- buttons for a new ring and for deleting this one, and the note. The top bar is the list's: its
 -- tabs reach over this column.
@@ -479,7 +438,7 @@ local function newListColumn(edges, height)
     local column = CreateFrame("Frame", nil, editor)
     column:SetSize(LIST_WIDTH, height - edges.top - edges.bottom - LIST_GAP - LIST_BOTTOM)
     column:SetPoint("TOPRIGHT", editor, "TOPRIGHT", -(edges.right + 12), -(edges.top + LIST_GAP))
-    Picker.Create(column, LIST_GAP, { has = onRing, toggle = toggle })
+    picker = Picker.Create(column, LIST_GAP, { has = onRing, toggle = toggle })
     editor.list = column
 end
 
@@ -492,13 +451,14 @@ end
 
 -- Builds the editor on a settings page (parent), top down from its top, width × height.
 function Editor:Create(parent, top, width, height)
-    local edges = newPage(parent, top, width, height)
+    local edges
+    editor, edges = Picker.NewPage("QoLRingEditor", parent, top, width, height)
     newRingColumn(edges, width - edges.left - edges.right - 12 - LIST_WIDTH - LIST_GAP)
     newListColumn(edges, height)
     -- Leaving the page, or closing the window, stops waiting for a key and typing in the search.
     editor:SetScript("OnHide", function()
         stopWaiting()
-        Picker.Hide()
+        picker:Hide()
     end)
 
     -- Nothing changes in combat (InCombatLockdown is still false while it starts), and afterwards
@@ -517,12 +477,12 @@ function Editor:Create(parent, top, width, height)
         if editor:IsVisible() then render() end
     end
     local function fillShown()
-        if editor:IsVisible() then Picker.Fill() end
+        if editor:IsVisible() then picker:Fill() end
     end
     local function later(key, fn)
         if editor:IsVisible() and not InCombatLockdown() then ns.Later(key, fn) end
     end
-    for _, event in ipairs(Ring.KNOWN_EVENTS) do
+    for _, event in ipairs(Entries.KNOWN_EVENTS) do
         ns.Events:On(event, function()
             later("ringEditor", renderShown)
             later("ringEditorList", fillShown)
@@ -538,7 +498,7 @@ end
 function Editor:Refresh()
     if not editor then return end
     render()
-    Picker.Fill()
+    picker:Fill()
     lock(InCombatLockdown())
     say(nil)
 end

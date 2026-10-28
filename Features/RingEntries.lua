@@ -189,6 +189,13 @@ local function kind(entry)
     return type(entry) == "table" and KINDS[entry.kind]
 end
 
+-- What changes the entries a character can use: spells learned, items gained or used up, toys,
+-- mounts and macros made or renamed. The rings and click casting watch them.
+Entries.KNOWN_EVENTS = {
+    "SPELLS_CHANGED", "BAG_UPDATE_DELAYED", "PLAYER_EQUIPMENT_CHANGED", "UPDATE_MACROS", "NEW_TOY_ADDED",
+    "TOYS_UPDATED", "NEW_MOUNT_ADDED", "COMPANION_LEARNED",
+}
+
 -- Whether this character can use the entry (out of combat: items and toys are counted).
 function Entries.Known(entry)
     local info = kind(entry)

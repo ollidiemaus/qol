@@ -25,6 +25,7 @@ local OPEN_WIDTH, OPEN_HEIGHT = 220, 22
 local COMMANDS = {
     { command = "/qol", about = L.INFO_COMMAND_SETTINGS },
     { command = "/qol ring", about = L.INFO_COMMAND_RING },
+    { command = "/qol click", about = L.INFO_COMMAND_CLICK_CAST },
     { command = "/rl", about = L.INFO_COMMAND_RELOAD },
 }
 

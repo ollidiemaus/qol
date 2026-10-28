@@ -60,6 +60,8 @@ Features\RingEntries.lua
 Features\Ring.lua
 Features\RingPicker.lua
 Features\RingEditor.lua
+Features\ClickCast.lua
+Features\ClickCastEditor.lua
 Features\ReloadCommand.lua
 Features\HiddenSettings.lua
 Features\HiddenSettingsProbe.lua

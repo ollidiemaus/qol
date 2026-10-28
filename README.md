@@ -6,7 +6,7 @@ Quality of Life bundles the little things you'd otherwise install five addons fo
 viewport, action bars that grow the other way, square action buttons without borders, class-colored
 health bars, junk selling and repairs at merchants, quests accepted and turned in for you, bookmarks
 for your bank characters on the mail frame, IDs and vendor prices in tooltips, a square minimap, dungeon entrances, boats and zeppelins on the world
-map, rings of actions for mouse and controller, back buttons for the Steam Deck on Forever's
+map, rings of actions for mouse and controller, click casting on unit frames, back buttons for the Steam Deck on Forever's
 controller bar, and switches to hide UI pieces you never click (also the buff tooltips that pop up
 in the controller interface). Everything is set up in the game's own options window. There's no minimap button.
 
@@ -195,6 +195,58 @@ Turn them on at the top of the Ring page.
 Updating from the single ring: it was made of an action bar's buttons and its keys were in Key
 Bindings. The new rings start empty: make one on the Ring page (`/qol ring`) and give it its keys there.
 
+### Click casting
+
+Bindings on the unit frames: click a frame with a binding's combination, or press it while the
+mouse is over one, and its action is used on that frame's unit without targeting it first. Shift-Left
+can heal a party member while you keep your target, and a key can heal whoever you point at.
+
+- **Making them:** on the Click casting page of the settings (`/qol click` opens it there), right
+  after the Ring page and built like it: your bindings on the left, what you can bind on the right
+  (**Spells**, **Items** and **Macros**, with the search box and page buttons). Click an action, then
+  click, turn the mouse wheel or press a key for it, with any of Shift, Ctrl and Alt held; Escape
+  cancels. You can also drag a spell from the spell book, an item from the bags or a macro onto the
+  page. Click a binding's box to give it another combination; a right-click removes it.
+- **Quick bind:** click **Quick bind**, point at an action on the right and click, turn the wheel or
+  press a key: that's the binding. A combination that already does something gets the new action,
+  and the page says what it had ("Shift-Left: Flash Heal (was Renew)"). A binding that doesn't work
+  right now (a spell of your other specialization) keeps its combination. Escape or the button ends
+  it, and so do leaving the page and combat.
+- **Target and Menu:** a new character starts with Left: Target and Right: Menu, as the game's
+  frames have them. They are bindings like the others: move them to another combination or remove
+  them, and a plain left click is free for a spell (or does nothing). A removed one stays on the
+  page as **Not Bound**: click its box to bind it again.
+- **Keys and the wheel** work while the mouse is over a unit frame. Everywhere else a key does what
+  Key Bindings gives it, and a ring's key opens its ring. Escape, Shift, Ctrl or Alt on their own,
+  Cmd on the Mac, and the keys you move, turn and jump with can't be bound.
+- **Like the game:** a click acts when you let go of the button, a key when you press it. A spell
+  casts the highest rank you know, an item is used on the unit (a bandage), and a macro sees the
+  unit as `[@mouseover]`.
+- **Which frames:** the player, target, target of target, focus, focus target, pet, party (with the
+  party pets), the raid-style party and raid frames, and the boss and arena frames. A unit frame
+  addon that uses the usual way for addons to join click casting gets your bindings too. Nameplates
+  are left alone.
+- **For each character:** the bindings are saved per character. A binding works while the character
+  has its action, so one combination can be one spell in one specialization and another in the
+  other. The page greys out the ones that don't work now and keeps them, and marks two working
+  bindings on one combination in red (only one of them works; its tooltip names the others).
+
+Turn it on at the top of the Click casting page, before or after making the bindings. Turning it
+off gives the frames the game's own clicks back at once.
+
+The game's own Click Casting (in Forever and retail) takes only clicks, and each binding is made in
+its dialog. This one takes keys and the wheel too, and quick bind makes many bindings fast. Both can
+be on at once, but the game's spell, macro and pet bindings win on the same click: the page marks
+those in red, so change them in the game's Click Casting.
+
+What it can't do:
+
+- In combat nothing changes: the bindings stay as they were when combat started, and frames that
+  appear in combat (someone joins the raid) get them once it ends.
+- Controller buttons can't be bound: click casting is for the mouse and keyboard.
+- A unit frame addon's frames get the bindings when click casting is on as you log in. Turned on
+  later, some of them only do after a `/reload`.
+
 ### Controller
 
 Only on WoW Forever, and only while its controller interface is on: with keyboard and mouse the
@@ -301,8 +353,8 @@ The pages:
   past the screen edge, tooltips, health bars in class color.
 - **Chat:** the chat buttons, the combat log, names in class color, `/rl`.
 - **Mail:** the bookmarks' names.
-- **Action Bars**, **Minimap**, **World map** (on Forever), **Viewport**, **Ring** and **Controller**
-  (on Forever).
+- **Action Bars**, **Minimap**, **World map** (on Forever), **Viewport**, **Ring**, **Click casting**
+  and **Controller** (on Forever).
 - **Advanced settings:** the game's hidden graphics, draw distance and camera settings, last in the
   list.
 
@@ -333,6 +385,9 @@ Quality of Life is available in English and German.
   buttons.
 - Other tooltip addons may show vendor prices too; turn one of them off if you see the price twice.
 - The same goes for other quest automation and minimap addons: use one of them for the same job.
+- Use one click casting addon: two would set the same unit frames' clicks. When another one is
+  there first, Quality of Life leaves the way unit frame addons join click casting to it and only
+  covers Blizzard's frames.
 - Another controller addon may put back paddle buttons of its own around the controller action bar.
   Use its paddles or these back buttons, not both: they would sit in the same place and want the
   same keys.

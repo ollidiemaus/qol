@@ -6,9 +6,9 @@ Notes for working on the addon. What it does for players is in the [README](../R
 
 | Folder | What's in it |
 |---|---|
-| `Core/` | Namespace and printing (`Init`), the event frame and unit listeners (`Events`), saved options with defaults and change watchers (`Options`), the saved data's version and migrations (`SavedData`), deferred changes (`Later`), the hidden holder for hidden frames (`Hider`), what the back buttons and the rings share (`Buttons`: an action slot's look, override bindings), our windows' frame (`Window`: the settings), `/qol` (`Slash`) and startup (`Lifecycle`) |
+| `Core/` | Namespace and printing (`Init`), the event frame and unit listeners (`Events`), saved options with defaults and change watchers (`Options`), the saved data's version and migrations, and the character key `name-realm` (`SavedData`), deferred changes (`Later`), the hidden holder for hidden frames (`Hider`), what the back buttons and the rings share (`Buttons`: an action slot's look, override bindings), our windows' frame (`Window`: the settings), `/qol` (`Slash`) and startup (`Lifecycle`) |
 | `Data/` | Static game data: `MapPins` (dungeon entrances, docks, portals; how it was made is at the top of the file) |
-| `Features/` | One file per feature: `Merchant`, `Quests`, `FasterAutoLoot`, `Tooltips`, `HideFrames` (also the chat buttons), `BuffTooltips` (the controller interface's tooltips for new buffs), `CombatLog`, `ChatClassColors`, `CombinedBagLayout`, `MailBookmarks` (tabs on the Send Mail tab), `ClassHealthBars`, `DruidManaBar` (mana in bear and cat form), `ScreenEdge` (Edit Mode frames past the screen edge), `Minimap` (shape, positions, class colors and font sizes around the minimap, and the FPS and ping text), `MapPins`, `Viewport`, `ActionBars`, `ButtonBorders`, `BarPaging`, `BackButtons` (the controller back buttons, Forever only), `RingEntries` (what can go on a ring, and what a character has of it), `Ring`, `RingPicker` (the editor's list), `RingEditor` (the settings' Ring page, `/qol ring`), `ReloadCommand`, `HiddenSettings` (the hidden settings on the Advanced settings page) and `HiddenSettingsProbe` (`/qol probe`) |
+| `Features/` | One file per feature: `Merchant`, `Quests`, `FasterAutoLoot`, `Tooltips`, `HideFrames` (also the chat buttons), `BuffTooltips` (the controller interface's tooltips for new buffs), `CombatLog`, `ChatClassColors`, `CombinedBagLayout`, `MailBookmarks` (tabs on the Send Mail tab), `ClassHealthBars`, `DruidManaBar` (mana in bear and cat form), `ScreenEdge` (Edit Mode frames past the screen edge), `Minimap` (shape, positions, class colors and font sizes around the minimap, and the FPS and ping text), `MapPins`, `Viewport`, `ActionBars`, `ButtonBorders`, `BarPaging`, `BackButtons` (the controller back buttons, Forever only), `RingEntries` (what can go on a ring or a click casting binding, and what a character has of it), `Ring`, `RingPicker` (the editors' list and spell book page, the Ring and Click casting pages'), `RingEditor` (the settings' Ring page, `/qol ring`), `ClickCast` (bindings on unit frames), `ClickCastEditor` (the settings' Click casting page, `/qol click`), `ReloadCommand`, `HiddenSettings` (the hidden settings on the Advanced settings page) and `HiddenSettingsProbe` (`/qol probe`) |
 | `UI/` | `SettingsPage.lua`, a settings page (two columns, or rows across the page, and key binding rows); `SettingsWindow.lua`, the window that `/qol` opens, with the list of pages; `InfoPage.lua`, the information page under Options > AddOns, with a button that opens the window; `Settings.lua`, the pages built with them, in the list's order |
 | `Locales/` | English strings, German overrides |
 | `Media/` | `Icon.tga`, the addon list icon (the TOC's `IconTexture`, 128×128, 32-bit), and `Icon.svg`, its source (not packaged); `Zeppelin.tga`, `Tram.tga`, `MinimapSquareBorder.tga` and the rings' `Ring.tga`, `RingSpoke.tga`, `RingLit1.tga` to `RingLit12.tga` and `RingSlot.tga` (see below); `AutoPotion.tga`, `AutoSetup.tga` and `Wayscribe.tga`, copies of the other addons' icons for the information page |
@@ -16,12 +16,16 @@ Notes for working on the addon. What it does for players is in the [README](../R
 | `Bindings.xml` | The back buttons' entries under Key Bindings > AddOns (the client loads it from the addon's folder, not the TOC) |
 
 Features never talk to each other or to the settings pages. A page writes `ns.Options`; a feature
-reads it with `Options:Get` and reacts to changes through `Options:Watch`.
+reads it with `Options:Get` and reacts to changes through `Options:Watch`. `RingEntries` and
+`RingPicker` are the one shared part: the rings made them, and click casting uses them for what a
+character has and for its page's list (the issue asked for them to be shared, not copied).
 
 ## Saved data
 
 Everything QoL saves is in `QoLDB`, account-wide: `options` (only values that differ from their
-default), `rings` and `characters` (the mail bookmarks' class icons), `probe` (the last `/qol probe`
+default), `rings`, `characters` (the mail bookmarks' class icons), `clickCast` (each character's
+click casting bindings by character key, `ns.PlayerKey()`; a character without any starts with
+Left: Target and Right: Menu, so it needs no migration), `probe` (the last `/qol probe`
 report, which nothing reads; missing until it first runs, so it needs no migration), and
 `version`, the layout's version (`Core/SavedData.lua`, now 1). On `ADDON_LOADED`, before anything
 reads the file, `SavedData:Migrate` runs `MIGRATIONS[n]` for every version from the saved one up
@@ -38,8 +42,10 @@ QoL doesn't reset what it doesn't understand. A file with a newer version than `
 alone: no migrations run and the version stays. A saved option whose type doesn't match its default
 stays in the file too; `Options:Init` marks it, `Get` returns the default for a marked key (one table
 lookup, since `Get` runs on tooltip paths) and `Set` replaces the value and clears the mark. Options
-QoL has no default for are kept and never read. The one exception is Ring: at login it drops what
-isn't a ring from `QoLDB.rings` (`clean` in `Features/Ring.lua`), as it did before versions.
+QoL has no default for are kept and never read. Click casting keeps a binding it doesn't understand
+(an action kind of a newer QoL) where it is and leaves it out of everything else. The one exception
+is Ring: at login it drops what isn't a ring from `QoLDB.rings` (`clean` in `Features/Ring.lua`), as
+it did before versions.
 
 ## Rules for touching Blizzard frames
 
@@ -58,7 +64,7 @@ Forever beta. So:
   too. It makes no garbage per request, since busy events (cooldowns, usability) ask many times a
   second: each key keeps one request table, reset by every new request, the batch swaps between two
   tables, and every feature's schedule helper hands it a function defined once, not a new closure.
-- The back buttons and the rings go through `ns.LaterOutsideWindows(key, fn)` instead: out of combat
+- The back buttons, the rings and click casting go through `ns.LaterOutsideWindows(key, fn)` instead: out of combat
   too, and in Forever's controller interface also away from the game's windows that have the
   controller (see Settings pages below).
 - Hide frames by parenting them to `ns.Hider`'s holder instead of `Hide()` plus hooks; Blizzard's
@@ -78,7 +84,13 @@ Forever beta. So:
   for an event that only matters while something shows.
 - The few calls into Blizzard code are listed here, each with why it's safe: the world map's
   `AddDataProvider` (the map's own extension point; it calls each provider in a secure call of its
-  own) and `SetMapID` (only from a click on one of our own pins, like a click on a zone). One
+  own) and `SetMapID` (only from a click on one of our own pins, like a click on a zone). Click
+  casting's, all out of combat (more under "Click casting" below): `SecureHandlerWrapScript` on the
+  unit frames' `OnEnter`, `OnLeave` and `OnHide` (the secure handlers' own way to add a snippet to
+  a frame's script, run as secure code), `SecureHandlerSetFrameRef` on our own header,
+  `PartyFrame.PartyMemberFramePool:EnumerateActive()` (a read of the pool) and
+  `hooksecurefunc("CompactUnitFrame_SetUpFrame", ...)`: a hook on a global function, not on a
+  frame's method, which runs after it and only notes the frame. One
   Blizzard table is written to: `hash_SlashCmdList`, the chat's cache of slash commands. Whenever
   the chat parses a slash command (and once at load), `ImportAllListsToHash`
   (`Blizzard_ChatFrameBase/Shared/ChatFrameUtil.lua`) moves every new entry of `SlashCmdList` into
@@ -534,6 +546,85 @@ far out its middle sits. `Media/RingSlot.tga` (128×128, 58 units around a 40-un
 minimap's day and night rim (`ui-hud-minimap-frame-cycle-c60-2x`). They were cropped, scaled,
 remapped and laid over each other with small Pillow and numpy scripts, not kept in the repository.
 
+Click casting (`Features/ClickCast.lua`) is its own engine, not the game's Click Casting (ADR 0001),
+with each character's bindings in `QoLDB.clickCast[name-realm]` (ADR 0002):
+`{ combination = "SHIFT-BUTTON1", action = { kind = "spell", id = 774 } }`. A combination is in the
+game's key binding notation (`ALT-CTRL-SHIFT-`, `BUTTON1` to `BUTTON5`, `MOUSEWHEELUP`,
+`MOUSEWHEELDOWN`); an action is a ring entry's shape (spell, item or macro, `RingEntries` says
+whether the character has it) or `target` or `menu`. A binding works while the character has its
+action; on each combination the first working one is used (the page marks a clash, quick bind never
+makes one). A binding with any other action, or not shaped like one, stays saved and unused
+(`ClickCast.List` leaves it out; the page's indexes are that list's).
+
+- What it changes on a Blizzard unit frame, and only out of combat (`ns.LaterOutsideWindows`): its
+  click attributes, with `SetAttribute`. Before the first change it keeps the frame's own value of
+  each attribute it sets (`originals`), and gives it back when the attribute isn't wanted any more,
+  the frame leaves, or the option goes off, so turning it off gives the game's clicks back without a
+  reload. It writes `*type1` and `*type2` as nil (a click with no binding does nothing), then
+  `<modifiers>type<n>` plus `<modifiers>spell<n>`, `item<n>` or `macro<n>` per click binding, and
+  `qol-clickcast`. The frames keep the game's click registration (on release). Target and Menu
+  use the frame's own `*type1` and `*type2` values. Nothing is a field write or a call into
+  Blizzard code: attributes are widget state the secure templates read, and the frames' scripts are
+  only wrapped (below).
+- The game's unit button click handler (`SecureUnitButton_OnClick`) asks the game's Click Casting
+  first: its spell, macro and pet bindings win (the page marks those, from
+  `C_ClickBindings.GetProfileInfo`, in a `pcall`), and an interaction binding remaps the button to
+  the one the interaction is on. Where the game binds no interaction to a combination, it blocks
+  `target`, `menu` and `togglemenu` there, so Target and Menu on other combinations are a `click` on
+  `QoLClickCastClicks` (`clickbutton`), a secure action button of ours that does them on the
+  frame's unit. That assumes the game's own Target and Menu on Left and Right: a player who moved
+  them in the game's Click Casting gets the remapped button's attributes. The game's modifier bits
+  are read with `GetStringFromModifiers` against `SHIFT_KEY_TEXT`, `CTRL_KEY_TEXT` and
+  `ALT_KEY_TEXT` (Shift first: German UMSCHALT has ALT in it).
+- Keys and the wheel: one secure action button of ours, `QoLClickCastKeys` (`AnyDown`,
+  `useOnKeyDown`), has `*type-k<i>` and its action per key binding. Each frame's `OnEnter`, `OnLeave`
+  and `OnHide` are wrapped (`SecureHandlerWrapScript`) on our header `QoLClickCast`: over a frame with
+  `qol-clickcast`, the snippet puts the frame's unit on both buttons and binds each key to a click on
+  the keys button (`SetBindingClick(true, ...)`, priority override bindings, so a ring's key gives way
+  over a unit frame), and keeps the frame's handle (`hovered`, in the header's environment); leaving
+  or hiding that frame clears them, and another frame hiding (the target of target losing its unit)
+  doesn't. The tests' handles are one per frame, as the game's are, so they compare. The wraps stay
+  once made (unwrapping could take
+  off another addon's wrap made later); with click casting off, `qol-clickcast` is gone and they do
+  nothing.
+- Which frames: `PlayerFrame`, `TargetFrame`, `TargetFrameToT`, `FocusFrame`, `FocusFrameToT`,
+  `PetFrame`, the party pool's frames and their `PetFrame`, `Boss1TargetFrame` to 5,
+  `ArenaEnemyMatchFrame1` to 5 and `ArenaEnemyFrame1` to 5 (the arena UI loads on demand: on its
+  `ADDON_LOADED`), and the
+  raid-style frames: `hooksecurefunc("CompactUnitFrame_SetUpFrame", ...)` on the global function
+  (not a frame's method) only notes the frame and schedules the change, outside Blizzard's call
+  stack. Nameplates (by name or by unit) and forbidden frames are left out. A frame that turns up in
+  combat gets the bindings once it ends.
+- Other addons' frames: unless another addon made `ClickCastHeader` first, QoL provides the shared
+  `ClickCastFrames` table (writing `ClickCastFrames[frame] = true` or nil puts a frame in or out; a
+  plain table a unit frame addon made before QoL loaded is taken over with its frames) and
+  `ClickCastHeader` (our header), with `clickcast_register` and `clickcast_unregister` snippets for
+  the frame handle in `clickcast_button`. A handle is no use to insecure code, so the snippet sets
+  the frame's name on `qol-joined` or `qol-left` and our `OnAttributeChanged` finds it with `_G`: a
+  frame without a name can't join that way (it can through `ClickCastFrames`). The tests' handles
+  error outside a snippet, as the game's are useless there. With click casting on, both are there
+  from QoL's `ADDON_LOADED` (`ClickCast:Provide`), for unit frame addons that look for the header
+  as they build their frames (at their load or at login); frames joining then get their bindings at
+  login, since nothing runs before it. Turned on later, QoL provides them then, and the frames
+  another addon built before only join after a reload.
+- A spell with a rank (a digit in `C_Spell.GetSpellSubtext`) is cast by name, so the highest rank
+  known is cast. Items use `item:<id>`, macros their name.
+- The header, the buttons and the frames change on the option, the bindings, and, while it's on,
+  what the character has (`RingEntries.KNOWN_EVENTS`), `GROUP_ROSTER_UPDATE`, a raid-style frame
+  set up and the arena UI loading. In combat everything stays as it was when it started.
+- The page (`Features/ClickCastEditor.lua`) is built like the rings' editor, on `RingPicker.NewPage`
+  and `RingPicker.Create` (Spells, Items and Macros, rows taking every mouse button, the wheel
+  handed to the page in quick bind). A combination is waited for by a full-screen frame of ours at
+  `FULLSCREEN_DIALOG` that takes the keyboard, the mouse buttons and the wheel
+  (`CreateKeyChordStringUsingMetaKeyState`; a combination with the Mac's Cmd, `META-`, is refused,
+  since combinations have only `ALT-CTRL-SHIFT-`); a binding added from the list or the cursor is
+  saved only once it has a combination. Target and Menu stay listed while nothing binds them, as the
+  game's Click Casting lists them, with a box that binds them again and no right-click removal: they
+  aren't in the list on the right. Quick bind replacing a clash replaces every working binding on
+  the combination and names them all. Quick bind is a keyboard frame that keeps a key only while the
+  mouse is over a row of the list (`List:EntryUnderMouse`) and passes the others on
+  (`SetPropagateKeyboardInput`, out of combat: quick bind ends on `PLAYER_REGEN_DISABLED`).
+
 ## Settings pages
 
 The settings are a window of our own (`UI/SettingsWindow.lua`), `QoLSettings`, which `/qol` opens and
@@ -589,11 +680,11 @@ settings are open, and closing our window is a plain `Hide` of a frame of ours.
 
 The options are grouped by part of the game: Automation (merchant, quests and loot), Interface
 (the bars to hide, the combined bags, tooltips, health bars), Chat (the chat window, `/rl`), Mail
-(the bookmarks' names), Action Bars, Minimap, World map (only where `MapPins.IsAvailable()`), Viewport, Ring, Controller (only
+(the bookmarks' names), Action Bars, Minimap, World map (only where `MapPins.IsAvailable()`), Viewport, Ring, Click casting, Controller (only
 on Forever) and Advanced settings (below). Every page is built by `UI/SettingsPage.lua`: two columns of rows, or rows across the
 page (`"wide"`, the Viewport page, as its sliders need the room, and the World map page, with two),
 or an option in the title bar instead of the Defaults button (`"title"`, the Ring page's switch,
-with the rings' editor below it), each an option's name with a control from the game's own
+with the rings' editor below it, and the Click casting page's, with the bindings' editor), each an option's name with a control from the game's own
 templates (`SettingsCheckboxTemplate`, `WowStyle2DropdownTemplate`,
 `MinimalSliderWithSteppersTemplate`, `ColorSwatchTemplate` opening `ColorPickerFrame`,
 `InputBoxTemplate` for a name), so they look like the game's pages and fit without scrolling
@@ -966,6 +1057,26 @@ Things only the real client can confirm:
   - The art: wheel, bronze rim, spokes and slot rims line up, cooldowns and counts show, long names
     wrap in the middle.
   - No "tainted by" error in combat after using a ring or the editor.
+- Click casting (on, on Forever and retail):
+  - The page: the parchment and the list line up as on the Ring page; a long name and a German
+    combination fit their row; the page buttons, the wheel and the controller cursor reach every row.
+    Adding with a click, a key, the wheel, Button 4 and 5 and every modifier; Escape; a box's new
+    combination; right-click; dragging from the spell book, the bags and the macro window. Quick bind
+    with each of those over a row, keys going on to the game away from the list, Escape not closing
+    the window.
+  - Clicks on the player, target, target of target, focus, pet, party (and party pet), raid-style
+    party and raid, boss and arena frames: a spell, an item (a bandage), a macro with
+    `[@mouseover]`, Target and Menu on other combinations, a plain click with nothing bound. Retail
+    12.x still lets an addon set the raid-style frames' click attributes out of combat.
+  - A key over a frame acts on press, does its Key Bindings action away from frames, and a ring's
+    key opens the ring away from frames (the priority override wins over the ring's). A frame
+    hiding under the mouse (a party member leaving) drops the keys (the `OnHide` wrap).
+  - The arena frames get the bindings when the arena UI loads; frames that appear in combat get
+    them after it.
+  - The game's own Click Casting: a spell on Shift-Left there wins and the page marks it; its
+    modifier bits decode right, in German too. Turning QoL's off gives every frame the game's
+    clicks back. A unit frame addon that joins through `ClickCastHeader` or `ClickCastFrames`.
+  - No "tainted by" error in combat afterwards.
 - Hide new buff tooltips (Options > Controller), in the controller interface: gaining or refreshing a
   buff (a food buff, a flask, a party member's buff) and a debuff shows no tooltip; selecting a buff
   through the buff frame (the radial's Buffs) and pointing at one with the mouse still do. After the
