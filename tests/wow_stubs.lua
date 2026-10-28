@@ -1303,6 +1303,37 @@ for index = 1, 4 do
     ADDON_GLOBALS[#ADDON_GLOBALS + 1] = "BINDING_NAME_CLICK QoLBackButton" .. index .. ":LeftButton"
 end
 
+-- The game sliders as retail's probe measured them (2026-10-28): what each step sets, from step 1.
+-- The client starts at step 5 of View Distance and Environment Detail, as Forever's first-run config
+-- has it, and at step 3 of Ground Clutter, which sets its settings' game defaults.
+local GAME_SLIDERS = {
+    graphicsViewDistance = { start = 4,
+        farclip = { 1500, 2000, 3000, 5000, 6000, 6000, 7000, 8000, 8000, 10000 },
+        horizonStart = { 400, 600, 800, 1000, 1400, 1700, 1900, 2400, 3000, 4000 },
+        horizonClip = { 1500, 2000, 3000, 5000, 6000, 6000, 7000, 8000, 8000, 10000 } },
+    graphicsEnvironmentDetail = { start = 4,
+        lodObjectCullSize = { 35, 30, 27, 22, 20, 19, 18, 17, 16, 14 },
+        lodObjectFadeScale = { 50, 50, 80, 80, 90, 90, 100, 110, 125, 150 } },
+    graphicsGroundClutter = { start = 2,
+        groundEffectDist = { 40, 55, 70, 110, 160, 185, 200, 260, 300, 320 },
+        groundEffectDensity = { 16, 16, 16, 40, 64, 80, 80, 128, 128, 256 } },
+}
+
+-- The game sliders' CVars in the state: their step (from 0), range and, per step, what it sets.
+local function addGameSliders(s)
+    for slider, columns in pairs(GAME_SLIDERS) do
+        s.cvars[slider], s.cvarRanges[slider] = tostring(columns.start), { 0, 9 }
+        local steps = {}
+        for step = 0, 9 do
+            steps[step] = {}
+            for cvar, values in pairs(columns) do
+                if cvar ~= "start" then steps[step][cvar] = tostring(values[step + 1]) end
+            end
+        end
+        s.gameSliders[slider] = steps
+    end
+end
+
 function Stubs.Reset(options)
     options = options or {}
     state = {
@@ -1325,16 +1356,22 @@ function Stubs.Reset(options)
         fonts = { GameFontNormal = { "Fonts\\FRIZQT__.TTF", 12, "" },
             WhiteNormalNumberFont = { "Fonts\\ARIALN.TTF", 10, "OUTLINE" } },
         -- The hidden settings with their ranges, measured in Forever's client (ground clutter fade
-        -- and Always sharpen have none), and their raid copies.
+        -- and Always sharpen have none) and, for Draw distance, in retail's (farclip and the horizon
+        -- have none), and their raid copies. The game sliders are added below.
         cvars = { chatClassColorOverride = "2", groundEffectDist = "70", groundEffectFade = "70",
             groundEffectDensity = "16", weatherDensity = "2", ResampleAlwaysSharpen = "0",
+            farclip = "6000", horizonStart = "1400", horizonClip = "6000", lodObjectFadeScale = "90",
+            lodObjectCullSize = "20", lodObjectCullDist = "30",
             cameraDistanceMaxZoomFactor = "1.9", RAIDgroundEffectDist = "70", RAIDgroundEffectFade = "70", RAIDgroundEffectDensity = "16",
-            RAIDweatherDensity = "2" },
+            RAIDweatherDensity = "2", RAIDfarclip = "6000" },
         cvarRanges = { groundEffectDist = { 40, 500 }, groundEffectDensity = { 16, 256 }, weatherDensity = { 0, 3 },
+            lodObjectFadeScale = { 50, 5000 }, lodObjectCullSize = { 1, 100 }, lodObjectCullDist = { 1, 200 },
             cameraDistanceMaxZoomFactor = { 1, 2.6 } },
-        -- The hidden settings' game defaults: each starts at its own.
+        -- The hidden settings' game defaults: each starts at its own, but those its game slider sets.
         cvarDefaults = { chatClassColorOverride = "2", groundEffectDist = "70", groundEffectFade = "70",
             groundEffectDensity = "16", weatherDensity = "2", ResampleAlwaysSharpen = "0",
+            farclip = "1000", horizonStart = "800", horizonClip = "1600", lodObjectFadeScale = "100",
+            lodObjectCullSize = "15", lodObjectCullDist = "30",
             cameraDistanceMaxZoomFactor = "1.9" }, cvarSecure = {}, cvarWhole = {}, cvarSets = {}, cvarReads = 0,
         gameSliders = {}, gameSliderRewrites = true,
         shift = false,
@@ -1359,6 +1396,7 @@ function Stubs.Reset(options)
         -- secure buttons used.
         cursorX = 500, cursorY = 400, gamepad = nil, usedActions = {},
     }
+    addGameSliders(state)
     for _, name in ipairs(ADDON_GLOBALS) do _G[name] = nil end
     _G.SlashCmdList = {}
     install()

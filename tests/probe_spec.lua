@@ -165,11 +165,8 @@ describe("hidden settings probe", function()
     end)
 
     it("measures a candidate once it's in the table only once", function()
-        local ns = Stubs.LoadAddon()
-        client(Stubs.state())
-        table.insert(ns.HiddenSettings.SETTINGS, { cvar = "farclip", label = "Draw distance", tooltip = "How far.",
-            kind = "slider", min = 1000, max = 10000, step = 1, section = "Draw distance" })
-        Stubs.Login()
+        local ns = start(client)
+        T.truthy(ns.HiddenSettings.Find("farclip"), "farclip is in the table")
         SlashCmdList.QOL("probe")
         local count = 0
         for _, line in ipairs(QoLDB.probe.lines) do

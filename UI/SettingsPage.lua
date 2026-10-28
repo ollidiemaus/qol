@@ -140,9 +140,12 @@ function Page:CreateDefaultsButton()
     self.defaultsButton = button
 end
 
+-- Each row's reset gets a table the rows share for this one click, so that rows which reset the
+-- same thing (a game slider) do it once.
 function Page:SetDefaults()
+    local done = {}
     for _, control in ipairs(self.controls) do
-        if control.reset then control.reset() end
+        if control.reset then control.reset(done) end
     end
     self:Refresh()
 end
@@ -271,8 +274,9 @@ end
 -- (a function; the control is greyed out while it returns false), title (the tooltip's, instead of
 -- the name), resetButton (a Reset button at the end of the row, which resets just this one; its
 -- tooltip says resetTooltip). key: the option, or for a value kept elsewhere { get = function,
--- set = function(value), reset = function, isDefault = function }, where get gives what the control
--- shows (a checkbox's true or false), reset is what the Defaults button does and isDefault whether
+-- set = function(value), reset = function(done), isDefault = function }, where get gives what the
+-- control shows (a checkbox's true or false), reset is what the Defaults button does (done: the
+-- table the rows share for one Defaults click, nil for the row's Reset button) and isDefault whether
 -- the value is already what reset sets (Reset is greyed out then); nil for a key binding or a
 -- button. The row gets, sets and resets its value with control.get, control.set and control.reset.
 local function optionRow(page, column, kind, key, label, tooltip, options)

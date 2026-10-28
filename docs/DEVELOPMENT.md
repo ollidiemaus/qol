@@ -611,42 +611,49 @@ The game's "all settings" reset doesn't reach our pages any more, and they don't
 settings search. Tooltips are `GameTooltip`.
 A row with a value (all but key bindings and buttons) gets, sets and resets it with functions of
 its own (`control.get`, `control.set`, `control.reset`), and the Defaults button calls each row's
-`reset`. Given an option's key, a row is backed by `ns.Options` and the page follows
-`Options:Watch`; given `{ get, set, reset }` instead, it's backed by a value kept elsewhere, which
-the page reads whenever it refreshes. `get` gives what the control shows: a checkbox wants `true`
-or `false`. A row made with the `resetButton` option ends with a Reset button (`UIPanelButtonTemplate`,
-at the row's right end, so they line up below each other) that calls just its own `reset`, greyed
-out while the backing's `isDefault()` says it's already there; its tooltip (`resetTooltip`) shows
-while it's greyed out too.
+`reset`, handing all of them one table for that click (`done`), so that rows which reset the same
+thing (a game slider) do it once. Given an option's key, a row is backed by `ns.Options` and the
+page follows `Options:Watch`; given `{ get, set, reset }` instead, it's backed by a value kept
+elsewhere, which the page reads whenever it refreshes. `get` gives what the control shows: a
+checkbox wants `true` or `false`. A row made with the `resetButton` option ends with a Reset button
+(`UIPanelButtonTemplate`, at the row's right end, so they line up below each other) that calls just
+its own `reset`, greyed out while the backing's `isDefault()` says it's already there; its tooltip
+(`resetTooltip`) shows while it's greyed out too.
 
 The Advanced settings page (last in the list) changes the game's **hidden settings**
 (`Features/HiddenSettings.lua`, see `GLOSSARY.md`): CVars the game's options don't show, or show
 with only part of their range. The module holds them as one table in the page's order (CVar, label
-and tooltip, kind, range, step, section) and owns reading, setting and reading back through
-`C_CVar`, falling back to the global functions, where a CVar the client doesn't know reads as nil.
-Adding a row takes a table entry and its strings; the page builds a wide row per known setting
-(sliders need the room) under a header per section, and leaves out unknown ones, the page itself
-when the client knows none.
+and tooltip, kind, range, step, section, game slider) and owns reading, setting and reading back
+through `C_CVar`, falling back to the global functions, where a CVar the client doesn't know reads
+as nil. Adding a row takes a table entry and its strings; the page builds a wide row per known
+setting (sliders need the room) under a header per section, and leaves out unknown ones, the page
+itself when the client knows none.
 
 - **The CVar is the only truth.** There are no option keys and no saved data for these, and nothing
   is written at login: the game keeps the values as it would after `/console`. Don't "fix" this into
-  a QoL copy that is applied at login: the game's own settings (its Ground Clutter slider, a
-  graphics quality preset, its Max Camera Distance slider) write some of these CVars too, so a copy
-  would drift from what the game uses and then overwrite the player's later choice.
+  a QoL copy that is applied at login: the game's own settings (its Ground Clutter, View Distance
+  and Environment Detail sliders, a graphics quality preset, its Max Camera Distance slider) write
+  some of these CVars too, so a copy would drift from what the game uses and then overwrite the
+  player's later choice.
 - **Read back after every set.** The game quietly ignores a value outside a CVar's range (no error,
   no clamping), so after each `SetCVar` the page refreshes and shows what `GetCVar` returns: a
   refused value shows the old one. The sliders cover exactly the ranges measured in Forever's client
   (2026-10-27). `cameraDistanceMaxZoomFactor` takes 1.0 to 2.6 there, while the game's own Max Camera
   Distance slider (`Camelot/ControlsOverrides.lua`) stops at 2.0 and moving it sets 2.0 or lower.
-  Sets happen at once, in combat too: none of these CVars is protected.
+  Draw distance's were measured with `/qol probe` in retail's client (12.1.5, 2026-10-28), not yet in
+  Forever's, which has the same CVars, game defaults and first-run values. `farclip`, `horizonStart`
+  and `horizonClip` take any number, so their sliders cover what View Distance sets and a bit below
+  (`farclip` from its game default of 1000). Sets happen at once, in combat too: none of these CVars
+  is protected.
 - **Protected in combat.** A CVar `C_CVar.GetCVarInfo` marks secure (its sixth value, `isSecure`)
   is one the game won't change in combat; `HiddenSettings.CanChange` is false for one of those in
-  combat. The page tracks combat itself, from `PLAYER_REGEN_DISABLED` (which comes while
-  `InCombatLockdown` is still false) to `PLAYER_REGEN_ENABLED`, and refreshes on both while it's
-  shown. A row's `canChange` is its `enabled`, so the name, slider or checkbox, box and Reset grey
-  out, and it guards the row's set and reset: Defaults leaves it alone, and a box typed into as
-  combat starts writes nothing when it loses the keyboard. Every other row still sets at once. None
-  of the six is expected to be secure in Forever's client; this guards later rows and other clients.
+  combat, and so is one whose game slider is, as its Reset writes that. The page tracks combat
+  itself, from `PLAYER_REGEN_DISABLED` (which comes while `InCombatLockdown` is still false) to
+  `PLAYER_REGEN_ENABLED`, and refreshes on both while it's shown. A row's `canChange` is its
+  `enabled`, so the name, slider or checkbox, box and Reset grey out, and it guards the row's set
+  and reset: Defaults leaves it alone, and a box typed into as combat starts writes nothing when it
+  loses the keyboard. Every other row still sets at once. None of them was secure where it was
+  measured (Forever's client, retail's for Draw distance); this guards later rows and other clients.
 - **The raid copies stay alone.** `RAIDgroundEffectDist` and the rest are the game's, used while its
   Raid and Battleground graphics are on; the page never writes them, and its intro says raids and
   battlegrounds use those instead.
@@ -655,14 +662,30 @@ when the client knows none.
   addon). Whether Forever's client sends `CVAR_UPDATE` for every `SetCVar` isn't confirmed; the
   refresh on showing is the fallback.
 - **Taint-safe.** The page touches no Blizzard frame: it only calls `SetCVar` and `GetCVar` on
-  CVars that aren't protected, from our own window.
+  these CVars and the game sliders' (`graphicsViewDistance` and the others), from our own window,
+  and leaves a protected one alone in combat.
 - **The game default comes from the game.** Each row's Reset and the page's Defaults set the CVar to
   `GetCVarDefault` (on a client without it, `C_CVar.GetCVarInfo`'s second value), never to a value
-  of ours; the row's tooltip ends with the same default and Reset's tooltip shows it. Whether it's
+  of ours, except on a row a game slider sets (below); the row's tooltip ends with the same default
+  and Reset's tooltip shows it. Whether it's
   at the default is compared as numbers, as the game formats them inconsistently (`1.9` and
   `1.900000`); a client that doesn't say a default leaves Reset greyed out and the tooltips without
   it. Reset reads back like any set. Each slider row passes its `step` to `Page:Slider`, and has a
   box to type an exact value (see the input boxes above).
+- **Reset goes to the game slider, not the game default, where one sets the row.** The game's
+  View Distance, Environment Detail and Ground Clutter sliders (`graphicsViewDistance` and the
+  others, see `GLOSSARY.md`) set several hidden settings whenever they're moved; the table names
+  that slider as the row's `gameSlider`. Writing a slider's current value again makes the client set
+  every setting behind it again (measured in retail: `farclip` at 5000 went back to the 8000 its
+  View Distance sets), so `HiddenSettings.Reset` does that for such a row, which also puts back the
+  slider's other rows, just as moving the slider would. Don't "fix" it back to the game default:
+  `farclip`'s (1000) is below anything View Distance sets (1500 to 10000), so Reset, and Defaults
+  for every player, would cut the world off short. QoL can't know what a slider sets without a table
+  of its own, so these rows' `isDefault` is always false (Reset never greys out), their tooltips
+  leave out the game default, and Reset's tooltip names the slider and the other rows it resets.
+  Defaults writes each slider once, through the `done` table its rows share. Rows the probe found
+  no slider setting (`groundEffectFade`, `weatherDensity`, `lodObjectCullDist` and the camera
+  distance) keep the game default.
 - **Measuring them.** `/qol probe` measures the ranges, game defaults and the game sliders in the
   client it runs in; see "The hidden settings probe" under "Trying it in game".
 
@@ -779,7 +802,9 @@ The fake `C_CVar` refuses what the game refuses (a value outside `state.cvarRang
 `state.cvarSecure` CVar in combat, an unknown CVar), drops the fraction for one in `state.cvarWhole`,
 and logs every write in `state.cvarSets`. A game slider is a `state.gameSliders` entry: per step
 from 0, the settings that step sets. Writing its CVar sets them, also when it already had that step,
-unless `state.gameSliderRewrites` is false.
+unless `state.gameSliderRewrites` is false. `Stubs.Reset` starts every spec with the three game
+sliders as retail's probe measured them (`GAME_SLIDERS` in `tests/wow_stubs.lua`), each at a step
+whose values the hidden settings start at.
 
 ## Trying it in game
 
@@ -938,9 +963,9 @@ command instead of `/run` lines pasted into chat. It's in the release package bu
 `/qol help` or the README.
 
 - **What it measures.** Every hidden setting in the table and the candidates for the page
-  (`CANDIDATES`: `farclip`, `horizonStart`, `horizonClip` and the `lodObject…` settings; one comes off
-  that list once it's in the table): its value, game default, the lowest and highest value the game
-  takes, whether it keeps halves (the value plus or minus 0.5) and whether it's protected in combat.
+  (`CANDIDATES`, now only `lodObjectMinSize`; one comes off that list once it's in the table): its
+  value, game default, the lowest and highest value the game takes, whether it keeps halves (the
+  value plus or minus 0.5) and whether it's protected in combat.
   A range is searched from the value outward in steps that double until the game refuses one, then
   by halving the gap on whole numbers, so a range that ends between two (the camera distance's 2.6)
   shows the last whole number in it. A side that still takes 10,000,000 is "no range check". Then
@@ -970,7 +995,8 @@ command instead of `/run` lines pasted into chat. It's in the release package bu
   `WTF/Account/<account>/SavedVariables/QoL.lua`. Nothing reads it back: it's diagnostics, and the
   CVar stays the only truth for the page. The report lines aren't translated; its two chat lines
   (the refusal in combat, where the report is kept) are in `ns.L` in English only, which
-  `tests/locales_spec.lua` lists in `ENGLISH_ONLY`.
+  `tests/locales_spec.lua` lists in `ENGLISH_ONLY`, as it does the Draw distance section's labels
+  and tooltips, not translated yet.
 
 ### Cutscenes and the viewport
 

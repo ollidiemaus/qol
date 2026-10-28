@@ -233,22 +233,46 @@ has:
 - **Always sharpen:** sharpens the image even when the game isn't upscaling it; the game's Resample
   Sharpness slider sets how much.
 
+The **Draw distance** section after them has:
+
+- **World distance:** how far away the world is drawn (1000 to 10000 yards, in steps of 100). The
+  game's View Distance sets 1500 to 10000.
+- **Horizon start** and **Horizon end:** how far away the horizon begins (400 to 4000) and ends
+  (1500 to 10000), in steps of 100. View Distance keeps the end equal to World distance, so move
+  both, or distant terrain stops where the horizon ended.
+- **Object fade scale:** how long objects stay before they fade out in the distance (50 to 5000, in
+  steps of 10). The game's Environment Detail sets 50 to 150.
+- **Object cull size:** objects that look smaller than this are hidden (1 to 100). Environment
+  Detail sets 35 down to 14.
+- **Object cull distance:** how close objects stay shown whatever their size (1 to 200 yards). No
+  game setting changes it.
+
+Higher (or, for the cull size, lower) draws more and costs frame rate. For now these rows are in
+English in every language.
+
 The **Camera** section after them has:
 
 - **Max camera distance:** how far the camera can zoom out (1.0 to 2.6, in steps of 0.1). The game's
   own Max Camera Distance slider stops at 2.0; moving it brings this back to 2.0 or lower.
 
-Each slider covers exactly the range the game takes, and changes apply at once, in combat too (a
-setting the game itself won't change in combat is greyed out until combat ends). The
+Each slider covers the range the game takes (World distance and the horizon take any value, so
+theirs cover what View Distance sets, World distance down to its game default of 1000), and changes
+apply at once, in combat too (a setting the game itself won't change in combat is greyed out until
+combat ends). The
 box next to a slider shows its value; type an exact one there and press Enter or Tab (Escape puts
 it back). A number outside the range is set to its nearest end. **Reset** at the end of a row puts
 that setting back to the game's own default, and is greyed out while it's already there, so you
-see at a glance what you've changed; pointing at a row or its Reset shows the game default.
+see at a glance what you've changed; pointing at a row or its Reset shows the game default. On a
+row one of the game's graphics sliders sets (Ground Clutter: ground clutter distance and density;
+View Distance: World distance and the horizon; Environment Detail: object fade scale and cull
+size), Reset instead puts back what that slider sets, with the other rows it sets, just as moving
+the slider would; its tooltip names them, and it's never greyed out. World distance's game
+default, 1000, would cut the world off shorter than anything View Distance sets.
 **Defaults** at the top puts every row back at once (click twice to confirm). The
 game keeps these values, as it would with `/console`; Quality of Life saves nothing of its own and
 shows what the game has every time you open the page. The game's own settings can set some
-of them again (moving its Ground Clutter slider changes the ground clutter rows, its Max Camera
-Distance slider the camera distance), and in raids and
+of them again (moving its Ground Clutter, View Distance or Environment Detail slider changes the
+rows it sets, its Max Camera Distance slider the camera distance), and in raids and
 battlegrounds the game uses its Raid and Battleground graphics instead, while those are on. A
 setting your client doesn't have isn't shown.
 
@@ -272,7 +296,8 @@ The pages:
 - **Mail:** the bookmarks' names.
 - **Action Bars**, **Minimap**, **World map** (on Forever), **Viewport**, **Ring** and **Controller**
   (on Forever).
-- **Advanced settings:** the game's hidden graphics and camera settings, last in the list.
+- **Advanced settings:** the game's hidden graphics, draw distance and camera settings, last in the
+  list.
 
 Every page fits without scrolling, most in two columns. With a controller, the
 arrows next to a viewport margin move it one pixel per press. In Forever's controller interface a

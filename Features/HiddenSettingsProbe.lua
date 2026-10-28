@@ -10,8 +10,7 @@ ns.HiddenSettingsProbe = Probe
 
 -- Settings considered for the page, measured with the table's. One the table takes in is measured
 -- with the table's, and can come off.
-local CANDIDATES = { "farclip", "horizonStart", "horizonClip", "lodObjectCullSize", "lodObjectCullDist",
-    "lodObjectFadeScale", "lodObjectMinSize" }
+local CANDIDATES = { "lodObjectMinSize" }
 
 -- The game's 1 to 10 graphics sliders that set several of them. Their CVars count from 0.
 local GAME_SLIDERS = { "graphicsViewDistance", "graphicsEnvironmentDetail", "graphicsGroundClutter" }

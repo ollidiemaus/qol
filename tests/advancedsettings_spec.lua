@@ -59,7 +59,7 @@ describe("advanced settings page", function()
         T.eq(page(ns).title, "Advanced settings")
     end)
 
-    it("says what these settings are above them, then puts the Graphics section's rows across the page", function()
+    it("says what these settings are above them, then puts each section's rows across the page", function()
         local ns = start()
         local p = page(ns)
         T.eq(#p.texts, 1)
@@ -69,34 +69,39 @@ describe("advanced settings page", function()
             "Raid and Battleground graphics" }) do
             T.truthy(intro:find(words, 1, true), "the intro says " .. words)
         end
-        T.eq(#p.headers, 2)
-        T.same({ p.headers[1].column, p.headers[1].text }, { "wide", "Graphics" })
-        T.same({ p.headers[2].column, p.headers[2].text }, { "wide", "Camera" })
+        local headers = {}
+        for _, header in ipairs(p.headers) do
+            T.eq(header.column, "wide", header.text)
+            headers[#headers + 1] = header.text
+        end
+        T.same(headers, { "Graphics", "Draw distance", "Camera" })
         T.same(labels(ns), { "Ground clutter distance", "Ground clutter fade", "Ground clutter density",
-            "Weather density", "Always sharpen", "Max camera distance" })
+            "Weather density", "Always sharpen", "World distance", "Horizon start", "Horizon end",
+            "Object fade scale", "Object cull size", "Object cull distance", "Max camera distance" })
         local kinds = {}
         for _, c in ipairs(p.controls) do
             T.eq(c.column, "wide", c.name())
             kinds[#kinds + 1] = c.kind
         end
-        T.same(kinds, { "slider", "slider", "slider", "slider", "checkbox", "slider" })
-        T.truthy(p:Height() <= ns.SettingsPage.MAX_HEIGHT, "fits without scrolling")
+        T.same(kinds, { "slider", "slider", "slider", "slider", "checkbox", "slider", "slider", "slider", "slider",
+            "slider", "slider", "slider" })
+        T.truthy(p:Height() <= ns.SettingsPage.MAX_HEIGHT, "fits without scrolling: " .. p:Height())
     end)
 
     it("puts a setting back to its game default with its Reset button, greyed out while it's there", function()
         local ns, state = start()
         show(ns)
-        local distance = row(ns, "Ground clutter distance")
-        T.eq(distance.resetButton:GetText(), "Reset")
-        T.falsy(distance.resetButton:IsEnabled(), "greyed out at the default")
-        distance.widget.Forward:Click()
-        T.eq(state.cvars.groundEffectDist, "71")
-        T.truthy(distance.resetButton:IsEnabled(), "away from the default")
-        distance.resetButton:Click()
-        T.eq(state.cvars.groundEffectDist, "70")
-        T.eq(distance.widget:GetValue(), 70)
-        T.eq(distance.box:GetText(), "70")
-        T.falsy(distance.resetButton:IsEnabled())
+        local fade = row(ns, "Ground clutter fade")
+        T.eq(fade.resetButton:GetText(), "Reset")
+        T.falsy(fade.resetButton:IsEnabled(), "greyed out at the default")
+        fade.widget.Forward:Click()
+        T.eq(state.cvars.groundEffectFade, "71")
+        T.truthy(fade.resetButton:IsEnabled(), "away from the default")
+        fade.resetButton:Click()
+        T.eq(state.cvars.groundEffectFade, "70")
+        T.eq(fade.widget:GetValue(), 70)
+        T.eq(fade.box:GetText(), "70")
+        T.falsy(fade.resetButton:IsEnabled())
 
         local sharpen = row(ns, "Always sharpen")
         T.falsy(sharpen.resetButton:IsEnabled())
@@ -109,45 +114,88 @@ describe("advanced settings page", function()
         T.falsy(sharpen.resetButton:IsEnabled())
     end)
 
+    it("puts a row a game slider writes back to what that slider sets, with the slider's other rows", function()
+        -- View Distance at step 10, where it sets 10000 and 4000.
+        local ns, state = start(function(s) s.cvars.farclip, s.cvars.horizonStart, s.cvars.horizonClip,
+            s.cvars.graphicsViewDistance = "10000", "4000", "10000", "9" end)
+        show(ns)
+        local world, horizonStart, horizonEnd = row(ns, "World distance"), row(ns, "Horizon start"),
+            row(ns, "Horizon end")
+        T.truthy(world.resetButton:IsEnabled(), "never greyed out, at what the slider sets too")
+        world.widget.Back:Click()
+        horizonStart.widget.Back:Click()
+        horizonEnd.widget.Back:Click()
+        row(ns, "Object cull distance").widget.Forward:Click()
+        state.cvarSets = {}
+        world.resetButton:Click()
+        T.same(state.cvarSets, { "graphicsViewDistance=9" })
+        T.same({ state.cvars.farclip, state.cvars.horizonStart, state.cvars.horizonClip }, { "10000", "4000", "10000" })
+        T.same({ world.box:GetText(), horizonStart.box:GetText(), horizonEnd.box:GetText() },
+            { "10000", "4000", "10000" })
+        T.eq(state.cvars.lodObjectCullDist, "31", "a row no game slider writes stays")
+        T.truthy(world.resetButton:IsEnabled(), "still not greyed out")
+
+        local fade, size = row(ns, "Object fade scale"), row(ns, "Object cull size")
+        fade.widget:SetValue(200)
+        size.widget.Back:Click()
+        state.cvarSets = {}
+        fade.resetButton:Click()
+        T.same(state.cvarSets, { "graphicsEnvironmentDetail=4" })
+        T.same({ state.cvars.lodObjectFadeScale, state.cvars.lodObjectCullSize }, { "90", "20" })
+        T.same({ fade.box:GetText(), size.box:GetText() }, { "90", "20" })
+        T.eq(state.cvars.farclip, "10000", "another game slider's rows stay")
+
+        local distance, density, fadeIn = row(ns, "Ground clutter distance"), row(ns, "Ground clutter density"),
+            row(ns, "Ground clutter fade")
+        distance.widget.Forward:Click()
+        density.widget.Forward:Click()
+        fadeIn.widget.Forward:Click()
+        state.cvarSets = {}
+        density.resetButton:Click()
+        T.same(state.cvarSets, { "graphicsGroundClutter=2" })
+        T.same({ state.cvars.groundEffectDist, state.cvars.groundEffectDensity }, { "70", "16" })
+        T.eq(state.cvars.groundEffectFade, "71", "Ground Clutter doesn't set the fade")
+    end)
+
     it("shows what the game kept after a Reset", function()
         local ns, state = start()
         show(ns)
-        local density = row(ns, "Ground clutter density")
-        density.widget.Forward:Click()
+        local cull = row(ns, "Object cull distance")
+        cull.widget.Forward:Click()
         -- A default the game itself refuses.
-        state.cvarDefaults.groundEffectDensity = "1000"
-        density.resetButton:Click()
-        T.eq(state.cvars.groundEffectDensity, "17")
-        T.eq(density.box:GetText(), "17")
+        state.cvarDefaults.lodObjectCullDist = "1000"
+        cull.resetButton:Click()
+        T.eq(state.cvars.lodObjectCullDist, "31")
+        T.eq(cull.box:GetText(), "31")
     end)
 
     it("counts a value equal to the game default but formatted differently as at the default", function()
         local ns, state = start(function(s)
-            s.cvars.groundEffectDist = "70.000000"
+            s.cvars.groundEffectFade = "70.000000"
             s.cvarDefaults.weatherDensity = "2.0"
         end)
         show(ns)
-        T.falsy(row(ns, "Ground clutter distance").resetButton:IsEnabled())
+        T.falsy(row(ns, "Ground clutter fade").resetButton:IsEnabled())
         T.falsy(row(ns, "Weather density").resetButton:IsEnabled())
-        state.cvars.groundEffectFade = "70.5"
+        state.cvars.lodObjectCullDist = "30.5"
         page(ns):Refresh()
-        T.truthy(row(ns, "Ground clutter fade").resetButton:IsEnabled())
+        T.truthy(row(ns, "Object cull distance").resetButton:IsEnabled())
     end)
 
     it("takes the game default from GetCVarInfo on a client without GetCVarDefault", function()
         local ns, state = start(function() C_CVar.GetCVarDefault = nil end)
         show(ns)
-        local distance = row(ns, "Ground clutter distance")
-        distance.widget.Forward:Click()
-        T.truthy(distance.resetButton:IsEnabled())
-        distance.resetButton:Click()
-        T.eq(state.cvars.groundEffectDist, "70")
+        local fade = row(ns, "Ground clutter fade")
+        fade.widget.Forward:Click()
+        T.truthy(fade.resetButton:IsEnabled())
+        fade.resetButton:Click()
+        T.eq(state.cvars.groundEffectFade, "70")
     end)
 
     it("says the game default on Reset's tooltip, and that the game's own settings may set another", function()
-        local ns, state = start(function(s) s.cvarDefaults.groundEffectDist = "100" end)
+        local ns, state = start(function(s) s.cvarDefaults.groundEffectFade = "100" end)
         show(ns)
-        local reset = row(ns, "Ground clutter distance").resetButton
+        local reset = row(ns, "Ground clutter fade").resetButton
         reset:RunScript("OnEnter")
         T.eq(GameTooltip.lines[1].text, "Reset")
         local tip = GameTooltip.lines[2].text
@@ -166,11 +214,11 @@ describe("advanced settings page", function()
         end)
         show(ns)
         local expected = {
-            ["Ground clutter distance"] = "Game default: 70",
             ["Ground clutter fade"] = "Game default: 1.9",
-            ["Ground clutter density"] = "Game default: 16",
             ["Weather density"] = "Game default: 2",
             ["Always sharpen"] = "Game default: On",
+            ["Object cull distance"] = "Game default: 30",
+            ["Max camera distance"] = "Game default: 1.9",
         }
         for label, ending in pairs(expected) do
             local c = row(ns, label)
@@ -181,7 +229,44 @@ describe("advanced settings page", function()
         end
     end)
 
-    it("sets every row back to its game default after the Defaults button's second click", function()
+    it("says on Reset's tooltip which game slider's values it puts back and which rows it resets too", function()
+        local ns = start()
+        show(ns)
+        local resets = {
+            ["Ground clutter distance"] = "Back to what the game's Ground Clutter sets. Also resets Ground clutter density.",
+            ["Ground clutter density"] = "Back to what the game's Ground Clutter sets. Also resets Ground clutter distance.",
+            ["World distance"] = "Back to what the game's View Distance sets. Also resets Horizon start and Horizon end.",
+            ["Horizon start"] = "Back to what the game's View Distance sets. Also resets World distance and Horizon end.",
+            ["Horizon end"] = "Back to what the game's View Distance sets. Also resets World distance and Horizon start.",
+            ["Object fade scale"] = "Back to what the game's Environment Detail sets. Also resets Object cull size.",
+            ["Object cull size"] = "Back to what the game's Environment Detail sets. Also resets Object fade scale.",
+        }
+        for label, text in pairs(resets) do
+            local c = row(ns, label)
+            c.resetButton:RunScript("OnEnter")
+            T.eq(GameTooltip.lines[2].text, text, label)
+            c.resetButton:RunScript("OnLeave")
+            c.row:RunScript("OnEnter")
+            local tip = GameTooltip.lines[2].text
+            T.falsy(tip:find("Game default", 1, true), label .. " leaves out the game default: " .. tip)
+            c.row:RunScript("OnLeave")
+        end
+        local cull = row(ns, "Object cull distance")
+        cull.row:RunScript("OnEnter")
+        T.eq(GameTooltip.lines[2].text:sub(-#"Game default: 30"), "Game default: 30")
+        cull.row:RunScript("OnLeave")
+        cull.resetButton:RunScript("OnEnter")
+        T.truthy(GameTooltip.lines[2].text:find("Back to the game default: 30", 1, true), GameTooltip.lines[2].text)
+    end)
+
+    it("names on Reset's tooltip only the rows this client has", function()
+        local ns = start(function(state) state.cvars.horizonClip = nil end)
+        show(ns)
+        row(ns, "World distance").resetButton:RunScript("OnEnter")
+        T.eq(GameTooltip.lines[2].text, "Back to what the game's View Distance sets. Also resets Horizon start.")
+    end)
+
+    it("sets every row back after the Defaults button's second click, writing each game slider once", function()
         local ns, state = start()
         local p = show(ns)
         for _, c in ipairs(p.controls) do
@@ -192,14 +277,33 @@ describe("advanced settings page", function()
         button:Click()
         T.eq(button:GetText(), "Sure?")
         T.same(state.cvars, changed, "nothing after one click")
+        state.cvarSets = {}
         button:Click()
         T.eq(state.cvars.groundEffectDist, "70")
         T.eq(state.cvars.groundEffectFade, "70")
         T.eq(state.cvars.groundEffectDensity, "16")
         T.eq(state.cvars.weatherDensity, "2")
         T.eq(state.cvars.ResampleAlwaysSharpen, "0")
-        for _, c in ipairs(p.controls) do T.falsy(c.resetButton:IsEnabled(), c.name()) end
+        T.same({ state.cvars.farclip, state.cvars.horizonStart, state.cvars.horizonClip }, { "6000", "1400", "6000" },
+            "what View Distance sets")
+        T.same({ state.cvars.lodObjectFadeScale, state.cvars.lodObjectCullSize }, { "90", "20" },
+            "what Environment Detail sets")
+        T.eq(state.cvars.lodObjectCullDist, "30")
+        T.eq(state.cvars.cameraDistanceMaxZoomFactor, "1.9")
+        local written = {}
+        for _, set in ipairs(state.cvarSets) do
+            local cvar = set:match("^[^=]+")
+            if cvar:find("^graphics") then written[cvar] = (written[cvar] or 0) + 1 end
+        end
+        T.same(written, { graphicsViewDistance = 1, graphicsEnvironmentDetail = 1, graphicsGroundClutter = 1 },
+            "each game slider once")
+        -- The rows a game slider writes keep their Reset; the others are at their game default.
+        local bySlider = { ["Ground clutter distance"] = true, ["Ground clutter density"] = true,
+            ["World distance"] = true, ["Horizon start"] = true, ["Horizon end"] = true,
+            ["Object fade scale"] = true, ["Object cull size"] = true }
+        for _, c in ipairs(p.controls) do T.eq(c.resetButton:IsEnabled(), bySlider[c.name()] == true, c.name()) end
         T.eq(state.cvars.RAIDgroundEffectDist, "70", "the raid copies stay alone")
+        T.eq(state.cvars.RAIDfarclip, "6000")
     end)
 
     it("covers exactly each setting's range with its slider, one step per arrow, its value in a box next to it", function()
@@ -229,6 +333,34 @@ describe("advanced settings page", function()
         T.eq(c.box:GetText(), "120")
         c.widget.Back:Click()
         T.eq(state.cvars.groundEffectDensity, "119")
+    end)
+
+    it("covers each Draw distance setting's range in its steps, setting a change at once", function()
+        local ns, state = start()
+        show(ns)
+        local ranges = {
+            ["World distance"] = { 1000, 10000, 100 }, ["Horizon start"] = { 400, 4000, 100 },
+            ["Horizon end"] = { 1500, 10000, 100 }, ["Object fade scale"] = { 50, 5000, 10 },
+            ["Object cull size"] = { 1, 100, 1 }, ["Object cull distance"] = { 1, 200, 1 },
+        }
+        for label, range in pairs(ranges) do
+            local c = row(ns, label)
+            T.same({ c.widget.minValue, c.widget.maxValue, c.widget.step }, range, label)
+            T.eq(c.box.template, "InputBoxTemplate", label)
+        end
+        local world = row(ns, "World distance")
+        T.eq(world.box:GetText(), "6000")
+        world.widget.Forward:Click()
+        T.same(state.cvarSets, { "farclip=6100" })
+        T.eq(world.box:GetText(), "6100")
+        Stubs.Type(world.box, "5000")
+        world.box:RunScript("OnEnterPressed")
+        T.eq(state.cvars.farclip, "5000")
+        local fade = row(ns, "Object fade scale")
+        fade.widget:SetValue(203)
+        T.eq(state.cvars.lodObjectFadeScale, "200", "rounded to its step")
+        T.eq(fade.box:GetText(), "200")
+        T.eq(state.cvars.horizonClip, "6000", "the game slider's other settings stay")
     end)
 
     it("steps the camera distance by 0.1 with its arrows and slider, never drifting off one decimal", function()
@@ -415,6 +547,29 @@ describe("advanced settings page", function()
         T.eq(state.cvars.weatherDensity, "2")
     end)
 
+    it("greys out in combat the rows whose game slider the game protects, until combat ends", function()
+        local ns, state = start(function(s) s.cvarSecure.graphicsViewDistance = true end)
+        local p = show(ns)
+        local world, fade = row(ns, "World distance"), row(ns, "Object fade scale")
+        world.widget.Forward:Click()
+        -- As the game: InCombatLockdown is still false while it sends this.
+        Stubs.Fire("PLAYER_REGEN_DISABLED")
+        Stubs.SetCombat(true)
+        for _, label in ipairs({ "World distance", "Horizon start", "Horizon end" }) do
+            T.truthy(greyedOut(row(ns, label)), label)
+        end
+        T.falsy(greyedOut(fade), "another game slider's row")
+        fade.widget.Forward:Click()
+        T.eq(state.cvars.lodObjectFadeScale, "100", "sets at once in combat")
+        state.cvarSets = {}
+        p.defaultsButton:Click()
+        p.defaultsButton:Click()
+        for _, set in ipairs(state.cvarSets) do T.falsy(set:find("graphicsViewDistance", 1, true), set) end
+        T.eq(state.cvars.farclip, "6100", "left alone")
+        Stubs.SetCombat(false)
+        T.falsy(greyedOut(world), "back after combat")
+    end)
+
     it("writes nothing for a protected row's box typed into as combat starts", function()
         local ns, state = start(protectWeather)
         show(ns)
@@ -515,15 +670,17 @@ describe("advanced settings page", function()
     end)
 
     it("leaves out a row whose setting the client doesn't know", function()
-        local ns = start(function(state) state.cvars.weatherDensity = nil end)
+        local ns = start(function(state) state.cvars.weatherDensity, state.cvars.lodObjectCullDist = nil, nil end)
         T.same(labels(ns), { "Ground clutter distance", "Ground clutter fade", "Ground clutter density",
-            "Always sharpen", "Max camera distance" })
+            "Always sharpen", "World distance", "Horizon start", "Horizon end", "Object fade scale",
+            "Object cull size", "Max camera distance" })
     end)
 
     it("leaves the page out of the list on a client that knows none of the settings", function()
         local ns = start(function(state)
             for _, cvar in ipairs({ "groundEffectDist", "groundEffectFade", "groundEffectDensity", "weatherDensity",
-                "ResampleAlwaysSharpen", "cameraDistanceMaxZoomFactor" }) do
+                "ResampleAlwaysSharpen", "farclip", "horizonStart", "horizonClip", "lodObjectFadeScale",
+                "lodObjectCullSize", "lodObjectCullDist", "cameraDistanceMaxZoomFactor" }) do
                 state.cvars[cvar] = nil
             end
         end)
@@ -547,20 +704,34 @@ describe("advanced settings page", function()
         for _, c in ipairs(page(ns).controls) do
             if c.kind == "slider" then c.widget.Forward:Click() else c.widget:Click() end
         end
-        T.eq(#state.cvarSets, 6)
+        T.eq(#state.cvarSets, 12)
         for _, set in ipairs(state.cvarSets) do T.falsy(set:find("^RAID"), set) end
         T.eq(state.cvars.RAIDgroundEffectDist, "70")
+        T.eq(state.cvars.RAIDfarclip, "6000")
     end)
 
     it("says what each setting does when pointed at", function()
         local ns = start()
         show(ns)
         local tips = {
-            ["Ground clutter distance"] = { "how far away", "in yards", "frame rate" },
+            ["Ground clutter distance"] = { "how far away", "in yards", "frame rate",
+                "Ground Clutter sets 40 to 320", "sets it again when you move it" },
             ["Ground clutter fade"] = { "how softly", "fades in" },
-            ["Ground clutter density"] = { "how thick", "frame rate" },
+            ["Ground clutter density"] = { "how thick", "frame rate", "Ground Clutter sets 16 to 256",
+                "sets it again when you move it" },
             ["Weather density"] = { "rain and snow", "0 (least)", "3 (most)" },
             ["Always sharpen"] = { "isn't upscaling", "Resample Sharpness" },
+            ["World distance"] = { "how far away the world is drawn", "in yards", "higher costs frame rate",
+                "View Distance sets 1500 to 10000", "sets it again when you move it" },
+            ["Horizon start"] = { "horizon begins", "in yards", "View Distance sets 400 to 4000",
+                "sets it again when you move it" },
+            ["Horizon end"] = { "horizon ends", "keeps it equal to World distance", "sets it again when you move it" },
+            ["Object fade scale"] = { "fade out", "higher keeps them longer", "frame rate",
+                "Environment Detail sets 50 to 150", "sets it again when you move it" },
+            ["Object cull size"] = { "smaller than this are hidden", "lower shows more", "frame rate",
+                "Environment Detail sets 35 down to 14", "sets it again when you move it" },
+            ["Object cull distance"] = { "whatever their size", "in yards", "higher shows more", "frame rate",
+                "No game setting changes it" },
             ["Max camera distance"] = { "zoom out", "Max Camera Distance slider", "2.0" },
         }
         for label, words in pairs(tips) do

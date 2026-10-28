@@ -252,16 +252,24 @@ end
 -- each set the page shows what the game kept, so a value it refused shows the old one; the Defaults
 -- button refreshes the page after resetting every row. canChange: whether the game takes a change
 -- now (inCombat: whether the page is in combat); the row is greyed out, and sets and resets
--- nothing, while it doesn't, so a box typed into as combat starts writes nothing either.
+-- nothing, while it doesn't, so a box typed into as combat starts writes nothing either. A row its
+-- game slider sets is never at what Reset sets: QoL can't know what the slider would set.
 local function hiddenBacking(page, setting, inCombat)
     local Hidden = ns.HiddenSettings
     local cvar = setting.cvar
     local backing = {
         canChange = function() return Hidden.CanChange(cvar, inCombat()) end,
-        isDefault = function() return Hidden.IsAtGameDefault(cvar) end,
+        isDefault = function() return not setting.gameSlider and Hidden.IsAtGameDefault(cvar) end,
     }
-    backing.reset = function()
-        if backing.canChange() then Hidden.Reset(cvar) end
+    -- done: shared by the rows of one Defaults click, which write each game slider once.
+    backing.reset = function(done)
+        if not backing.canChange() then return end
+        local slider = setting.gameSlider
+        if done and slider then
+            if done[slider] then return end
+            done[slider] = true
+        end
+        Hidden.Reset(cvar)
     end
     local function set(value)
         if backing.canChange() then Hidden.Set(cvar, value) end
@@ -287,6 +295,20 @@ local function gameDefaultText(setting)
     return number and ("%g"):format(number) or gameDefault
 end
 
+-- Reset's tooltip on a row its game slider sets: that it puts back what the slider sets, and the
+-- other rows here it puts back with it (known: the settings on the page).
+local function gameSliderResetText(setting, known)
+    local others = {}
+    for _, other in ipairs(known) do
+        if other.gameSlider == setting.gameSlider and other ~= setting then others[#others + 1] = other.label end
+    end
+    local text = L.RESET_TO_GAME_SLIDER_TIP:format(ns.HiddenSettings.GAME_SLIDER_NAMES[setting.gameSlider])
+    if #others == 0 then return text end
+    local list = others[#others]
+    if #others > 1 then list = L.LIST_AND:format(table.concat(others, ", ", 1, #others - 1), list) end
+    return text .. " " .. L.ALSO_RESETS:format(list)
+end
+
 -- Advanced settings page: what the game's hidden settings are, then a section of rows across the
 -- page for each part of the game (Features/HiddenSettings.lua), those this client knows.
 local function buildAdvanced(page)
@@ -296,16 +318,20 @@ local function buildAdvanced(page)
     local combat = false
     local function inCombat() return combat or InCombatLockdown() end
     local section
-    for _, setting in ipairs(ns.HiddenSettings.Known()) do
+    local known = ns.HiddenSettings.Known()
+    for _, setting in ipairs(known) do
         if setting.section ~= section then
             section = setting.section
             page:Header("wide", section)
         end
         local backing = hiddenBacking(page, setting, inCombat)
-        -- The game default, from the game, ends the row's tooltip and is on its Reset button's.
-        local gameDefault = gameDefaultText(setting)
+        -- The game default, from the game, ends the row's tooltip and is on its Reset button's. Not
+        -- on a row its game slider sets, as Reset doesn't go there.
+        local gameDefault = not setting.gameSlider and gameDefaultText(setting)
         local tooltip, resetTooltip = setting.tooltip, nil
-        if gameDefault then
+        if setting.gameSlider then
+            resetTooltip = gameSliderResetText(setting, known)
+        elseif gameDefault then
             tooltip = tooltip .. "\n\n" .. L.GAME_DEFAULT:format(gameDefault)
             resetTooltip = L.RESET_TO_GAME_DEFAULT_TIP:format(gameDefault)
         end

@@ -10,8 +10,12 @@ local SAME = {
     CATEGORY_RING = true, SECTION_BUFFS = true, INFO_VERSION = true, VENDOR_STACK = true,
 }
 
--- Strings in English only: the probe's developer output.
-local ENGLISH_ONLY = { PROBE_COMBAT = true, PROBE_SAVED = true }
+-- Strings in English only: the probe's developer output, and the Draw distance section for now.
+local ENGLISH_ONLY = { PROBE_COMBAT = true, PROBE_SAVED = true, SECTION_DRAW_DISTANCE = true }
+for _, key in ipairs({ "WORLD_DISTANCE", "HORIZON_START", "HORIZON_END", "OBJECT_FADE_SCALE", "OBJECT_CULL_SIZE",
+    "OBJECT_CULL_DISTANCE" }) do
+    ENGLISH_ONLY[key], ENGLISH_ONLY[key .. "_TIP"] = true, true
+end
 
 local function strings(locale)
     return Stubs.LoadAddon({ locale = locale }).L
