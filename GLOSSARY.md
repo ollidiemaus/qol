@@ -37,3 +37,17 @@ _Avoid_: proxy, index CVar, Graphics Quality (that's the preset that moves all o
 What a merchant pays for an item, shown on its tooltip: for one item, or with Shift held for the
 whole stack.
 _Avoid_: sell price (that's the game's own tooltip line), merchant price
+
+### Loot
+
+**Auto loot**:
+The game taking loot straight into the bags when a corpse or container is opened, without the loot window
+waiting for a click. Whether it happens is the game's call: its Auto Loot setting, flipped by the auto
+loot key, or on a controller by tapping or holding the interact button.
+_Avoid_: autoloot, loot all
+
+**Faster auto loot**:
+Taking all of the loot at once when the game auto loots, instead of one item after another. When the game
+doesn't auto loot, it changes nothing, and anything that can't be taken (full bags, a confirmation) stays
+in the loot window.
+_Avoid_: fast loot, instant loot
