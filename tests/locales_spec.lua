@@ -10,6 +10,9 @@ local SAME = {
     CATEGORY_RING = true, SECTION_BUFFS = true, INFO_VERSION = true, VENDOR_STACK = true,
 }
 
+-- Strings in English only: the probe's developer output.
+local ENGLISH_ONLY = { PROBE_COMBAT = true, PROBE_SAVED = true }
+
 local function strings(locale)
     return Stubs.LoadAddon({ locale = locale }).L
 end
@@ -27,7 +30,7 @@ describe("locales", function()
         local count = 0
         for key, value in pairs(english) do
             count = count + 1
-            if not SAME[key] then
+            if not SAME[key] and not ENGLISH_ONLY[key] then
                 T.truthy(german[key] ~= value, "German for " .. key)
             end
             T.eq(placeholders(german[key]), placeholders(value), "placeholders of " .. key)

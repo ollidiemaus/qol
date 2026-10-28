@@ -20,7 +20,7 @@ globals = {
 -- WoW API the addon reads. Keep this list explicit: an unexpected global is usually a typo.
 read_globals = {
     -- Lua extensions in the WoW client
-    "issecretvalue", "strsplit", "strtrim",
+    "issecretvalue", "strsplit", "strtrim", "date",
     -- Frames and UI
     "CreateFrame", "UIParent", "WorldFrame", "DEFAULT_CHAT_FRAME", "EventRegistry",
     "Settings", "CreateSettingsListSectionHeaderInitializer", "MinimalSliderWithSteppersMixin",
@@ -62,7 +62,7 @@ read_globals = {
     "NUM_BAG_SLOTS", "NUM_TOTAL_EQUIPPED_BAG_SLOTS",
     "CanMerchantRepair", "GetRepairAllCost", "RepairAllItems", "GetMoney",
     "IsInGuild", "CanGuildBankRepair", "GetGuildBankWithdrawMoney", "GetGuildBankMoney",
-    "GetAddOnMetadata", "IsAddOnLoaded", "IsMacClient",
+    "GetAddOnMetadata", "IsAddOnLoaded", "IsMacClient", "GetBuildInfo",
     -- Namespaces
     "Enum", "C_ActionBar", "C_AddOns", "C_Container", "C_CVar", "C_EventUtils", "C_GossipInfo", "C_Item", "C_Map", "C_MerchantFrame",
     "C_InputInterfaceStyle", "C_KeyBindings", "C_Texture", "C_Timer",

@@ -559,6 +559,9 @@ local function install()
     G.strtrim = function(text) return (text:gsub("^%s+", ""):gsub("%s+$", "")) end
     G.unpack = G.unpack or table.unpack
     G.GetLocale = function() return state.locale end
+    -- version, build, date, interface
+    G.GetBuildInfo = function() return "1.60.1", "70630", "Oct 21 2026", 16001 end
+    G.date = os.date
     G.GetMoneyString = function(copper) return tostring(copper) .. "c" end
     G.NORMAL_FONT_COLOR = { r = 1, g = 0.82, b = 0 }
     G.NUM_BAG_SLOTS = 4
@@ -1117,13 +1120,22 @@ local function install()
                 state.cvarSecure[name] == true, false
         end,
         -- As the game: a setting it doesn't know, a value outside the setting's range
-        -- (state.cvarRanges) or a secure setting in combat is quietly ignored. Every call is recorded.
+        -- (state.cvarRanges) or a secure setting in combat is quietly ignored, and one in
+        -- state.cvarWhole drops a fraction. Every call is recorded. A game slider's CVar
+        -- (state.gameSliders: per step from 0, the settings it sets) sets the settings behind it,
+        -- also when it already had that step, unless state.gameSliderRewrites is false.
         SetCVar = function(name, value)
             table.insert(state.cvarSets, name .. "=" .. tostring(value))
             if state.cvars[name] == nil or (state.cvarSecure[name] and state.combat) then return end
             local range, number = state.cvarRanges[name], tonumber(value)
             if range and not (number and number >= range[1] and number <= range[2]) then return end
+            if number and state.cvarWhole[name] then value = math.floor(number) end
+            local changed = tonumber(state.cvars[name]) ~= tonumber(value)
             state.cvars[name] = tostring(value)
+            local steps = state.gameSliders[name]
+            if steps and (changed or state.gameSliderRewrites) then
+                for cvar, stepValue in pairs(steps[tonumber(value)] or {}) do state.cvars[cvar] = stepValue end
+            end
         end,
     }
 
@@ -1323,7 +1335,8 @@ function Stubs.Reset(options)
         -- The hidden settings' game defaults: each starts at its own.
         cvarDefaults = { chatClassColorOverride = "2", groundEffectDist = "70", groundEffectFade = "70",
             groundEffectDensity = "16", weatherDensity = "2", ResampleAlwaysSharpen = "0",
-            cameraDistanceMaxZoomFactor = "1.9" }, cvarSecure = {}, cvarSets = {}, cvarReads = 0,
+            cameraDistanceMaxZoomFactor = "1.9" }, cvarSecure = {}, cvarWhole = {}, cvarSets = {}, cvarReads = 0,
+        gameSliders = {}, gameSliderRewrites = true,
         shift = false,
         quest = { npc = "Creature-0-1-0-1-3139-0001", gossipActive = {}, gossipAvailable = {}, greetingActive = {},
             greetingAvailable = {}, autoAccept = false, completable = true, money = 0, choices = 0, calls = {} },

@@ -8,7 +8,7 @@ Notes for working on the addon. What it does for players is in the [README](../R
 |---|---|
 | `Core/` | Namespace and printing (`Init`), the event frame and unit listeners (`Events`), saved options with defaults and change watchers (`Options`), the saved data's version and migrations (`SavedData`), deferred changes (`Later`), the hidden holder for hidden frames (`Hider`), what the back buttons and the rings share (`Buttons`: an action slot's look, override bindings), our windows' frame (`Window`: the settings), `/qol` (`Slash`) and startup (`Lifecycle`) |
 | `Data/` | Static game data: `MapPins` (dungeon entrances, docks, portals; how it was made is at the top of the file) |
-| `Features/` | One file per feature: `Merchant`, `Quests`, `Tooltips`, `HideFrames` (also the chat buttons), `BuffTooltips` (the controller interface's tooltips for new buffs), `CombatLog`, `ChatClassColors`, `CombinedBagLayout`, `MailBookmarks` (tabs on the Send Mail tab), `ClassHealthBars`, `DruidManaBar` (mana in bear and cat form), `ScreenEdge` (Edit Mode frames past the screen edge), `Minimap` (shape, positions, class colors and font sizes around the minimap, and the FPS and ping text), `MapPins`, `Viewport`, `ActionBars`, `ButtonBorders`, `BarPaging`, `BackButtons` (the controller back buttons, Forever only), `RingEntries` (what can go on a ring, and what a character has of it), `Ring`, `RingPicker` (the editor's list), `RingEditor` (the settings' Ring page, `/qol ring`), `ReloadCommand` |
+| `Features/` | One file per feature: `Merchant`, `Quests`, `Tooltips`, `HideFrames` (also the chat buttons), `BuffTooltips` (the controller interface's tooltips for new buffs), `CombatLog`, `ChatClassColors`, `CombinedBagLayout`, `MailBookmarks` (tabs on the Send Mail tab), `ClassHealthBars`, `DruidManaBar` (mana in bear and cat form), `ScreenEdge` (Edit Mode frames past the screen edge), `Minimap` (shape, positions, class colors and font sizes around the minimap, and the FPS and ping text), `MapPins`, `Viewport`, `ActionBars`, `ButtonBorders`, `BarPaging`, `BackButtons` (the controller back buttons, Forever only), `RingEntries` (what can go on a ring, and what a character has of it), `Ring`, `RingPicker` (the editor's list), `RingEditor` (the settings' Ring page, `/qol ring`), `ReloadCommand`, `HiddenSettings` (the hidden settings on the Advanced settings page) and `HiddenSettingsProbe` (`/qol probe`) |
 | `UI/` | `SettingsPage.lua`, a settings page (two columns, or rows across the page, and key binding rows); `SettingsWindow.lua`, the window that `/qol` opens, with the list of pages; `InfoPage.lua`, the information page under Options > AddOns, with a button that opens the window; `Settings.lua`, the pages built with them, in the list's order |
 | `Locales/` | English strings, German overrides |
 | `Media/` | `Icon.tga`, the addon list icon (the TOC's `IconTexture`, 128×128, 32-bit), and `Icon.svg`, its source (not packaged); `Zeppelin.tga`, `Tram.tga`, `MinimapSquareBorder.tga` and the rings' `Ring.tga`, `RingSpoke.tga`, `RingLit1.tga` to `RingLit12.tga` and `RingSlot.tga` (see below); `AutoPotion.tga`, `AutoSetup.tga` and `Wayscribe.tga`, copies of the other addons' icons for the information page |
@@ -21,11 +21,13 @@ reads it with `Options:Get` and reacts to changes through `Options:Watch`.
 ## Saved data
 
 Everything QoL saves is in `QoLDB`, account-wide: `options` (only values that differ from their
-default), `rings` and `characters` (the mail bookmarks' class icons), and `version`, the layout's
-version (`Core/SavedData.lua`, now 1). On `ADDON_LOADED`, before anything reads the file,
-`SavedData:Migrate` runs `MIGRATIONS[n]` for every version from the saved one up to `VERSION`, one
-at a time, and writes each version once its migration is done. There are none yet: a file without a
-version is the layout from before versions, which version 1 kept, so 0 to 1 only writes the number.
+default), `rings` and `characters` (the mail bookmarks' class icons), `probe` (the last `/qol probe`
+report, which nothing reads; missing until it first runs, so it needs no migration), and
+`version`, the layout's version (`Core/SavedData.lua`, now 1). On `ADDON_LOADED`, before anything
+reads the file, `SavedData:Migrate` runs `MIGRATIONS[n]` for every version from the saved one up
+to `VERSION`, one at a time, and writes each version once its migration is done. There are none
+yet: a file without a version is the layout from before versions, which version 1 kept, so 0 to 1
+only writes the number.
 A change to the layout raises `VERSION` and adds the migration that turns the old layout into the
 new one. A migration that fails (an error) stops there: the error goes to the game's error handler,
 the version stays at the last one that worked, and QoL loads as usual. So a migration works out
@@ -661,6 +663,8 @@ when the client knows none.
   `1.900000`); a client that doesn't say a default leaves Reset greyed out and the tooltips without
   it. Reset reads back like any set. Each slider row passes its `step` to `Page:Slider`, and has a
   box to type an exact value (see the input boxes above).
+- **Measuring them.** `/qol probe` measures the ranges, game defaults and the game sliders in the
+  client it runs in; see "The hidden settings probe" under "Trying it in game".
 
 The history below is from the time the pages were in the game's settings; the workarounds it led to
 stay since they cost nothing.
@@ -770,6 +774,12 @@ protected and fails on `SetAttribute` in combat; `Stubs.NewGamepadBar()` (betwee
 to a frame registered with `RegisterUnitEvent` only when its first argument is one of that frame's
 units, as the game does, and `Stubs.Listens(event, unit)` says whether any of our frames would get
 the event for that unit, so a spec can check that other units' events never reach QoL.
+
+The fake `C_CVar` refuses what the game refuses (a value outside `state.cvarRanges`, a
+`state.cvarSecure` CVar in combat, an unknown CVar), drops the fraction for one in `state.cvarWhole`,
+and logs every write in `state.cvarSets`. A game slider is a `state.gameSliders` entry: per step
+from 0, the settings that step sets. Writing its CVar sets them, also when it already had that step,
+unless `state.gameSliderRewrites` is false.
 
 ## Trying it in game
 
@@ -919,6 +929,48 @@ Things only the real client can confirm:
   game menu closes, the cursor goes to the middle and hides (these three confirmed 2026-10-11, Steam
   Deck). Turning it off brings the pop-ups back without a reload. Right-clicking a buff away in
   combat still works.
+
+### The hidden settings probe
+
+`/qol probe` (`Features/HiddenSettingsProbe.lua`) measures what the Advanced settings page needs to
+know about the client it runs in, so Forever's client and every patch can be measured with one
+command instead of `/run` lines pasted into chat. It's in the release package but not in
+`/qol help` or the README.
+
+- **What it measures.** Every hidden setting in the table and the candidates for the page
+  (`CANDIDATES`: `farclip`, `horizonStart`, `horizonClip` and the `lodObject…` settings; one comes off
+  that list once it's in the table): its value, game default, the lowest and highest value the game
+  takes, whether it keeps halves (the value plus or minus 0.5) and whether it's protected in combat.
+  A range is searched from the value outward in steps that double until the game refuses one, then
+  by halving the gap on whole numbers, so a range that ends between two (the camera distance's 2.6)
+  shows the last whole number in it. A side that still takes 10,000,000 is "no range check". Then
+  each game slider (`graphicsViewDistance`, `graphicsEnvironmentDetail`, `graphicsGroundClutter`:
+  CVars from 0 to 9, reported from 1 to 10 as the game's options show them): its step and game
+  default, and for each step the value of every setting that changes with it. Last, the same-value
+  test: with the settings behind a slider set to what another step sets, it writes the slider's step
+  again and says whether they came back, so whether a Reset can put back what that slider sets. A
+  setting the game wouldn't set to another value is named as not tested.
+- **Putting things back.** Before it writes anything it saves every value it may touch. Each setting
+  gets its value back right after its range search. At the end the sliders are written back first,
+  then every setting, as writing a slider sets the settings behind it again: so a value set with
+  `/console` that differs from what its slider sets comes back too. Then it reads everything again
+  and names a value that didn't come back. An error halfway still puts everything back, then shows
+  as a `failed` line and goes to the game's error handler. It saves only what it measures: a CVar a
+  slider sets that isn't on the lists gets back what the slider sets, not a value set with
+  `/console`.
+- **Safe to run.** It all happens at once, so the game never draws a frame with a changed value (at
+  most the screen stutters once). It refuses in combat and writes nothing then. It never writes the
+  raid copies, the Raid and Battleground graphics (`raidGraphics…`), Graphics Quality or any other
+  graphics option, so the game reloads nothing, and it touches no frame.
+- **The report.** `key = value` lines, as in Wayscribe's `/ws probe`: `client` (version, build,
+  locale) and `date`, then `cvar.<setting>`, `slider.<slider>`, `slider.<slider>.<setting>` (its
+  values from step 1 to 10), `rewrite.<slider>` and `restore` (or `restore.<setting>` for one that
+  didn't come back). It's printed to chat and kept in `QoLDB.probe` (`client`, `date`, `lines`),
+  replaced each run; after a `/reload` or logout it's in
+  `WTF/Account/<account>/SavedVariables/QoL.lua`. Nothing reads it back: it's diagnostics, and the
+  CVar stays the only truth for the page. The report lines aren't translated; its two chat lines
+  (the refusal in combat, where the report is kept) are in `ns.L` in English only, which
+  `tests/locales_spec.lua` lists in `ENGLISH_ONLY`.
 
 ### Cutscenes and the viewport
 

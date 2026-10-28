@@ -330,6 +330,10 @@ L.MAX_CAMERA_DISTANCE = "Max camera distance"
 L.MAX_CAMERA_DISTANCE_TIP = "How far the camera can zoom out. The game's own Max Camera Distance slider stops "
     .. "at 2.0, and moving it brings this back to 2.0 or lower."
 
+-- /qol probe, a developer tool: English only
+L.PROBE_COMBAT = "The probe doesn't run in combat."
+L.PROBE_SAVED = "The report is also in QoL.lua in the SavedVariables folder, under probe, after a /reload or logout."
+
 -- Key bindings on a settings page
 L.SECTION_KEYS = "Keys"
 L.NOT_BOUND = "Not Bound"
