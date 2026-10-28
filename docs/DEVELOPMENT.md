@@ -659,8 +659,10 @@ itself when the client knows none.
   battlegrounds use those instead.
 - **Following changes.** The window refreshes the page each time it shows it, and while it's shown the
   page refreshes on `CVAR_UPDATE` for a CVar in the table (`/console`, the game's options, another
-  addon). Whether Forever's client sends `CVAR_UPDATE` for every `SetCVar` isn't confirmed; the
-  refresh on showing is the fallback.
+  addon). Once for a burst, through `ns.Later` (in combat too): a game slider writes several CVars at
+  once, the Defaults button a few for each slider, and `/qol probe` hundreds in one go. Whether
+  Forever's client sends `CVAR_UPDATE` for every `SetCVar` isn't confirmed; the refresh on showing is
+  the fallback.
 - **Taint-safe.** The page touches no Blizzard frame: it only calls `SetCVar` and `GetCVar` on
   these CVars and the game sliders' (`graphicsViewDistance` and the others), from our own window,
   and leaves a protected one alone in combat.

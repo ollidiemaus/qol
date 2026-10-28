@@ -484,6 +484,7 @@ describe("advanced settings page", function()
         Stubs.Type(fade.box, "12")
         state.cvars.groundEffectFade, state.cvars.groundEffectDensity = "250", "64"
         Stubs.Fire("CVAR_UPDATE", "groundEffectFade", "250")
+        Stubs.RunTimers()
         T.eq(fade.box:GetText(), "12")
         T.eq(fade.widget:GetValue(), 250)
         T.eq(density.box:GetText(), "64")
@@ -653,9 +654,34 @@ describe("advanced settings page", function()
         show(ns)
         state.cvars.groundEffectFade = "250"
         Stubs.Fire("CVAR_UPDATE", "groundEffectFade", "250")
+        Stubs.RunTimers()
         T.eq(row(ns, "Ground clutter fade").widget:GetValue(), 250)
         T.eq(row(ns, "Ground clutter fade").box:GetText(), "250")
         T.same(state.cvarSets, {})
+    end)
+
+    it("refreshes once for a burst of changes, on the next frame, in combat too", function()
+        local ns, state = start()
+        local p = show(ns)
+        local refreshes, refresh = 0, p.Refresh
+        p.Refresh = function(...)
+            refreshes = refreshes + 1
+            return refresh(...)
+        end
+        for value = 100, 500, 100 do
+            state.cvars.groundEffectFade = tostring(value)
+            Stubs.Fire("CVAR_UPDATE", "groundEffectFade", tostring(value))
+        end
+        T.eq(refreshes, 0, "not inside the burst")
+        Stubs.RunTimers()
+        T.eq(refreshes, 1)
+        T.eq(row(ns, "Ground clutter fade").widget:GetValue(), 500)
+        state.combat = true
+        state.cvars.groundEffectFade = "250"
+        Stubs.Fire("CVAR_UPDATE", "groundEffectFade", "250")
+        Stubs.RunTimers()
+        T.eq(refreshes, 2, "in combat")
+        T.eq(row(ns, "Ground clutter fade").widget:GetValue(), 250)
     end)
 
     it("reads nothing for a change while it's hidden, or for a setting not on it", function()

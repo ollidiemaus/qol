@@ -344,9 +344,16 @@ local function buildAdvanced(page)
         end
     end
     -- A change through /console, the game's options or another addon. The window refreshes the page
-    -- each time it shows it too, in case the game doesn't send this for every change.
+    -- each time it shows it too, in case the game doesn't send this for every change. Once on the
+    -- next frame for a burst of them, in combat too: a game slider writes several, and /qol probe
+    -- hundreds.
+    local function refreshShown()
+        if page.frame:IsVisible() then page:Refresh() end
+    end
     ns.Events:On("CVAR_UPDATE", function(_, cvar)
-        if page.frame:IsVisible() and ns.HiddenSettings.Find(cvar) then page:Refresh() end
+        if page.frame:IsVisible() and ns.HiddenSettings.Find(cvar) then
+            ns.Later("advancedSettingsRefresh", refreshShown, true)
+        end
     end)
     -- A protected setting's row greys out in combat and comes back after it.
     local function combatChanged(inCombatNow)
