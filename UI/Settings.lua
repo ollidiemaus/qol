@@ -26,7 +26,7 @@ local function isNot(key)
     return function() return Options:Get(key) ~= true end
 end
 
--- Automation page: what's done for you at merchants and quest givers.
+-- Automation page: what's done for you at merchants, quest givers and loot.
 local function buildAutomation(page)
     page:Header("left", L.SECTION_MERCHANT)
     page:Checkbox("left", "sellJunk", L.SELL_JUNK, L.SELL_JUNK_TIP)
@@ -36,6 +36,9 @@ local function buildAutomation(page)
     page:Header("right", L.SECTION_QUESTS)
     page:Checkbox("right", "questAccept", L.QUEST_ACCEPT, L.QUEST_ACCEPT_TIP)
     page:Checkbox("right", "questTurnIn", L.QUEST_TURN_IN, L.QUEST_TURN_IN_TIP)
+
+    page:Header("right", L.SECTION_LOOT)
+    page:Checkbox("right", "fasterAutoLoot", L.FASTER_AUTO_LOOT, L.FASTER_AUTO_LOOT_TIP)
 end
 
 -- Interface page: the bars to hide, the combined bags and the player frame on the left, tooltips and

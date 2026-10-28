@@ -30,6 +30,13 @@ It's made for WoW Forever and also runs on retail (Midnight).
 
 Hold **Shift** while talking to an NPC to do everything yourself that time.
 
+### Loot
+
+- **Faster auto loot:** when the game auto loots, all of the loot goes into your bags at once instead
+  of one item after another. When the game doesn't auto loot, nothing changes. What can't be taken
+  (full bags, a bind-on-pickup item to confirm, a roll) stays in the loot window. Off until you turn
+  it on.
+
 ### Tooltips
 
 - **IDs:** spell, item, buff and debuff, NPC, quest, currency and achievement IDs in their tooltips.
@@ -289,7 +296,7 @@ controller interface the button opens the window once you close the game's optio
 
 The pages:
 
-- **Automation:** junk selling, repairs, quests.
+- **Automation:** junk selling, repairs, quests, faster auto loot.
 - **Interface:** hiding the system and bag bars, the combined bags, mana in bear and cat form, frames
   past the screen edge, tooltips, health bars in class color.
 - **Chat:** the chat buttons, the combat log, names in class color, `/rl`.

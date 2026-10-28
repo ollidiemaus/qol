@@ -51,6 +51,13 @@ L.QUEST_TURN_IN_TIP = "Gibt abgeschlossene Quests ab, wenn du den Questgeber ans
     .. "zur Auswahl oder mit Gold zu bezahlen bleiben dir überlassen. Halte beim Ansprechen eines NPCs die "
     .. "Umschalttaste gedrückt, um es selbst zu tun."
 
+L.SECTION_LOOT = "Beute"
+L.FASTER_AUTO_LOOT = "Schnelleres automatisches Plündern"
+L.FASTER_AUTO_LOOT_TIP = "Nimmt die ganze Beute auf einmal statt einen Gegenstand nach dem anderen, wenn das "
+    .. "Spiel automatisch plündert (Schnell-Plündern). Ohne automatisches Plündern ändert sich nichts. "
+    .. "Gegenstände, die nicht in deine Taschen passen, deren Bindung du bestätigen musst oder um die "
+    .. "gewürfelt wird, bleiben im Beutefenster."
+
 -- Settings: interface page
 L.CATEGORY_INTERFACE = "Oberfläche"
 L.SECTION_TOOLTIPS = "Tooltips"

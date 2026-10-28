@@ -38,6 +38,7 @@ Data\MapPins.lua
 
 Features\Merchant.lua
 Features\Quests.lua
+Features\FasterAutoLoot.lua
 Features\Tooltips.lua
 Features\HideFrames.lua
 Features\BuffTooltips.lua

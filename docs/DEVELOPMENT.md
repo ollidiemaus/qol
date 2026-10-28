@@ -8,7 +8,7 @@ Notes for working on the addon. What it does for players is in the [README](../R
 |---|---|
 | `Core/` | Namespace and printing (`Init`), the event frame and unit listeners (`Events`), saved options with defaults and change watchers (`Options`), the saved data's version and migrations (`SavedData`), deferred changes (`Later`), the hidden holder for hidden frames (`Hider`), what the back buttons and the rings share (`Buttons`: an action slot's look, override bindings), our windows' frame (`Window`: the settings), `/qol` (`Slash`) and startup (`Lifecycle`) |
 | `Data/` | Static game data: `MapPins` (dungeon entrances, docks, portals; how it was made is at the top of the file) |
-| `Features/` | One file per feature: `Merchant`, `Quests`, `Tooltips`, `HideFrames` (also the chat buttons), `BuffTooltips` (the controller interface's tooltips for new buffs), `CombatLog`, `ChatClassColors`, `CombinedBagLayout`, `MailBookmarks` (tabs on the Send Mail tab), `ClassHealthBars`, `DruidManaBar` (mana in bear and cat form), `ScreenEdge` (Edit Mode frames past the screen edge), `Minimap` (shape, positions, class colors and font sizes around the minimap, and the FPS and ping text), `MapPins`, `Viewport`, `ActionBars`, `ButtonBorders`, `BarPaging`, `BackButtons` (the controller back buttons, Forever only), `RingEntries` (what can go on a ring, and what a character has of it), `Ring`, `RingPicker` (the editor's list), `RingEditor` (the settings' Ring page, `/qol ring`), `ReloadCommand`, `HiddenSettings` (the hidden settings on the Advanced settings page) and `HiddenSettingsProbe` (`/qol probe`) |
+| `Features/` | One file per feature: `Merchant`, `Quests`, `FasterAutoLoot`, `Tooltips`, `HideFrames` (also the chat buttons), `BuffTooltips` (the controller interface's tooltips for new buffs), `CombatLog`, `ChatClassColors`, `CombinedBagLayout`, `MailBookmarks` (tabs on the Send Mail tab), `ClassHealthBars`, `DruidManaBar` (mana in bear and cat form), `ScreenEdge` (Edit Mode frames past the screen edge), `Minimap` (shape, positions, class colors and font sizes around the minimap, and the FPS and ping text), `MapPins`, `Viewport`, `ActionBars`, `ButtonBorders`, `BarPaging`, `BackButtons` (the controller back buttons, Forever only), `RingEntries` (what can go on a ring, and what a character has of it), `Ring`, `RingPicker` (the editor's list), `RingEditor` (the settings' Ring page, `/qol ring`), `ReloadCommand`, `HiddenSettings` (the hidden settings on the Advanced settings page) and `HiddenSettingsProbe` (`/qol probe`) |
 | `UI/` | `SettingsPage.lua`, a settings page (two columns, or rows across the page, and key binding rows); `SettingsWindow.lua`, the window that `/qol` opens, with the list of pages; `InfoPage.lua`, the information page under Options > AddOns, with a button that opens the window; `Settings.lua`, the pages built with them, in the list's order |
 | `Locales/` | English strings, German overrides |
 | `Media/` | `Icon.tga`, the addon list icon (the TOC's `IconTexture`, 128×128, 32-bit), and `Icon.svg`, its source (not packaged); `Zeppelin.tga`, `Tram.tga`, `MinimapSquareBorder.tga` and the rings' `Ring.tga`, `RingSpoke.tga`, `RingLit1.tga` to `RingLit12.tga` and `RingSlot.tga` (see below); `AutoPotion.tga`, `AutoSetup.tga` and `Wayscribe.tga`, copies of the other addons' icons for the information page |
@@ -65,6 +65,8 @@ Forever beta. So:
   own `Show()` calls then change nothing.
 - Compare or compute with game values only after `ns.IsUsable(value)` (nil and secret values fail).
 - Register events through `ns.Events:On`; it skips events the client doesn't know.
+  `ns.Events:Off(event, handler)` takes a handler away again and unregisters the event once none is
+  left, for a feature that listens only while its option is on (Faster auto loot).
 - Events about units (`UNIT_*`, first argument a unit) go through a unit listener, never through
   `ns.Events:On`: `ns.Events:NewUnitListener(unit1[, unit2])` registers with `RegisterUnitEvent`
   on a frame of its own, so the game drops every other unit's events before QoL wakes (in a raid
@@ -242,6 +244,15 @@ the buff frame's update, where right-clicking a buff calls `CancelUnitBuff`.
 
 Names in chat in class color are the game's own setting: `chatClassColorOverride` "0" means always
 (see `ChatFrameUtil.ShouldColorChatByClass`). Turning the option off gives the setting its default.
+
+Faster auto loot touches no Blizzard frame: the loot window isn't hidden, moved or hooked. On
+`LOOT_READY` it calls `LootSlot` for every slot, the last first, as Leatrix Plus does, and the game
+leaves what it can't take in the window (full bags, a bind confirmation, a roll). It acts only when
+the event's `autoloot` argument says the game auto loots. Leatrix compares the Auto Loot setting with
+the auto loot key instead, which misses Forever's controller: tapping or holding the interact button
+switches auto loot through `C_AutoLoot.SetUseAutoLootToggle`, and the event's flag has that too. The
+event can come more than once for the same loot, so loot is taken at most once in 0.3 s (Leatrix's
+throttle). While the option is off, nothing listens to `LOOT_READY` (`ns.Events:Off`).
 
 The combined bag from the top left: with keyboard and mouse, Blizzard lays the combined bag's item
 buttons out from the bottom right of its money frame, leftwards and upwards
@@ -576,7 +587,7 @@ settings are open, and closing our window is a plain `Hide` of a frame of ours.
   window of the game has the controller, so SmartNavigation's `CreateFrame` hook rebuilds no window
   for them.
 
-The options are grouped by part of the game: Automation (merchant and quests), Interface
+The options are grouped by part of the game: Automation (merchant, quests and loot), Interface
 (the bars to hide, the combined bags, tooltips, health bars), Chat (the chat window, `/rl`), Mail
 (the bookmarks' names), Action Bars, Minimap, World map (only where `MapPins.IsAvailable()`), Viewport, Ring, Controller (only
 on Forever) and Advanced settings (below). Every page is built by `UI/SettingsPage.lua`: two columns of rows, or rows across the
@@ -854,6 +865,11 @@ Things only the real client can confirm:
 - Quests: accepting from a gossip NPC and from a quest greeting NPC (several quests in a row), a
   shared quest, turning in with one reward and with none, a choice of rewards and a quest that costs
   gold staying open, and Shift leaving everything to the player.
+- Faster auto loot: with Auto Loot on, a corpse, an herb, a catch and a container empty at once; the
+  auto loot key held keeps the window open; with Auto Loot off, holding the key takes it all at once.
+  Full bags leave the rest in the window, a bind-on-pickup item in a group asks first, and a group
+  roll still comes up. On Forever with a controller: tapping and holding the interact button. With
+  Open loot window at mouse on, a window with something left in it still opens at the mouse.
 - Hiding the combat log: the tabs after it close the gap, also after a whisper tab opens and with
   the combat log selected when the option is turned on (the chat stays empty until another tab is
   clicked). No "tainted by" error in combat afterwards.

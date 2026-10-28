@@ -54,6 +54,12 @@ L.QUEST_TURN_IN = "Turn in quests automatically"
 L.QUEST_TURN_IN_TIP = "Turns in finished quests when you talk to the quest giver. Quests with a reward to choose "
     .. "or gold to pay are left to you. Hold Shift while talking to an NPC to do it yourself."
 
+L.SECTION_LOOT = "Loot"
+L.FASTER_AUTO_LOOT = "Faster auto loot"
+L.FASTER_AUTO_LOOT_TIP = "When the game auto loots, takes all of the loot at once instead of one item after "
+    .. "another. Without auto loot nothing changes. Items that don't fit in your bags, that ask you to confirm "
+    .. "binding them or that are up for a roll stay in the loot window."
+
 -- Settings: interface page
 L.CATEGORY_INTERFACE = "Interface"
 L.SECTION_TOOLTIPS = "Tooltips"

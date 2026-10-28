@@ -17,6 +17,8 @@ local DEFAULTS = {
     questAccept = false,
     questTurnIn = false,
 
+    fasterAutoLoot = false,
+
     tooltipIDs = false,
     tooltipSellPrice = true,
 

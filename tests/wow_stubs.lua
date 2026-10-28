@@ -768,6 +768,13 @@ local function install()
     G.GetGuildBankWithdrawMoney = function() return state.guildLimit end
     G.GetGuildBankMoney = function() return state.guildMoney end
 
+    -- Loot: the loot window's slots, and the slots taken, in order. The game takes a slot later, so
+    -- the window keeps its slots.
+    G.GetNumLootItems = function() return state.lootSlots end
+    G.LootSlot = function(slot) table.insert(state.looted, slot) end
+    -- The clock: Stubs.Wait moves it on.
+    G.GetTime = function() return state.now end
+
     -- Frames the addon hides
     G.MicroMenuContainer = newRegion("Frame", G.UIParent)
     G.BagsBar = newRegion("Frame", G.UIParent)
@@ -1348,6 +1355,8 @@ function Stubs.Reset(options)
         bags = {}, prices = {}, used = {}, soldAll = 0, sellAllEnabled = true,
         canRepair = false, repairCost = 0, repairs = {}, money = 0,
         inGuild = false, guildCanRepair = false, guildLimit = 0, guildMoney = 0,
+        lootSlots = 0, looted = {},
+        now = 1000, -- GetTime: seconds since the computer started
         layouts = {}, reloads = 0, errors = {},
         units = { player = { isPlayer = true, class = "MAGE", name = "Testmage" } }, realm = "TestRealm",
         regionalNames = false,
@@ -1452,6 +1461,11 @@ function Stubs.TriggerRegistry(event, ...)
     for _, callback in ipairs(state.registry[event] or {}) do
         callback.fn(callback.owner, ...)
     end
+end
+
+-- Moves GetTime's clock on.
+function Stubs.Wait(seconds)
+    state.now = state.now + seconds
 end
 
 -- Lets the delayed C_Timer callbacks come due, then runs everything that is due.

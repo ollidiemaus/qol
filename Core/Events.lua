@@ -33,6 +33,23 @@ function Events:On(event, handler)
     return true
 end
 
+-- Removes a handler On added, and unregisters the event once none is left. The event's handlers
+-- get a new list, so an event running right now (a handler turning itself off) skips none of them.
+function Events:Off(event, handler)
+    local handlers = self.handlers[event]
+    if not handlers then return end
+    local kept = {}
+    for i = 1, #handlers do
+        if handlers[i] ~= handler then kept[#kept + 1] = handlers[i] end
+    end
+    if #kept > 0 then
+        self.handlers[event] = kept
+    else
+        self.handlers[event] = nil
+        frame:UnregisterEvent(event)
+    end
+end
+
 -- A unit listener hears events about one or two units, so the game drops other units' events
 -- before QoL wakes. Each listener has a frame of its own: registering an event again on one frame
 -- replaces its units. Make one once, at Init, and turn its events on and off as things show.

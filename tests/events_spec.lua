@@ -2,6 +2,45 @@ local T = require("testlib")
 local Stubs = require("wow_stubs")
 local describe, it = T.describe, T.it
 
+describe("events", function()
+    -- An event no feature listens to.
+    it("stop reaching a handler after Off, and stop listening once no handler is left", function()
+        local ns = Stubs.LoadAddon()
+        Stubs.Login()
+        local heard = {}
+        local function first() heard[#heard + 1] = "first" end
+        local function second() heard[#heard + 1] = "second" end
+        ns.Events:On("TEST_EVENT", first)
+        ns.Events:On("TEST_EVENT", second)
+        ns.Events:Off("TEST_EVENT", first)
+        Stubs.Fire("TEST_EVENT")
+        T.same(heard, { "second" })
+        ns.Events:Off("TEST_EVENT", second)
+        Stubs.Fire("TEST_EVENT")
+        T.same(heard, { "second" })
+        T.eq(Stubs.Listens("TEST_EVENT"), false)
+        -- On again after Off: heard again.
+        ns.Events:On("TEST_EVENT", first)
+        Stubs.Fire("TEST_EVENT")
+        T.same(heard, { "second", "first" })
+    end)
+
+    it("keep calling the other handlers when one turns itself off", function()
+        local ns = Stubs.LoadAddon()
+        Stubs.Login()
+        local heard = {}
+        local function once()
+            heard[#heard + 1] = "once"
+            ns.Events:Off("TEST_EVENT", once)
+        end
+        ns.Events:On("TEST_EVENT", once)
+        ns.Events:On("TEST_EVENT", function() heard[#heard + 1] = "always" end)
+        Stubs.Fire("TEST_EVENT")
+        Stubs.Fire("TEST_EVENT")
+        T.same(heard, { "once", "always", "always" })
+    end)
+end)
+
 describe("unit listeners", function()
     it("deliver an event only for their units, with the event and its arguments", function()
         local ns = Stubs.LoadAddon()
