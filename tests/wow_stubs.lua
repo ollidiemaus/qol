@@ -70,6 +70,8 @@ local function newRegion(kind, parent, template)
         if state.combat and self.protected then
             error("ADDON_ACTION_BLOCKED: SetPoint on a protected frame in combat")
         end
+        -- SetPoint(point, x, y): offsets from the same point of the parent.
+        if type(relativeTo) == "number" then relativeTo, relativePoint, x, y = nil, point, relativeTo, relativePoint end
         self.points[#self.points + 1] = { point, relativeTo, relativePoint, x or 0, y or 0 }
     end
     function region:SetAllPoints(relativeTo)
