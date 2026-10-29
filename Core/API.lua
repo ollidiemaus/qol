@@ -10,6 +10,7 @@ ns.API = API
 
 local FEATURES = {
     viewport = "viewportEnabled",
+    clickcast = "clickCast",
 }
 
 -- Feature names are matched case-insensitively.
