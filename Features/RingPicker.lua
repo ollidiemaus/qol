@@ -56,17 +56,54 @@ end
 
 -- Forever's spell book page (a single one, the condensed spell book's): its dark top bar and the
 -- parchment's rims, as shares of its size (measured from interface/spellbook of client 1.60.1).
--- Without it, the same bar over plain parchment.
+-- Without it, retail's (below); without that too, the same bar over plain parchment.
 local PAGE = "spellbook-page-condensed-c60"
 local BAR = 0.081
 local RIMS = { top = 0.094, bottom = 0.026, left = 0.03, right = 0.026 }
 local BAR_COLOR = { 0.11, 0.08, 0.05 }
 local PAPER, PAPER_EDGE = { 0.94, 0.88, 0.74 }, { 0.78, 0.68, 0.50 }
 
+-- Retail's spell book page, as its halved spell book draws it (Blizzard_SpellBookFrame.xml of
+-- 12.1.5): a wooden top bar 54 high, a strip of the whole book's 1614 cut to the page's width, over
+-- a page that starts 3 above the bar's bottom, and the page curl at rest in its bottom right corner
+-- (the first of the flipbook's 8 frames, 4 × 2), 150 × 155 at 15 from the right and 6 from the
+-- bottom of a page 807 × 805. Our bar keeps Forever's height and the page its parchment's edges, so
+-- the editors lie the same on both.
+local RETAIL = {
+    bar = "spellbook-background-evergreen-header", barWidth = 1614, barHeight = 54, overlap = 3,
+    page = "spellbook-background-evergreen-right", pageWidth = 807, pageHeight = 805,
+    curl = "spellbook-corner-flipbook-evergreen", curlWidth = 150, curlHeight = 155, curlRight = 15, curlBottom = 6,
+}
+
 local function fill(parent, color, layer)
     local texture = parent:CreateTexture(nil, layer)
     texture:SetColorTexture(color[1], color[2], color[3])
     return texture
+end
+
+-- Retail's page on page (art: its background texture); false on a client without it.
+local function retailPage(page, art, edges, width, height)
+    if not (C_Texture.GetAtlasInfo(RETAIL.bar) and Picker.Atlas(art, RETAIL.page)) then return false end
+    local pageTop = edges.bar - math.floor(RETAIL.overlap * edges.bar / RETAIL.barHeight + 0.5)
+    art:ClearAllPoints()
+    art:SetPoint("TOPLEFT", 0, -pageTop)
+    art:SetPoint("BOTTOMRIGHT")
+    -- The bar's middle: its left end has the round cut the spell book's portrait sits in.
+    local bar = page:CreateTexture(nil, "BACKGROUND", nil, 2)
+    bar:SetAtlas(RETAIL.bar)
+    local share = math.min(1, width / RETAIL.barWidth)
+    bar:SetTexCoord((1 - share) / 2, (1 + share) / 2, 0, 1)
+    bar:SetPoint("TOPLEFT")
+    bar:SetPoint("TOPRIGHT")
+    bar:SetHeight(edges.bar)
+    local curl = page:CreateTexture(nil, "BACKGROUND", nil, 1)
+    if Picker.Atlas(curl, RETAIL.curl) then
+        local x, y = width / RETAIL.pageWidth, (height - pageTop) / RETAIL.pageHeight
+        curl:SetTexCoord(0, 0.25, 0, 0.5)
+        curl:SetSize(RETAIL.curlWidth * x, RETAIL.curlHeight * y)
+        curl:SetPoint("BOTTOMRIGHT", -RETAIL.curlRight * x, RETAIL.curlBottom * y)
+    end
+    return true
 end
 
 -- The spell book page a page's editor stands on, on the settings page below its title (top down
@@ -83,7 +120,7 @@ function Picker.NewPage(name, parent, top, width, height)
     }
     local art = page:CreateTexture(nil, "BACKGROUND")
     art:SetAllPoints()
-    if not Picker.Atlas(art, PAGE) then
+    if not (Picker.Atlas(art, PAGE) or retailPage(page, art, edges, width, height)) then
         art:SetColorTexture(PAPER_EDGE[1], PAPER_EDGE[2], PAPER_EDGE[3])
         local paper = fill(page, PAPER, "BORDER")
         paper:SetPoint("TOPLEFT", edges.left, -edges.top)

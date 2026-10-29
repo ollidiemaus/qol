@@ -693,6 +693,48 @@ describe("ring", function()
             T.truthy(rows + list.next:GetHeight() < list:GetHeight(), "rows " .. rows .. " high in " .. list:GetHeight())
         end)
 
+        it("stands on Forever's spell book page, else retail's, else plain colors", function()
+            local ns = start()
+            local Picker = ns.RingPicker
+            local function textures(page)
+                local list = {}
+                for _, region in ipairs(Stubs.state().regions) do
+                    if region.parent == page then list[#list + 1] = region end
+                end
+                return list
+            end
+            local function find(page, atlas)
+                for _, texture in ipairs(textures(page)) do
+                    if texture.atlas == atlas then return texture end
+                end
+            end
+            local atlases = Stubs.state().atlases
+            atlases["spellbook-page-condensed-c60"] = {}
+            local forever = Picker.NewPage(nil, UIParent, 54, 665, 493)
+            T.eq(#textures(forever), 1, "one texture")
+            T.truthy(find(forever, "spellbook-page-condensed-c60"), "Forever's page")
+
+            atlases["spellbook-page-condensed-c60"] = nil
+            atlases["spellbook-background-evergreen-header"] = {}
+            atlases["spellbook-background-evergreen-right"] = {}
+            atlases["spellbook-corner-flipbook-evergreen"] = {}
+            local retail, edges = Picker.NewPage(nil, UIParent, 54, 665, 493)
+            local bar = find(retail, "spellbook-background-evergreen-header")
+            T.eq(bar:GetHeight(), edges.bar, "the bar keeps Forever's height")
+            local share = 665 / 1614
+            T.eq(bar.texCoord[1], (1 - share) / 2, "the bar's middle")
+            T.eq(bar.texCoord[2], (1 + share) / 2)
+            local paper = find(retail, "spellbook-background-evergreen-right")
+            T.eq(paper:PointFor("TOPLEFT")[5], -(edges.bar - 2), "the page under the bar's bottom")
+            local curl = find(retail, "spellbook-corner-flipbook-evergreen")
+            T.eq(curl.texCoord[2], 0.25, "the curl's first frame")
+            T.eq(curl.texCoord[4], 0.5)
+
+            atlases["spellbook-background-evergreen-header"] = nil
+            local plain = Picker.NewPage(nil, UIParent, 54, 665, 493)
+            for _, texture in ipairs(textures(plain)) do T.truthy(texture.color, "a color, no atlas") end
+        end)
+
         describe("list", function()
             local function list() return QoLRingEditor.list end
             local function rows() return list().rows end
