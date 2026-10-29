@@ -869,4 +869,12 @@ describe("click casting page", function()
         for index, tab in ipairs(page().list.tabs) do tabs[index] = tab.text end
         T.same(tabs, { "Spells", "Items", "Macros" })
     end)
+
+    it("stands its tabs on the parchment's top edge, where retail's page starts", function()
+        local ns = open()
+        local list = page().list
+        local _, edges = ns.RingPicker.NewPage(nil, UIParent, 0, page():GetWidth(), page():GetHeight())
+        local tabsBottom = list:PointFor("TOPRIGHT")[5] + list.tabs[1]:PointFor("BOTTOMLEFT")[5]
+        T.eq(tabsBottom, -edges.top)
+    end)
 end)

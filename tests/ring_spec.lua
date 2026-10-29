@@ -720,12 +720,13 @@ describe("ring", function()
             atlases["spellbook-corner-flipbook-evergreen"] = {}
             local retail, edges = Picker.NewPage(nil, UIParent, 54, 665, 493)
             local bar = find(retail, "spellbook-background-evergreen-header")
-            T.eq(bar:GetHeight(), edges.bar, "the bar keeps Forever's height")
+            T.eq(bar:GetHeight(), edges.top + 3, "the bar reaches 3 past Forever's parchment edge")
+            T.eq(edges.bar, bar:GetHeight(), "edges.bar is retail's bar")
             local share = 665 / 1614
             T.eq(bar.texCoord[1], (1 - share) / 2, "the bar's middle")
             T.eq(bar.texCoord[2], (1 + share) / 2)
             local paper = find(retail, "spellbook-background-evergreen-right")
-            T.eq(paper:PointFor("TOPLEFT")[5], -(edges.bar - 2), "the page under the bar's bottom")
+            T.eq(paper:PointFor("TOPLEFT")[5], -edges.top, "the page starts where the tabs stand")
             local curl = find(retail, "spellbook-corner-flipbook-evergreen")
             T.eq(curl.texCoord[2], 0.25, "the curl's first frame")
             T.eq(curl.texCoord[4], 0.5)
@@ -733,6 +734,15 @@ describe("ring", function()
             atlases["spellbook-background-evergreen-header"] = nil
             local plain = Picker.NewPage(nil, UIParent, 54, 665, 493)
             for _, texture in ipairs(textures(plain)) do T.truthy(texture.color, "a color, no atlas") end
+        end)
+
+        it("stands its tabs on the parchment's top edge, where retail's page starts", function()
+            local ns = start()
+            SlashCmdList.QOL("ring")
+            local editor, list = QoLRingEditor, QoLRingEditor.list
+            local _, edges = ns.RingPicker.NewPage(nil, UIParent, 0, editor:GetWidth(), editor:GetHeight())
+            local tabsBottom = list:PointFor("TOPRIGHT")[5] + list.tabs[1]:PointFor("BOTTOMLEFT")[5]
+            T.eq(tabsBottom, -edges.top)
         end)
 
         describe("list", function()

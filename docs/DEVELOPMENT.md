@@ -479,13 +479,15 @@ the cursor and how to read it off the cursor. A character's ring is the entries 
   stretched over it; its dark top bar is its upper 8.1% and the parchment lies inside rims of 9.4%
   (top), 2.6% (bottom), 3% (left) and 2.6% (right), measured from the texture of client 1.60.1.
   Without that atlas (retail) it's retail's spell book page as its halved spell book draws it
-  (`Blizzard_SpellBookFrame.xml`): `spellbook-background-evergreen-header` as the bar, at Forever's
-  height (the game's 54 squashed to it) and cut to the page's width from the middle of the book's
-  1614 (its left end has the portrait's round cut), over `spellbook-background-evergreen-right`
-  from 3/54 of the bar above its bottom, with the page curl (`spellbook-corner-flipbook-evergreen`,
-  the first of its 4 × 2 frames, still) in the bottom right corner, all scaled from a page of
-  807 × 805. The parchment's edges stay Forever's, so the editors lie the same on both; retail's
-  paper reaches past them. Without either, a dark bar over plain parchment colors. Text on the paper is
+  (`Blizzard_SpellBookFrame.xml`): `spellbook-background-evergreen-header` as the bar, cut to the
+  page's width from the middle of the book's 1614 (its left end has the portrait's round cut), over
+  `spellbook-background-evergreen-right` from Forever's parchment edge, where the tabs stand, with
+  the page curl (`spellbook-corner-flipbook-evergreen`, the first of its 4 × 2 frames, still) in the
+  bottom right corner, all scaled from a page of 807 × 805. The bar reaches 3 below the paper's top,
+  as the game's 54 over its page from 51, where its tabs stand too; so it comes out near the game's
+  own height. Don't squash it to Forever's bar: the paper would then start above the tabs. The
+  parchment's edges stay Forever's, so the editors lie the same on both; retail's paper reaches
+  past them. Without either, a dark bar over plain parchment colors. Text on the paper is
   ink: `SPELLBOOK_FONT_COLOR` (or Forever 1.60.1's value) without the font's shadow
   (`RingPicker.Ink`). The page wraps `Page:Refresh` to refresh the editor too, so it's up to date
   whenever the window shows the page and when the switch changes.

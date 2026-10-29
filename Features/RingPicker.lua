@@ -67,10 +67,10 @@ local PAPER, PAPER_EDGE = { 0.94, 0.88, 0.74 }, { 0.78, 0.68, 0.50 }
 -- 12.1.5): a wooden top bar 54 high, a strip of the whole book's 1614 cut to the page's width, over
 -- a page that starts 3 above the bar's bottom, and the page curl at rest in its bottom right corner
 -- (the first of the flipbook's 8 frames, 4 × 2), 150 × 155 at 15 from the right and 6 from the
--- bottom of a page 807 × 805. Our bar keeps Forever's height and the page its parchment's edges, so
--- the editors lie the same on both.
+-- bottom of a page 807 × 805. Our page starts at Forever's parchment edge, where the tabs stand as
+-- on retail's (the bar 3 taller), so the editors lie the same on both.
 local RETAIL = {
-    bar = "spellbook-background-evergreen-header", barWidth = 1614, barHeight = 54, overlap = 3,
+    bar = "spellbook-background-evergreen-header", barWidth = 1614, overlap = 3,
     page = "spellbook-background-evergreen-right", pageWidth = 807, pageHeight = 805,
     curl = "spellbook-corner-flipbook-evergreen", curlWidth = 150, curlHeight = 155, curlRight = 15, curlBottom = 6,
 }
@@ -81,12 +81,13 @@ local function fill(parent, color, layer)
     return texture
 end
 
--- Retail's page on page (art: its background texture); false on a client without it.
+-- Retail's page on page (art: its background texture), its bar's height in edges.bar; false on a
+-- client without it.
 local function retailPage(page, art, edges, width, height)
     if not (C_Texture.GetAtlasInfo(RETAIL.bar) and Picker.Atlas(art, RETAIL.page)) then return false end
-    local pageTop = edges.bar - math.floor(RETAIL.overlap * edges.bar / RETAIL.barHeight + 0.5)
+    edges.bar = edges.top + RETAIL.overlap
     art:ClearAllPoints()
-    art:SetPoint("TOPLEFT", 0, -pageTop)
+    art:SetPoint("TOPLEFT", 0, -edges.top)
     art:SetPoint("BOTTOMRIGHT")
     -- The bar's middle: its left end has the round cut the spell book's portrait sits in.
     local bar = page:CreateTexture(nil, "BACKGROUND", nil, 2)
@@ -98,7 +99,7 @@ local function retailPage(page, art, edges, width, height)
     bar:SetHeight(edges.bar)
     local curl = page:CreateTexture(nil, "BACKGROUND", nil, 1)
     if Picker.Atlas(curl, RETAIL.curl) then
-        local x, y = width / RETAIL.pageWidth, (height - pageTop) / RETAIL.pageHeight
+        local x, y = width / RETAIL.pageWidth, (height - edges.top) / RETAIL.pageHeight
         curl:SetTexCoord(0, 0.25, 0, 0.5)
         curl:SetSize(RETAIL.curlWidth * x, RETAIL.curlHeight * y)
         curl:SetPoint("BOTTOMRIGHT", -RETAIL.curlRight * x, RETAIL.curlBottom * y)
