@@ -53,6 +53,7 @@ local function buildInterface(page)
 
     page:Header("left", L.SECTION_PLAYER_FRAME)
     page:Checkbox("left", "druidManaBar", L.DRUID_MANA_BAR, L.DRUID_MANA_BAR_TIP)
+    page:Checkbox("left", "hidePortraitHitText", L.HIDE_PORTRAIT_HIT_TEXT, L.HIDE_PORTRAIT_HIT_TEXT_TIP)
 
     page:Header("left", L.SECTION_EDIT_MODE)
     page:Checkbox("left", "pastScreenEdge", L.PAST_SCREEN_EDGE, L.PAST_SCREEN_EDGE_TIP)

@@ -536,6 +536,10 @@ local function newPlayerFrame(raw)
     container.FrameFlash = container:CreateTexture()
     container.FrameFlash:SetAtlas(GLOW_ATLAS.player)
     container.FrameFlash:SetPoint("CENTER", container, "CENTER", -1.5, 1)
+    -- The portrait hit text CombatFeedback_Initialize gets, hidden until the player takes a hit.
+    main.HitIndicator = newRegion("Frame", main)
+    main.HitIndicator.HitText = main.HitIndicator:CreateFontString()
+    main.HitIndicator.HitText:Hide()
     state.playerFrame = raw
     local frame = setmetatable({}, {
         __index = raw,
@@ -1356,7 +1360,9 @@ local function install()
         newUnitButton(unit, name).healthbar = bar
     end
     G.PlayerFrame = newPlayerFrame(G.PlayerFrame)
-    newUnitButton("pet", "PetFrame")
+    -- The pet frame's portrait hit text, a global font string in a frame under it.
+    G.PetHitIndicator = newRegion("Frame", newUnitButton("pet", "PetFrame")):CreateFontString()
+    G.PetHitIndicator:Hide()
     -- The party frames from PartyFrame's pool (state.partyFrames, each with its pet's frame), and
     -- the boss frames.
     state.partyFrames = {}

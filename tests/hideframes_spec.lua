@@ -12,6 +12,16 @@ local function coords()
     return MinimapCluster.MinimapContainer.PlayerCoords
 end
 
+local function isUnder(region, frame)
+    local node = region:GetParent()
+    while node and node ~= frame do node = node:GetParent() end
+    return node == frame
+end
+
+local function playerHitText()
+    return PlayerFrame.PlayerFrameContent.PlayerFrameContentMain.HitIndicator.HitText
+end
+
 describe("hiding frames", function()
     it("leaves every frame alone by default", function()
         start()
@@ -21,6 +31,10 @@ describe("hiding frames", function()
         T.eq(coords():GetParent(), MinimapCluster.MinimapContainer)
         T.eq(ChatFrameMenuButton:GetParent(), ChatFrame1ButtonFrame)
         T.eq(TextToSpeechButtonFrame:GetParent(), UIParent)
+        playerHitText():Show()
+        PetHitIndicator:Show()
+        T.truthy(playerHitText():IsVisible())
+        T.truthy(PetHitIndicator:IsVisible())
     end)
 
     it("hides the chosen frames at login, even if the game shows them again", function()
@@ -34,12 +48,47 @@ describe("hiding frames", function()
         T.falsy(QuickJoinToastButton:IsVisible())
     end)
 
+    it("hides the player's and the pet's portrait hit text, even when the game shows it", function()
+        start({ hidePortraitHitText = true })
+        local hitText = playerHitText()
+        T.falsy(isUnder(hitText, PlayerFrame.PlayerFrameContent.PlayerFrameContentMain), "left the player frame")
+        T.falsy(isUnder(PetHitIndicator, PetFrame), "left the pet frame")
+        -- CombatFeedback_OnCombatEvent shows the text on every hit.
+        hitText:Show()
+        PetHitIndicator:Show()
+        T.falsy(hitText:IsVisible())
+        T.falsy(PetHitIndicator:IsVisible())
+    end)
+
     it("puts a frame back where it was when turned off", function()
         local ns = start({ hideMinimapCoords = true })
         ns.Options:Set("hideMinimapCoords", false)
         Stubs.RunTimers()
         T.eq(coords():GetParent(), MinimapCluster.MinimapContainer)
         T.truthy(coords():IsVisible())
+    end)
+
+    it("brings the portrait hit text back when turned off", function()
+        local ns = start()
+        local playerParent, petParent = playerHitText():GetParent(), PetHitIndicator:GetParent()
+        ns.Options:Set("hidePortraitHitText", true)
+        Stubs.RunTimers()
+        ns.Options:Set("hidePortraitHitText", false)
+        Stubs.RunTimers()
+        T.eq(playerHitText():GetParent(), playerParent)
+        T.eq(PetHitIndicator:GetParent(), petParent)
+        playerHitText():Show()
+        PetHitIndicator:Show()
+        T.truthy(playerHitText():IsVisible())
+        T.truthy(PetHitIndicator:IsVisible())
+    end)
+
+    it("hides the player's hit text on a client without the pet's", function()
+        Stubs.LoadAddon()
+        _G.PetHitIndicator = nil
+        Stubs.Login({ hidePortraitHitText = true })
+        playerHitText():Show()
+        T.falsy(playerHitText():IsVisible())
     end)
 
     it("waits for the end of combat to move a protected frame", function()

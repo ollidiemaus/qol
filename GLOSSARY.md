@@ -78,3 +78,8 @@ _Avoid_: raid frame (that's one kind), portrait
 **Clash**:
 Two bindings on the same combination that both work at once, because the character has both actions.
 _Avoid_: conflict, duplicate (a binding that doesn't work for this character right now isn't one)
+
+**Portrait hit text**:
+The damage, healing and miss text the game flashes over the player's and the pet's portrait when they
+take a hit or a heal.
+_Avoid_: combat text (that's the floating combat text in the world), unit frame numbers

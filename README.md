@@ -118,6 +118,9 @@ the default map marks dungeon entrances itself.
   energy while you're shapeshifted, in the frame's own art (the one the game uses for a third bar).
   Its numbers follow the game's Status Text setting, like the other bars. Off by default; it stays
   away in a vehicle.
+- **Hide portrait hit text:** no more damage and heal numbers, or Dodge, Parry, Miss, Block and Immune,
+  flashing over your and your pet's portrait. Floating combat text in the world stays as it is. Off by
+  default.
 
 ### Chat commands
 
@@ -350,8 +353,8 @@ controller interface the button opens the window once you close the game's optio
 The pages:
 
 - **Automation:** junk selling, repairs, quests, faster auto loot.
-- **Interface:** hiding the system and bag bars, the combined bags, mana in bear and cat form, frames
-  past the screen edge, tooltips, health bars in class color.
+- **Interface:** hiding the system and bag bars, the combined bags, mana in bear and cat form, portrait hit
+  text, frames past the screen edge, tooltips, health bars in class color.
 - **Chat:** the chat buttons, the combat log, names in class color, `/rl`.
 - **Mail:** the bookmarks' names.
 - **Action Bars**, **Minimap**, **World map** (on Forever), **Viewport**, **Ring**, **Click casting**

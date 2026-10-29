@@ -70,6 +70,7 @@ local DEFAULTS = {
     classColorFocus = false,
     classColorFocusTarget = false,
     druidManaBar = false,
+    hidePortraitHitText = false,
     pastScreenEdge = false,
 
     reloadCommand = true,

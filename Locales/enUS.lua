@@ -89,6 +89,8 @@ L.SECTION_PLAYER_FRAME = "Player frame"
 L.DRUID_MANA_BAR = "Mana in bear and cat form"
 L.DRUID_MANA_BAR_TIP = "Shows your mana in a third bar below rage or energy while you're in bear or cat form, "
     .. "in the player frame's own style. Its numbers follow the game's Status Text setting."
+L.HIDE_PORTRAIT_HIT_TEXT = "Hide portrait hit text"
+L.HIDE_PORTRAIT_HIT_TEXT_TIP = "Hides the damage and healing numbers that flash over your and your pet's portrait."
 
 L.SECTION_EDIT_MODE = "Edit Mode"
 L.PAST_SCREEN_EDGE = "Frames past the screen edge"

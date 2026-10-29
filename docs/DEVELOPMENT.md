@@ -226,6 +226,16 @@ the option off gives the frames we changed Blizzard's insets back and anchors th
 come back inside the screen. Several frames are protected, so `ns.Later` waits for the end of combat
 (Edit Mode can't open in combat anyway).
 
+Portrait hit text (the damage, heal and miss text over the player's and the pet's portrait) has no
+setting of the game's. The player frame's `HitIndicator.HitText` and the global `PetHitIndicator`
+font strings go to the hidden holder like the frames above. `CombatFeedback_OnCombatEvent` calls
+`Show()` on the text on every hit, and the fade (`CombatFeedback_OnUpdate`) only runs while it
+`IsVisible()`, so under the holder nothing shows and the fade does nothing. Text left shown when the
+option is turned off is hidden by that fade on the next drawn frame, since its time is up. No
+Blizzard function is hooked and the frames' events and scripts stay theirs. Font strings aren't
+protected, but the change goes through `ns.Later` like the other HideFrames options. Forever has no Camelot copy of this code;
+its player and pet frames use Mainline's `CombatFeedback`.
+
 The combat log can't be closed in the default UI, and the dock's own functions (`FCF_Close`,
 `FCF_UnDockFrame`) write to the chat frames and the dock. So `ChatFrame2` goes to the hidden holder
 and its tab is scaled down to 0.001: the dock gives every tab its parent, width and anchor again on
@@ -956,6 +966,8 @@ Things only the real client can confirm:
   summoning a pet, and no "tainted by" error shows up in combat afterwards.
 - Hiding the system bar leaves the main action bar where it was (on Forever it is anchored to the
   micro menu), and the micro menu still shows on the vehicle bar.
+- Hide portrait hit text: no numbers or Dodge/Parry over the player's and the pet's portrait in
+  combat, also in a vehicle; unticked, they come back at once, and no "tainted by" error shows up.
 - Junk selling and repairs (including guild repairs) at a merchant.
 - The vendor price of a stack in your bags shows the price of one, and `Vendor x<count>` with the
   stack total while Shift is held (pressing Shift while pointing flips it within a moment), with

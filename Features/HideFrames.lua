@@ -3,7 +3,7 @@ local Options = ns.Options
 
 -- Hides pieces of the default UI the player doesn't want: the system bar (micro menu), the bag
 -- bar, the coordinates under the minimap, the social button above the chat and the other buttons
--- next to the chat.
+-- next to the chat, and the hit text over the player's and the pet's portrait.
 local HideFrames = {}
 ns.HideFrames = HideFrames
 
@@ -24,6 +24,14 @@ HideFrames.TARGETS = {
     hideChatButtons = function()
         return ChatFrameMenuButton, ChatFrameChannelButton, ChatFrameToggleVoiceDeafenButton,
             ChatFrameToggleVoiceMuteButton, TextToSpeechButtonFrame
+    end,
+    -- The damage, heal and miss text over the player's and the pet's portrait. The game shows it on
+    -- every hit and fades it with an OnUpdate that only runs while it's visible.
+    hidePortraitHitText = function()
+        local content = PlayerFrame and PlayerFrame.PlayerFrameContent
+        local main = content and content.PlayerFrameContentMain
+        local indicator = main and main.HitIndicator
+        return indicator and indicator.HitText, PetHitIndicator
     end,
 }
 
