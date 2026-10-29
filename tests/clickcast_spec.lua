@@ -173,6 +173,36 @@ describe("click casting keys", function()
         T.eq(hoverBinding("F"), nil)
     end)
 
+    it("keeps the keys over a frame's health bar, which takes the mouse, in combat too", function()
+        start({ bind("F", spell(RENEW)) })
+        local bar = PlayerFrame.HealthBarsContainer.HealthBar
+        -- From the frame onto its bar: the game leaves the frame first.
+        Stubs.PointAt(PlayerFrame)
+        Stubs.PointAway(PlayerFrame)
+        Stubs.PointAt(bar)
+        T.eq(hoverBinding("F"), "CLICK QoLClickCastKeys:k1")
+        Stubs.PointAway(bar)
+        T.eq(hoverBinding("F"), nil)
+        T.eq(press(bar, "F"), "spell:139 on player", "straight onto the bar")
+        Stubs.state().combat = true
+        T.eq(press(party(2).HealthBarsContainer.HealthBar, "F"), "spell:139 on party2")
+        Stubs.PointAt(party(3).HealthBarsContainer.HealthBar)
+        Stubs.HideUnitFrame(party(3))
+        T.eq(hoverBinding("F"), nil, "the frame hid under the mouse")
+    end)
+
+    it("uses Target and Menu on other clicks on the unit of the frame whose bar the mouse is over", function()
+        start({ bind("ALT-BUTTON1", TARGET) })
+        Stubs.PointAt(party(1))
+        Stubs.PointAway(party(1))
+        Stubs.PointAt(party(2).HealthBarsContainer.HealthBar)
+        Stubs.Hold("ALT")
+        local before = #Stubs.state().usedActions
+        Stubs.ClickUnitFrame(party(2), "LeftButton")
+        Stubs.Hold()
+        T.eq(usedSince(before), "target on party2")
+    end)
+
     it("acts when the key goes down", function()
         start({ bind("F", spell(RENEW)) })
         Stubs.PointAt(party(1))
@@ -315,14 +345,36 @@ describe("click casting frames", function()
         T.eq(click(frame, "LeftButton", "SHIFT"), "spell:139 on raid9")
     end)
 
+    -- Grid2's frames module as far as QoL looks at it: the frames it registered, by name.
+    local function grid2()
+        _G.Grid2Frame = { registeredFrames = {} }
+        function Grid2Frame:RegisterFrame(frame) self.registeredFrames[frame:GetName()] = frame end
+        local frame = Stubs.NewUnitButton("raid1", "Grid2LayoutHeader1UnitButton1")
+        Grid2Frame:RegisterFrame(frame)
+        return frame
+    end
+
+    it("takes Grid2's frames, those there already and those it makes later", function()
+        local first
+        start({ bind("SHIFT-BUTTON1", spell(RENEW)) }, nil, function() first = grid2() end)
+        T.eq(click(first, "LeftButton", "SHIFT"), "spell:139 on raid1")
+        local later = Stubs.NewUnitButton("raid2", "Grid2LayoutHeader1UnitButton2")
+        Grid2Frame:RegisterFrame(later)
+        Stubs.RunTimers()
+        T.eq(click(later, "LeftButton", "SHIFT"), "spell:139 on raid2")
+    end)
+
     it("leaves another click casting addon's ClickCastFrames and ClickCastHeader alone", function()
-        local theirs, header = {}, {}
+        local theirs, header, grid
         start({ bind("SHIFT-BUTTON1", spell(RENEW)) }, nil, function()
+            theirs, header = {}, {}
             _G.ClickCastFrames, _G.ClickCastHeader = theirs, header
+            grid = grid2()
         end)
         T.eq(ClickCastFrames, theirs)
         T.eq(ClickCastHeader, header)
         T.eq(click(party(1), "LeftButton", "SHIFT"), "spell:139 on party1", "Blizzard's frames still work")
+        T.eq(click(grid, "LeftButton", "SHIFT"), nil, "Grid2's frames are the other addon's")
     end)
 end)
 
@@ -426,7 +478,7 @@ describe("click casting page", function()
         T.eq(window.order[ring + 1], "clickCast")
         T.eq(page():GetParent(), ns.SettingsPanel.pages.clickCast.frame)
         T.same(shown(), { "Target: Left", "Menu: Right" })
-        T.eq(note(), "Click casting is off: set up your bindings, then turn it on at the top of this page.")
+        T.eq(note(), "Click casting is off: turn it on at the top of this page to change your bindings.")
         SlashCmdList.QOL("click")
         T.falsy(QoLSettings:IsShown(), "closed again")
     end)
@@ -659,6 +711,54 @@ describe("click casting page", function()
         T.truthy(page().rows[1].box:IsEnabled(), "boxes again")
         T.eq(note(), "Click a spell, item or macro on the right to bind it, or drag one here. Click a "
             .. "binding's box to change its combination; a right-click removes the binding.")
+    end)
+
+    it("greys out and changes nothing while click casting is off, and follows the switch", function()
+        local ns = open({ bind("SHIFT-BUTTON1", spell(RENEW)) }, {})
+        local state = Stubs.state()
+        local switch = ns.SettingsPanel.pages.clickCast.controls[1]
+        T.eq(switch.key, "clickCast")
+        local function dimmed()
+            return { page().rows[1]:GetParent():GetAlpha(), page().list:GetAlpha(), page().quick:GetAlpha(),
+                page().note:GetAlpha() }
+        end
+        T.same(dimmed(), { 0.5, 0.5, 0.5, 1 }, "all but the note")
+        T.falsy(page().quick:IsEnabled(), "no quick bind")
+        T.falsy(page().rows[1].box:IsEnabled(), "no boxes")
+        page().rows[1]:RunScript("OnEnter")
+        T.same(tooltip(), {}, "no word on what a click does")
+        Stubs.Hover(action("Flash Heal"))
+        T.same(tooltip(), {})
+        Stubs.Hover(nil)
+        page().rows[1].box:RunScript("OnClick", "LeftButton")
+        T.falsy(page().rows[1].box.selected, "no box waits")
+        page().quick:Click()
+        T.eq(page().quick.text, "Quick bind")
+        page().rows[1]:RunScript("OnClick", "RightButton")
+        action("Flash Heal"):Click()
+        state.cursorInfo = { "spell", 1, "spell", FLASH_HEAL, FLASH_HEAL }
+        page().rows[1]:RunScript("OnReceiveDrag")
+        state.cursorInfo = nil
+        T.same(shown(), { "Renew: Shift-Left", "Target: |cff808080Not Bound|r", "Menu: |cff808080Not Bound|r" },
+            "nothing removed or added")
+        T.same(QoLDB.clickCast[ME], { bind("SHIFT-BUTTON1", spell(RENEW)) })
+
+        switch.widget:Click()
+        T.truthy(ns.Options:Get("clickCast"), "on")
+        T.same(dimmed(), { 1, 1, 1, 1 })
+        T.truthy(page().quick:IsEnabled(), "quick bind")
+        T.truthy(page().rows[1].box:IsEnabled(), "boxes")
+        T.truthy(note():find("^Click a spell"))
+
+        page().rows[1].box:RunScript("OnClick", "LeftButton")
+        switch.widget:Click()
+        T.falsy(page().rows[1].box.selected, "turning it off stops a box waiting")
+        T.truthy(Stubs.TypeKey("G"), "keys go on to the game")
+        switch.widget:Click()
+        page().quick:Click()
+        switch.widget:Click()
+        T.eq(page().quick.text, "Quick bind", "and ends quick bind")
+        T.same(QoLDB.clickCast[ME], { bind("SHIFT-BUTTON1", spell(RENEW)) })
     end)
 
     describe("quick bind", function()

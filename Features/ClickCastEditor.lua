@@ -18,7 +18,8 @@ local Picker = ns.RingPicker
 --   it gets the new action, and the note says what it had.
 -- A binding this character can't use now is greyed out; a clash, or a click the game's own Click
 -- Casting takes over, is in red with a tooltip why. Nothing changes in combat: the page still shows
--- the bindings, with its buttons off and a note why.
+-- the bindings, with its buttons off and a note why. While click casting is off, nothing changes
+-- either, and the whole editor is greyed out but for the note saying so (its pages still turn).
 local Editor = {}
 ns.ClickCastEditor = Editor
 
@@ -62,6 +63,11 @@ local quick
 
 local function bindings() return ClickCast.List() end
 
+local function on() return Options:Get("clickCast") == true end
+
+-- The bindings change out of combat only, and while click casting is on.
+local function frozen() return InCombatLockdown() or not on() end
+
 local function actionName(action)
     local unit = UNIT_ACTIONS[action.kind]
     if unit then return unit.name end
@@ -87,7 +93,7 @@ local function say(message)
     if not message then
         message = InCombatLockdown() and L.CLICK_CAST_EDITOR_COMBAT
             or quick and L.CLICK_CAST_QUICK_HINT
-            or Options:Get("clickCast") and L.CLICK_CAST_EDITOR_HINT or L.CLICK_CAST_EDITOR_OFF
+            or on() and L.CLICK_CAST_EDITOR_HINT or L.CLICK_CAST_EDITOR_OFF
     end
     editor.note:SetText(message)
 end
@@ -297,7 +303,7 @@ local function onQuickKey(frame, key)
 end
 
 local function onQuick()
-    if InCombatLockdown() then return end
+    if frozen() then return end
     if quick then
         endQuick()
     else
@@ -327,7 +333,7 @@ local function bound(entry)
 end
 
 local function onListClick(entry, mouseButton)
-    if InCombatLockdown() or not entry then return end
+    if frozen() or not entry then return end
     if quick then
         quickBind(entry, ClickCast.KEY_OF_BUTTON[mouseButton])
     elseif mouseButton == "LeftButton" then
@@ -344,7 +350,7 @@ end
 
 -- A spell, item or macro dropped on the page gets a binding.
 local function onReceiveDrag()
-    if InCombatLockdown() or not GetCursorInfo() then return end
+    if frozen() or not GetCursorInfo() then return end
     local entry = Entries.FromCursor()
     ClearCursor()
     if entry and BINDABLE[entry.kind] then
@@ -358,12 +364,13 @@ end
 -- Rows
 ---------------------------------------------------------------------------------------------------
 
+-- The tooltips say what a click does only while click casting is on.
 local function onRowEnter(row)
     local binding = row.binding
     if row.unbound then
         GameTooltip:SetOwner(row, "ANCHOR_RIGHT")
         GameTooltip:SetText(actionName(row.unbound))
-        GameTooltip:AddLine(L.CLICK_CAST_UNBOUND_TIP, 0, 1, 0, true)
+        if on() then GameTooltip:AddLine(L.CLICK_CAST_UNBOUND_TIP, 0, 1, 0, true) end
         GameTooltip:Show()
     end
     if not binding then return end
@@ -386,7 +393,7 @@ local function onRowEnter(row)
         end
         if mark.takenOver then GameTooltip:AddLine(L.CLICK_CAST_TAKEN_OVER, RED[1], RED[2], RED[3], true) end
     end
-    GameTooltip:AddLine(L.CLICK_CAST_BINDING_TIP, 0, 1, 0, true)
+    if on() then GameTooltip:AddLine(L.CLICK_CAST_BINDING_TIP, 0, 1, 0, true) end
     GameTooltip:Show()
 end
 
@@ -395,13 +402,13 @@ local function onRowLeave(row)
 end
 
 local function onRowClick(row, mouseButton)
-    if InCombatLockdown() or not row.index then return end
+    if frozen() or not row.index then return end
     if mouseButton == "RightButton" then remove(row.index) end
 end
 
 local function onBoxClick(box, mouseButton)
     local row = box:GetParent()
-    if InCombatLockdown() then return end
+    if frozen() then return end
     if mouseButton == "RightButton" then
         if row.index then
             remove(row.index)
@@ -489,6 +496,8 @@ local function newBindingsColumn(edges, width)
     editor.note:SetPoint("TOP", column, "BOTTOM", 0, -(6 + PAGE_BUTTON + INSET))
     editor.note:SetWidth(width - 2 * INSET)
     Picker.Ink(editor.note)
+    -- What's greyed out while click casting is off (the list joins them).
+    editor.parts = { editor.title, column, editor.nextPage, editor.previous, editor.pageText, editor.quick }
 end
 
 -- What this character has, to bind, on the right of the page.
@@ -501,16 +510,23 @@ local function newListColumn(edges, height)
         has = bound,
         clicks = { "AnyUp" },
         click = onListClick,
-        hint = function() return quick and L.CLICK_CAST_LIST_QUICK or L.CLICK_CAST_LIST_ADD end,
+        hint = function()
+            if not on() then return nil end
+            return quick and L.CLICK_CAST_LIST_QUICK or L.CLICK_CAST_LIST_ADD
+        end,
         wheel = onListWheel,
     })
     editor.list = column
+    editor.parts[#editor.parts + 1] = column
 end
 
--- The buttons and boxes work out of combat only.
+-- The buttons and boxes work out of combat only (locked), and while click casting is on; while it's
+-- off, the editor is greyed out but for the note.
 local function lock(locked)
+    locked = locked or not on()
     editor.quick:SetEnabled(not locked)
     for _, row in ipairs(editor.rows) do row.box:SetEnabled(not locked) end
+    for _, part in ipairs(editor.parts) do part:SetAlpha(on() and 1 or 0.5) end
 end
 
 -- Builds the editor on a settings page (parent), top down from its top, width × height.
@@ -552,9 +568,13 @@ function Editor:Create(parent, top, width, height)
 end
 
 -- Shows the bindings and what this character has as they are now: the settings window does it
--- when it shows the page, and when the switch changes.
+-- when it shows the page, and when the switch changes (off stops a box waiting and quick bind).
 function Editor:Refresh()
     if not editor then return end
+    if not on() then
+        stopWaiting()
+        endQuick()
+    end
     render()
     picker:Fill()
     lock(InCombatLockdown())

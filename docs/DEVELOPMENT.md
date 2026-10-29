@@ -86,8 +86,9 @@ Forever beta. So:
   `AddDataProvider` (the map's own extension point; it calls each provider in a secure call of its
   own) and `SetMapID` (only from a click on one of our own pins, like a click on a zone). Click
   casting's, all out of combat (more under "Click casting" below): `SecureHandlerWrapScript` on the
-  unit frames' `OnEnter`, `OnLeave` and `OnHide` (the secure handlers' own way to add a snippet to
-  a frame's script, run as secure code), `SecureHandlerSetFrameRef` on our own header,
+  unit frames' `OnEnter`, `OnLeave` and `OnHide`, and on those of their protected parts that take the
+  mouse, found with `GetChildren` (a read) (the secure handlers' own way to add a snippet to a
+  frame's script, run as secure code), `SecureHandlerSetFrameRef` on our own header,
   `PartyFrame.PartyMemberFramePool:EnumerateActive()` (a read of the pool) and
   `hooksecurefunc("CompactUnitFrame_SetUpFrame", ...)`: a hook on a global function, not on a
   frame's method, which runs after it and only notes the frame. One
@@ -583,7 +584,14 @@ makes one). A binding with any other action, or not shaped like one, stays saved
   the keys button (`SetBindingClick(true, ...)`, priority override bindings, so a ring's key gives way
   over a unit frame), and keeps the frame's handle (`hovered`, in the header's environment); leaving
   or hiding that frame clears them, and another frame hiding (the target of target losing its unit)
-  doesn't. The tests' handles are one per frame, as the game's are, so they compare. The wraps stay
+  doesn't. The parts of a frame that take the mouse and are protected get the same wraps: Forever's
+  health and mana bars (`TextStatusBar`, `enableMouseMotion`) and their containers, with
+  `SecureFrameParentPropagationTemplate`, take the mouse from the frame, and the game leaves the
+  frame before it enters the bar, so without them the keys went off over the bars. The snippet walks
+  up from the part with `GetParent` to the frame with `qol-clickcast`, and `hovered` is the part, so
+  leaving the frame for its bar keeps the keys. Only protected parts: in combat a handle's
+  `GetParent` reaches a protected parent only, so the walk works there too. The tests' handles are
+  one per frame, as the game's are, so they compare. The wraps stay
   once made (unwrapping could take
   off another addon's wrap made later); with click casting off, `qol-clickcast` is gone and they do
   nothing.
@@ -607,6 +615,13 @@ makes one). A binding with any other action, or not shaped like one, stays saved
   as they build their frames (at their load or at login); frames joining then get their bindings at
   login, since nothing runs before it. Turned on later, QoL provides them then, and the frames
   another addon built before only join after a reload.
+- Grid2 joins click casting only through a global `Clique` (it gives its frames Clique's
+  `ClickCastUnitTemplate`, and sets `Clique.header` on its headers). QoL doesn't pose as Clique: the
+  template is XML another addon can't declare a second time, and other addons read `Clique` as
+  "Clique is here". Instead, where QoL provides the header, it hooks `Grid2Frame:RegisterFrame`
+  (`hooksecurefunc` on Grid2's method, after it) and takes the frames already in
+  `Grid2Frame.registeredFrames`, so Grid2's frames join like any other, turned on later too. Where
+  another click casting addon has the header, Grid2's frames are that addon's.
 - A spell with a rank (a digit in `C_Spell.GetSpellSubtext`) is cast by name, so the highest rank
   known is cast. Items use `item:<id>`, macros their name.
 - The header, the buttons and the frames change on the option, the bindings, and, while it's on,
@@ -618,12 +633,19 @@ makes one). A binding with any other action, or not shaped like one, stays saved
   `FULLSCREEN_DIALOG` that takes the keyboard, the mouse buttons and the wheel
   (`CreateKeyChordStringUsingMetaKeyState`; a combination with the Mac's Cmd, `META-`, is refused,
   since combinations have only `ALT-CTRL-SHIFT-`); a binding added from the list or the cursor is
-  saved only once it has a combination. Target and Menu stay listed while nothing binds them, as the
-  game's Click Casting lists them, with a box that binds them again and no right-click removal: they
-  aren't in the list on the right. Quick bind replacing a clash replaces every working binding on
-  the combination and names them all. Quick bind is a keyboard frame that keeps a key only while the
-  mouse is over a row of the list (`List:EntryUnderMouse`) and passes the others on
-  (`SetPropagateKeyboardInput`, out of combat: quick bind ends on `PLAYER_REGEN_DISABLED`).
+  saved only once it has a combination. Keys are refused where `IsKeyPressIgnoredForBinding` (the
+  game's Key Bindings' test) says so, but not mouse buttons: on Forever it ignores `BUTTON1` and
+  `BUTTON2` too, which kept Left and Right (Alt-Left: Target, say) from being bound. Target and Menu
+  stay listed while nothing binds them, as the game's Click Casting lists them, with a box that
+  binds them again and no right-click removal: they aren't in the list on the right. Quick bind
+  replacing a clash replaces every working binding on the combination and names them all. Quick bind
+  is a keyboard frame that keeps a key only while the mouse is over a row of the list
+  (`List:EntryUnderMouse`) and passes the others on (`SetPropagateKeyboardInput`, out of combat:
+  quick bind ends on `PLAYER_REGEN_DISABLED`).
+- While click casting is off the page changes nothing, as in combat: everything but the note is at
+  half alpha (`editor.parts`), the boxes and Quick bind are disabled, the clicks, drags and
+  right-clicks do nothing, and the tooltips leave out what a click does. Turning it off stops a box
+  waiting and ends quick bind. The pages still turn, so the bindings can be read.
 
 ## Settings pages
 
@@ -1063,19 +1085,22 @@ Things only the real client can confirm:
     Adding with a click, a key, the wheel, Button 4 and 5 and every modifier; Escape; a box's new
     combination; right-click; dragging from the spell book, the bags and the macro window. Quick bind
     with each of those over a row, keys going on to the game away from the list, Escape not closing
-    the window.
+    the window. Click casting off: the page greyed out (the note isn't) and nothing changes; on
+    again, it is as before. Alt-Left and Ctrl-Right bound to Target and Menu, and Left to a spell.
   - Clicks on the player, target, target of target, focus, pet, party (and party pet), raid-style
     party and raid, boss and arena frames: a spell, an item (a bandage), a macro with
     `[@mouseover]`, Target and Menu on other combinations, a plain click with nothing bound. Retail
     12.x still lets an addon set the raid-style frames' click attributes out of combat.
-  - A key over a frame acts on press, does its Key Bindings action away from frames, and a ring's
+  - A key over a frame, its portrait and its health and mana bars (moving between them, in combat
+    too), acts on press, does its Key Bindings action away from frames, and a ring's
     key opens the ring away from frames (the priority override wins over the ring's). A frame
     hiding under the mouse (a party member leaving) drops the keys (the `OnHide` wrap).
   - The arena frames get the bindings when the arena UI loads; frames that appear in combat get
     them after it.
   - The game's own Click Casting: a spell on Shift-Left there wins and the page marks it; its
     modifier bits decode right, in German too. Turning QoL's off gives every frame the game's
-    clicks back. A unit frame addon that joins through `ClickCastHeader` or `ClickCastFrames`.
+    clicks back. A unit frame addon that joins through `ClickCastHeader` or `ClickCastFrames`, and
+    Grid2's party and raid frames (clicks and keys, a raid joined in combat getting them after it).
   - No "tainted by" error in combat afterwards.
 - Hide new buff tooltips (Options > Controller), in the controller interface: gaining or refreshing a
   buff (a food buff, a flask, a party member's buff) and a debuff shows no tooltip; selecting a buff

@@ -182,7 +182,8 @@ end
 local function onRowEnter(row)
     GameTooltip:SetOwner(row, "ANCHOR_RIGHT")
     Entries.Tooltip(GameTooltip, row.entry)
-    GameTooltip:AddLine(row.list.handlers.hint(row.entry), 0, 1, 0, true)
+    local hint = row.list.handlers.hint(row.entry)
+    if hint then GameTooltip:AddLine(hint, 0, 1, 0, true) end
     GameTooltip:Show()
 end
 
@@ -293,7 +294,8 @@ end
 -- page has it (the check mark); toggle(entry), what a left click does (the Ring page puts it on or
 -- takes it off). A page can also give: kinds, the tabs (all by default); click(entry, mouseButton)
 -- for the clicks it registers (clicks, the arguments of RegisterForClicks); hint(entry), the
--- tooltip's last line; wheel(delta), true when it took the wheel (else it turns the page).
+-- tooltip's last line (nil for none); wheel(delta), true when it took the wheel (else it turns the
+-- page).
 function Picker.Create(column, rise, handlers)
     local self = setmetatable({ handlers = handlers, shown = { query = "", page = 1, entries = {} } }, List)
     handlers.kinds = handlers.kinds or KINDS

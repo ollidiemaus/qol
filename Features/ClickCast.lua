@@ -102,12 +102,13 @@ local MOVEMENT = { "MOVEFORWARD", "MOVEBACKWARD", "STRAFELEFT", "STRAFERIGHT", "
 
 -- Why the combination can't be a binding ("escape", "meta": the Mac's Cmd, which combinations leave
 -- out, "modifier" or "movement": a key the character moves, turns or jumps with, held with
--- modifiers or not), or nil.
+-- modifiers or not), or nil. IsKeyPressIgnoredForBinding is the game's Key Bindings' test, which
+-- also ignores Left and Right: here they're clicks like the other mouse buttons.
 function ClickCast.Refusal(combination)
     local _, key = ClickCast.Split(combination)
     if key == "ESCAPE" then return "escape" end
     if key:find("^[LR]?META") then return "meta" end
-    if MODIFIER_KEYS[key] or IsKeyPressIgnoredForBinding(key) then return "modifier" end
+    if MODIFIER_KEYS[key] or (not CLICKS[key] and IsKeyPressIgnoredForBinding(key)) then return "modifier" end
     for _, command in ipairs(MOVEMENT) do
         for _, bound in ipairs({ GetBindingKey(command) }) do
             if bound == combination or bound == key then return "movement" end
@@ -240,7 +241,7 @@ end
 
 local header, keysButton, clicksButton
 local frames, leaving, wrapped, joined = {}, {}, {}, {}
-local provided, ready, started
+local provided, ready, started, grid2
 
 -- QoL's header and buttons, made once.
 local function create()
@@ -390,13 +391,17 @@ local function keyAttributes(keys)
     return wanted
 end
 
--- Over a registered frame, its unit goes on QoL's buttons and the keys click the keys button, as
--- priority bindings so they win over the rings' keys. Leaving that frame or hiding it drops them;
--- another frame hiding (a target of target losing its unit) doesn't.
+-- Over a registered frame, or a part of one that takes the mouse (below), its unit goes on QoL's
+-- buttons and the keys click the keys button, as priority bindings so they win over the rings' keys.
+-- Leaving that frame or part, or hiding it, drops them; another frame hiding (a target of target
+-- losing its unit) doesn't. The game leaves the one before entering the next, so going from a frame
+-- onto its health bar drops the keys and binds them again.
 local ENTER = [[
-    if not self:GetAttribute("qol-clickcast") then return end
+    local frame = self
+    while frame and not frame:GetAttribute("qol-clickcast") do frame = frame:GetParent() end
+    if not frame then return end
     hovered = self
-    local unit = self:GetAttribute("unit")
+    local unit = frame:GetAttribute("unit")
     local keys = owner:GetFrameRef("keys")
     keys:SetAttribute("unit", unit)
     owner:GetFrameRef("clicks"):SetAttribute("unit", unit)
@@ -412,14 +417,34 @@ local LEAVE = [[
     owner:ClearBindings()
 ]]
 
--- The wraps stay once made (unwrapping could take off another addon's wrap made later); a frame
--- without qol-clickcast skips them.
-local function wrap(frame)
+local function wrapScripts(frame)
     if wrapped[frame] then return end
     wrapped[frame] = true
     SecureHandlerWrapScript(frame, "OnEnter", header, ENTER)
     SecureHandlerWrapScript(frame, "OnLeave", header, LEAVE)
     SecureHandlerWrapScript(frame, "OnHide", header, LEAVE)
+end
+
+-- The parts of a frame that take the mouse and are protected, as Forever's health and mana bars
+-- (TextStatusBar, with SecureFrameParentPropagationTemplate on them and the frames between): the
+-- mouse going onto one leaves the frame. Their snippets find the frame through their parents,
+-- protected too, so in combat as well.
+local function wrapParts(frame)
+    for _, child in ipairs({ frame:GetChildren() }) do
+        local takesMouse = child.IsMouseMotionEnabled or child.IsMouseEnabled
+        if takesMouse(child) and child:IsProtected() and not (child.IsForbidden and child:IsForbidden()) then
+            wrapScripts(child)
+        end
+        wrapParts(child)
+    end
+end
+
+-- The wraps stay once made (unwrapping could take off another addon's wrap made later); a frame
+-- without qol-clickcast, and a part of none, skips them.
+local function wrap(frame)
+    if wrapped[frame] then return end
+    wrapScripts(frame)
+    wrapParts(frame)
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -449,8 +474,22 @@ local EXPORT = [[
 local REGISTER = EXPORT:format("qol-joined", "qol-joined")
 local UNREGISTER = EXPORT:format("qol-left", "qol-left")
 
+-- Grid2 hands its secure headers' frames to click casting only through a global Clique (Clique's
+-- header, and its ClickCastUnitTemplate for the frames, which a second addon can't declare too), so
+-- QoL takes the frames Grid2 registers itself: those there already and each one it makes later.
+local function takeGrid2()
+    local grid = Grid2Frame
+    if grid2 or type(grid) ~= "table" or type(grid.RegisterFrame) ~= "function" then return end
+    grid2 = true
+    hooksecurefunc(grid, "RegisterFrame", function(_, frame) join(frame, true) end)
+    if type(grid.registeredFrames) == "table" then
+        for _, frame in pairs(grid.registeredFrames) do join(frame, true) end
+    end
+end
+
 -- The shared ClickCastFrames table and ClickCastHeader, unless another click casting addon has
--- them. A ClickCastFrames table a unit frame addon made first is taken over with its frames.
+-- them. A ClickCastFrames table a unit frame addon made first is taken over with its frames, and
+-- Grid2's frames come along.
 local function provide()
     provided = true
     if ClickCastHeader ~= nil or (ClickCastFrames ~= nil and type(ClickCastFrames) ~= "table") then return end
@@ -468,6 +507,7 @@ local function provide()
             join(_G[value], name == "qol-joined")
         end
     end)
+    takeGrid2()
 end
 
 ---------------------------------------------------------------------------------------------------

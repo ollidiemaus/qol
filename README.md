@@ -213,26 +213,27 @@ can heal a party member while you keep your target, and a key can heal whoever y
   right now (a spell of your other specialization) keeps its combination. Escape or the button ends
   it, and so do leaving the page and combat.
 - **Target and Menu:** a new character starts with Left: Target and Right: Menu, as the game's
-  frames have them. They are bindings like the others: move them to another combination or remove
-  them, and a plain left click is free for a spell (or does nothing). A removed one stays on the
-  page as **Not Bound**: click its box to bind it again.
-- **Keys and the wheel** work while the mouse is over a unit frame. Everywhere else a key does what
-  Key Bindings gives it, and a ring's key opens its ring. Escape, Shift, Ctrl or Alt on their own,
-  Cmd on the Mac, and the keys you move, turn and jump with can't be bound.
+  frames have them. They are bindings like the others: move them to another combination (Alt-Left
+  for Target, say) or remove them, and a plain left click is free for a spell (or does nothing). A
+  removed one stays on the page as **Not Bound**: click its box to bind it again.
+- **Keys and the wheel** work while the mouse is anywhere over a unit frame, its health and mana
+  bars too. Everywhere else a key does what Key Bindings gives it, and a ring's key opens its ring.
+  Escape, Shift, Ctrl or Alt on their own, Cmd on the Mac, and the keys you move, turn and jump with
+  can't be bound.
 - **Like the game:** a click acts when you let go of the button, a key when you press it. A spell
   casts the highest rank you know, an item is used on the unit (a bandage), and a macro sees the
   unit as `[@mouseover]`.
 - **Which frames:** the player, target, target of target, focus, focus target, pet, party (with the
   party pets), the raid-style party and raid frames, and the boss and arena frames. A unit frame
-  addon that uses the usual way for addons to join click casting gets your bindings too. Nameplates
-  are left alone.
+  addon that uses the usual way for addons to join click casting gets your bindings too, and so do
+  Grid2's frames. Nameplates are left alone.
 - **For each character:** the bindings are saved per character. A binding works while the character
   has its action, so one combination can be one spell in one specialization and another in the
   other. The page greys out the ones that don't work now and keeps them, and marks two working
   bindings on one combination in red (only one of them works; its tooltip names the others).
 
-Turn it on at the top of the Click casting page, before or after making the bindings. Turning it
-off gives the frames the game's own clicks back at once.
+Turn it on at the top of the Click casting page. While it's off, the page is greyed out and the
+bindings can't be changed. Turning it off gives the frames the game's own clicks back at once.
 
 The game's own Click Casting (in Forever and retail) takes only clicks, and each binding is made in
 its dialog. This one takes keys and the wheel too, and quick bind makes many bindings fast. Both can

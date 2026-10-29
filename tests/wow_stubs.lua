@@ -19,6 +19,9 @@ local function permissive(object)
     })
 end
 
+-- The kinds of regions that aren't frames.
+local REGION_KINDS = { Texture = true, MaskTexture = true, FontString = true }
+
 local function newRegion(kind, parent, template)
     local region = { kind = kind, parent = parent, template = template, shown = true, points = {}, width = 0,
         height = 0, events = {}, scripts = {}, hooks = {}, effectiveScale = 1, enabled = true }
@@ -30,6 +33,14 @@ local function newRegion(kind, parent, template)
         self.parent = newParent
     end
     function region:GetParent() return self.parent end
+    -- The frames in it (not its textures and font strings).
+    function region:GetChildren()
+        local frame, children = state.rawFrames[self] or self, {}
+        for _, other in ipairs(state.regions) do
+            if other.parent == frame and not REGION_KINDS[other.kind] then children[#children + 1] = other end
+        end
+        return unpack(children)
+    end
     local function checkShow(self)
         if state.combat and self.protected then
             error("ADDON_ACTION_BLOCKED: Show or Hide on a protected frame in combat")
@@ -139,6 +150,9 @@ local function newRegion(kind, parent, template)
     end
     function region:SetMouseClickEnabled(enabled) self.mouseClickEnabled = enabled end
     function region:EnableMouse(enabled) self.mouseEnabled = enabled end
+    -- EnableMouse takes the mouse's motion too; SetMouseMotionEnabled only that (OnEnter, OnLeave).
+    function region:SetMouseMotionEnabled(enabled) self.mouseMotion = enabled end
+    function region:IsMouseMotionEnabled() return (self.mouseMotion or self.mouseEnabled) == true end
     function region:EnableMouseWheel(enabled) self.mouseWheel = enabled end
     -- Whether the mouse is over it (Stubs.Hover), or over a region in it.
     function region:IsMouseOver()
@@ -482,13 +496,21 @@ local function makeSecure(frame)
 end
 
 -- A unit frame as SecureUnitButton_OnLoad sets it up: the game's Target on a left click and its
--- menu on a right click (with any modifiers), acting on release.
+-- menu on a right click (with any modifiers), acting on release. Its health bar
+-- (HealthBarsContainer.HealthBar) is Forever's TextStatusBar: it takes the mouse's motion, not its
+-- clicks, and it and the container are protected (SecureFrameParentPropagationTemplate).
 local function newUnitButton(unit, name)
     local frame = newRegion("Button", nil)
     makeSecure(frame)
     frame.name, frame.unit = name, unit
     frame.attributes = { unit = unit, ["*type1"] = "target", ["*type2"] = "menu" }
     frame.clicks = { "AnyUp" }
+    frame.mouseEnabled = true
+    local container = newRegion("Frame", frame)
+    container.protected = true
+    container.HealthBar = newRegion("StatusBar", container)
+    container.HealthBar.protected, container.HealthBar.mouseMotion = true, true
+    frame.HealthBarsContainer = container
     if name then _G[name] = frame end
     return frame
 end
@@ -686,7 +708,6 @@ local function install()
             function frame:GetMinMaxValues() return self.minValue or 0, self.maxValue or 1 end
             function frame:SetValue(value) self.value = value end
             function frame:GetValue() return self.value or 0 end
-            function frame:SetMouseMotionEnabled(enabled) self.mouseMotion = enabled end
         end
         if kind == "Cooldown" then
             function frame:SetCooldownFromDurationObject(duration) self.duration = duration end
@@ -931,7 +952,9 @@ local function install()
     G.GetBindingName = function(command) return G["BINDING_NAME_" .. command] or command end
     G.NOT_BOUND = "Not Bound"
     local metaKeys = { LSHIFT = true, RSHIFT = true, LCTRL = true, RCTRL = true, LALT = true, RALT = true }
-    G.IsKeyPressIgnoredForBinding = function(key) return metaKeys[key] == true end
+    -- As BindingUtil.lua has it: the Key Bindings ignore Left and Right too.
+    local ignoredKeys = { UNKNOWN = true, BUTTON1 = true, BUTTON2 = true }
+    G.IsKeyPressIgnoredForBinding = function(key) return metaKeys[key] == true or ignoredKeys[key] == true end
     G.CreateKeyChordStringUsingMetaKeyState = function(key)
         return (state.alt and "ALT-" or "") .. (state.ctrl and "CTRL-" or "") .. (state.shift and "SHIFT-" or "")
             .. (state.meta and "META-" or "") .. key
@@ -1393,6 +1416,7 @@ local ADDON_GLOBALS = {
     "GamepadMainActionBarFrame", "BINDING_HEADER_QOL",
     "QoLRing", "QoLRingButton", "QoLRingEditor", "QoLSettings",
     "QoLClickCast", "QoLClickCastKeys", "QoLClickCastClicks", "QoLClickCastEditor", "ClickCastFrames", "ClickCastHeader",
+    "Grid2Frame",
 }
 for index = 1, 5 do ADDON_GLOBALS[#ADDON_GLOBALS + 1] = "ArenaEnemyMatchFrame" .. index end
 for index = 1, 4 do
@@ -1731,7 +1755,7 @@ local function frameHandle(region)
     -- A frame set as an attribute by insecure code reads as nil here; a handle stays a handle, to
     -- insecure code too.
     function methods:GetAttribute(name)
-        local value = region.attributes[name]
+        local value = region.attributes and region.attributes[name]
         if type(value) == "table" and not handles[value] then return nil end
         return value
     end
@@ -1747,10 +1771,16 @@ local function frameHandle(region)
         end
     end
     function methods:GetFrameRef(label)
-        local ref = region.attributes["frameref-" .. label]
+        local ref = region.attributes and region.attributes["frameref-" .. label]
         return handles[ref] and ref or nil
     end
     function methods:GetName() return region.name end
+    -- In combat only a protected parent has a handle.
+    function methods:GetParent()
+        local parent = region.parent
+        if not parent or (state.combat and not parent.protected) then return nil end
+        return frameHandle(parent)
+    end
     function methods:RunAttribute(name, ...) return runSnippet(region, region, region.attributes[name], ...) end
     -- Bindings a snippet makes, owned by its frame: priority ones win over the others.
     function methods:SetBindingClick(priority, key, target, mouseButton)
@@ -1910,11 +1940,15 @@ function Stubs.PointAt(frame) runWrap(frame, "OnEnter") end
 function Stubs.PointAway(frame) runWrap(frame, "OnLeave") end
 
 -- A unit frame the game's own secure code hides (no unit any more), in combat too: its wrapped
--- OnHide snippet runs.
+-- OnHide snippet runs, and those of the frames shown in it.
 function Stubs.HideUnitFrame(frame)
     frame = state.rawFrames[frame] or frame
+    local shown = {}
+    for _, region in ipairs(descendants(frame)) do
+        if region:IsVisible() then shown[#shown + 1] = region end
+    end
     frame.shown = false
-    runWrap(frame, "OnHide")
+    for _, region in ipairs(shown) do runWrap(region, "OnHide") end
 end
 
 -- Holds Shift, Ctrl, Alt and the Mac's Cmd as named ("SHIFT", "CTRL", "ALT", "META"); none lets them

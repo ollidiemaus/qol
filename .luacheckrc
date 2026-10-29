@@ -24,6 +24,7 @@ read_globals = {
     -- Click casting
     "C_ClickBindings", "GetStringFromModifiers", "SHIFT_KEY_TEXT", "CTRL_KEY_TEXT", "ALT_KEY_TEXT",
     "PartyFrame", "CompactUnitFrame_SetUpFrame", "hooksecurefunc", "SecureHandlerSetFrameRef",
+    "Grid2Frame", -- Grid2's frames module: its frames join click casting
     -- Lua extensions in the WoW client
     "issecretvalue", "strsplit", "strtrim", "date",
     -- Frames and UI
