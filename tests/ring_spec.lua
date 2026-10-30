@@ -895,3 +895,91 @@ describe("ring", function()
         end)
     end)
 end)
+
+describe("ring on Classic Era", function()
+    -- Logs in on Classic Era as the mage, with the ring on.
+    local function startClassicEra(rings, setup)
+        local ns = Stubs.LoadAddon({ client = "classicEra" })
+        mage(Stubs.state())
+        if setup then setup(Stubs.state()) end
+        Stubs.Login({ ring = true }, rings)
+        return ns
+    end
+    local function list() return QoLRingEditor.list end
+    local function names()
+        local found = {}
+        for _, row in ipairs(list().rows) do
+            if row:IsShown() then found[#found + 1] = row.name:GetText() end
+        end
+        return found
+    end
+    -- The atlas of the mask on a texture.
+    local function maskAtlas(texture)
+        local mask = next(texture.masks or {})
+        return mask and mask.atlas
+    end
+
+    it("lists the spell book's spells from its tabs, without passives, spells still to learn or hidden tabs",
+        function()
+            startClassicEra(nil, function(state)
+                for id = 9001, 9004 do state.spells[id] = { name = "Spell " .. id } end
+                state.spellBook = { { id = FIREBALL }, { id = 9001, passive = true }, { id = FROSTBOLT },
+                    { id = 9002, future = true }, { id = BLINK }, { id = 9003 }, { id = 9004 } }
+                state.spellTabs = { { numSlots = 2 }, { numSlots = 3 }, { numSlots = 1, shouldHide = true },
+                    { numSlots = 1, offSpecID = 62 } }
+            end)
+            SlashCmdList.QOL("ring")
+            T.same(names(), { "Fireball", "Frostbolt", "Blink" }, "the spell book's order")
+            T.same(Stubs.state().errors, {})
+        end)
+
+    it("has tabs for spells, items, mounts and macros (no toy box), of a template Classic Era has, that switch",
+        function()
+            startClassicEra(nil, function(state) state.bags[0] = { size = 16 } end)
+            SlashCmdList.QOL("ring")
+            local tabs, labels = list().tabs, {}
+            for index, tab in ipairs(tabs) do
+                labels[index] = tab:GetText()
+                T.eq(tab.template, "PanelTopTabButtonTemplate")
+            end
+            T.same(labels, { "Spells", "Items", "Mounts", "Macros" })
+            T.truthy(tabs[2]:PointFor("BOTTOMLEFT")[2] == tabs[1], "side by side")
+            T.falsy(tabs[1]:IsEnabled(), "the shown tab can't be clicked")
+            tabs[3]:Click()
+            T.same(names(), { "Brown Horse" })
+            T.falsy(tabs[3]:IsEnabled())
+            T.truthy(tabs[1]:IsEnabled(), "spells can be clicked again")
+            tabs[4]:Click()
+            T.same(names(), { "Pull" })
+            tabs[2]:Click()
+            T.same(names(), {}, "no items with a use")
+            T.same(Stubs.state().errors, {})
+        end)
+
+    it("rounds the ring's icons with Classic Era's circle mask", function()
+        startClassicEra({ ringOf({ spell(FIREBALL) }, "F") })
+        Stubs.PressOverride("F", true)
+        T.eq(maskAtlas(ringArt().slots[1].icon), "CircleMaskScalable")
+        SlashCmdList.QOL("ring")
+        T.eq(maskAtlas(QoLRingEditor.art.slots[1].icon), "CircleMaskScalable", "the editor's ring too")
+        T.same(Stubs.state().errors, {})
+    end)
+
+    it("leaves out a toy a ring already holds (saved on another client), and keeps it", function()
+        startClassicEra({ ringOf({ { kind = "toy", id = TOY }, spell(FIREBALL) }, "F") })
+        Stubs.PressOverride("F", true)
+        SlashCmdList.QOL("ring")
+        T.same(QoLRingEditor.art.entries, { spell(FIREBALL) })
+        QoLRingEditor.art.slots[1]:RunScript("OnDragStart")
+        T.same(QoLDB.rings[1].entries, { { kind = "toy", id = TOY } }, "only Fireball taken off")
+        T.same(Stubs.state().errors, {})
+    end)
+
+    it("keeps Forever's circle mask on Forever", function()
+        Stubs.LoadAddon()
+        mage(Stubs.state())
+        Stubs.Login({ ring = true }, { ringOf({ spell(FIREBALL) }, "F") })
+        Stubs.PressOverride("F", true)
+        T.eq(maskAtlas(ringArt().slots[1].icon), "CircleMask")
+    end)
+end)

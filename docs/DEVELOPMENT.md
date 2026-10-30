@@ -694,11 +694,29 @@ settings are open, and closing our window is a plain `Hide` of a frame of ours.
   `PortraitFrameTemplate`, which Classic Era has with the same `SetTitle`, `SetPortraitToAsset` and
   `CloseButton`, in Classic Era's own frame art and rock background. The options art inside
   (`Options_InnerFrame`, the list's atlases) exists there too.
-- The Ring and Click casting pages build their editors' tabs from the game's tab system
-  (`TabSystemTopButtonTemplate`), which only the shared XML of TBC Anniversary and later clients
-  loads, not Classic Era's. Until those editors get tabs of a template Classic Era has, the two pages
-  are left out of the list where `C_XMLUtil.GetTemplateInfo` doesn't know that template (their
-  `available` in `UI/Settings.lua`).
+- The Ring and Click casting pages' editors (`Features/RingPicker.lua`) have a Classic Era path for
+  what Forever's and retail's spell book is built on, each taken where the newer one is missing:
+  - Tabs: the game's tab system (`TabSystemTopButtonTemplate`) is only in the shared XML of TBC
+    Anniversary and later clients, and `CreateFrame` with it is an error on Classic Era. Where
+    `C_XMLUtil.GetTemplateInfo` doesn't know it, a tab is Classic Era's `PanelTopTabButtonTemplate`
+    (its `TabButtonTemplate`, the help window's top tabs), sized with `PanelTemplates_TabResize`
+    and selected with `PanelTemplates_SelectTab`/`DeselectTab` (a selected tab is disabled, as in
+    the tab system), its click our `ShowKind`. The panel functions find its art by parent key, but
+    the template also names it `$parentLeft` and so on, so each tab gets a name of ours
+    (`QoLPickerTab<n>`) for those names to start with.
+  - Spells: Classic Era has no skill lines (`C_SpellBook.GetNumSpellBookSkillLines`). Its spell
+    book is read by tab and slot instead, as its own spell book does (`GetNumSpellTabs`,
+    `GetSpellTabInfo`, `GetSpellBookItemInfo(slot, BOOKTYPE_SPELL)`, `IsPassiveSpell`): `SPELL`
+    slots only (not `FUTURESPELL`), no passives, no hidden or off-spec tab. The client hands out the
+    ranks its spell book shows, so the game's "Show all spell ranks" decides whether lower ranks
+    are listed.
+  - Ring slots: Forever's `CircleMask` atlas isn't in Classic Era; its own circle mask is
+    `CircleMaskScalable`.
+  - Toys: Classic Era has no toy box (`C_ToyBox`, `PlayerHasToy`), so the list has no Toys tab
+    there. A ring that already holds a toy (saved on another client) leaves it out as one the
+    character doesn't have, and keeps it; the toy calls are behind a check all the same.
+  The click casting engine needs nothing of its own: Classic Era's unit frames are the same
+  `PlayerFrame`, `TargetFrame`, `PartyFrame` pool and boss frames.
 - The list is drawn as the game's (`Blizzard_CategoryList`) but with frames of ours, not its
   templates: `SettingsCategoryListButtonMixin` reads its scroll box's element data and a file local
   of the game's settings. A header (`Options_CategoryHeader_1`, drawn on the list itself so the
@@ -957,10 +975,13 @@ the event for that unit, so a spec can check that other units' events never reac
 
 `Stubs.Reset({ client = "classicEra" })` (or `LoadAddon` with it) makes the stubbed client Classic Era
 (1.15.9, interface 11509): the tooltip data processor, the spell book's skill-line calls, toys, the
-addon compartment, the combined bags and Forever's controller globals are gone, and `CreateFrame`
+addon compartment, the combined bags, Forever's `CircleMask` atlas and controller globals are gone,
+the spell book is read by tab (`GetSpellTabInfo`, from `state.spellTabs` or one tab of every slot;
+a slot's `future` makes it `FUTURESPELL`), and `CreateFrame`
 errors on a template Classic Era lacks (`MISSING_TEMPLATES`), as the client does, so a template
 only Forever and retail have can't slip into the login unnoticed. `tests/classicera_spec.lua` logs in
-on it and opens the settings window.
+on it and opens the settings window; the ring and click casting specs have Classic Era cases of
+their own.
 
 The fake `C_CVar` refuses what the game refuses (a value outside `state.cvarRanges`, a
 `state.cvarSecure` CVar in combat, an unknown CVar), drops the fraction for one in `state.cvarWhole`,

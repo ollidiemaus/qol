@@ -635,6 +635,30 @@ local function hasTemplate(template)
     return not (MISSING_TEMPLATES[state.client] or {})[template]
 end
 
+-- The spell book: one line of state.spellBook's slots ({ id, passive, offSpec, flyout, future }),
+-- or without it the known spells by ID. A flyout's slots: state.flyouts[id] = { { spellID, known } }.
+local function bookSlots()
+    if state.spellBook then return state.spellBook end
+    local ids = {}
+    for id in pairs(state.spells) do ids[#ids + 1] = id end
+    table.sort(ids)
+    local slots = {}
+    for index, id in ipairs(ids) do slots[index] = { id = id } end
+    return slots
+end
+
+-- Classic Era's spell book tabs: state.spellTabs ({ numSlots, offSpecID, shouldHide } each, the
+-- slots of the book in turn), or one tab with every slot.
+local function spellTabs()
+    local tabs, offset = {}, 0
+    for index, tab in ipairs(state.spellTabs or { { numSlots = #bookSlots() } }) do
+        tabs[index] = { offset = offset, numSlots = tab.numSlots, offSpecID = tab.offSpecID or 0,
+            shouldHide = tab.shouldHide == true }
+        offset = offset + tab.numSlots
+    end
+    return tabs
+end
+
 -- Takes out what Classic Era (1.15.9) lacks: the tooltip data processor, the spell book's skill
 -- lines, toys, the addon compartment, combined bags and Forever's controller interface.
 local function makeClassicEra(G)
@@ -647,6 +671,27 @@ local function makeClassicEra(G)
     G.AddonCompartmentFrame = nil
     G.ContainerFrameCombinedBags = nil
     G.C_InputInterfaceStyle, G.GamepadMode, G.BuffFrameTooltip = nil, nil, nil
+    -- Its own circle mask atlas instead of Forever's.
+    state.atlases.CircleMask, state.atlases.CircleMaskScalable = nil, { width = 64, height = 64 }
+    -- What it has instead of the skill lines: the spell book's tabs, read by slot.
+    G.BOOKTYPE_SPELL = "spell"
+    G.GetNumSpellTabs = function() return #spellTabs() end
+    G.GetSpellTabInfo = function(index)
+        local tab = spellTabs()[index]
+        if not tab then return nil end
+        return "Tab " .. index, 136243, tab.offset, tab.numSlots, false, tab.offSpecID, tab.shouldHide, 0
+    end
+    G.GetSpellBookItemInfo = function(slot, bookType)
+        assert(bookType == "spell", "the player's spell book")
+        local s = bookSlots()[slot]
+        if not s then return nil end
+        return s.future and "FUTURESPELL" or "SPELL", s.id
+    end
+    G.IsPassiveSpell = function(slot, bookType)
+        assert(bookType == "spell", "the player's spell book")
+        local s = bookSlots()[slot]
+        return s ~= nil and s.passive == true
+    end
 end
 
 local function install()
@@ -668,6 +713,13 @@ local function install()
     G.C_XMLUtil = { GetTemplateInfo = function(template)
         if hasTemplate(template) then return { type = "Frame", width = 0, height = 0, keyValues = {} } end
     end }
+    -- The panel templates' tab functions: a tab as wide as its text (7 a letter), its sides and the
+    -- padding (24 without one); a selected tab is disabled.
+    G.PanelTemplates_TabResize = function(tab, padding)
+        tab:SetWidth(#(tab:GetText() or "") * 7 + (padding or 24) + 32)
+    end
+    G.PanelTemplates_SelectTab = function(tab) tab:SetEnabled(false) end
+    G.PanelTemplates_DeselectTab = function(tab) tab:SetEnabled(true) end
     G.CreateFrame = function(kind, name, parent, template)
         -- As the client: a template it doesn't have, alone or in a list, is an error.
         for each in tostring(template or ""):gmatch("[^,%s]+") do
@@ -707,6 +759,12 @@ local function install()
                 system:SetTab(self.tabID, true)
                 if not was and self.isSelected then system:PlayTabSelectSound() end
             end)
+        end
+        -- A top tab of the panel templates (Classic Era's TabButtonTemplate): PanelTemplates_SelectTab
+        -- disables it, PanelTemplates_DeselectTab enables it again.
+        if template == "PanelTopTabButtonTemplate" then
+            frame.Text = frame:CreateFontString()
+            frame:SetSize(115, 32)
         end
         -- A side tab (SidePanelTabButtonMixin): its icon, SetChecked showing the selected art, a mouse
         -- up calling the handler SetCustomOnMouseUpHandler gave, and tooltipText on hover.
@@ -1108,17 +1166,6 @@ local function install()
         end,
     }
     G.C_Spell.GetSpellSubtext = function(id) return (spell(id) or {}).subtext end
-    -- The spell book: one line of state.spellBook's slots ({ id, passive, offSpec, flyout }), or
-    -- without it the known spells by ID. A flyout's slots: state.flyouts[id] = { { spellID, known } }.
-    local function bookSlots()
-        if state.spellBook then return state.spellBook end
-        local ids = {}
-        for id in pairs(state.spells) do ids[#ids + 1] = id end
-        table.sort(ids)
-        local slots = {}
-        for index, id in ipairs(ids) do slots[index] = { id = id } end
-        return slots
-    end
     G.Enum.SpellBookSpellBank = { Player = 0, Pet = 1 }
     G.Enum.SpellBookItemType = { None = 0, Spell = 1, FutureSpell = 2, PetAction = 3, Flyout = 4 }
     G.C_SpellBook = {
@@ -1518,7 +1565,8 @@ function Stubs.Reset(options)
         units = { player = { isPlayer = true, class = "MAGE", name = "Testmage" } }, realm = "TestRealm",
         regionalNames = false,
         focus = nil,
-        atlases = { ["ui-hud-minimap-frame-generic-mask"] = { width = 215, height = 226 } },
+        atlases = { ["ui-hud-minimap-frame-generic-mask"] = { width = 215, height = 226 },
+            CircleMask = { width = 64, height = 64 } },
         fonts = { GameFontNormal = { "Fonts\\FRIZQT__.TTF", 12, "" },
             WhiteNormalNumberFont = { "Fonts\\ARIALN.TTF", 10, "OUTLINE" } },
         -- The hidden settings with their ranges, measured in Forever's client (ground clutter fade

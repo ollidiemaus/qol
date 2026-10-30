@@ -54,6 +54,9 @@ read_globals = {
     "PickupAction", "PlaceAction", "ClearCursor", "PlayerHasToy", "GetMacroInfo", "GetMacroIndexByName",
     "GetMacroSpell", "GetMacroItem", "PickupMacro", "GetNumMacros", "MAX_ACCOUNT_MACROS", "GetInventoryItemID",
     "GetFlyoutInfo", "GetFlyoutSlotInfo", "SPELLBOOK_FONT_COLOR",
+    -- Classic Era's spell book and tabs
+    "GetNumSpellTabs", "GetSpellTabInfo", "GetSpellBookItemInfo", "IsPassiveSpell", "BOOKTYPE_SPELL",
+    "PanelTemplates_TabResize", "PanelTemplates_SelectTab", "PanelTemplates_DeselectTab",
     -- Strings and formatting
     "GetLocale", "GetMoneyString", "AbbreviateLargeNumbers",
     -- Units
