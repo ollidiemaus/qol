@@ -56,7 +56,7 @@ end
 
 -- Forever's spell book page (a single one, the condensed spell book's): its dark top bar and the
 -- parchment's rims, as shares of its size (measured from interface/spellbook of client 1.60.1).
--- Without it, retail's (below); without that too, the same bar over plain parchment.
+-- Without it, retail's (below), then Classic Era's; without any, the same bar over plain parchment.
 local PAGE = "spellbook-page-condensed-c60"
 local BAR = 0.081
 local RIMS = { top = 0.094, bottom = 0.026, left = 0.03, right = 0.026 }
@@ -73,6 +73,17 @@ local RETAIL = {
     bar = "spellbook-background-evergreen-header", barWidth = 1614, overlap = 3,
     page = "spellbook-background-evergreen-right", pageWidth = 807, pageHeight = 805,
     curl = "spellbook-corner-flipbook-evergreen", curlWidth = 150, curlHeight = 155, curlRight = 15, curlBottom = 6,
+}
+
+-- Classic Era's own spell book panel (Interface\Spellbook\UI-SpellbookPanel-*, the pieces of build
+-- 1.15.9.70576, 256 × 256 on the left), not the Cata spell book page it also ships but doesn't use.
+-- In pixels of its left pieces, measured from the files: the dark stone strip under the title, right
+-- of the portrait's circle (x 80-256, y 35-77 of TopLeft); the parchment inside the metal frame,
+-- without the frame's red shade at its left (x 26-256), from y 77 of TopLeft down and on in BotLeft
+-- to y 175, its ragged bottom edge included, the frame's line below it not.
+local CLASSIC = {
+    file = "Interface\\Spellbook\\UI-SpellbookPanel-%s", size = 256,
+    strip = { left = 80, top = 35, bottom = 77 }, parchment = { left = 26, top = 77, bottom = 175 },
 }
 
 local function fill(parent, color, layer)
@@ -107,6 +118,42 @@ local function retailPage(page, art, edges, width, height)
     return true
 end
 
+-- Sets a crop of a piece of Classic Era's panel on texture (a new one on page without it).
+local function classicTexture(page, texture, piece, left, top, right, bottom)
+    texture = texture or page:CreateTexture(nil, "BACKGROUND")
+    local size = CLASSIC.size
+    texture:SetTexture(CLASSIC.file:format(piece))
+    texture:SetTexCoord(left / size, right / size, top / size, bottom / size)
+    return texture
+end
+
+-- Classic Era's panel on page (art: the parchment's top), its stone strip down to the parchment's
+-- top edge, where the tabs stand, the parchment filling the rest; false on a client without its
+-- files. No metal frame, no portrait.
+local function classicPage(page, art, edges, height)
+    local function has(piece) return GetFileIDFromPath(CLASSIC.file:format(piece)) end
+    if not (GetFileIDFromPath and has("TopLeft") and has("BotLeft")) then return false end
+    local size, strip, parchment = CLASSIC.size, CLASSIC.strip, CLASSIC.parchment
+    edges.bar = edges.top
+    local bar = classicTexture(page, nil, "TopLeft", strip.left, strip.top, size, strip.bottom)
+    bar:SetPoint("TOPLEFT")
+    bar:SetPoint("TOPRIGHT")
+    bar:SetHeight(edges.bar)
+    -- The two pieces share the parchment by their pixels in the files.
+    local topRows = size - parchment.top
+    local topHeight = (height - edges.top) * topRows / (topRows + parchment.bottom)
+    local upper = classicTexture(page, art, "TopLeft", parchment.left, parchment.top, size, size)
+    upper:ClearAllPoints()
+    upper:SetPoint("TOPLEFT", 0, -edges.top)
+    upper:SetPoint("TOPRIGHT", 0, -edges.top)
+    upper:SetHeight(topHeight)
+    local lower = classicTexture(page, nil, "BotLeft", parchment.left, 0, size, parchment.bottom)
+    lower:SetPoint("BOTTOMLEFT")
+    lower:SetPoint("BOTTOMRIGHT")
+    lower:SetHeight(height - edges.top - topHeight)
+    return true
+end
+
 -- The spell book page a page's editor stands on, on the settings page below its title (top down
 -- from its top), width × height. Returns it and where its parchment lies, in pixels from its edges
 -- (bar: the top bar's height).
@@ -121,7 +168,8 @@ function Picker.NewPage(name, parent, top, width, height)
     }
     local art = page:CreateTexture(nil, "BACKGROUND")
     art:SetAllPoints()
-    if not (Picker.Atlas(art, PAGE) or retailPage(page, art, edges, width, height)) then
+    if not (Picker.Atlas(art, PAGE) or retailPage(page, art, edges, width, height)
+            or classicPage(page, art, edges, height)) then
         art:SetColorTexture(PAPER_EDGE[1], PAPER_EDGE[2], PAPER_EDGE[3])
         local paper = fill(page, PAPER, "BORDER")
         paper:SetPoint("TOPLEFT", edges.left, -edges.top)

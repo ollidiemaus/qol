@@ -27,6 +27,7 @@ read_globals = {
     "Grid2Frame", -- Grid2's frames module: its frames join click casting
     -- Lua extensions in the WoW client
     "issecretvalue", "strsplit", "strtrim", "date",
+    "GetFileIDFromPath",
     -- Frames and UI
     "CreateFrame", "UIParent", "WorldFrame", "DEFAULT_CHAT_FRAME", "EventRegistry",
     "Settings", "CreateSettingsListSectionHeaderInitializer", "MinimalSliderWithSteppersMixin",

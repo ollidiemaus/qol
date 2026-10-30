@@ -897,11 +897,21 @@ describe("click casting on Classic Era", function()
     end
     -- Logs in on Classic Era as the priest, click casting on, and opens the page.
     local function open()
-        Stubs.LoadAddon({ client = "classicEra" })
+        local ns = Stubs.LoadAddon({ client = "classicEra" })
         priest(Stubs.state())
         Stubs.Login({ clickCast = true })
         SlashCmdList.QOL("click")
+        return ns
     end
+
+    it("stands its tabs on the spell book parchment's top edge", function()
+        local ns = open()
+        local list = page().list
+        local _, edges = ns.RingPicker.NewPage(nil, UIParent, 0, page():GetWidth(), page():GetHeight())
+        local tabsBottom = list:PointFor("TOPRIGHT")[5] + list.tabs[1]:PointFor("BOTTOMLEFT")[5]
+        T.eq(tabsBottom, -edges.bar, "on the stone strip's bottom, where the parchment starts")
+        T.eq(tabsBottom, -edges.top)
+    end)
 
     it("lists the spell book's spells, and its tabs switch to items and macros", function()
         open()
