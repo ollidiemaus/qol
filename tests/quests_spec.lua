@@ -4,8 +4,8 @@ local describe, it = T.describe, T.it
 
 local BOTH = { questAccept = true, questTurnIn = true }
 
-local function start(savedOptions)
-    Stubs.LoadAddon()
+local function start(savedOptions, client)
+    Stubs.LoadAddon({ client = client })
     Stubs.Login(savedOptions)
     return Stubs.state().quest
 end
@@ -117,6 +117,48 @@ describe("quest automation", function()
         quest.greetingActive = { { title = "A", isComplete = false, questID = 10 } }
         Stubs.Fire("QUEST_GREETING")
         T.same(calls(quest), { "greetingAvailable:1" })
+    end)
+
+    it("works with Classic Era's greeting, which has no quest IDs, quest after quest", function()
+        local quest = start(BOTH, "classicEra")
+        quest.greetingActive = { { title = "A", isComplete = false }, { title = "B", isComplete = true } }
+        quest.greetingAvailable = { { title = "C" }, { title = "D" } }
+        quest.titles = { [11] = "B", [20] = "C", [21] = "D" }
+        Stubs.Fire("QUEST_GREETING")
+        T.same(calls(quest), { "greetingActive:2" })
+        Stubs.Fire("QUEST_TURNED_IN", 11, 0, 0)
+        quest.greetingActive = { { title = "A", isComplete = false } }
+        Stubs.Fire("QUEST_GREETING")
+        T.same(calls(quest), { "greetingAvailable:1" })
+        -- Classic Era's QUEST_ACCEPTED: the quest log index, then the quest ID.
+        Stubs.Fire("QUEST_ACCEPTED", 3, 20)
+        quest.greetingAvailable = { { title = "D" } }
+        Stubs.Fire("QUEST_GREETING")
+        T.same(calls(quest), { "greetingAvailable:1" })
+    end)
+
+    it("opens a quest it couldn't finish only once at the same NPC on Classic Era", function()
+        local quest = start(BOTH, "classicEra")
+        quest.greetingActive = { { title = "B", isComplete = true } }
+        quest.greetingAvailable = { { title = "C" } }
+        quest.choices = 2
+        Stubs.Fire("QUEST_GREETING")
+        Stubs.Fire("QUEST_COMPLETE")
+        T.same(calls(quest), { "greetingActive:1" })
+        Stubs.Fire("QUEST_GREETING")
+        T.same(calls(quest), { "greetingAvailable:1" })
+        Stubs.Fire("QUEST_GREETING")
+        T.same(calls(quest), {})
+    end)
+
+    it("turns a repeatable quest in again at the same NPC on Classic Era", function()
+        local quest = start({ questTurnIn = true }, "classicEra")
+        quest.greetingActive = { { title = "Additional Runecloth", isComplete = true } }
+        quest.titles = { [7813] = "Additional Runecloth" }
+        Stubs.Fire("QUEST_GREETING")
+        Stubs.Fire("QUEST_TURNED_IN", 7813, 0, 0)
+        Stubs.Fire("QUEST_GREETING")
+        T.same(calls(quest), { "greetingActive:1", "greetingActive:1" })
     end)
 
     it("leaves everything to the player while Shift is held", function()

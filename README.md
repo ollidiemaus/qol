@@ -63,7 +63,7 @@ the price of one, as its buttons may not say how many items a slot holds.
 
 ### Chat
 
-- **Hide the social button** on top of the chat window.
+- **Hide the social button** on top of the chat window (the Friends button on Classic Era).
 - **Hide the other chat buttons:** the chat menu, channel, voice chat and text to speech buttons.
 - **Hide the combat log:** the Combat Log tab leaves the chat window. The combat log keeps running,
   so addons that read it still work.

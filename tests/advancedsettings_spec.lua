@@ -3,9 +3,9 @@ local Stubs = require("wow_stubs")
 local describe, it = T.describe, T.it
 
 -- The game's settings installed, the addon loaded and logged in. before: changes the test state
--- before the addon loads (a client without a setting).
-local function start(before)
-    local ns = Stubs.LoadAddon()
+-- before the addon loads (a client without a setting); client: "classicEra" for Classic Era.
+local function start(before, client)
+    local ns = Stubs.LoadAddon({ client = client })
     if before then before(Stubs.state()) end
     Stubs.InstallSettings()
     Stubs.Login()
@@ -700,6 +700,23 @@ describe("advanced settings page", function()
         T.same(labels(ns), { "Ground clutter distance", "Ground clutter fade", "Ground clutter density",
             "Always sharpen", "World distance", "Horizon start", "Horizon end", "Object fade scale",
             "Object cull size", "Max camera distance" })
+    end)
+
+    it("stays on Classic Era, without the settings it doesn't know, keeping the old value for a refused one", function()
+        local ns, state = start(function(s) s.cvars.ResampleAlwaysSharpen = nil end, "classicEra")
+        T.truthy(page(ns), "the page is there")
+        T.same(labels(ns), { "Ground clutter distance", "Ground clutter fade", "Ground clutter density",
+            "Weather density", "World distance", "Horizon start", "Horizon end", "Object fade scale",
+            "Object cull size", "Object cull distance", "Max camera distance" })
+        show(ns)
+        local camera = row(ns, "Max camera distance")
+        T.same({ camera.widget.minValue, camera.widget.maxValue }, { 1, 2.6 }, "the range measured on Forever")
+        state.cvarRanges.cameraDistanceMaxZoomFactor = { 1, 2 }
+        camera.widget:SetValue(2.5)
+        T.same(state.cvarSets, { "cameraDistanceMaxZoomFactor=2.5" })
+        T.eq(state.cvars.cameraDistanceMaxZoomFactor, "1.9")
+        T.eq(camera.widget:GetValue(), 1.9)
+        T.eq(camera.box:GetText(), "1.9")
     end)
 
     it("leaves the page out of the list on a client that knows none of the settings", function()

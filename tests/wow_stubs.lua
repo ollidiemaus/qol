@@ -785,6 +785,20 @@ local function makeClassicEra(G)
     G.MinimapCluster.MinimapContainer.PlayerCoords = false
     -- Only its arena frames lock their health bars' color.
     for _, raw in pairs(state.healthBars) do raw.lockColor = nil end
+    -- Its chat's social button is FriendsMicroButton (FloatingChatFrame.xml), no Quick Join, and the
+    -- player's portrait hit text is PlayerHitIndicator, straight on the old player frame.
+    G.QuickJoinToastButton = nil
+    G.FriendsMicroButton = newRegion("Button", G.ChatFrame1ButtonFrame)
+    state.playerFrame.PlayerFrameContent = false
+    G.PlayerHitIndicator = G.PlayerFrame:CreateFontString()
+    G.PlayerHitIndicator:Hide()
+    -- Its quest greeting: no GetActiveQuestID, and GetAvailableQuestInfo stops before the quest ID
+    -- (isTrivial, isDaily, isRepeatable, isLegendary), so a quest there is known by its title.
+    -- QUEST_ACCEPTED carries the quest log index before the quest ID.
+    G.GetActiveQuestID = nil
+    G.GetAvailableQuestInfo = function() return false, false, false, false end
+    G.GetAvailableTitle = function(i) return state.quest.greetingAvailable[i].title end
+    G.C_QuestLog = { GetQuestInfo = function(questID) return state.quest.titles[questID] end }
     -- Its minimap (Blizzard_Minimap/Classic): the round border is MinimapBorder, with no compass
     -- underlay; the tracking button (MiniMapTracking) and the time of day icon (GameTimeFrame, as
     -- there is no calendar) sit on MinimapBackdrop, not on the cluster.
@@ -1767,7 +1781,8 @@ function Stubs.Reset(options)
         gameSliders = {}, gameSliderRewrites = true,
         shift = false,
         quest = { npc = "Creature-0-1-0-1-3139-0001", gossipActive = {}, gossipAvailable = {}, greetingActive = {},
-            greetingAvailable = {}, autoAccept = false, completable = true, money = 0, choices = 0, calls = {} },
+            greetingAvailable = {}, titles = {}, autoAccept = false, completable = true, money = 0, choices = 0,
+            calls = {} },
         -- A few of Forever's maps; a retail client has none of them (state.maps = {}).
         maps = { [1413] = { name = "The Barrens", mapType = 3, parentMapID = 1414 },
             [1414] = { name = "Kalimdor", mapType = 2, parentMapID = 947 } },
