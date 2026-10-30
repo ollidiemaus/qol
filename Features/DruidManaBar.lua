@@ -39,12 +39,19 @@ local frameAlpha
 -- The threat glow has the third bar's atlas from us.
 local glowChanged = false
 
+-- Whether this client's player frame is the one the bar is drawn for: Classic Era's old frame has
+-- no art container (PlayerFrameContainer), and no room for a third bar.
+function DruidManaBar.IsAvailable()
+    return PlayerFrame ~= nil and type(PlayerFrame.PlayerFrameContainer) == "table"
+end
+
 -- Shown while the player's own art is drawn (not a vehicle's), without a third bar of Blizzard's
 -- (moonkin on retail) or a class bar where ours goes (retail's combo points in cat form).
 function DruidManaBar.ShouldShow()
     if not Options:Get(KEY) then return false end
+    if not DruidManaBar.IsAvailable() then return false end
     local frame = PlayerFrame
-    if not (frame and frame.PlayerFrameContainer and frame.state == "player") then return false end
+    if frame.state ~= "player" then return false end
     if frame.activeAlternatePowerBar then return false end
     local classBar = frame.classPowerBar
     if classBar and classBar:IsShown() then return false end

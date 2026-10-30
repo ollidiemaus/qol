@@ -676,6 +676,17 @@ end
 ------------------------------------------------------------------------------------------------
 -- Setup
 
+-- Whether this client has the addon compartment (Classic Era doesn't).
+function MinimapLayout.HasCompartment()
+    return AddonCompartmentFrame ~= nil
+end
+
+-- Whether this client shows the player's coordinates under the minimap (Classic Era doesn't).
+function MinimapLayout.HasCoords()
+    local container = MinimapCluster and MinimapCluster.MinimapContainer
+    return container ~= nil and type(container.PlayerCoords) == "table"
+end
+
 -- Whether this client has Forever's day and night icon (the settings offer it only there).
 function MinimapLayout.HasDayNight()
     return MinimapCluster ~= nil and type(MinimapCluster.DielFrame) == "table"
