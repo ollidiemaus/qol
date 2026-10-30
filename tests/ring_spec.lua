@@ -693,7 +693,7 @@ describe("ring", function()
             T.truthy(rows + list.next:GetHeight() < list:GetHeight(), "rows " .. rows .. " high in " .. list:GetHeight())
         end)
 
-        it("stands on Forever's spell book page, else retail's, else plain colors", function()
+        it("stands on Forever's spell book page, else retail's, else Classic Era's, else plain colors", function()
             local ns = start()
             local Picker = ns.RingPicker
             local function textures(page)
@@ -731,7 +731,44 @@ describe("ring", function()
             T.eq(curl.texCoord[2], 0.25, "the curl's first frame")
             T.eq(curl.texCoord[4], 0.5)
 
+            -- Classic Era: its spell book panel's files, the stone strip over the parchment, which
+            -- ends in the panel's ragged bottom edge at the page's bottom.
             atlases["spellbook-background-evergreen-header"] = nil
+            local files = Stubs.state().files
+            files["Interface\\Spellbook\\UI-SpellbookPanel-TopLeft"] = 136839
+            files["Interface\\Spellbook\\UI-SpellbookPanel-BotLeft"] = 136836
+            local function file(page, name)
+                local found = {}
+                for _, texture in ipairs(textures(page)) do
+                    T.eq(texture.color, nil, "no plain color")
+                    if texture.texture == "Interface\\Spellbook\\UI-SpellbookPanel-" .. name then
+                        found[#found + 1] = texture
+                    end
+                end
+                return found
+            end
+            local classic
+            classic, edges = Picker.NewPage(nil, UIParent, 54, 665, 493)
+            local top = file(classic, "TopLeft")
+            T.eq(#top, 2, "the stone strip and the parchment's top")
+            table.sort(top, function(a, b) return a.texCoord[3] < b.texCoord[3] end)
+            bar, paper = top[1], top[2]
+            T.eq(bar:GetHeight(), edges.bar, "the strip is the bar")
+            T.eq(bar:PointFor("TOPLEFT")[5], 0)
+            T.eq(bar:PointFor("TOPRIGHT")[4], 0, "as wide as the page")
+            T.eq(edges.bar, edges.top, "the bar ends where the tabs stand")
+            T.eq(paper:PointFor("TOPLEFT")[5], -edges.top, "the parchment starts where the tabs stand")
+            T.truthy(bar.texCoord[4] <= paper.texCoord[3], "the strip lies above the parchment in the file")
+            local bottom = file(classic, "BotLeft")
+            T.eq(#bottom, 1, "the parchment's bottom")
+            T.eq(bottom[1]:PointFor("BOTTOMLEFT")[5], 0, "the ragged edge at the page's bottom")
+            T.eq(bottom[1]:PointFor("BOTTOMRIGHT")[4], 0)
+            T.eq(bottom[1].texCoord[3], 0, "the parchment goes on from the top piece")
+            local filled = paper:GetHeight() + bottom[1]:GetHeight()
+            T.truthy(math.abs(filled - (493 - edges.top)) < 0.01, "the parchment fills the page: " .. filled)
+
+            files["Interface\\Spellbook\\UI-SpellbookPanel-TopLeft"] = nil
+            files["Interface\\Spellbook\\UI-SpellbookPanel-BotLeft"] = nil
             local plain = Picker.NewPage(nil, UIParent, 54, 665, 493)
             for _, texture in ipairs(textures(plain)) do T.truthy(texture.color, "a color, no atlas") end
         end)

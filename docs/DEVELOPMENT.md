@@ -587,8 +587,18 @@ the cursor and how to read it off the cursor. A character's ring is the entries 
   as the game's 54 over its page from 51, where its tabs stand too; so it comes out near the game's
   own height. Don't squash it to Forever's bar: the paper would then start above the tabs. The
   parchment's edges stay Forever's, so the editors lie the same on both; retail's paper reaches
-  past them. Without either, a dark bar over plain parchment colors. Text on the paper is
-  ink: `SPELLBOOK_FONT_COLOR` (or Forever 1.60.1's value) without the font's shadow
+  past them. Without either, Classic Era's own spell book panel, found by its files
+  (`GetFileIDFromPath("Interface\\Spellbook\\UI-SpellbookPanel-TopLeft")` and `-BotLeft`), not by
+  the flavor: the dark stone strip under its title, right of the portrait's circle, stretched to the
+  page's width down to Forever's parchment edge, where the tabs stand, and under it the parchment
+  inside the panel's metal frame, the top-left piece's on the bottom-left piece's, which ends in the
+  ragged edge at the page's bottom. No frame, no portrait: the page sits in our bronze window. The
+  crops are pixels of the 256 × 256 left pieces of build 1.15.9.70576 (`CLASSIC` in
+  `RingPicker.lua`); after a client update, check them against the files (wow-data `file 136839`,
+  `136836 -f classic --png`). It's the panel and not `Spellbook-Page-1/2`, the Cata page Classic
+  Era also ships: Classic Era's spell book doesn't use that one, and the editor stands on its
+  client's own spell book. Without any of the three, a dark bar over plain parchment colors. Text
+  on the paper is ink: `SPELLBOOK_FONT_COLOR` (or Forever 1.60.1's value) without the font's shadow
   (`RingPicker.Ink`). The page wraps `Page:Refresh` to refresh the editor too, so it's up to date
   whenever the window shows the page and when the switch changes.
 - The room is the game's canvas (665 wide) where the window was 860, so the left column is 256

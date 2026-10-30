@@ -772,6 +772,10 @@ local function makeClassicEra(G)
     for _, name in ipairs({ "GameTooltip", "ItemRefTooltip", "ShoppingTooltip1", "ShoppingTooltip2" }) do
         makeClassicTooltip(G, name)
     end
+    -- Its spell book panel's four pieces (FileDataIDs of 1.15.9.70576).
+    for piece, id in pairs({ TopLeft = 136839, TopRight = 136840, BotLeft = 136836, BotRight = 136837 }) do
+        state.files["Interface\\Spellbook\\UI-SpellbookPanel-" .. piece] = id
+    end
     G.C_SpellBook.GetNumSpellBookSkillLines = nil
     G.C_SpellBook.GetSpellBookSkillLineInfo = nil
     G.C_SpellBook.GetSpellBookItemInfo = nil
@@ -1198,6 +1202,7 @@ local function install()
     G.C_Texture = {
         GetAtlasInfo = function(atlas) return state.atlases[atlas] end,
     }
+    G.GetFileIDFromPath = function(path) return state.files[path] end
 
     -- Key bindings: state.bindings[key] = command (the saved ones), state.overrides[key] = { owner,
     -- command } (override bindings). Changing bindings is blocked in combat.
@@ -1756,6 +1761,8 @@ function Stubs.Reset(options)
         guids = {}, -- UnitGUID by unit token (but "npc", the quest giver's)
         regionalNames = false,
         focus = nil,
+        -- The client's files it knows by path (GetFileIDFromPath): path -> FileDataID.
+        files = {},
         atlases = { ["ui-hud-minimap-frame-generic-mask"] = { width = 215, height = 226 },
             CircleMask = { width = 64, height = 64 }, flightmasterferry = { width = 32, height = 32 } },
         fonts = { GameFontNormal = { "Fonts\\FRIZQT__.TTF", 12, "" },
