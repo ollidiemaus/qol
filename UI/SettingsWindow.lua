@@ -52,8 +52,14 @@ local function paint(button, selected)
     end
 end
 
+-- Classic Era has no flat portrait frame: there the game's portrait frame, in Classic Era's own art.
+local function template()
+    if C_XMLUtil.GetTemplateInfo("PortraitFrameFlatTemplate") then return "PortraitFrameFlatTemplate" end
+    return "PortraitFrameTemplate"
+end
+
 function Window.New()
-    local frame = ns.NewWindow("QoLSettings", L.ADDON_TITLE, WIDTH, HEIGHT, "PortraitFrameFlatTemplate")
+    local frame = ns.NewWindow("QoLSettings", L.ADDON_TITLE, WIDTH, HEIGHT, template())
     local window = setmetatable({ frame = frame, pages = {}, buttons = {}, order = {} }, Window)
 
     local inner = frame:CreateTexture(nil, "OVERLAY", nil, 2)

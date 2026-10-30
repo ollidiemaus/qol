@@ -687,6 +687,18 @@ settings are open, and closing our window is a plain `Hide` of a frame of ours.
   `options_categoryheader_1-c60`, `options_list_hover-c60`, the tabs and the divider) that no UI
   code names, as it has for the metal frame: the client swaps them in for the plain names, which is
   what we use. `options_list_active` has none.
+- Classic Era (1.15) has no `PortraitFrameFlatTemplate` (Forever's and retail's shared templates
+  have it, Classic Era's `Classic/SharedUIPanelTemplates.xml` doesn't): `CreateFrame` with it is an
+  error there, which kept the window, and with it `/qol` and the information page's button, from
+  being built at login. Where `C_XMLUtil.GetTemplateInfo` doesn't know it, the window is the plain
+  `PortraitFrameTemplate`, which Classic Era has with the same `SetTitle`, `SetPortraitToAsset` and
+  `CloseButton`, in Classic Era's own frame art and rock background. The options art inside
+  (`Options_InnerFrame`, the list's atlases) exists there too.
+- The Ring and Click casting pages build their editors' tabs from the game's tab system
+  (`TabSystemTopButtonTemplate`), which only the shared XML of TBC Anniversary and later clients
+  loads, not Classic Era's. Until those editors get tabs of a template Classic Era has, the two pages
+  are left out of the list where `C_XMLUtil.GetTemplateInfo` doesn't know that template (their
+  `available` in `UI/Settings.lua`).
 - The list is drawn as the game's (`Blizzard_CategoryList`) but with frames of ours, not its
   templates: `SettingsCategoryListButtonMixin` reads its scroll box's element data and a file local
   of the game's settings. A header (`Options_CategoryHeader_1`, drawn on the list itself so the
@@ -942,6 +954,13 @@ protected and fails on `SetAttribute` in combat; `Stubs.NewGamepadBar()` (betwee
 to a frame registered with `RegisterUnitEvent` only when its first argument is one of that frame's
 units, as the game does, and `Stubs.Listens(event, unit)` says whether any of our frames would get
 the event for that unit, so a spec can check that other units' events never reach QoL.
+
+`Stubs.Reset({ client = "classicEra" })` (or `LoadAddon` with it) makes the stubbed client Classic Era
+(1.15.9, interface 11509): the tooltip data processor, the spell book's skill-line calls, toys, the
+addon compartment, the combined bags and Forever's controller globals are gone, and `CreateFrame`
+errors on a template Classic Era lacks (`MISSING_TEMPLATES`), as the client does, so a template
+only Forever and retail have can't slip into the login unnoticed. `tests/classicera_spec.lua` logs in
+on it and opens the settings window.
 
 The fake `C_CVar` refuses what the game refuses (a value outside `state.cvarRanges`, a
 `state.cvarSecure` CVar in combat, an unknown CVar), drops the fraction for one in `state.cvarWhole`,

@@ -623,6 +623,32 @@ local function split(delimiter, text)
     return (unpack or table.unpack)(parts)
 end
 
+-- The frame templates a client lacks (the rest it has): Classic Era has neither the flat portrait
+-- frame nor the large side tab, and the tab system is only in the shared XML of TBC Anniversary and
+-- later clients.
+local MISSING_TEMPLATES = {
+    classicEra = { PortraitFrameFlatTemplate = true, LargeSideTabButtonTemplate = true,
+        TabSystemTopButtonTemplate = true, TabSystemTemplate = true },
+}
+
+local function hasTemplate(template)
+    return not (MISSING_TEMPLATES[state.client] or {})[template]
+end
+
+-- Takes out what Classic Era (1.15.9) lacks: the tooltip data processor, the spell book's skill
+-- lines, toys, the addon compartment, combined bags and Forever's controller interface.
+local function makeClassicEra(G)
+    G.GetBuildInfo = function() return "1.15.9", "70576", "Oct 21 2026", 11509 end
+    G.TooltipDataProcessor = nil
+    G.C_SpellBook.GetNumSpellBookSkillLines = nil
+    G.C_SpellBook.GetSpellBookSkillLineInfo = nil
+    G.C_SpellBook.GetSpellBookItemInfo = nil
+    G.C_ToyBox, G.PlayerHasToy = nil, nil
+    G.AddonCompartmentFrame = nil
+    G.ContainerFrameCombinedBags = nil
+    G.C_InputInterfaceStyle, G.GamepadMode, G.BuffFrameTooltip = nil, nil, nil
+end
+
 local function install()
     local G = _G
     G.issecretvalue = function(value) return value == Stubs.SECRET end
@@ -639,7 +665,14 @@ local function install()
     G.NUM_TOTAL_EQUIPPED_BAG_SLOTS = 5
     G.DEFAULT_CHAT_FRAME = { AddMessage = function(_, text) state.messages[#state.messages + 1] = text end }
 
+    G.C_XMLUtil = { GetTemplateInfo = function(template)
+        if hasTemplate(template) then return { type = "Frame", width = 0, height = 0, keyValues = {} } end
+    end }
     G.CreateFrame = function(kind, name, parent, template)
+        -- As the client: a template it doesn't have, alone or in a list, is an error.
+        for each in tostring(template or ""):gmatch("[^,%s]+") do
+            if not hasTemplate(each) then error("CreateFrame(): Couldn't find inherited node \"" .. each .. "\"", 2) end
+        end
         local frame = newRegion(kind or "Frame", parent, template)
         if name then G[name], frame.name = frame, name end
         if template == "MinimalSliderWithSteppersTemplate" then Stubs.BuildSlider(frame) end
@@ -1466,6 +1499,8 @@ end
 function Stubs.Reset(options)
     options = options or {}
     state = {
+        -- The game client: "forever" (WoW Forever, the default) or "classicEra".
+        client = options.client or "forever",
         locale = options.locale or "enUS",
         version = options.version, loadedAddons = {},
         restricted = 0, regions = {}, timers = {}, delayed = {}, messages = {}, registry = {}, postCalls = {}, linePreCalls = {},
@@ -1536,6 +1571,7 @@ function Stubs.Reset(options)
     for _, name in ipairs(ADDON_GLOBALS) do _G[name] = nil end
     _G.SlashCmdList = {}
     install()
+    if state.client == "classicEra" then makeClassicEra(_G) end
 end
 
 local function tocFiles()
