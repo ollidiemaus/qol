@@ -432,7 +432,7 @@ end
 -- game's menu: in that interface the menu brings controller wiring of its own (a prompted binding
 -- footer, binding groups, suspending the focus of the window that has the controller), and the
 -- game stopped responding when its settings closed after one was opened from our page, back when
--- the pages were in them (see docs/DEVELOPMENT.md).
+-- the pages were in them (see docs/dev/settings-window.md).
 function Page:Dropdown(column, key, label, choices, tooltip, options)
     local control = optionRow(self, column, "dropdown", key, label, tooltip, options)
     control.choices = choices

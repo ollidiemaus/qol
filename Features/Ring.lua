@@ -34,7 +34,7 @@ Ring.AIMS = { "mouse", "stick" }
 local OPENER = "QoLRingButton"
 local MEDIA = "Interface\\AddOns\\QoL\\Media\\"
 local ROUND = "Interface\\CharacterFrame\\TempPortraitAlphaMask"
--- Sizes in UI units, from the textures (docs/DEVELOPMENT.md says how they were made): Ring.tga
+-- Sizes in UI units, from the textures (docs/dev/rings.md says how they were made): Ring.tga
 -- covers SIZE with the bronze rim ending RIM units out, and the slots sit RADIUS out.
 -- RingSpoke.tga is a SPOKE square with one spoke pointing up, its middle SPOKE_RADIUS out.
 -- RingLit<n>.tga is the lit wedge of a slot of n: a square of LIT[n][2] units whose middle sits

@@ -8,7 +8,7 @@ local L = ns.L
 -- bronze like the window's frame. The pages are UI/SettingsPage.lua's, and get the room the game's
 -- settings give a page. Being outside the game's settings, nothing of ours runs inside them: on
 -- Forever, with the controller interface on, the game froze now and then when they closed after a
--- change in them (see docs/DEVELOPMENT.md).
+-- change in them (see docs/dev/settings-window.md).
 local Window = {}
 Window.__index = Window
 ns.SettingsWindow = Window

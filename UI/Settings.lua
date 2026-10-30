@@ -9,7 +9,7 @@ local Options = ns.Options
 -- Under Options > AddOns there's only the information page (UI/InfoPage.lua), with a button that
 -- opens the window. The game's settings have nothing of ours to change: on Forever, with the
 -- controller interface on, the game stopped responding now and then when they closed after a
--- change (see docs/DEVELOPMENT.md). The pages read and write ns.Options, and the features react
+-- change (see docs/dev/settings-window.md). The pages read and write ns.Options, and the features react
 -- through Options:Watch; the Advanced settings page reads and writes the game's own values through
 -- ns.HiddenSettings.
 local SettingsPanel = {}

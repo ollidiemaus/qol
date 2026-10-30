@@ -2,7 +2,7 @@ local _, ns = ...
 
 -- Click casting: a binding (a combination and an action) is used on the unit frame clicked with
 -- the combination, or under the mouse when it's pressed. What it changes on Blizzard's frames and
--- why that's taint-safe is in docs/DEVELOPMENT.md, "Click casting".
+-- why that's taint-safe is in docs/dev/click-casting.md.
 local ClickCast = {}
 ns.ClickCast = ClickCast
 

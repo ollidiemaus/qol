@@ -7,7 +7,7 @@ How the engineering skills should consume this repo's domain documentation when 
 - **`GLOSSARY.md`** at the repo root.
 - **`docs/adr/`**: read ADRs that touch the area you're about to work in.
 
-These sit next to `docs/DEVELOPMENT.md`, they don't replace it: DEVELOPMENT.md still holds the design notes and the taint rules for Blizzard frames (grep its `##` headings first, see `.claude/CLAUDE.md`). An ADR records one decision and why; the DEVELOPMENT.md section it changes gets updated as usual.
+These sit next to `docs/DEVELOPMENT.md`, they don't replace it: DEVELOPMENT.md holds the taint rules for Blizzard frames, and `docs/dev/<area>.md` the design notes per area. An ADR records one decision and why; the `docs/dev/` file it changes gets updated as usual.
 
 If any of these files don't exist, **proceed silently**. Don't flag their absence; don't suggest creating them upfront. The `/domain-modeling` skill (reached via `/grill-with-docs`) creates them lazily when terms or decisions actually get resolved.
 

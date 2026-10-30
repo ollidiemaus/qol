@@ -2,7 +2,7 @@ local _, ns = ...
 local L = ns.L
 
 -- /qol probe, a developer tool: measures the hidden settings in the client it runs in and prints a
--- report, kept in QoLDB.probe to be copied out of the SavedVariables file (docs/DEVELOPMENT.md,
+-- report, kept in QoLDB.probe to be copied out of the SavedVariables file (docs/dev/in-game.md,
 -- "The hidden settings probe"). Every value it writes is put back before it ends.
 local HiddenSettings = ns.HiddenSettings
 local Probe = {}

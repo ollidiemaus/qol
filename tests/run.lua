@@ -1,4 +1,9 @@
--- Usage (from the repository root): lua tests/run.lua
+-- Usage (from the repository root): ~/.lua51/bin/lua tests/run.lua
+-- WoW runs Lua 5.1; a newer interpreter would pass code the game rejects.
+if _VERSION ~= "Lua 5.1" then
+    io.stderr:write("tests/run.lua needs Lua 5.1 (got " .. _VERSION .. "): run ~/.lua51/bin/lua tests/run.lua\n")
+    os.exit(1)
+end
 package.path = "./tests/?.lua;" .. package.path
 
 local T = require("testlib")

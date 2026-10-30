@@ -119,7 +119,7 @@ end
 local function vendorLine(tooltip, itemID)
     local total, price, count = vendorPrice(tooltip, itemID)
     if not total then return nil end
-    -- Shift is read only here, never watched: DEVELOPMENT.md says why the tooltip isn't refreshed.
+    -- Shift is read only here, never watched: docs/dev/tooltips-chat-bags-mail.md says why the tooltip isn't refreshed.
     if count > 1 and IsShiftKeyDown() then
         return L.VENDOR_STACK:format(L.VENDOR, count), ns.FormatMoney(total)
     end

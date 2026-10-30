@@ -1,4 +1,10 @@
 -- Just enough of the WoW API to load the addon in plain Lua and drive it with events.
+--
+-- Grep it rather than read it:
+--   grep -n '^function Stubs\.' tests/wow_stubs.lua   what a spec can do (events, clicks, keys, combat)
+--   grep -n '^ *---' tests/wow_stubs.lua              the faked API's areas inside install()
+--   grep -nw 'UnitClass' tests/wow_stubs.lua          whether one API is faked (C_* members too)
+-- Each part starts with a comment that says what it fakes and which state.* fields drive it.
 local Stubs = {}
 
 -- A stand-in for a secret value: issecretvalue() is true only for this.
@@ -1110,7 +1116,7 @@ local function install()
         end,
     }
 
-    -- Bags and items
+    --- Bags and items
     G.C_Container = {
         GetContainerNumSlots = function(bag) return state.bags[bag] and state.bags[bag].size or 0 end,
         GetContainerItemInfo = function(bag, slot) return state.bags[bag] and state.bags[bag][slot] end,
@@ -1125,7 +1131,7 @@ local function install()
         end,
     }
 
-    -- Merchant
+    --- Merchant
     G.C_MerchantFrame = {
         IsSellAllJunkEnabled = function() return state.sellAllEnabled end,
         SellAllJunkItems = function() state.soldAll = state.soldAll + 1 end,
@@ -1141,14 +1147,14 @@ local function install()
     -- The guild bank's loader, which Blizzard_GuildBankUI's bootstrap defines at startup.
     G.GuildBankFrame_LoadUI = function() end
 
-    -- Loot: the loot window's slots, and the slots taken, in order. The game takes a slot later, so
+    --- Loot: the loot window's slots, and the slots taken, in order. The game takes a slot later, so
     -- the window keeps its slots.
     G.GetNumLootItems = function() return state.lootSlots end
     G.LootSlot = function(slot) table.insert(state.looted, slot) end
     -- The clock: Stubs.Wait moves it on.
     G.GetTime = function() return state.now end
 
-    -- Frames the addon hides
+    --- Frames the addon hides
     G.MicroMenuContainer = newRegion("Frame", G.UIParent)
     G.BagsBar = newRegion("Frame", G.UIParent)
     G.QuickJoinToastButton = newRegion("Frame", G.UIParent)
@@ -1187,7 +1193,7 @@ local function install()
     -- The tooltip the controller interface shows for new buffs.
     G.BuffFrameTooltip = newRegion("Frame", G.UIParent)
 
-    -- The minimap as Forever builds it: the cluster with its header bar and zone text button, the
+    --- The minimap as Forever builds it: the cluster with its header bar and zone text button, the
     -- container with the map, the round frame and the coordinates under the map. Since 1.60.1 the
     -- header bar is the zone text button's own two textures (a spec removes BorderTop for that).
     G.MinimapCluster = newRegion("Frame", G.UIParent)
@@ -1242,7 +1248,7 @@ local function install()
     }
     G.GetFileIDFromPath = function(path) return state.files[path] end
 
-    -- Key bindings: state.bindings[key] = command (the saved ones), state.overrides[key] = { owner,
+    --- Key bindings: state.bindings[key] = command (the saved ones), state.overrides[key] = { owner,
     -- command } (override bindings). Changing bindings is blocked in combat.
     local function sortedKeys(map)
         local keys = {}
@@ -1302,7 +1308,7 @@ local function install()
         end
     end
 
-    -- The game's own Click Casting: state.clickBindings is its profile, { type, actionID, button,
+    --- The game's own Click Casting: state.clickBindings is its profile, { type, actionID, button,
     -- modifiers }. Modifiers are bits here (Shift 1, Ctrl 2, Alt 4), named by GetStringFromModifiers.
     G.Enum.ClickBindingType = { None = 0, Spell = 1, Macro = 2, Interaction = 3, PetAction = 4 }
     G.Enum.ClickBindingInteraction = { Target = 1, OpenContextMenu = 2 }
@@ -1323,7 +1329,7 @@ local function install()
         return table.concat(names, "-")
     end
 
-    -- The controller interface's own bindings: state.gamepadBindings[key] = command.
+    --- The controller interface's own bindings: state.gamepadBindings[key] = command.
     G.Enum.BindingContext = { None = 0, GamepadModeInGameCore = 1 }
     G.C_KeyBindings = {
         GetBindingContextForAction = function() return G.Enum.BindingContext.None end,
@@ -1333,7 +1339,7 @@ local function install()
         end,
     }
 
-    -- Action slots: state.actions[slot] = { texture, usable (default true), noMana, count, cooldown,
+    --- Action slots: state.actions[slot] = { texture, usable (default true), noMana, count, cooldown,
     -- current, autoRepeat }. state.cursor is what PickupAction took; PlaceAction records the slot.
     local function action(slot)
         assert(type(slot) == "number" and slot >= 1 and slot <= 180, "valid action slot")
@@ -1369,7 +1375,7 @@ local function install()
         end,
     }
 
-    -- What a ring holds, as this character has it. state.spells[id] = { name, texture, usable,
+    --- What a ring holds, as this character has it. state.spells[id] = { name, texture, usable,
     -- noMana, consumable, charges, count, cooldown } for the spells it knows; state.items[id] = { name,
     -- texture, count, equipped, usable, consumable, stack, cooldown = { start, duration } } for the
     -- items (count 0: not in the bags); state.toys[id] = { usable } for the toys it has (item data
@@ -1512,7 +1518,7 @@ local function install()
     end
     G.SecureHandlerExecute = function(frame, body, ...) return Stubs.Execute(frame, body, ...) end
 
-    -- Settings the client keeps (C_CVar), as strings. cvarReads counts the GetCVar calls.
+    --- Settings the client keeps (C_CVar), as strings. cvarReads counts the GetCVar calls.
     G.C_CVar = {
         GetCVar = function(name)
             state.cvarReads = state.cvarReads + 1
@@ -1546,7 +1552,7 @@ local function install()
         end,
     }
 
-    -- Quest givers: state.quest holds what the NPC offers; every call the addon makes is recorded.
+    --- Quest givers: state.quest holds what the NPC offers; every call the addon makes is recorded.
     local quest = function() return state.quest end
     local function record(call) table.insert(state.quest.calls, call) end
     G.IsShiftKeyDown = function() return state.shift end
@@ -1578,7 +1584,7 @@ local function install()
     G.GetNumQuestChoices = function() return quest().choices end
     G.GetQuestReward = function(choice) record("reward:" .. choice) end
 
-    -- The world map: a MapCanvas with its data providers, at state.worldMap.
+    --- The world map: a MapCanvas with its data providers, at state.worldMap.
     G.Enum.UIMapType = { Cosmic = 0, World = 1, Continent = 2, Zone = 3 }
     G.CreateFromMixins = function(...)
         local object = {}
@@ -1616,7 +1622,7 @@ local function install()
     function G.GameTooltip:Show() self.shown = true end
     function G.GameTooltip:Hide() self.shown = false end
 
-    -- Units: state.units[unit] = { isPlayer, treatAsPlayer, class }; a unit that isn't there doesn't exist.
+    --- Units: state.units[unit] = { isPlayer, treatAsPlayer, class }; a unit that isn't there doesn't exist.
     G.UnitIsPlayer = function(unit)
         local info = state.units[unit]
         if info and info.isPlayer ~= nil then return info.isPlayer end
@@ -1663,7 +1669,7 @@ local function install()
         WARRIOR = { r = 0.78, g = 0.61, b = 0.43 },
     }
 
-    -- Unit frames (secure unit buttons), each with the health bar UnitFrame_Initialize stores in
+    --- Unit frames (secure unit buttons), each with the health bar UnitFrame_Initialize stores in
     -- frame.healthbar. state.rawFrames maps a read-only frame (PlayerFrame) to the frame under it.
     state.healthBars, state.rawFrames = {}, {}
     for name, unit in pairs({ PlayerFrame = "player", TargetFrame = "target", TargetFrameToT = "targettarget",
@@ -1699,7 +1705,7 @@ local function install()
         end
     end
 
-    -- Action bar layout helpers: record what the addon asks for.
+    --- Action bar layout helpers: record what the addon asks for.
     G.GridLayoutUtil = {
         CreateStandardGridLayout = function(stride, xPadding, yPadding, xMultiplier, yMultiplier)
             return { kind = "standard", stride = stride, xPadding = xPadding, yPadding = yPadding,
