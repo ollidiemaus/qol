@@ -1,9 +1,10 @@
 local addonName, ns = ...
 
 -- Settings are ready on ADDON_LOADED; the features start on PLAYER_LOGIN, once the default UI
--- (action bars, micro menu, minimap, chat) exists.
-ns.Events:On("ADDON_LOADED", function(_, loaded)
+-- (action bars, micro menu, minimap, chat) exists. Once loaded, it stops listening.
+local function onLoaded(_, loaded)
     if loaded ~= addonName or ns.db then return end
+    ns.Events:Off("ADDON_LOADED", onLoaded)
     if type(QoLDB) ~= "table" then
         QoLDB = {}
     end
@@ -12,7 +13,8 @@ ns.Events:On("ADDON_LOADED", function(_, loaded)
     ns.SettingsPanel:Init()
     -- Before login, for the unit frame addons that look for it as they build their frames.
     ns.ClickCast:Provide()
-end)
+end
+ns.Events:On("ADDON_LOADED", onLoaded)
 
 ns.Events:On("PLAYER_LOGIN", function()
     ns.Merchant:Init()

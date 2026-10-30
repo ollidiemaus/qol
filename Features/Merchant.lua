@@ -12,33 +12,39 @@ local function lastBag()
     return NUM_TOTAL_EQUIPPED_BAG_SLOTS or NUM_BAG_SLOTS or 4
 end
 
+-- The item's sell price, or nil; and false as the second value while the client hasn't loaded the
+-- item's info yet (C_Item.GetItemInfo returns nothing for it then).
 local function sellPrice(itemID)
-    if not (C_Item and C_Item.GetItemInfo) then return nil end
-    local price = select(11, C_Item.GetItemInfo(itemID))
-    if ns.IsUsable(price) then return price end
-    return nil
+    if not (C_Item and C_Item.GetItemInfo) then return nil, true end
+    local name, _, _, _, _, _, _, _, _, _, price = C_Item.GetItemInfo(itemID)
+    if name == nil then return nil, false end
+    if ns.IsUsable(price) then return price, true end
+    return nil, true
 end
 
--- Every grey item in the bags that a merchant pays for: { bag, slot, count, value }.
+-- Every grey item in the bags that a merchant pays for: { bag, slot, count, value }. Second, the
+-- IDs of grey items whose info isn't loaded yet, as keys (nil when there are none).
 function Merchant:FindJunk()
-    local junk = {}
+    local junk, unloaded = {}, nil
     for bag = 0, lastBag() do
         for slot = 1, C_Container.GetContainerNumSlots(bag) or 0 do
             local info = C_Container.GetContainerItemInfo(bag, slot)
             if info and info.quality == POOR and not info.hasNoValue and not info.isLocked and info.itemID then
-                local price = sellPrice(info.itemID)
-                if price and price > 0 then
+                local price, loaded = sellPrice(info.itemID)
+                if not loaded then
+                    unloaded = unloaded or {}
+                    unloaded[info.itemID] = true
+                elseif price and price > 0 then
                     local count = info.stackCount or 1
                     junk[#junk + 1] = { bag = bag, slot = slot, count = count, value = price * count }
                 end
             end
         end
     end
-    return junk
+    return junk, unloaded
 end
 
-function Merchant:SellJunk()
-    local junk = self:FindJunk()
+local function sell(junk)
     if #junk == 0 then return end
 
     local total = 0
@@ -59,8 +65,53 @@ function Merchant:SellJunk()
     ns.Print(L.SOLD_JUNK:format(#junk, ns.FormatMoney(total)))
 end
 
--- How much of a repair the guild bank pays: what's left of today's withdrawal limit (-1 for the
--- guild master), capped by what the bank holds.
+-- A grey item whose info the client hasn't loaded has no price yet, so the junk waits for the
+-- client to load it (GET_ITEM_INFO_RECEIVED), at most LOAD_SECONDS, and is then sold all at once:
+-- "sell all junk" would sell such an item too, and the count and value said would leave it out.
+-- Closing the merchant ends the wait.
+local LOAD_SECONDS = 1
+local unloadedIDs -- the item IDs waited for, as keys, while waiting
+local waits = 0 -- counts the waits, so an earlier wait's timer ends none after it
+local onItemInfo, stopWaiting
+
+local function finish()
+    if not unloadedIDs then return end
+    stopWaiting()
+    sell((Merchant:FindJunk()))
+end
+
+function onItemInfo(_, itemID)
+    if not (unloadedIDs and unloadedIDs[itemID]) then return end
+    unloadedIDs[itemID] = nil
+    if next(unloadedIDs) == nil then finish() end
+end
+
+function stopWaiting()
+    unloadedIDs = nil
+    ns.Events:Off("GET_ITEM_INFO_RECEIVED", onItemInfo)
+    ns.Events:Off("MERCHANT_CLOSED", stopWaiting)
+end
+
+function Merchant:SellJunk()
+    if unloadedIDs then return end
+    local junk, unloaded = self:FindJunk()
+    if not unloaded then
+        sell(junk)
+        return
+    end
+    unloadedIDs = unloaded
+    ns.Events:On("GET_ITEM_INFO_RECEIVED", onItemInfo)
+    ns.Events:On("MERCHANT_CLOSED", stopWaiting)
+    if C_Item.RequestLoadItemDataByID then
+        for itemID in pairs(unloaded) do C_Item.RequestLoadItemDataByID(itemID) end
+    end
+    waits = waits + 1
+    local wait = waits
+    C_Timer.After(LOAD_SECONDS, function()
+        if wait == waits then finish() end
+    end)
+end
+
 local function guildFunds()
     local limit = GetGuildBankWithdrawMoney()
     local bank = GetGuildBankMoney() or 0

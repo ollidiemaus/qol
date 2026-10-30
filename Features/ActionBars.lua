@@ -42,9 +42,11 @@ ActionBars.BARS = {
 function ActionBars.VerticalKey(frameName) return "flipVertical_" .. frameName end
 function ActionBars.HorizontalKey(frameName) return "flipHorizontal_" .. frameName end
 
+-- Each bar's option keys, built once: the wake-up events read them several times a second.
 for _, bar in ipairs(ActionBars.BARS) do
-    Options:AddDefault(ActionBars.VerticalKey(bar.frame), false)
-    Options:AddDefault(ActionBars.HorizontalKey(bar.frame), false)
+    bar.verticalKey, bar.horizontalKey = ActionBars.VerticalKey(bar.frame), ActionBars.HorizontalKey(bar.frame)
+    Options:AddDefault(bar.verticalKey, false)
+    Options:AddDefault(bar.horizontalKey, false)
 end
 
 -- Blizzard's layout for the bar with the chosen axes flipped. Reads the bar, moves only its
@@ -103,8 +105,8 @@ function ActionBars:Update()
     for _, info in ipairs(self.BARS) do
         local bar = _G[info.frame]
         if bar then
-            local flipVertical = Options:Get(self.VerticalKey(info.frame))
-            local flipHorizontal = Options:Get(self.HorizontalKey(info.frame))
+            local flipVertical = Options:Get(info.verticalKey)
+            local flipHorizontal = Options:Get(info.horizontalKey)
             local flipped = flipVertical or flipHorizontal
             local token = layoutToken(bar)
             if flipped and (force or appliedOver[info.frame] ~= token) then
@@ -134,7 +136,7 @@ end
 
 local function hasAnyFlip()
     for _, info in ipairs(ActionBars.BARS) do
-        if Options:Get(ActionBars.VerticalKey(info.frame)) or Options:Get(ActionBars.HorizontalKey(info.frame)) then
+        if Options:Get(info.verticalKey) or Options:Get(info.horizontalKey) then
             return true
         end
     end

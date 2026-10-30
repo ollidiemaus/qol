@@ -17,10 +17,11 @@ local BAR_PAST = { 26, -26, -26, 26 }
 local UNIT_FRAME_BLIZZARD = { 10, -10, -10, 10 }
 local UNIT_FRAME_PAST = { 40, -40, -40, 40 }
 
--- Two drawn frames: Blizzard's change shows in the first, ours runs in the second.
+-- Two drawn frames a tenth of a second apart: Blizzard's change shows in the first, ours runs in
+-- the second.
 local function twoFrames()
-    Stubs.NextFrame()
-    Stubs.NextFrame()
+    Stubs.NextFrame(0.1)
+    Stubs.NextFrame(0.1)
 end
 
 describe("frames past the screen edge", function()

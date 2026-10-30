@@ -174,9 +174,12 @@ Classic Era (1.15) is the exception: Blizzard sets `lockColor` there only on its
 change (`HealthBar_OnValueChanged`, run by `UnitFrameHealthBar_OnValueChanged`) and on every
 `UnitFrameHealthBar_Update`. Its bars poll their health (`frequentUpdates`, `UnitFrameHealthBar_OnUpdate`
 calls `SetValue`), so no event marks the change. So at Init each bar without `lockColor` (a read)
-gets `HookScript("OnValueChanged", ...)`, which runs after the game's handler and only asks
-`ns.Later("classHealthBars", ..., true)` for `Apply` again, in combat too; a colored bar is then
-tinted again within a drawn frame. It asks for the client's lack of `lockColor`, not which client
+gets `HookScript("OnValueChanged", ...)`, which runs after the game's handler and, while that bar's
+option is on or it shows a class color, only asks `ns.Later("classHealthBar<n>", ..., true)` to color
+that one bar again (`ApplyBar`), in combat too; a colored bar is then tinted again within a drawn
+frame. This runs on every health change of the target and focus, so the options that are on are kept
+in a table the option watcher updates, and `colorBar` sets the desaturation and color only where
+they differ. It asks for the client's lack of `lockColor`, not which client
 it is, so Forever's and retail's bars (locked in their OnLoad) get no hook. Whether the game draws
 the green for one frame before `Apply` runs (our OnUpdate may run before or after the bar's) is
 for the in-game check. An `UnitFrameHealthBar_Update` that sets green without a new value (no
@@ -228,7 +231,8 @@ since that's how the new layout gets applied), on leaving Edit Mode (`ExitEditMo
 `RevertAllChanges`, which applies the saved layout again), `PLAYER_SPECIALIZATION_CHANGED`, and in
 Edit Mode on a highlight or a setting change, without an event. So the events are wake-ups, and
 between `EditMode.Enter` and `EditMode.Exit` (EventRegistry) a frame of ours compares the frames
-every drawn frame while the option is on. The insets are always worked out from the selection box,
+ten times a second (and on the first frame it shows) while the option is on: each comparison reads
+every frame's rect and its selection box's. The insets are always worked out from the selection box,
 whatever Blizzard set; a frame that has them already is left alone. That check makes no garbage of its own:
 insets go around as four numbers (multiple returns), never tables, the watcher and the schedule
 helper call one function defined at file scope, and a frame anchored again reuses its own copy of
@@ -463,7 +467,7 @@ The FPS and ping text is a frame of ours (a child of `MinimapCluster`, like the 
 place like any other element. The game has no place for it, so it has no "Default" position (an
 unknown or inside value hides it), and it's only made the first time it has a row. It shows
 `GetFramerate()` and the higher of `GetNetStats()`'s home and world latency, as the game's own latency
-meter on the micro menu does. A `C_Timer.After(1)` chain updates it while it has a row and ends itself
+meter on the micro menu does. One `C_Timer.NewTicker(1)` updates it while it has a row and cancels itself
 once it hasn't; no OnUpdate of ours runs every frame for it. The frame keeps the width of a reading of
 999 and 999 and is as high as the clock's button, so its row never moves as the numbers change; the
 text is anchored to the side of its spot (left, right or center), so it keeps to the minimap's edge or
@@ -495,7 +499,11 @@ regions of our own, copied from the bar's buttons
 and the cooldown swipe) and updated in combat (`ns.Later(..., true)`): icon, usability color, count
 (`GetActionDisplayCount`, maybe secret, only passed to `SetText`), cooldown
 (`C_ActionBar.GetActionCooldownDuration` into `SetCooldownFromDurationObject` on our own Cooldown)
-and the selected rim. Dragging calls `PickupAction`/`PlaceAction` only out of combat, and with
+and the selected rim. Cooldown and usability events ask for this many times a second in combat, so
+the icon, tint, count and a cleared or `SetCooldown` cooldown go through `ns.Buttons`' setters
+(`SetIcon`, `SetUsable`, `SetCount`, `ClearCooldown`, `SetCooldown`), which skip a value the region
+shows already; the rings' slots use them too, and every change to those regions goes through them.
+A secret value, and a duration object (new on each call), is always set. Dragging calls `PickupAction`/`PlaceAction` only out of combat, and with
 `lockActionBars` on only with the `PICKUPACTION` modifier, as the game's bars do.
 
 Bindings: `Bindings.xml` adds `CLICK QoLBackButtonN:LeftButton` under Key Bindings > AddOns, named
@@ -1191,7 +1199,9 @@ Things only the real client can confirm:
   micro menu), and the micro menu still shows on the vehicle bar.
 - Hide portrait hit text: no numbers or Dodge/Parry over the player's and the pet's portrait in
   combat, also in a vehicle; unticked, they come back at once, and no "tainted by" error shows up.
-- Junk selling and repairs (including guild repairs) at a merchant.
+- Junk selling and repairs (including guild repairs) at a merchant. Right after login a grey item
+  the client hasn't loaded yet makes junk selling wait for `GET_ITEM_INFO_RECEIVED` (at most a
+  second, `Merchant:SellJunk`); it then sells everything at once with the right count and value.
 - The vendor price of a stack in your bags shows the price of one, and `Vendor x<count>` with the
   stack total while Shift is held (pressing Shift while pointing flips it within a moment), with
   and without a merchant open, and only once (the game's own sell price line is replaced, not

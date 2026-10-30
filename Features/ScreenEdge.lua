@@ -15,7 +15,7 @@ local Options = ns.Options
 -- which fires EDIT_MODE_LAYOUTS_UPDATED), leaving Edit Mode (RevertAllChanges applies the saved
 -- layout again), a specialization change, and in Edit Mode a frame highlighted or a setting
 -- changed. It sets 0s for a frame not laid out yet. We don't hook its code, so the events are
--- wake-ups, and while Edit Mode is open the frames are compared every drawn frame. The insets are
+-- wake-ups, and while Edit Mode is open the frames are compared ten times a second. The insets are
 -- always worked out from the selection box; a frame whose insets already are those is left alone.
 --
 -- New insets don't move a frame the game has already pulled in: leaving Edit Mode anchors every
@@ -45,8 +45,8 @@ local function allUsable(...)
 end
 
 -- Edit Mode's insets for a laid out frame (UpdateClampOffsets): from its edges to its selection box's.
--- Insets go around as four numbers, never tables: this runs for every Edit Mode frame on every drawn
--- frame while Edit Mode is open.
+-- Insets go around as four numbers, never tables: this runs for every Edit Mode frame ten times a
+-- second while Edit Mode is open.
 local function selectionInsets(frame)
     local selection = frame.Selection
     if not (selection and frame.GetClampRectInsets) then return nil end
@@ -130,7 +130,7 @@ function ScreenEdge:Apply()
     end
 end
 
--- Defined once: schedule hands it to ns.Later on every drawn frame while the watcher shows.
+-- Defined once: schedule hands it to ns.Later ten times a second while the watcher shows.
 local function apply()
     ScreenEdge:Apply()
 end
@@ -140,15 +140,25 @@ local function schedule()
 end
 
 -- Shown while Edit Mode is open and the option is on: Blizzard sets the insets again without an
--- event there (a frame highlighted, a setting changed).
+-- event there (a frame highlighted, a setting changed). It compares the frames ten times a second,
+-- and on the first frame it shows.
+local CHECK_SECONDS = 0.1
+local sinceCheck = 0
 local watcher = CreateFrame("Frame")
 watcher:Hide()
-watcher:SetScript("OnUpdate", schedule)
+watcher:SetScript("OnUpdate", function(_, elapsed)
+    sinceCheck = sinceCheck + elapsed
+    if sinceCheck < CHECK_SECONDS then return end
+    sinceCheck = 0
+    schedule()
+end)
 
 local editModeOpen = false
 
 local function updateWatcher()
-    watcher:SetShown(editModeOpen and Options:Get(KEY) == true)
+    local shown = editModeOpen and Options:Get(KEY) == true
+    if shown and not watcher:IsShown() then sinceCheck = CHECK_SECONDS end
+    watcher:SetShown(shown)
 end
 
 local WAKE_EVENTS = {

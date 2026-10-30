@@ -471,7 +471,10 @@ end
 -- turns it green again (HealthBar_OnValueChanged) before the OnValueChanged hooks run.
 local function newHealthBar(unit)
     local raw = { unit = unit, color = { 1, 1, 1, 1 }, desaturated = false, lockColor = true, value = 1 }
-    function raw.SetStatusBarColor(_, r, g, b, a) raw.color = { r, g, b, a or 1 } end
+    function raw.SetStatusBarColor(_, r, g, b, a)
+        raw.color = { r, g, b, a or 1 }
+        raw.colorSets = (raw.colorSets or 0) + 1
+    end
     function raw.GetStatusBarColor() return raw.color[1], raw.color[2], raw.color[3], raw.color[4] end
     function raw.SetStatusBarDesaturated(_, desaturated) raw.desaturated = desaturated and true or false end
     function raw.IsStatusBarDesaturated() return raw.desaturated end
@@ -1061,6 +1064,19 @@ local function install()
             local queue = seconds > 0 and state.delayed or state.timers
             queue[#queue + 1] = fn
         end,
+        -- Each AdvanceTime runs it once, until it is cancelled.
+        NewTicker = function(_, fn)
+            local ticker = { cancelled = false }
+            function ticker.Cancel(self) self.cancelled = true end
+            function ticker.IsCancelled(self) return self.cancelled end
+            local function tick()
+                if ticker.cancelled then return end
+                fn(ticker)
+                if not ticker.cancelled then state.delayed[#state.delayed + 1] = tick end
+            end
+            state.delayed[#state.delayed + 1] = tick
+            return ticker
+        end,
     }
     -- The interface style: Stubs.SetControllerUI switches to the controller interface.
     G.C_InputInterfaceStyle = { GetCurrentStyle = function() return state.interfaceStyle end }
@@ -1101,9 +1117,10 @@ local function install()
         UseContainerItem = function(bag, slot) table.insert(state.used, bag .. ":" .. slot) end,
     }
     G.C_Item = {
+        RequestLoadItemDataByID = function(itemID) table.insert(state.itemRequests, itemID) end,
         GetItemInfo = function(itemID)
             local price = state.prices[itemID]
-            if price == nil then return nil end
+            if price == nil or state.unloadedItems[itemID] then return nil end
             return "Item " .. itemID, nil, 0, 1, 1, "Junk", "Junk", 1, "", 0, price
         end,
     }
@@ -1772,7 +1789,7 @@ function Stubs.Reset(options)
         interfaceStyle = 0,
         screenWidth = 2560, screenHeight = 1440,
         framerate = 59.7, latencyHome = 45, latencyWorld = 38,
-        bags = {}, prices = {}, used = {}, soldAll = 0, sellAllEnabled = true,
+        bags = {}, prices = {}, unloadedItems = {}, itemRequests = {}, used = {}, soldAll = 0, sellAllEnabled = true,
         canRepair = false, repairCost = 0, repairs = {}, money = 0,
         inGuild = false, guildCanRepair = false, guildLimit = 0, guildMoney = 0,
         lootSlots = 0, looted = {},
@@ -1914,14 +1931,15 @@ local function onUpdateDue()
     return false
 end
 
--- One drawn frame: the C_Timer callbacks that are due, then the OnUpdate of every visible frame.
-function Stubs.NextFrame()
+-- One drawn frame: the C_Timer callbacks that are due, then the OnUpdate of every visible frame,
+-- elapsed seconds (0 if not given) after the last one.
+function Stubs.NextFrame(elapsed)
     local timers = state.timers
     state.timers = {}
     for _, fn in ipairs(timers) do fn() end
     for _, region in ipairs(state.regions) do
         local onUpdate = region.scripts.OnUpdate
-        if onUpdate and region:IsVisible() then onUpdate(region, 0) end
+        if onUpdate and region:IsVisible() then onUpdate(region, elapsed or 0) end
     end
     Stubs.RenderEditMode()
 end
@@ -2447,6 +2465,17 @@ end
 function Stubs.SetHealth(frameName, value)
     local raw = state.healthBars[frameName]
     raw.SetValue(raw.bar, value)
+end
+
+-- The client hasn't loaded the item's info yet: C_Item.GetItemInfo returns nothing for it.
+function Stubs.UnloadItem(itemID)
+    state.unloadedItems[itemID] = true
+end
+
+-- The client loads the item's info, as after a request, and says so.
+function Stubs.LoadItem(itemID)
+    state.unloadedItems[itemID] = nil
+    Stubs.Fire("GET_ITEM_INFO_RECEIVED", itemID, true)
 end
 
 -- The whole bag contents: items ={ { bag, slot, itemID, quality, count, price, hasNoValue } }.
