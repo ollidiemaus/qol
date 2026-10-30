@@ -1022,6 +1022,19 @@ they're in the player's language. Forever's UiMap IDs (1411 and up) don't exist 
 `MapPins.IsAvailable()` is false: the settings leave the World map page out and the map is never
 touched.
 
+Classic Era (1.15) has the same UiMap IDs for its zones, so the pins show there too, with a path of
+their own for the places where its world differs from Forever's. `MapPins.World()` tells the two
+apart by asking for Forever's Zephras Isle map (2521), not the build: a pin marked `world =
+"forever"` (the Southshore stop, Stormwind Harbor, the Riverglades boat, the Zephras Isle airships)
+is left out on Classic Era, and one marked `world = "classicEra"` (its direct Menethil Harbor–Auberdine
+boat) on Forever. Classic Era's Stormwind City and Eastern Plaguelands maps cover another part of
+the world than Forever's (Forever's Stormwind takes in the harbor), so the Stockade, the Deeprun
+Tram, Stratholme and Naxxramas carry a `classicEra = { x, y }` place, converted through both
+clients' zone rects; the continent pins follow from it, since `GetMapRectOnMap` gives Classic
+Era's own rects. Classic Era has no `flightmasterferry` atlas, so the boat style names an
+`orAtlas`, the garrison's `Ships_CargoShip-Map`, used where `C_Texture.GetAtlasInfo` doesn't know
+the first.
+
 The Controller page is registered only when `GamepadMainActionBarFrame` exists (Forever); on retail
 there's nothing for it to change.
 
@@ -1201,7 +1214,10 @@ Things only the real client can confirm:
   row making room, nothing cut off), and gone when hidden.
 - World map pins: in the right places on the zone and continent maps (the entrance positions are
   the instance portals, like retail's encounter journal pins), the tooltips' names in German, and a
-  click opening the destination's map. Open the map in combat too.
+  click opening the destination's map. Open the map in combat too. On Classic Era: the Stockade
+  (~39.7, 54.0) and the Deeprun Tram (~64.5, 7.6) in Stormwind, Stratholme (~30.8, 15.7) and
+  Naxxramas (~31.4, 25.9) in the Eastern Plaguelands, the Menethil Harbor–Auberdine boat at both
+  docks, and the ship icon's size next to the others.
 - Controller back buttons (Options > Controller), on a Steam Deck with F13 to F16 (or other free
   keys) given to L4, L5, R4 and R5 in Steam Input, bound under Key Bindings > AddOns > Quality of
   Life:

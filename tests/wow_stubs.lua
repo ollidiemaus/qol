@@ -807,6 +807,22 @@ local function makeClassicEra(G)
     G.GetGuildBankWithdrawMoney, G.GetGuildBankMoney = nil, nil
     -- Its own circle mask atlas instead of Forever's.
     state.atlases.CircleMask, state.atlases.CircleMaskScalable = nil, { width = 64, height = 64 }
+    -- No boat icon on the map's atlas (flightmasterferry); the garrison's ship icons are there.
+    state.atlases.flightmasterferry = nil
+    state.atlases["Ships_CargoShip-Map"] = { width = 94, height = 94 }
+    -- Its world: no Zephras Isle, and Stormwind's and the Eastern Plaguelands' maps cover other
+    -- parts of the Eastern Kingdoms than Forever's (left, right, top, bottom there).
+    local getMapInfo, getMapRect = G.C_Map.GetMapInfo, G.C_Map.GetMapRectOnMap
+    local rects = { ["1453>1415"] = { 0.38, 0.46, 0.66, 0.74 }, ["1423>1415"] = { 0.53, 0.67, 0.18, 0.33 } }
+    G.C_Map.GetMapInfo = function(mapID)
+        if mapID == 2521 then return nil end
+        return getMapInfo(mapID)
+    end
+    G.C_Map.GetMapRectOnMap = function(mapID, topMapID)
+        local rect = rects[mapID .. ">" .. topMapID]
+        if not rect then return getMapRect(mapID, topMapID) end
+        return rect[1], rect[2], rect[3], rect[4]
+    end
     -- What it has instead of the skill lines: the spell book's tabs, read by slot.
     G.BOOKTYPE_SPELL = "spell"
     G.GetNumSpellTabs = function() return #spellTabs() end
@@ -1727,7 +1743,7 @@ function Stubs.Reset(options)
         regionalNames = false,
         focus = nil,
         atlases = { ["ui-hud-minimap-frame-generic-mask"] = { width = 215, height = 226 },
-            CircleMask = { width = 64, height = 64 } },
+            CircleMask = { width = 64, height = 64 }, flightmasterferry = { width = 32, height = 32 } },
         fonts = { GameFontNormal = { "Fonts\\FRIZQT__.TTF", 12, "" },
             WhiteNormalNumberFont = { "Fonts\\ARIALN.TTF", 10, "OUTLINE" } },
         -- The hidden settings with their ranges, measured in Forever's client (ground clutter fade
