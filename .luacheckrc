@@ -36,7 +36,7 @@ read_globals = {
     "MicroMenuContainer", "ContainerFrameCombinedBags",
     "BagsBar", "QuickJoinToastButton", "MinimapCluster", "Minimap", "MinimapZoneText", "MinimapCompassTexture",
     "MinimapCompassTextureUnderlay", "HybridMinimap", "TimeManagerClockButton",
-    "TimeManagerClockTicker", "GameTimeFrame", "AddonCompartmentFrame", "WorldMapFrame", "MapCanvasDataProviderMixin", "CreateFromMixins",
+    "TimeManagerClockTicker", "GameTimeFrame", "AddonCompartmentFrame", "ToggleCalendar", "MiniMapTracking", "MinimapBorder", "WorldMapFrame", "MapCanvasDataProviderMixin", "CreateFromMixins",
     "GameTooltip", "SELL_PRICE",
     "ChatFrame2", "ChatFrame2Tab", "ChatFrameMenuButton", "ChatFrameChannelButton", "ChatFrameToggleVoiceDeafenButton",
     "ChatFrameToggleVoiceMuteButton", "TextToSpeechButtonFrame", "BuffFrameTooltip",

@@ -180,12 +180,14 @@ local function buildMinimap(page)
     end
     page:Dropdown("right", "minimapTracking", L.MINIMAP_TRACKING, positions("minimapTracking"),
         L.MINIMAP_INSIDE_POSITION_TIP)
-    -- Only Forever has the day and night icon.
+    -- Forever's day and night icon, or Classic Era's time of day icon; retail has neither.
     if ns.MinimapLayout.HasDayNight() then
         page:Dropdown("right", "minimapDayNight", L.MINIMAP_DAY_NIGHT, positions("minimapDayNight"),
             L.MINIMAP_INSIDE_POSITION_TIP)
     end
-    page:Checkbox("right", "hideMinimapCalendar", L.HIDE_MINIMAP_CALENDAR, L.HIDE_MINIMAP_CALENDAR_TIP)
+    if ns.MinimapLayout.HasCalendar() then
+        page:Checkbox("right", "hideMinimapCalendar", L.HIDE_MINIMAP_CALENDAR, L.HIDE_MINIMAP_CALENDAR_TIP)
+    end
 end
 
 -- Action bar page: the two flips side by side for each bar, then the paging keys and the buttons'

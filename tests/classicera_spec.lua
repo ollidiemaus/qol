@@ -22,7 +22,7 @@ describe("the stubbed Classic Era client", function()
     end)
 
     it("lacks tooltip data, the spell book's skill lines, toys, the addon compartment, combined bags, the controller, "
-        .. "the player frame's art, the minimap's coordinates, guild banks", function()
+        .. "the player frame's art, the minimap's coordinates, guild banks, the calendar", function()
         Stubs.Reset({ client = "classicEra" })
         T.eq(select(4, GetBuildInfo()), 11509)
         T.eq(TooltipDataProcessor, nil)
@@ -39,6 +39,16 @@ describe("the stubbed Classic Era client", function()
         T.falsy(MinimapCluster.MinimapContainer.PlayerCoords)
         T.eq(GuildBankFrame_LoadUI, nil)
         T.eq(CanGuildBankRepair, nil)
+        T.eq(ToggleCalendar, nil)
+    end)
+
+    it("has its own minimap: the round border, the tracking button and the time of day icon", function()
+        Stubs.Reset({ client = "classicEra" })
+        T.truthy(MinimapBorder:IsVisible())
+        T.falsy(MiniMapTracking:IsShown(), "shown only while something is tracked")
+        T.falsy(MinimapCluster.Tracking)
+        T.falsy(MinimapCluster.DielFrame)
+        T.eq(GameTimeFrame:GetParent(), MinimapBackdrop)
     end)
 
     it("keeps every template on Forever", function()
@@ -91,11 +101,13 @@ describe("QoL on Classic Era", function()
         -- buttons.
         for _, key in ipairs({ "combinedBagTopLeft", "druidManaBar", "minimapCompartment",
             "hideMinimapCoords", "minimapCoordsClassColor", "guildRepair", "hideBuffTooltips",
-            "controllerBackButtons" }) do
+            "controllerBackButtons", "hideMinimapCalendar" }) do
             T.falsy(keys[key], key)
         end
         T.truthy(keys.sellJunk)
         T.truthy(keys.autoRepair)
+        T.truthy(keys.minimapDayNight, "its time of day icon")
+        T.truthy(keys.minimapTracking)
         local headers = {}
         for _, header in ipairs(ns.SettingsPanel.pages.interface.headers) do headers[header.text] = true end
         for _, header in ipairs(ns.SettingsPanel.pages.minimap.headers) do headers[header.text] = true end

@@ -771,6 +771,24 @@ local function makeClassicEra(G)
     -- player frame's raw table, as the addon may not write the frame.
     state.playerFrame.PlayerFrameContainer = false
     G.MinimapCluster.MinimapContainer.PlayerCoords = false
+    -- Its minimap (Blizzard_Minimap/Classic): the round border is MinimapBorder, with no compass
+    -- underlay; the tracking button (MiniMapTracking) and the time of day icon (GameTimeFrame, as
+    -- there is no calendar) sit on MinimapBackdrop, not on the cluster.
+    local cluster = G.MinimapCluster
+    cluster.Tracking, cluster.DielFrame = false, false
+    G.ToggleCalendar = nil
+    G.Minimap:SetSize(140, 140)
+    G.MinimapBackdrop = newRegion("Frame", G.Minimap)
+    G.MinimapBackdrop:SetSize(192, 192)
+    G.MinimapBorder = newRegion("Texture", G.MinimapBackdrop)
+    G.MinimapCompassTextureUnderlay = nil
+    G.MiniMapTracking = newRegion("Frame", G.MinimapBackdrop)
+    G.MiniMapTracking:SetSize(33, 33)
+    G.MiniMapTracking:SetPoint("TOPLEFT", G.MinimapBackdrop, "TOPLEFT", 3, -50)
+    G.MiniMapTracking:Hide() -- the game shows it while something is tracked
+    G.GameTimeFrame = newRegion("Frame", G.MinimapBackdrop)
+    G.GameTimeFrame:SetSize(50, 50)
+    G.GameTimeFrame:SetPoint("TOPRIGHT", G.MinimapBackdrop, "TOPRIGHT", -4, -23)
     G.GuildBankFrame_LoadUI, G.CanGuildBankRepair = nil, nil
     G.GetGuildBankWithdrawMoney, G.GetGuildBankMoney = nil, nil
     -- Its own circle mask atlas instead of Forever's.
@@ -1131,6 +1149,8 @@ local function install()
     cluster.DielFrame = newRegion("Frame", cluster)
     cluster.DielFrame:SetSize(42, 42)
     cluster.DielFrame:SetPoint("CENTER", cluster, "CENTER", 63, 72)
+    -- Forever's calendar button is GameTimeFrame; the calendar's bootstrap defines this at startup.
+    G.ToggleCalendar = function() end
     G.C_Texture = {
         GetAtlasInfo = function(atlas) return state.atlases[atlas] end,
     }
@@ -1624,6 +1644,7 @@ local ADDON_GLOBALS = {
     "SLASH_QOL_RELOAD1", "hash_SlashCmdList", "IsSecureCmd", "SLASH_OTHERADDON1", "SLASH_RELOAD1",
     "HUD_EDIT_MODE_ACTION_BAR_LABEL", "HUD_EDIT_MODE_STANCE_BAR_LABEL", "HUD_EDIT_MODE_PET_ACTION_BAR_LABEL",
     "GetMinimapShape", "HybridMinimap", "TimeManagerClockButton", "GameTimeFrame", "AddonCompartmentFrame",
+    "ToggleCalendar", "MinimapBackdrop", "MinimapBorder", "MiniMapTracking",
     "TimeManagerClockTicker", "QoLNoAction", "ColorPickerFrame", "SettingsPanel", "GameMenuFrame",
     "GamepadMainActionBarFrame", "BINDING_HEADER_QOL",
     "QoLRing", "QoLRingButton", "QoLRingEditor", "QoLSettings",

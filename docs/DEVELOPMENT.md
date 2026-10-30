@@ -404,6 +404,25 @@ wider and higher and the zone text's button and font string higher (`MinimapZone
 of 12 and shows nothing of a line that doesn't fit), by the ratio to the game's size; a smaller one
 leaves them as they are. The sizes are set before the positions, which go by the buttons' sizes.
 
+Classic Era (1.15) has the same minimap with other names (`Blizzard_Minimap/Classic/Minimap.xml`),
+so a few frames have a Classic Era path. Each asks the client for the frame, not which client it is:
+- The round border is `MinimapBorder`, a texture on `MinimapBackdrop`; there is no compass
+  underlay, and `MinimapCompassTexture` is the compass ring the game shows only while the map
+  rotates. The square shape hides all three that exist.
+- The tracking button is `MiniMapTracking` on `MinimapBackdrop` (`MinimapTracking_Simple.xml`), not
+  `MinimapCluster.Tracking`. The game shows it only while something is tracked; the layout moves it
+  the same either way.
+- There is no calendar (no `ToggleCalendar`, which Forever's calendar bootstrap defines at startup):
+  `GameTimeFrame` is the time of day icon on the round border (`GameTime_NoCalendar.xml`), not the
+  calendar button. So without `ToggleCalendar` the day and night option moves `GameTimeFrame` (where
+  the cluster has no `DielFrame`), and the calendar option and its row are left out, or it would
+  hide the icon.
+- The map is 140 across, not 198. The rows' distances from the round frame (`EDGES.round`) and the
+  inside spots' cover of the round frame (`ROUND_COVER`) keep Forever's numbers until they're checked
+  in game.
+The zone text, the clock, the class colors, the font sizes and the FPS and ping text use the same
+frames as Forever.
+
 The FPS and ping text is a frame of ours (a child of `MinimapCluster`, like the clock) that the rows
 place like any other element. The game has no place for it, so it has no "Default" position (an
 unknown or inside value hides it), and it's only made the first time it has a row. It shows
@@ -769,6 +788,8 @@ settings are open, and closing our window is a plain `Hide` of a frame of ours.
   - Mana in bear and cat form (`PlayerFrame.PlayerFrameContainer`): Classic Era's player frame is the
     old one, without the art container the bar is drawn into; QoL doesn't draw a bar of its own
     there. The Player frame section keeps the portrait hit text.
+  - The calendar button (`ToggleCalendar`): Classic Era has no calendar; its `GameTimeFrame` is the
+    time of day icon, which the day and night row moves instead (see the minimap notes).
   - The addon compartment's place (`AddonCompartmentFrame`) and the Coordinates section
     (`MinimapCluster.MinimapContainer.PlayerCoords`): Classic Era's minimap has neither.
   - Guild bank repair (`GuildBankFrame_LoadUI`, which Blizzard_GuildBankUI's bootstrap defines at
@@ -1039,9 +1060,11 @@ the event for that unit, so a spec can check that other units' events never reac
 instead: `Stubs.ShowClassicTooltip` builds one, with the game's sell price line for an item with a
 price), the spell book's skill-line calls, toys, the
 addon compartment, the combined bags, Forever's `CircleMask` atlas and controller globals and the
-guild bank calls are gone, the player frame's art container and the minimap's coordinates are
-`false` (a stub frame answers any other capitalized field with a no-op method, so a check reads
-them with `type(...) == "table"`), the spell book is read by tab (`GetSpellTabInfo`, from
+guild bank calls and `ToggleCalendar` are gone, the player frame's art container, the minimap's
+coordinates, its tracking button and day and night icon are `false` (a stub frame answers any
+other capitalized field with a no-op method, so a check reads them with `type(...) == "table"`),
+the minimap is Classic Era's (140 across, `MinimapBorder`, and `MiniMapTracking` and the time of
+day `GameTimeFrame` on `MinimapBackdrop`), the spell book is read by tab (`GetSpellTabInfo`, from
 `state.spellTabs` or one tab of every slot; a slot's `future` makes it `FUTURESPELL`), and
 `CreateFrame` errors on a template Classic Era lacks (`MISSING_TEMPLATES`), as the client does, so a template
 only Forever and retail have can't slip into the login unnoticed. `tests/classicera_spec.lua` logs in
@@ -1091,6 +1114,9 @@ Things only the real client can confirm:
   becomes the `Vendor` line, fitted to the tooltip, not doubled), on a chat link, and none on the
   comparison tooltips; item, spell and NPC IDs show, and whether a buff's or debuff's tooltip gets
   its spell ID (only if Classic Era runs `OnTooltipSetSpell` for auras).
+- On Classic Era's minimap: the square shape hides the round border (and the compass ring with
+  rotate minimap on); the tracking button (track herbs or minerals) and the time of day icon in
+  every row and inside spot, and whether Forever's distances from the round frame fit its border.
 - Class-colored health bars: the shading matches the default bar, an NPC target (and a rare or
   "minus" one) shows the default green, switching targets in combat recolors at once, and turning
   an option off brings the green back without a `/reload`. Also on the target of target, focus and
