@@ -105,6 +105,11 @@ Forever beta. So:
   stay: the copy behind `SlashCmdList`'s metatable (nothing runs it) and
   `hash_ChatTypeInfoList["/RL"]`, which names no chat type, so `/rl` still tab-completes but does
   nothing.
+- Classic Era's tooltips, which lack the tooltip data processor: `HookScript` on `GameTooltip`,
+  `ItemRefTooltip` and the comparison tooltips' item, spell, unit, money and cleared scripts, and,
+  inside the item script, the game's `Sell Price` line's font strings rewritten in place and
+  `Show()` to fit the tooltip. Not through `ns.Later`: a line added or changed a frame later would
+  miss the tooltip. Why that's safe there is under the vendor price notes below.
 - Leave `WorldFrame` alone while a cutscene plays. Blizzard's `CinematicFrame` re-anchors it for
   the black bars and resets it to full screen at the end; `MovieFrame` hides it. Two hands on
   `WorldFrame` during a cutscene is how viewport addons crash the game. The viewport waits until
@@ -248,6 +253,32 @@ would call the game's tooltip rebuild (`RefreshData`, `SetBagItem`, ...) from in
 can blank tooltips holding secret lines. Bag, bank and merchant buttons rebuild their own tooltip
 about every 0.2 s while hovered, so the line flips there anyway; a chat link or quest reward keeps
 what it showed when it opened.
+
+Classic Era (1.15) has no tooltip data processor: `Blizzard_SharedXMLGame.toc` loads
+`TooltipDataHandler.lua` for every game type but vanilla. Its tooltips still run the scripts older
+clients had, so there `Tooltips.InitScripts` hooks them (`HookScript`, which runs after the game's
+own handler and leaves it in place) on `GameTooltip`, `ItemRefTooltip` and the two comparison
+tooltips: `OnTooltipSetItem`, `OnTooltipSetSpell` and `OnTooltipSetUnit` add the ID lines (the item
+from `GetItem`'s link, the spell from `GetSpell`, the NPC from `UnitGUID` of `GetUnit`'s unit), and
+the item one the vendor price on `GameTooltip` and `ItemRefTooltip`. Quests, currencies and
+achievements have no such script, so those IDs don't show there (Classic Era has neither of the
+last two anyway). The game's own sell price comes from `OnTooltipAddMoney`, which the client runs
+while it builds an item tooltip, before `OnTooltipSetItem`; the frame's handler
+(`GameTooltip_OnTooltipAddMoney`) adds a `Sell Price: <money>` line, or a heading and two lines for
+a price range. Lines can't be taken out of a tooltip, so the `OnTooltipAddMoney` hook notes which
+line the game's is (`NumLines`; a range is kept, as on retail), and where QoL can price the item the
+`OnTooltipSetItem` hook turns that line into the vendor line in place, after checking it still
+starts with `SELL_PRICE` (another addon's money hook may have run first and added a line; then the
+game's line stays and QoL adds none): the label in the line's left
+font string (`<tooltip>TextLeft<n>`), the money in its right one, shown, then `Show()` to fit the
+tooltip to the new text. Without a game line it adds its own line, as on retail. `OnTooltipCleared`
+forgets the noted line, so one left over from an item tooltip the client gave up on can't be
+rewritten in the next one. Classic Era hands out no secret values and these tooltips aren't
+protected, so the hooks and the font string writes can't taint anything that matters there; on
+Forever and retail, which have the data processor, none of this runs.
+Classic Era has no `GetProcessingTooltipInfo`, so a stack's size comes only from the hovered
+button's `count`, which Blizzard's item buttons carry (`SetItemButtonCount`); a bag addon's
+button without it gets the price of one with Shift held too.
 
 The tooltips Forever's controller interface shows for new buffs come from the buff frame
 (`BuffFrameMixin:Update` queues each aura gained or refreshed, `ShowNextAuraForTooltip` shows it
@@ -990,7 +1021,9 @@ units, as the game does, and `Stubs.Listens(event, unit)` says whether any of ou
 the event for that unit, so a spec can check that other units' events never reach QoL.
 
 `Stubs.Reset({ client = "classicEra" })` (or `LoadAddon` with it) makes the stubbed client Classic Era
-(1.15.9, interface 11509): the tooltip data processor, the spell book's skill-line calls, toys, the
+(1.15.9, interface 11509): the tooltip data processor (its tooltips run their scripts
+instead: `Stubs.ShowClassicTooltip` builds one, with the game's sell price line for an item with a
+price), the spell book's skill-line calls, toys, the
 addon compartment, the combined bags, Forever's `CircleMask` atlas and controller globals and the
 guild bank calls are gone, the player frame's art container and the minimap's coordinates are
 `false` (a stub frame answers any other capitalized field with a no-op method, so a check reads
@@ -1040,6 +1073,10 @@ Things only the real client can confirm:
   stack total while Shift is held (pressing Shift while pointing flips it within a moment), with
   and without a merchant open, and only once (the game's own sell price line is replaced, not
   doubled).
+- On Classic Era: the same vendor price checks, in bags, at a merchant (the game's `Sell Price` line
+  becomes the `Vendor` line, fitted to the tooltip, not doubled), on a chat link, and none on the
+  comparison tooltips; item, spell and NPC IDs show, and whether a buff's or debuff's tooltip gets
+  its spell ID (only if Classic Era runs `OnTooltipSetSpell` for auras).
 - Class-colored health bars: the shading matches the default bar, an NPC target (and a rare or
   "minus" one) shows the default green, switching targets in combat recolors at once, and turning
   an option off brings the green back without a `/reload`. Also on the target of target, focus and

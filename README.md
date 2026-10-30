@@ -43,6 +43,10 @@ Hold **Shift** while talking to an NPC to do everything yourself that time.
 - **Vendor price:** what an item sells for, everywhere, not just while a merchant is open, as a
   `Vendor` line with the price of one. Hold Shift for the whole stack.
 
+On Classic Era there are no quest IDs (buff and debuff IDs aren't confirmed there yet), and the
+game's own sell price line becomes the `Vendor` line. With a bag addon there, Shift may still show
+the price of one, as its buttons may not say how many items a slot holds.
+
 ### Interface
 
 - **Hide the system bar:** the micro menu (character, spellbook, ..., game menu). Your key
@@ -384,11 +388,12 @@ Quality of Life is available in English and German.
 
 ## Good to know
 
-- Quality of Life never replaces or hooks Blizzard's action bar, Edit Mode or tooltip code. It only
-  moves the button slots of the bars you flipped, changes the textures of the buttons whose borders
-  you hid, widens how far Edit Mode frames may go, parents hidden frames to a hidden holder, adds
-  lines to tooltips, and puts a bookmark's name in the mail's To box. That keeps it clear
-  of the "tainted by an addon" errors Midnight-era clients are strict about.
+- Quality of Life never replaces Blizzard's action bar, Edit Mode or tooltip code or hooks their
+  functions. It only moves the button slots of the bars you flipped, changes the textures of the
+  buttons whose borders you hid, widens how far Edit Mode frames may go, parents hidden frames to
+  a hidden holder, adds lines to tooltips (on Classic Era from the tooltips' own scripts, turning
+  the game's sell price line into its vendor line), and puts a bookmark's name in the mail's To
+  box. That keeps it clear of the "tainted by an addon" errors Midnight-era clients are strict about.
 - Don't run it together with another viewport or action bar growth addon: both would move the
   same frames. Hiding the button borders is the same: leave it off when another addon styles your
   buttons.

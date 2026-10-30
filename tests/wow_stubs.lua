@@ -659,7 +659,95 @@ local function spellTabs()
     return tabs
 end
 
--- Takes out what Classic Era (1.15.9) lacks: the tooltip data processor, the spell book's skill
+-- Classic Era's tooltips, which have no data processor (Blizzard_SharedXMLGame loads it for every
+-- game type but vanilla): the client builds a tooltip and then runs its scripts, the frame's own
+-- handler first and then the hooks. Lines are { left, right } (text: left, as GameTooltip's stub has it); the line font strings are the
+-- globals <name>TextLeft<n> and <name>TextRight<n>, and a right one counts once it is shown.
+local function makeClassicTooltip(G, name)
+    local tooltip = G[name] or {}
+    tooltip.lines, tooltip.handlers, tooltip.hookList = {}, {}, {}
+    local function fontString(n, side)
+        local fs = {}
+        function fs:SetText(text)
+            local line = tooltip.lines[n]
+            if side == "left" then line.left, line.text = text, text return end
+            line.rightText = text
+            if line.right then line.right = text end
+        end
+        function fs:GetText()
+            local line = tooltip.lines[n]
+            if side == "left" then return line.left end
+            return line.right
+        end
+        function fs:SetTextColor(r, g, b) tooltip.lines[n][side .. "Color"] = { r, g, b } end
+        function fs:Show() if side == "right" then tooltip.lines[n].right = tooltip.lines[n].rightText end end
+        function fs:Hide() if side == "right" then tooltip.lines[n].right = nil end end
+        return fs
+    end
+    local function addLine(left, right)
+        local n = #tooltip.lines + 1
+        tooltip.lines[n] = { text = left, left = left, right = right, rightText = right }
+        G[name .. "TextLeft" .. n] = fontString(n, "left")
+        G[name .. "TextRight" .. n] = fontString(n, "right")
+    end
+    function tooltip:GetName() return name end
+    function tooltip:GetOwner() return self.owner end
+    function tooltip:NumLines() return #self.lines end
+    function tooltip:AddLine(text) addLine(text, nil) end
+    function tooltip:AddDoubleLine(left, right) addLine(left, right) end
+    function tooltip:Show() self.shown = true self.resized = (self.resized or 0) + 1 end
+    function tooltip:GetItem() if self.itemID then return "Item " .. self.itemID, "item:" .. self.itemID end end
+    function tooltip:GetSpell() if self.spellID then return "Spell " .. self.spellID, self.spellID end end
+    function tooltip:GetUnit() if self.unit then return "Unit", self.unit end end
+    function tooltip:HookScript(script, fn)
+        self.hookList[script] = self.hookList[script] or {}
+        table.insert(self.hookList[script], fn)
+    end
+    function tooltip:RunScript(script, ...)
+        if self.handlers[script] then self.handlers[script](self, ...) end
+        for _, fn in ipairs(self.hookList[script] or {}) do fn(self, ...) end
+    end
+    -- GameTooltip_OnTooltipAddMoney: one line for a price, three for a range.
+    tooltip.handlers.OnTooltipAddMoney = function(self, cost, maxCost)
+        if not maxCost or maxCost < 1 then
+            self:AddLine(G.SELL_PRICE .. ": " .. cost .. "c (game)")
+        else
+            self:AddLine(G.SELL_PRICE .. ": (game)")
+            self:AddLine("    Minimum: " .. cost .. "c")
+            self:AddLine("    Maximum: " .. maxCost .. "c")
+        end
+    end
+    G[name] = tooltip
+end
+
+-- Builds a Classic Era tooltip (GameTooltip unless options.tooltip names another) the way the client
+-- does: it clears it, adds the game's sell price line for an item with a price (that of the stack,
+-- options.maxPrice for a range; options.sellPrice false for none) and runs OnTooltipSetItem,
+-- OnTooltipSetSpell or OnTooltipSetUnit. what is { item = id }, { spell = id } or { unit = token }.
+function Stubs.ShowClassicTooltip(what, options)
+    options = options or {}
+    local tooltip = _G[options.tooltip or "GameTooltip"]
+    tooltip.owner = options.owner
+    tooltip.itemID, tooltip.spellID, tooltip.unit = what.item, what.spell, what.unit
+    tooltip.lines, tooltip.resized = {}, 0
+    tooltip:RunScript("OnTooltipCleared")
+    if what.item then
+        local price = state.prices[what.item]
+        local count = type(options.owner) == "table" and options.owner.count or 1
+        if options.sellPrice ~= false and price and price > 0 then
+            tooltip:RunScript("OnTooltipAddMoney", price * count, options.maxPrice)
+        end
+        tooltip:RunScript("OnTooltipSetItem")
+    elseif what.spell then
+        tooltip:RunScript("OnTooltipSetSpell")
+    else
+        tooltip:RunScript("OnTooltipSetUnit")
+    end
+    return tooltip
+end
+
+-- Takes out what Classic Era (1.15.9) lacks: the tooltip data processor (its tooltips run scripts
+-- instead, Stubs.ShowClassicTooltip), the spell book's skill
 -- lines, toys, the addon compartment, combined bags, Forever's controller interface, the player
 -- frame's art container (Classic Era's frame is the old one, without a second mana bar), the
 -- minimap's player coordinates and guild banks. Its UI still names the guild bank calls in dead
@@ -667,6 +755,10 @@ end
 local function makeClassicEra(G)
     G.GetBuildInfo = function() return "1.15.9", "70576", "Oct 21 2026", 11509 end
     G.TooltipDataProcessor = nil
+    G.SELL_PRICE = "Sell Price"
+    for _, name in ipairs({ "GameTooltip", "ItemRefTooltip", "ShoppingTooltip1", "ShoppingTooltip2" }) do
+        makeClassicTooltip(G, name)
+    end
     G.C_SpellBook.GetNumSpellBookSkillLines = nil
     G.C_SpellBook.GetSpellBookSkillLineInfo = nil
     G.C_SpellBook.GetSpellBookItemInfo = nil
@@ -1335,7 +1427,10 @@ local function install()
     G.IsShiftKeyDown = function() return state.shift end
     G.IsControlKeyDown = function() return state.ctrl end
     G.IsAltKeyDown = function() return state.alt end
-    G.UnitGUID = function(unit) if unit == "npc" then return quest().npc end return nil end
+    G.UnitGUID = function(unit)
+        if unit == "npc" then return quest().npc end
+        return state.guids[unit]
+    end
     G.C_GossipInfo = {
         GetActiveQuests = function() return quest().gossipActive end,
         GetAvailableQuests = function() return quest().gossipAvailable end,
@@ -1574,6 +1669,7 @@ function Stubs.Reset(options)
         now = 1000, -- GetTime: seconds since the computer started
         layouts = {}, reloads = 0, errors = {},
         units = { player = { isPlayer = true, class = "MAGE", name = "Testmage" } }, realm = "TestRealm",
+        guids = {}, -- UnitGUID by unit token (but "npc", the quest giver's)
         regionalNames = false,
         focus = nil,
         atlases = { ["ui-hud-minimap-frame-generic-mask"] = { width = 215, height = 226 },

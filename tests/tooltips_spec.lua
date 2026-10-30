@@ -138,3 +138,67 @@ describe("ID lines", function()
         T.same(lineTexts(Stubs.ShowTooltip("Spell", { id = 133 })), {})
     end)
 end)
+
+-- Classic Era has no tooltip data processor: QoL hooks the tooltips' own scripts there.
+describe("Classic Era tooltips", function()
+    local function startClassic(savedOptions)
+        local ns = Stubs.LoadAddon({ client = "classicEra" })
+        Stubs.Login(savedOptions)
+        return Stubs.state(), ns
+    end
+
+    it("show item, spell and NPC IDs", function()
+        local state = startClassic(IDS)
+        state.guids.mouseover = "Creature-0-1465-0-2105-448-000043F59F"
+        state.guids.target = "Player-1305-0A1B2C3D"
+        T.same(lineTexts(Stubs.ShowClassicTooltip({ item = 999 })), { "Item ID = 999" })
+        T.same(lineTexts(Stubs.ShowClassicTooltip({ item = 999 }, { tooltip = "ItemRefTooltip" })), { "Item ID = 999" })
+        T.same(lineTexts(Stubs.ShowClassicTooltip({ spell = 133 })), { "Spell ID = 133" })
+        T.same(lineTexts(Stubs.ShowClassicTooltip({ unit = "mouseover" })), { "NPC ID = 448" })
+        T.same(lineTexts(Stubs.ShowClassicTooltip({ unit = "target" })), {})
+    end)
+
+    it("turn the game's sell price line into the one vendor price line", function()
+        local state = startClassic(IDS)
+        state.prices[4536] = 2
+        local tooltip = Stubs.ShowClassicTooltip({ item = 4536 }, { owner = { count = 6 } })
+        T.same(lineTexts(tooltip), { "Vendor = 2c", "Item ID = 4536" })
+        T.truthy(tooltip.resized > 0, "resized for the new text")
+        state.shift = true
+        tooltip = Stubs.ShowClassicTooltip({ item = 4536 }, { owner = { count = 6 } })
+        T.same(lineTexts(tooltip), { "Vendor x6 = 12c", "Item ID = 4536" })
+    end)
+
+    it("add the vendor price where the game shows none", function()
+        local state = startClassic()
+        state.prices[1234] = 75
+        T.same(lineTexts(Stubs.ShowClassicTooltip({ item = 1234 }, { sellPrice = false })), { "Vendor = 75c" })
+    end)
+
+    it("keep the game's line for a price range, while turned off and on comparison tooltips", function()
+        local state, ns = startClassic()
+        state.prices[1234] = 75
+        T.same(lineTexts(Stubs.ShowClassicTooltip({ item = 1234 }, { maxPrice = 300 })),
+            { "Sell Price: (game)", "    Minimum: 75c", "    Maximum: 300c" })
+        T.same(lineTexts(Stubs.ShowClassicTooltip({ item = 1234 }, { tooltip = "ShoppingTooltip1" })),
+            { "Sell Price: 75c (game)" })
+        ns.Options:Set("tooltipSellPrice", false)
+        T.same(lineTexts(Stubs.ShowClassicTooltip({ item = 1234 })), { "Sell Price: 75c (game)" })
+    end)
+
+    it("keep the game's line where another addon's money hook added a line after it", function()
+        local state = startClassic()
+        state.prices[1234] = 75
+        -- Hooked before QoL (loaded first), so it runs first.
+        table.insert(GameTooltip.hookList.OnTooltipAddMoney, 1, function(self) self:AddLine("Auction: 1g") end)
+        T.same(lineTexts(Stubs.ShowClassicTooltip({ item = 1234 })), { "Sell Price: 75c (game)", "Auction: 1g" })
+    end)
+
+    it("start every tooltip afresh", function()
+        local state = startClassic()
+        state.prices[1234] = 75
+        -- A money script without an item script after it (the client gave up on the item).
+        GameTooltip:RunScript("OnTooltipAddMoney", 75)
+        T.same(lineTexts(Stubs.ShowClassicTooltip({ item = 1234 }, { sellPrice = false })), { "Vendor = 75c" })
+    end)
+end)
