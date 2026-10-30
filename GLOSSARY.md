@@ -4,6 +4,25 @@ A World of Warcraft addon of small quality-of-life changes, set up in a settings
 
 ## Language
 
+### Game clients
+
+**WoW Forever**:
+Blizzard's new game client of the original World of Warcraft, still in beta, with a controller interface
+and changes of its own to the world (new boats and airships, new dungeons). The client QoL is made for;
+**Forever** for short.
+_Avoid_: Camelot, Forever classic, the beta (alone)
+
+**Retail**:
+The current World of Warcraft, Midnight (version 12). QoL also runs on it.
+_Avoid_: Mainline, Midnight (except as the expansion's name), modern WoW
+
+**Classic Era**:
+The game client of the original World of Warcraft as Blizzard runs it today, version 1.15, with its
+Era, Hardcore and Season of Discovery realms. One of the clients QoL runs on, next to WoW Forever and
+retail.
+_Avoid_: Classic (alone, as it also means the later classic clients such as TBC Anniversary and
+Mists), Vanilla, 1.15
+
 ### Hidden settings
 
 **Hidden setting**:

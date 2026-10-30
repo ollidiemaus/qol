@@ -10,7 +10,8 @@ map, rings of actions for mouse and controller, click casting on unit frames, ba
 controller bar, and switches to hide UI pieces you never click (also the buff tooltips that pop up
 in the controller interface). Everything is set up in the game's own options window. There's no minimap button.
 
-It's made for WoW Forever and also runs on retail (Midnight).
+It's made for WoW Forever and also runs on retail (Midnight) and Classic Era (1.15). On Classic Era the
+Ring and Click casting pages aren't there yet.
 
 ## Features
 
@@ -342,9 +343,9 @@ setting your client doesn't have isn't shown.
 ## Settings
 
 Type `/qol` (or `/qualityoflife`): the settings open in a window of their own, in Forever's bronze
-frame and laid out like the game's options, with the pages on the left and their options on the
-right. Drag its title bar to move it; `/qol` again, Escape or the X closes it. It also opens in
-combat; Escape then goes to the game, so close it with the X.
+frame (on Classic Era in its own window art) and laid out like the game's options, with the pages
+on the left and their options on the right. Drag its title bar to move it; `/qol` again, Escape or
+the X closes it. It also opens in combat; Escape then goes to the game, so close it with the X.
 
 **Esc > Options > AddOns > Quality of Life** has an information page with the chat commands, the
 author's other addons (with links to copy) and an **Open settings (/qol)** button. In Forever's
@@ -357,8 +358,8 @@ The pages:
   text, frames past the screen edge, tooltips, health bars in class color.
 - **Chat:** the chat buttons, the combat log, names in class color, `/rl`.
 - **Mail:** the bookmarks' names.
-- **Action Bars**, **Minimap**, **World map** (on Forever), **Viewport**, **Ring**, **Click casting**
-  and **Controller** (on Forever).
+- **Action Bars**, **Minimap**, **World map** (on Forever), **Viewport**, **Ring** and **Click casting**
+  (not yet on Classic Era), and **Controller** (on Forever).
 - **Advanced settings:** the game's hidden graphics, draw distance and camera settings, last in the
   list.
 
