@@ -10,8 +10,7 @@ map, rings of actions for mouse and controller, click casting on unit frames, ba
 controller bar, and switches to hide UI pieces you never click (also the buff tooltips that pop up
 in the controller interface). Everything is set up in the game's own options window. There's no minimap button.
 
-It's made for WoW Forever and also runs on retail (Midnight) and Classic Era (1.15). On Classic Era the
-Ring and Click casting pages aren't there yet.
+It's made for WoW Forever and also runs on retail (Midnight) and Classic Era (1.15).
 
 ## Features
 
@@ -175,7 +174,8 @@ combat, shows cooldowns and charges, and names the action you point at in the mi
   tabs for **Spells**, **Items** (the ones with a use, in the bags or worn), **Toys**, **Mounts**
   and **Macros**, a search box, and the page buttons (the mouse wheel turns pages too). Click one to
   put it on the ring, and click it again (it has a check mark) to take it off. The toys are the ones
-  the Toy Box shows with its own filters.
+  the Toy Box shows with its own filters. Classic Era has no Toy Box, so there's no Toys tab there;
+  its spells are the ranks its spell book shows (its **Show all spell ranks** box).
 - **Arranging them:** drag one from the list, the spell book, the bags or an action bar onto the
   ring's empty slot (the **+**) to add it, onto a slot to put it there, or off the ring to take it
   away; a right-click takes one away too. With a controller, click a slot to pick up or put down
@@ -358,8 +358,8 @@ The pages:
   text, frames past the screen edge, tooltips, health bars in class color.
 - **Chat:** the chat buttons, the combat log, names in class color, `/rl`.
 - **Mail:** the bookmarks' names.
-- **Action Bars**, **Minimap**, **World map** (on Forever), **Viewport**, **Ring** and **Click casting**
-  (not yet on Classic Era), and **Controller** (on Forever).
+- **Action Bars**, **Minimap**, **World map** (on Forever), **Viewport**, **Ring**, **Click casting**
+  and **Controller** (on Forever).
 - **Advanced settings:** the game's hidden graphics, draw distance and camera settings, last in the
   list.
 

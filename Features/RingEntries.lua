@@ -111,14 +111,17 @@ local KINDS = {
         name = function(id) return toyInfo(id) or C_Item.GetItemNameByID(id) end,
         show = function(button, id)
             -- Not in Blizzard's API documentation; a client without it shows every toy as usable.
-            setUsable(button, not C_ToyBox.IsToyUsable or C_ToyBox.IsToyUsable(id))
+            setUsable(button, not (C_ToyBox and C_ToyBox.IsToyUsable) or C_ToyBox.IsToyUsable(id))
             button.count:SetText("")
             itemCooldown(button, id)
         end,
         tooltip = function(tooltip, id)
             if tooltip.SetToyByItemID then tooltip:SetToyByItemID(id) else tooltip:SetItemByID(id) end
         end,
-        pickup = function(id) C_ToyBox.PickupToyBoxItem(id) end,
+        -- Classic Era has no toy box: a toy a ring already holds can't be picked up there.
+        pickup = function(id)
+            if C_ToyBox then C_ToyBox.PickupToyBoxItem(id) end
+        end,
     },
     -- A mount is summoned by its spell. It can't be put on the cursor by its ID, only by its place
     -- in the mount journal's list; its spell may go there instead (FromCursor makes it a mount
@@ -293,12 +296,32 @@ local function collector()
     end
 end
 
+-- Classic Era's spell book has no skill lines, so it's read by tab and slot, as its own spell book
+-- does. Passives, spells still to learn and hidden or off-spec tabs are left out. Which ranks are
+-- there is up to the game's "Show all spell ranks" box.
+local function addSpellTabs(add)
+    for tab = 1, GetNumSpellTabs() do
+        local _, _, offset, slots, _, offSpecID, shouldHide = GetSpellTabInfo(tab)
+        if not shouldHide and (offSpecID or 0) == 0 then
+            for slot = offset + 1, offset + slots do
+                local slotType, id = GetSpellBookItemInfo(slot, BOOKTYPE_SPELL)
+                if slotType == "SPELL" and id and not IsPassiveSpell(slot, BOOKTYPE_SPELL) then
+                    add(Entries.FromSpell(id))
+                end
+            end
+        end
+    end
+end
+
 -- The spell book's spells in its order, a flyout's known spells in its place (a mage's portals);
 -- passives and other specializations' spells left out.
 local function spellBook()
     local list, add = collector()
     local book = C_SpellBook
-    if not (book and book.GetNumSpellBookSkillLines) then return list end
+    if not (book and book.GetNumSpellBookSkillLines) then
+        if GetNumSpellTabs then addSpellTabs(add) end
+        return list
+    end
     local bank, types = Enum.SpellBookSpellBank.Player, Enum.SpellBookItemType
     for line = 1, book.GetNumSpellBookSkillLines() do
         local info = book.GetSpellBookSkillLineInfo(line)

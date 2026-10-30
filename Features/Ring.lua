@@ -183,7 +183,7 @@ local function newSlot(frame, slotKind, index)
     slot.icon:SetAllPoints()
     local mask = slot:CreateMaskTexture()
     mask:SetAllPoints(slot.icon)
-    mask:SetAtlas("CircleMask")
+    mask:SetAtlas(C_Texture.GetAtlasInfo("CircleMask") and "CircleMask" or "CircleMaskScalable")
     slot.icon:AddMaskTexture(mask)
     slot.icon:Hide()
 

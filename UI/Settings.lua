@@ -396,10 +396,6 @@ local function buildAdvanced(page)
     ns.Events:On("PLAYER_REGEN_ENABLED", function() combatChanged(false) end)
 end
 
-local function hasTabSystem()
-    return C_XMLUtil.GetTemplateInfo("TabSystemTopButtonTemplate") ~= nil
-end
-
 -- The window's pages, in the order of its list. available: whether the page has anything to change
 -- on this client; defaults: false for a page without a Defaults button.
 local PAGES = {
@@ -414,11 +410,9 @@ local PAGES = {
         available = function() return ns.MapPins.IsAvailable() end },
     { key = "viewport", title = L.CATEGORY_VIEWPORT, build = buildViewport },
     -- Its only option is the switch: no Defaults button, as resetting it would turn the rings off.
-    -- Both editors' tabs are the game's tab system, which Classic Era doesn't have.
-    { key = "ring", title = L.CATEGORY_RING, build = buildRing, defaults = false, available = hasTabSystem },
+    { key = "ring", title = L.CATEGORY_RING, build = buildRing, defaults = false },
     -- Likewise: resetting its switch would turn click casting off.
-    { key = "clickCast", title = L.CATEGORY_CLICK_CAST, build = buildClickCast, defaults = false,
-        available = hasTabSystem },
+    { key = "clickCast", title = L.CATEGORY_CLICK_CAST, build = buildClickCast, defaults = false },
     -- Only Forever has the controller action bar; on retail there's nothing for it to change.
     { key = "controller", title = L.CATEGORY_CONTROLLER, build = buildController,
         available = function() return GamepadMainActionBarFrame ~= nil end },
