@@ -660,7 +660,10 @@ local function spellTabs()
 end
 
 -- Takes out what Classic Era (1.15.9) lacks: the tooltip data processor, the spell book's skill
--- lines, toys, the addon compartment, combined bags and Forever's controller interface.
+-- lines, toys, the addon compartment, combined bags, Forever's controller interface, the player
+-- frame's art container (Classic Era's frame is the old one, without a second mana bar), the
+-- minimap's player coordinates and guild banks. Its UI still names the guild bank calls in dead
+-- code; they are gone here, so a call to one fails the spec.
 local function makeClassicEra(G)
     G.GetBuildInfo = function() return "1.15.9", "70576", "Oct 21 2026", 11509 end
     G.TooltipDataProcessor = nil
@@ -671,6 +674,12 @@ local function makeClassicEra(G)
     G.AddonCompartmentFrame = nil
     G.ContainerFrameCombinedBags = nil
     G.C_InputInterfaceStyle, G.GamepadMode, G.BuffFrameTooltip = nil, nil, nil
+    -- false, not nil: a stub frame answers any other capitalized field with a no-op method. The
+    -- player frame's raw table, as the addon may not write the frame.
+    state.playerFrame.PlayerFrameContainer = false
+    G.MinimapCluster.MinimapContainer.PlayerCoords = false
+    G.GuildBankFrame_LoadUI, G.CanGuildBankRepair = nil, nil
+    G.GetGuildBankWithdrawMoney, G.GetGuildBankMoney = nil, nil
     -- Its own circle mask atlas instead of Forever's.
     state.atlases.CircleMask, state.atlases.CircleMaskScalable = nil, { width = 64, height = 64 }
     -- What it has instead of the skill lines: the spell book's tabs, read by slot.
@@ -915,6 +924,8 @@ local function install()
     G.CanGuildBankRepair = function() return state.guildCanRepair end
     G.GetGuildBankWithdrawMoney = function() return state.guildLimit end
     G.GetGuildBankMoney = function() return state.guildMoney end
+    -- The guild bank's loader, which Blizzard_GuildBankUI's bootstrap defines at startup.
+    G.GuildBankFrame_LoadUI = function() end
 
     -- Loot: the loot window's slots, and the slots taken, in order. The game takes a slot later, so
     -- the window keeps its slots.

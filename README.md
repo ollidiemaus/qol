@@ -363,6 +363,10 @@ The pages:
 - **Advanced settings:** the game's hidden graphics, draw distance and camera settings, last in the
   list.
 
+On Classic Era the pages leave out what it doesn't have: the combined bags, mana in bear and cat
+form, guild bank repairs, the addon compartment's place and the player coordinates. Junk selling
+and repairs with your own gold work as everywhere.
+
 Every page fits without scrolling, most in two columns. With a controller, the
 arrows next to a viewport margin move it one pixel per press. In Forever's controller interface a
 dropdown doesn't open its list: each press (or click) switches it to the next choice, as the game

@@ -51,6 +51,11 @@ local function place(button, money, x, y)
     button:SetPoint("BOTTOMRIGHT", money, "TOPRIGHT", x, y)
 end
 
+-- Whether this client has the combined bag (Classic Era has only the separate bags).
+function CombinedBagLayout.IsAvailable()
+    return ContainerFrameCombinedBags ~= nil
+end
+
 function CombinedBagLayout:Apply()
     local bag = ContainerFrameCombinedBags
     local money = bag and bag.MoneyFrame

@@ -21,7 +21,8 @@ describe("the stubbed Classic Era client", function()
         T.truthy(pcall(CreateFrame, "Button", nil, UIParent, "UIPanelButtonTemplate"))
     end)
 
-    it("lacks tooltip data, the spell book's skill lines, toys, the addon compartment, combined bags, the controller", function()
+    it("lacks tooltip data, the spell book's skill lines, toys, the addon compartment, combined bags, the controller, "
+        .. "the player frame's art, the minimap's coordinates, guild banks", function()
         Stubs.Reset({ client = "classicEra" })
         T.eq(select(4, GetBuildInfo()), 11509)
         T.eq(TooltipDataProcessor, nil)
@@ -34,6 +35,10 @@ describe("the stubbed Classic Era client", function()
         T.eq(C_InputInterfaceStyle, nil)
         T.eq(GamepadMode, nil)
         T.eq(BuffFrameTooltip, nil)
+        T.falsy(PlayerFrame.PlayerFrameContainer)
+        T.falsy(MinimapCluster.MinimapContainer.PlayerCoords)
+        T.eq(GuildBankFrame_LoadUI, nil)
+        T.eq(CanGuildBankRepair, nil)
     end)
 
     it("keeps every template on Forever", function()
@@ -66,6 +71,37 @@ describe("QoL on Classic Era", function()
         SlashCmdList.QOL("click")
         T.eq(ns.SettingsPanel.window.selected, "clickCast")
         T.truthy(QoLClickCastEditor:IsVisible())
+        T.same(Stubs.state().errors, {})
+    end)
+
+    it("lists only the pages that change something on Classic Era", function()
+        local ns = start()
+        T.same(ns.SettingsPanel.window.order, { "automation", "interface", "chat", "mail", "actionBars",
+            "minimap", "worldMap", "viewport", "ring", "clickCast", "advanced" })
+    end)
+
+    it("leaves out the options Classic Era has nothing for", function()
+        local ns = start()
+        local keys = {}
+        for _, page in pairs(ns.SettingsPanel.pages) do
+            for _, c in ipairs(page.controls) do keys[c.key or c.command or "?"] = true end
+        end
+        -- Combined bags, the second mana bar of Forever's and retail's player frame, the addon
+        -- compartment, the player coordinates, guild banks, the controller's buff tooltips and back
+        -- buttons.
+        for _, key in ipairs({ "combinedBagTopLeft", "druidManaBar", "minimapCompartment",
+            "hideMinimapCoords", "minimapCoordsClassColor", "guildRepair", "hideBuffTooltips",
+            "controllerBackButtons" }) do
+            T.falsy(keys[key], key)
+        end
+        T.truthy(keys.sellJunk)
+        T.truthy(keys.autoRepair)
+        local headers = {}
+        for _, header in ipairs(ns.SettingsPanel.pages.interface.headers) do headers[header.text] = true end
+        for _, header in ipairs(ns.SettingsPanel.pages.minimap.headers) do headers[header.text] = true end
+        T.falsy(headers[ns.L.SECTION_COMBINED_BAGS], "the Combined bags section")
+        T.falsy(headers[ns.L.SECTION_MINIMAP_COORDS], "the Coordinates section")
+        T.truthy(headers[ns.L.SECTION_PLAYER_FRAME], "the Player frame section keeps its other row")
         T.same(Stubs.state().errors, {})
     end)
 

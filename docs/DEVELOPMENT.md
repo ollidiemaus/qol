@@ -717,6 +717,22 @@ settings are open, and closing our window is a plain `Hide` of a frame of ours.
     character doesn't have, and keeps it; the toy calls are behind a check all the same.
   The click casting engine needs nothing of its own: Classic Era's unit frames are the same
   `PlayerFrame`, `TargetFrame`, `PartyFrame` pool and boss frames.
+- On Classic Era the pages offer only what changes something there. Each check asks the client for
+  the thing the option works on, not which client it is: a row whose frame or system is missing is
+  left out, and a section whose rows all are with it.
+  - Combined bags (`ContainerFrameCombinedBags`): Classic Era has only the separate bags.
+  - Mana in bear and cat form (`PlayerFrame.PlayerFrameContainer`): Classic Era's player frame is the
+    old one, without the art container the bar is drawn into; QoL doesn't draw a bar of its own
+    there. The Player frame section keeps the portrait hit text.
+  - The addon compartment's place (`AddonCompartmentFrame`) and the Coordinates section
+    (`MinimapCluster.MinimapContainer.PlayerCoords`): Classic Era's minimap has neither.
+  - Guild bank repair (`GuildBankFrame_LoadUI`, which Blizzard_GuildBankUI's bootstrap defines at
+    startup on Forever and retail): Classic Era has no guild banks; its merchant frame names
+    `CanGuildBankRepair` only in a button that is never shown. `Merchant:Repair` asks the same check
+    before the guild bank calls, so a guild repair saved on another client pays with own gold
+    there. Junk selling and own gold repairs work as everywhere.
+  - The controller's buff tooltips and back buttons are on the Controller page, which only Forever
+    (with `GamepadMainActionBarFrame`) lists.
 - The list is drawn as the game's (`Blizzard_CategoryList`) but with frames of ours, not its
   templates: `SettingsCategoryListButtonMixin` reads its scroll box's element data and a file local
   of the game's settings. A header (`Options_CategoryHeader_1`, drawn on the list itself so the
@@ -975,10 +991,12 @@ the event for that unit, so a spec can check that other units' events never reac
 
 `Stubs.Reset({ client = "classicEra" })` (or `LoadAddon` with it) makes the stubbed client Classic Era
 (1.15.9, interface 11509): the tooltip data processor, the spell book's skill-line calls, toys, the
-addon compartment, the combined bags, Forever's `CircleMask` atlas and controller globals are gone,
-the spell book is read by tab (`GetSpellTabInfo`, from `state.spellTabs` or one tab of every slot;
-a slot's `future` makes it `FUTURESPELL`), and `CreateFrame`
-errors on a template Classic Era lacks (`MISSING_TEMPLATES`), as the client does, so a template
+addon compartment, the combined bags, Forever's `CircleMask` atlas and controller globals and the
+guild bank calls are gone, the player frame's art container and the minimap's coordinates are
+`false` (a stub frame answers any other capitalized field with a no-op method, so a check reads
+them with `type(...) == "table"`), the spell book is read by tab (`GetSpellTabInfo`, from
+`state.spellTabs` or one tab of every slot; a slot's `future` makes it `FUTURESPELL`), and
+`CreateFrame` errors on a template Classic Era lacks (`MISSING_TEMPLATES`), as the client does, so a template
 only Forever and retail have can't slip into the login unnoticed. `tests/classicera_spec.lua` logs in
 on it and opens the settings window; the ring and click casting specs have Classic Era cases of
 their own.
