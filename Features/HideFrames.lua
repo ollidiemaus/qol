@@ -8,7 +8,7 @@ local HideFrames = {}
 ns.HideFrames = HideFrames
 
 -- Option key -> the frames it hides. Looked up when needed, since not every client has every frame
--- (retail has no minimap coordinates, for example).
+-- (Classic Era has no minimap coordinates, for example).
 HideFrames.TARGETS = {
     -- The container, not MicroMenu itself: in vehicles and pet battles the game moves MicroMenu
     -- onto the vehicle bar, where it should still show.

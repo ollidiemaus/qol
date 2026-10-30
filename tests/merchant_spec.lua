@@ -144,3 +144,24 @@ describe("repairing", function()
         T.same(state.repairs, {})
     end)
 end)
+
+describe("at a merchant on Classic Era", function()
+    -- Guild bank repair saved on, as a player who also plays on Forever or retail may have it.
+    local function startClassicEra()
+        Stubs.LoadAddon({ client = "classicEra" })
+        Stubs.Login({ autoRepair = true, guildRepair = true })
+        return Stubs.state()
+    end
+
+    it("sells the junk and repairs with own gold, without trying the guild bank it doesn't have", function()
+        local state = startClassicEra()
+        Stubs.SetBags({ { bag = 0, slot = 1, itemID = 100, quality = POOR, count = 2, price = 15 } })
+        state.canRepair, state.repairCost, state.money, state.inGuild = true, 500, 1000, true
+        openMerchant()
+        T.same(state.repairs, { "own" })
+        T.eq(state.soldAll, 1)
+        T.same(state.messages, { "|cff33ff99Quality of Life|r: Repaired for 500c.",
+            "|cff33ff99Quality of Life|r: Sold 1 junk |4item:items; for 30c." })
+        T.same(state.errors, {})
+    end)
+end)

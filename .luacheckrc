@@ -67,7 +67,7 @@ read_globals = {
     -- Bags, items and merchants
     "NUM_BAG_SLOTS", "NUM_TOTAL_EQUIPPED_BAG_SLOTS",
     "CanMerchantRepair", "GetRepairAllCost", "RepairAllItems", "GetMoney",
-    "IsInGuild", "CanGuildBankRepair", "GetGuildBankWithdrawMoney", "GetGuildBankMoney",
+    "IsInGuild", "GuildBankFrame_LoadUI", "CanGuildBankRepair", "GetGuildBankWithdrawMoney", "GetGuildBankMoney",
     -- Loot, and the clock its throttle reads
     "GetNumLootItems", "LootSlot", "GetTime",
     "GetAddOnMetadata", "IsAddOnLoaded", "IsMacClient", "GetBuildInfo",
