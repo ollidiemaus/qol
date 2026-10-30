@@ -42,6 +42,21 @@ describe("the stubbed Classic Era client", function()
         T.eq(ToggleCalendar, nil)
     end)
 
+    it("has Forever's zone maps but Zephras Isle, Stormwind and the Eastern Plaguelands on their own rects", function()
+        Stubs.Reset({ client = "classicEra" })
+        local state = Stubs.state()
+        state.maps[2521] = { name = "Zephras Isle", mapType = 3, parentMapID = 947 }
+        state.mapRects["1453>1415"] = { 0.36, 0.46, 0.64, 0.74 }
+        state.mapRects["1413>1414"] = { 0.5, 0.7, 0.3, 0.6 }
+        T.eq(C_Map.GetMapInfo(2521), nil)
+        T.truthy(C_Map.GetMapInfo(1413))
+        T.same({ C_Map.GetMapRectOnMap(1453, 1415) }, { 0.38, 0.46, 0.66, 0.74 })
+        T.truthy(C_Map.GetMapRectOnMap(1423, 1415))
+        T.same({ C_Map.GetMapRectOnMap(1413, 1414) }, { 0.5, 0.7, 0.3, 0.6 })
+        T.eq(C_Texture.GetAtlasInfo("flightmasterferry"), nil)
+        T.truthy(C_Texture.GetAtlasInfo("Ships_CargoShip-Map"))
+    end)
+
     it("has its own minimap: the round border, the tracking button and the time of day icon", function()
         Stubs.Reset({ client = "classicEra" })
         T.truthy(MinimapBorder:IsVisible())

@@ -17,13 +17,16 @@ ns.MapPins = MapPins
 
 local DUNGEONS, TRAVEL = "mapDungeons", "mapTravel"
 local CONTINENT = Enum and Enum.UIMapType and Enum.UIMapType.Continent or 2
+local ZEPHRAS_ISLE = 2521 -- Forever's own island, a map Classic Era doesn't have
 
 -- How each type looks (an atlas of the client, or a texture of ours, and the size on screen), and
--- which option shows it.
+-- which option shows it. orAtlas: the one to use where the client lacks the atlas (Classic Era has
+-- no ferry icon, but has the garrison's ship icons).
 MapPins.STYLES = {
     dungeon = { atlas = "dungeon", size = 24, option = DUNGEONS, label = "MAP_DUNGEON" },
     raid = { atlas = "raid", size = 24, option = DUNGEONS, label = "MAP_RAID" },
-    boat = { atlas = "flightmasterferry", size = 20, option = TRAVEL, label = "MAP_BOAT" },
+    boat = { atlas = "flightmasterferry", orAtlas = "Ships_CargoShip-Map", size = 20, option = TRAVEL,
+        label = "MAP_BOAT" },
     -- The client has no zeppelin or tram icon; ours are drawn in the style of the boat's.
     zeppelin = { texture = "Interface\\AddOns\\QoL\\Media\\Zeppelin", size = 22, option = TRAVEL,
         label = "MAP_ZEPPELIN" },
@@ -41,13 +44,20 @@ local function mapName(mapID)
     return info and info.name or nil
 end
 
--- Whether this client has the maps the pins are on. Forever's UiMap IDs don't exist on retail, so
--- there the options aren't offered and the world map is left alone.
+-- Whether this client has the maps the pins are on: Forever and Classic Era do. Their UiMap IDs
+-- don't exist on retail, so there the options aren't offered and the world map is left alone.
 function MapPins.IsAvailable()
     for _, pin in ipairs(ns.MapPinData) do
         if mapInfo(pin.map) then return true end
     end
     return false
+end
+
+-- Which world the client shows: "forever", or "classicEra" where Forever's Zephras Isle map
+-- doesn't exist. Some routes are only in one of them, and Classic Era's Stormwind and Eastern
+-- Plaguelands maps cover other parts of the world (Data/MapPins.lua).
+function MapPins.World()
+    return mapInfo(ZEPHRAS_ISLE) and "forever" or "classicEra"
 end
 
 local function areaName(areaID)
@@ -56,15 +66,34 @@ local function areaName(areaID)
     return nil
 end
 
--- Where a pin is on a continent: its place on the zone, put into the zone's rectangle there.
-local function onParent(pin, parentID)
-    local left, right, top, bottom = C_Map.GetMapRectOnMap(pin.map, parentID)
+-- Where a place (x, y) on a zone is on its continent: put into the zone's rectangle there.
+local function onParent(zoneID, x, y, parentID)
+    local left, right, top, bottom = C_Map.GetMapRectOnMap(zoneID, parentID)
     if not (left and right and top and bottom) then return nil end
-    return left + (right - left) * pin.x / 100, top + (bottom - top) * pin.y / 100
+    return left + (right - left) * x / 100, top + (bottom - top) * y / 100
 end
 
 -- The pins of a map with their places (0 to 1), worked out once per map.
 local placesByMap = {}
+
+-- Adds a pin's places on mapID; zonePlace is where it is on its own zone (in this world).
+local function addPlaces(places, pin, zonePlace, mapID, isContinent)
+    if pin.map == mapID then
+        places[#places + 1] = { pin = pin, x = zonePlace.x / 100, y = zonePlace.y / 100 }
+    end
+    for _, other in ipairs(pin.also or {}) do
+        if other.map == mapID then
+            places[#places + 1] = { pin = pin, x = other.x / 100, y = other.y / 100 }
+        end
+    end
+    if isContinent then
+        local zone = mapInfo(pin.map)
+        if zone and zone.parentMapID == mapID and C_Map.GetMapRectOnMap then
+            local x, y = onParent(pin.map, zonePlace.x, zonePlace.y, mapID)
+            if x then places[#places + 1] = { pin = pin, x = x, y = y } end
+        end
+    end
+end
 
 function MapPins.PlacesOn(mapID)
     local places = placesByMap[mapID]
@@ -72,21 +101,11 @@ function MapPins.PlacesOn(mapID)
     places = {}
     local info = mapInfo(mapID)
     local isContinent = info and info.mapType == CONTINENT
+    local world = MapPins.World()
     for _, pin in ipairs(ns.MapPinData) do
-        if pin.map == mapID then
-            places[#places + 1] = { pin = pin, x = pin.x / 100, y = pin.y / 100 }
-        end
-        for _, other in ipairs(pin.also or {}) do
-            if other.map == mapID then
-                places[#places + 1] = { pin = pin, x = other.x / 100, y = other.y / 100 }
-            end
-        end
-        if isContinent then
-            local zone = mapInfo(pin.map)
-            if zone and zone.parentMapID == mapID and C_Map.GetMapRectOnMap then
-                local x, y = onParent(pin, mapID)
-                if x then places[#places + 1] = { pin = pin, x = x, y = y } end
-            end
+        if not pin.world or pin.world == world then
+            local zonePlace = world == "classicEra" and pin.classicEra or pin
+            addPlaces(places, pin, zonePlace, mapID, isContinent)
         end
     end
     placesByMap[mapID] = places
@@ -208,6 +227,14 @@ local function acquire()
     return button
 end
 
+-- The style's atlas, or its orAtlas where the client lacks it.
+local function atlasOf(style)
+    if style.orAtlas and C_Texture and C_Texture.GetAtlasInfo and not C_Texture.GetAtlasInfo(style.atlas) then
+        return style.orAtlas
+    end
+    return style.atlas
+end
+
 local function shown(pin)
     local style = MapPins.STYLES[pin.type]
     return style ~= nil and Options:Get(style.option) == true
@@ -232,7 +259,7 @@ function MapPins:Redraw()
                 button.icon:SetTexture(style.texture)
                 button.icon:SetTexCoord(0, 1, 0, 1) -- a pooled button may have shown an atlas
             else
-                button.icon:SetAtlas(style.atlas)
+                button.icon:SetAtlas(atlasOf(style))
             end
             button:ClearAllPoints()
             button:SetPoint("CENTER", view.frame, "TOPLEFT", place.x * width, -place.y * height)

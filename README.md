@@ -111,8 +111,10 @@ the price of one, as its buttons may not say how many items a slot holds.
   map of that place opens. Forever's new routes are there too: the boat from Stormwind Harbor, the
   stop at Southshore, the boat between Tanaris and the Riverglades and the airships to Zephras Isle.
 
-The places come from Forever's own game data, so these options only show on Forever. On retail,
-the default map marks dungeon entrances itself.
+The places come from Forever's own game data, and Classic Era has the same zone maps, so these
+options show on Forever and Classic Era. On Classic Era the pins follow its world: Forever's new
+routes aren't there, the boat from Menethil Harbor goes straight to Auberdine, and boats get a ship
+icon (Classic Era has no ferry icon). On retail, the default map marks dungeon entrances itself.
 
 ### Unit frames
 
@@ -364,7 +366,7 @@ The pages:
   text, frames past the screen edge, tooltips, health bars in class color.
 - **Chat:** the chat buttons, the combat log, names in class color, `/rl`.
 - **Mail:** the bookmarks' names.
-- **Action Bars**, **Minimap**, **World map** (on Forever), **Viewport**, **Ring**, **Click casting**
+- **Action Bars**, **Minimap**, **World map** (on Forever and Classic Era), **Viewport**, **Ring**, **Click casting**
   and **Controller** (on Forever).
 - **Advanced settings:** the game's hidden graphics, draw distance and camera settings, last in the
   list.

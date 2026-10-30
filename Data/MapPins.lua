@@ -19,6 +19,13 @@ local _, ns = ...
 --   * the portal between Darnassus and Rut'theran Village and the Deeprun Tram: their area triggers
 --     (AreaTrigger.db2), with AzerothCore's teleport table saying which is which.
 -- Forever's new dungeons aren't here: the client has no position for their entrances.
+--
+-- The same pins serve Classic Era (1.15), whose world differs in a few places:
+--   * world = "forever": a route only Forever has; world = "classicEra": one only Classic Era has
+--     (its direct boat between Menethil Harbor and Auberdine, from the docks Forever's route uses);
+--   * classicEra = { x, y }: the place on Classic Era's zone map, where it covers another part of the
+--     world than Forever's (Stormwind City, the Eastern Plaguelands). Converted from Forever's place
+--     through both clients' zone rects (UiMapAssignment).
 ns.MapPinData = {
     -- Dungeons
     { type = "dungeon", map = 1454, x = 53.0, y = 48.9, areas = { 2437 } }, -- Ragefire Chasm, Orgrimmar
@@ -26,7 +33,8 @@ ns.MapPinData = {
     { type = "dungeon", map = 1436, x = 38.2, y = 77.5, areas = { 1581 } }, -- The Deadmines, Westfall
     { type = "dungeon", map = 1421, x = 44.7, y = 67.8, areas = { 209 } }, -- Shadowfang Keep, Silverpine Forest
     { type = "dungeon", map = 1440, x = 16.5, y = 11.0, areas = { 719 } }, -- Blackfathom Deeps, Ashenvale
-    { type = "dungeon", map = 1453, x = 50.4, y = 66.2, areas = { 717 } }, -- The Stockade, Stormwind City
+    -- The Stockade, Stormwind City
+    { type = "dungeon", map = 1453, x = 50.4, y = 66.2, areas = { 717 }, classicEra = { x = 39.7, y = 54.0 } },
     { type = "dungeon", map = 1426, x = 17.7, y = 39.2, areas = { 721 } }, -- Gnomeregan, Dun Morogh
     { type = "dungeon", map = 1413, x = 42.3, y = 89.9, areas = { 491 } }, -- Razorfen Kraul, The Barrens
     { type = "dungeon", map = 1420, x = 85.1, y = 31.4, areas = { 796 } }, -- Scarlet Monastery, Tirisfal Glades
@@ -40,7 +48,8 @@ ns.MapPinData = {
     { type = "dungeon", map = 1428, x = 33.0, y = 25.2, areas = { 1583 }, also = { { map = 1427, x = 40.8, y = 95.6 } } },
     { type = "dungeon", map = 1444, x = 62.0, y = 33.3, areas = { 2557 } }, -- Dire Maul, Feralas
     { type = "dungeon", map = 1422, x = 69.1, y = 73.0, areas = { 2057 } }, -- Scholomance, Western Plaguelands
-    { type = "dungeon", map = 1423, x = 26.1, y = 10.4, areas = { 2017 } }, -- Stratholme, Eastern Plaguelands
+    -- Stratholme, Eastern Plaguelands
+    { type = "dungeon", map = 1423, x = 26.1, y = 10.4, areas = { 2017 }, classicEra = { x = 30.8, y = 15.7 } },
 
     -- Raids
     -- Molten Core, Burning Steppes and Searing Gorge
@@ -50,7 +59,8 @@ ns.MapPinData = {
     { type = "raid", map = 1434, x = 54.0, y = 17.6, areas = { 1977 } }, -- Zul'Gurub, Stranglethorn Vale
     -- Ruins of Ahn'Qiraj and Ahn'Qiraj Temple, both behind the Scarab Wall, Silithus
     { type = "raid", map = 1451, x = 29.0, y = 92.8, areas = { 3429, 3428 } },
-    { type = "raid", map = 1423, x = 26.6, y = 19.5, areas = { 3456 } }, -- Naxxramas, Eastern Plaguelands
+    -- Naxxramas, Eastern Plaguelands
+    { type = "raid", map = 1423, x = 26.6, y = 19.5, areas = { 3456 }, classicEra = { x = 31.4, y = 25.9 } },
 
     -- Boats
     { type = "boat", map = 1413, x = 63.8, y = 38.8, to = { { area = 35, map = 1434 } } }, -- Ratchet -> Booty Bay
@@ -60,15 +70,23 @@ ns.MapPinData = {
     { type = "boat", map = 1438, x = 54.8, y = 97.2, to = { { area = 442, map = 1439 } } }, -- Rut'theran Village -> Auberdine
     { type = "boat", map = 1439, x = 33.3, y = 39.8, to = { { area = 702, map = 1438 } } }, -- Auberdine -> Rut'theran Village
     -- Menethil Harbor -> Southshore -> Auberdine -> Menethil Harbor
-    { type = "boat", map = 1437, x = 4.5, y = 56.7, to = { { area = 271, map = 1424 }, { area = 442, map = 1439 } } },
-    { type = "boat", map = 1424, x = 50.7, y = 70.4, to = { { area = 442, map = 1439 }, { area = 150, map = 1437 } } },
-    { type = "boat", map = 1439, x = 32.3, y = 44.1, to = { { area = 150, map = 1437 }, { area = 271, map = 1424 } } },
-    { type = "boat", map = 1439, x = 30.5, y = 40.9, to = { { area = 17203, map = 1453 } } }, -- Auberdine -> Stormwind Harbor
-    { type = "boat", map = 1453, x = 21.8, y = 56.9, to = { { area = 442, map = 1439 } } }, -- Stormwind Harbor -> Auberdine
+    { type = "boat", map = 1437, x = 4.5, y = 56.7, world = "forever",
+        to = { { area = 271, map = 1424 }, { area = 442, map = 1439 } } },
+    { type = "boat", map = 1424, x = 50.7, y = 70.4, world = "forever",
+        to = { { area = 442, map = 1439 }, { area = 150, map = 1437 } } },
+    { type = "boat", map = 1439, x = 32.3, y = 44.1, world = "forever",
+        to = { { area = 150, map = 1437 }, { area = 271, map = 1424 } } },
+    -- Menethil Harbor -> Auberdine and back, without the stop at Southshore
+    { type = "boat", map = 1437, x = 4.5, y = 56.7, world = "classicEra", to = { { area = 442, map = 1439 } } },
+    { type = "boat", map = 1439, x = 32.3, y = 44.1, world = "classicEra", to = { { area = 150, map = 1437 } } },
+    -- Auberdine -> Stormwind Harbor and back
+    { type = "boat", map = 1439, x = 30.5, y = 40.9, world = "forever", to = { { area = 17203, map = 1453 } } },
+    { type = "boat", map = 1453, x = 21.8, y = 56.9, world = "forever", to = { { area = 442, map = 1439 } } },
     { type = "boat", map = 1444, x = 31.0, y = 39.5, to = { { area = 1108, map = 1444 } } }, -- Feathermoon -> Forgotten Coast
     { type = "boat", map = 1444, x = 43.1, y = 42.8, to = { { area = 1116, map = 1444 } } }, -- Forgotten Coast -> Feathermoon
-    { type = "boat", map = 1446, x = 68.6, y = 23.0, to = { { area = 16591, map = 2548 } } }, -- Steamwheedle Port -> Riverglades
-    { type = "boat", map = 2548, x = 80.6, y = 54.6, to = { { area = 977, map = 1446 } } }, -- Riverglades -> Steamwheedle Port
+    -- Steamwheedle Port -> Riverglades and back
+    { type = "boat", map = 1446, x = 68.6, y = 23.0, world = "forever", to = { { area = 16591, map = 2548 } } },
+    { type = "boat", map = 2548, x = 80.6, y = 54.6, world = "forever", to = { { area = 977, map = 1446 } } },
 
     -- Zeppelins and airships
     { type = "zeppelin", map = 1411, x = 50.5, y = 12.7, to = { { area = 117, map = 1434 } } }, -- Orgrimmar -> Grom'gol
@@ -77,14 +95,16 @@ ns.MapPinData = {
     { type = "zeppelin", map = 1434, x = 31.5, y = 29.1, to = { { area = 1497, map = 1420 } } }, -- Grom'gol -> Undercity
     { type = "zeppelin", map = 1420, x = 60.6, y = 58.9, to = { { area = 1637, map = 1411 } } }, -- Undercity -> Orgrimmar
     { type = "zeppelin", map = 1420, x = 61.9, y = 58.9, to = { { area = 117, map = 1434 } } }, -- Undercity -> Grom'gol
-    { type = "zeppelin", map = 1416, x = 12.8, y = 51.2, to = { { area = 16593, map = 2521 } } }, -- Alterac -> Zephras Isle
-    { type = "zeppelin", map = 2521, x = 65.8, y = 83.8, to = { { map = 1416 } } }, -- Zephras Isle -> Alterac Mountains
-    { type = "zeppelin", map = 1412, x = 34.3, y = 26.1, to = { { area = 16593, map = 2521 } } }, -- Mulgore -> Zephras Isle
-    { type = "zeppelin", map = 2521, x = 57.7, y = 81.0, to = { { map = 1412 } } }, -- Zephras Isle -> Mulgore
+    -- Alterac Mountains -> Zephras Isle and back, Mulgore -> Zephras Isle and back
+    { type = "zeppelin", map = 1416, x = 12.8, y = 51.2, world = "forever", to = { { area = 16593, map = 2521 } } },
+    { type = "zeppelin", map = 2521, x = 65.8, y = 83.8, world = "forever", to = { { map = 1416 } } },
+    { type = "zeppelin", map = 1412, x = 34.3, y = 26.1, world = "forever", to = { { area = 16593, map = 2521 } } },
+    { type = "zeppelin", map = 2521, x = 57.7, y = 81.0, world = "forever", to = { { map = 1412 } } },
 
     -- Portals and the tram
     { type = "portal", map = 1457, x = 29.1, y = 41.2, to = { { area = 702, map = 1438 } } }, -- Darnassus -> Rut'theran
     { type = "portal", map = 1438, x = 55.9, y = 89.3, to = { { area = 1657, map = 1457 } } }, -- Rut'theran -> Darnassus
-    { type = "tram", map = 1453, x = 69.6, y = 30.3, to = { { area = 1537, map = 1455 } } }, -- Stormwind -> Ironforge
+    -- Stormwind -> Ironforge
+    { type = "tram", map = 1453, x = 69.6, y = 30.3, to = { { area = 1537, map = 1455 } }, classicEra = { x = 64.5, y = 7.6 } },
     { type = "tram", map = 1455, x = 78.0, y = 51.4, to = { { area = 1519, map = 1453 } } }, -- Ironforge -> Stormwind
 }
