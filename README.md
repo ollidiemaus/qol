@@ -89,11 +89,12 @@ the price of one, as its buttons may not say how many items a slot holds.
   friendly, hostile or contested territory.
 - **Font size of the zone text, the clock and FPS and ping,** from 9 to 24 or the game's own. With a
   larger font the clock's button grows with it, and the rows above and below the minimap make room.
-- **Clock, addon compartment, tracking button and Forever's day and night icon:** each can move to
-  a row above or below the minimap (left, center or right), or be hidden. The tracking button and
-  the day and night icon can also sit inside the map: in a corner, or in the middle of its top or
-  bottom edge. Things in the same spot sit side by side; with something below the minimap, the
-  coordinates move under it.
+- **Clock, addon compartment, tracking button and the day and night icon** (Forever's, or the
+  time of day icon on Classic Era): each can move to a row above or below the minimap (left,
+  center or right), or be hidden. The tracking button and the day and night icon can also sit
+  inside the map: in a corner, or in the middle of its top or bottom edge. Things in the same spot
+  sit side by side; with something below the minimap, the coordinates move under it. On Classic
+  Era the tracking button shows only while you track something, as the game has it.
 - **FPS and ping** in a row above or below the minimap (left, center or right), like the clock,
   updated every second, also in class color and at another font size. The ping is the higher of
   your home and world latency.
@@ -369,8 +370,8 @@ The pages:
   list.
 
 On Classic Era the pages leave out what it doesn't have: the combined bags, mana in bear and cat
-form, guild bank repairs, the addon compartment's place and the player coordinates. Junk selling
-and repairs with your own gold work as everywhere.
+form, guild bank repairs, the addon compartment's place, the calendar button and the player
+coordinates. Junk selling and repairs with your own gold work as everywhere.
 
 Every page fits without scrolling, most in two columns. With a controller, the
 arrows next to a viewport margin move it one pixel per press. In Forever's controller interface a
