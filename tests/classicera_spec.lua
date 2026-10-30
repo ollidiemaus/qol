@@ -51,6 +51,21 @@ describe("the stubbed Classic Era client", function()
         T.eq(GameTimeFrame:GetParent(), MinimapBackdrop)
     end)
 
+    it("turns its health bars green again on every value change, where Forever keeps their color", function()
+        Stubs.Reset({ client = "classicEra" })
+        local bar = Stubs.HealthBar("TargetFrame")
+        T.falsy(bar.lockColor)
+        bar.color = { 0.5, 0.5, 0.5, 1 }
+        Stubs.SetHealth("TargetFrame", 0.4)
+        T.same(bar.color, { 0, 1, 0, 1 })
+
+        Stubs.Reset()
+        bar = Stubs.HealthBar("TargetFrame")
+        bar.color = { 0.5, 0.5, 0.5, 1 }
+        Stubs.SetHealth("TargetFrame", 0.4)
+        T.same(bar.color, { 0.5, 0.5, 0.5, 1 })
+    end)
+
     it("keeps every template on Forever", function()
         Stubs.Reset()
         T.truthy(pcall(CreateFrame, "Frame", nil, UIParent, "PortraitFrameFlatTemplate"))

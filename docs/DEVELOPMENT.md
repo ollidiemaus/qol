@@ -105,6 +105,9 @@ Forever beta. So:
   stay: the copy behind `SlashCmdList`'s metatable (nothing runs it) and
   `hash_ChatTypeInfoList["/RL"]`, which names no chat type, so `/rl` still tab-completes but does
   nothing.
+- Classic Era's health bars, whose color the game doesn't lock: `HookScript("OnValueChanged")` on
+  the player, target, target of target, focus and focus target bars, which only schedules the
+  class color again (see the class-colored health bars below).
 - Classic Era's tooltips, which lack the tooltip data processor: `HookScript` on `GameTooltip`,
   `ItemRefTooltip` and the comparison tooltips' item, spell, unit, money and cleared scripts, and,
   inside the item script, the game's `Sell Price` line's font strings rewritten in place and
@@ -165,6 +168,20 @@ focus target bars and never colors them itself, so a color stays until we change
 follows Blizzard's raid frames: `UnitIsPlayer` or `UnitTreatAsPlayerForDisplay`, with a known,
 non-secret class (`UnitClass` is secret while a unit's identity is restricted). The bar's own
 `unit` field says what it shows, so the player frame in a vehicle (`"vehicle"`) keeps its default.
+
+Classic Era (1.15) is the exception: Blizzard sets `lockColor` there only on its arena frames
+(`Blizzard_ArenaUI.lua`), so the player, target and other bars are recolored green on every value
+change (`HealthBar_OnValueChanged`, run by `UnitFrameHealthBar_OnValueChanged`) and on every
+`UnitFrameHealthBar_Update`. Its bars poll their health (`frequentUpdates`, `UnitFrameHealthBar_OnUpdate`
+calls `SetValue`), so no event marks the change. So at Init each bar without `lockColor` (a read)
+gets `HookScript("OnValueChanged", ...)`, which runs after the game's handler and only asks
+`ns.Later("classHealthBars", ..., true)` for `Apply` again, in combat too; a colored bar is then
+tinted again within a drawn frame. It asks for the client's lack of `lockColor`, not which client
+it is, so Forever's and retail's bars (locked in their OnLoad) get no hook. Whether the game draws
+the green for one frame before `Apply` runs (our OnUpdate may run before or after the bar's) is
+for the in-game check. An `UnitFrameHealthBar_Update` that sets green without a new value (no
+`OnValueChanged`) comes from the events `Apply` already follows (target and focus changes, login),
+except `UNIT_MAXHEALTH` at unchanged health, rare enough to wait for the next health change.
 
 Forever's player frame has a third bar only for the druid's astral power (moonkin), so bear and cat
 form show no mana. The druid mana bar follows the rule of Blizzard's Wrath to Mists clients
@@ -1064,12 +1081,13 @@ guild bank calls and `ToggleCalendar` are gone, the player frame's art container
 coordinates, its tracking button and day and night icon are `false` (a stub frame answers any
 other capitalized field with a no-op method, so a check reads them with `type(...) == "table"`),
 the minimap is Classic Era's (140 across, `MinimapBorder`, and `MiniMapTracking` and the time of
-day `GameTimeFrame` on `MinimapBackdrop`), the spell book is read by tab (`GetSpellTabInfo`, from
+day `GameTimeFrame` on `MinimapBackdrop`), the unit frames' health bars lose `lockColor`, the spell book is read by tab (`GetSpellTabInfo`, from
 `state.spellTabs` or one tab of every slot; a slot's `future` makes it `FUTURESPELL`), and
 `CreateFrame` errors on a template Classic Era lacks (`MISSING_TEMPLATES`), as the client does, so a template
 only Forever and retail have can't slip into the login unnoticed. `tests/classicera_spec.lua` logs in
 on it and opens the settings window; the ring and click casting specs have Classic Era cases of
-their own.
+their own. `Stubs.SetHealth` moves a unit frame's health bar to a new value, as the
+game's OnUpdate does: an unlocked bar turns green before its `OnValueChanged` hook runs.
 
 The fake `C_CVar` refuses what the game refuses (a value outside `state.cvarRanges`, a
 `state.cvarSecure` CVar in combat, an unknown CVar), drops the fraction for one in `state.cvarWhole`,

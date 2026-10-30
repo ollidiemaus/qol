@@ -466,13 +466,25 @@ end
 
 -- A unit frame's health bar, read-only to the addon like action bars: its color and desaturation
 -- change only through the widget methods, which work in combat too. It starts the way Blizzard
--- leaves these bars: white (the texture's own green shows) and not desaturated.
+-- leaves these bars: white (the texture's own green shows) and not desaturated. Forever and retail
+-- lock its color (lockColor, set in the bar's OnLoad); Classic Era doesn't, so there a new value
+-- turns it green again (HealthBar_OnValueChanged) before the OnValueChanged hooks run.
 local function newHealthBar(unit)
-    local raw = { unit = unit, color = { 1, 1, 1, 1 }, desaturated = false }
+    local raw = { unit = unit, color = { 1, 1, 1, 1 }, desaturated = false, lockColor = true, value = 1 }
     function raw.SetStatusBarColor(_, r, g, b, a) raw.color = { r, g, b, a or 1 } end
     function raw.GetStatusBarColor() return raw.color[1], raw.color[2], raw.color[3], raw.color[4] end
     function raw.SetStatusBarDesaturated(_, desaturated) raw.desaturated = desaturated and true or false end
     function raw.IsStatusBarDesaturated() return raw.desaturated end
+    function raw.HookScript(_, script, fn)
+        if script ~= "OnValueChanged" then error("health bar HookScript: " .. tostring(script)) end
+        raw.valueHook = fn
+    end
+    function raw.SetValue(bar, value)
+        if value == raw.value then return end -- the game runs OnValueChanged only on a change
+        raw.value = value
+        if not raw.lockColor then raw.color = { 0, 1, 0, 1 } end
+        if raw.valueHook then raw.valueHook(bar, value) end
+    end
     return setmetatable({}, {
         __index = raw,
         __newindex = function(_, key) error("the addon wrote health bar field " .. tostring(key)) end,
@@ -771,6 +783,8 @@ local function makeClassicEra(G)
     -- player frame's raw table, as the addon may not write the frame.
     state.playerFrame.PlayerFrameContainer = false
     G.MinimapCluster.MinimapContainer.PlayerCoords = false
+    -- Only its arena frames lock their health bars' color.
+    for _, raw in pairs(state.healthBars) do raw.lockColor = nil end
     -- Its minimap (Blizzard_Minimap/Classic): the round border is MinimapBorder, with no compass
     -- underlay; the tracking button (MiniMapTracking) and the time of day icon (GameTimeFrame, as
     -- there is no calendar) sit on MinimapBackdrop, not on the cluster.
@@ -1583,6 +1597,7 @@ local function install()
         FocusFrame = "focus", FocusFrameToT = "focustarget" }) do
         local bar, raw = newHealthBar(unit)
         state.healthBars[name] = raw
+        raw.bar = bar
         newUnitButton(unit, name).healthbar = bar
     end
     G.PlayerFrame = newPlayerFrame(G.PlayerFrame)
@@ -2367,6 +2382,12 @@ end
 -- change bar.unit here, the way Blizzard switches the player frame to a vehicle.
 function Stubs.HealthBar(frameName)
     return state.healthBars[frameName]
+end
+
+-- The game moves a unit frame's health bar to a new health value, as its OnUpdate does.
+function Stubs.SetHealth(frameName, value)
+    local raw = state.healthBars[frameName]
+    raw.SetValue(raw.bar, value)
 end
 
 -- The whole bag contents: items ={ { bag, slot, itemID, quality, count, price, hasNoValue } }.
