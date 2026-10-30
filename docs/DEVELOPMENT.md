@@ -351,6 +351,20 @@ for text that wasn't typed, and `SendMailFrame_CanSend`) from our call. Nothing 
 hooked or written. `OpenMailFrame` sits 46 right of the mail frame (`MailFrame.xml`), so a letter
 left open covers the tabs' right edge, mostly their transparent part.
 
+The first tab is placed against `MailFrame`'s top right, not `SendMailFrame`'s: on Forever and
+retail the Send Mail frame fills the mail frame, so it's the same place, but Classic Era's
+(`Classic/MailFrame.xml`) is its old 384×512 art frame anchored top left inside a mail frame 338
+wide (`ButtonFrameTemplate`), and against it the tabs hung 46 off the edge. Classic Era (1.15) also
+has no `LargeSideTabButtonTemplate` (its Cooldown Viewer inherits it, but nothing there defines it),
+so `CreateFrame` with it was an error each time a bookmark was saved. Where
+`C_XMLUtil.GetTemplateInfo` doesn't know it, a tab is Classic Era's spell book side tab,
+`SpellBookSkillLineTabTemplate` (a CheckButton, 32×32, in `Vanilla/SpellBookFrame.xml`, which
+`Blizzard_UIPanels_Game` loads at startup): its icon is its `NormalTexture`, sized by the template
+(the element is empty, so the mail icon is set with `SetNormalTexture` before `GetNormalTexture`),
+its OnClick (the spell book's `SpellBookSkillLineTab_OnClick`) is replaced by ours on our frame,
+which unchecks it and fills in To, and it shows `tooltip` on hover. The tabs are 17 apart, as the
+spell book spaces them. The `classicon-<class>` atlases are in Classic Era too.
+
 The square minimap's bronze border, `Media/MinimapSquareBorder.tga` (512×512), is Forever's own
 round frame (`ui-hud-minimap-frame-c60-2x`, file 8026708 of build 1.60.1.70291) unwrapped onto a
 square: each pixel of a band along the square's edges, with rounded corners, takes the ring's pixel

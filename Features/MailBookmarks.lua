@@ -8,7 +8,9 @@ local Options = ns.Options
 -- else the mail frame's own portrait, and their name on hover. A click puts the name in To and goes
 -- on to Subject, as the game's Reply and Enter in To do.
 --
--- The tabs are frames of ours, children of SendMailFrame, so they show only on the Send Mail tab.
+-- The tabs are frames of ours, children of SendMailFrame, so they show only on the Send Mail tab,
+-- placed against MailFrame (Classic Era's Send Mail frame is wider than the mail frame it sits in).
+-- Classic Era has no large side tab: there they are its spell book's side tabs.
 -- On Blizzard's frames only widget methods (SetText, SetFocus), through ns.Later.
 local MailBookmarks = {}
 ns.MailBookmarks = MailBookmarks
@@ -21,6 +23,7 @@ MailBookmarks.KEYS = KEYS
 
 local FIRST_TAB_Y = -60 -- below the title bar, where the Group Finder starts its tabs
 local TAB_GAP = 2
+local SKILL_LINE_TAB_GAP = 17 -- as Classic Era's spell book spaces them (32 high, art past that)
 local ICON_SIZE = 50 -- the inside of the tab art (SidePanelTabButtonMixin's interior)
 local UNKNOWN_ICON = "Interface\\MailFrame\\Mail-Icon"
 
@@ -67,14 +70,33 @@ end
 
 -- Made without a parent: SmartNavigation hooks CreateFrame, and a frame made inside an open
 -- controller window makes it rebuild that window from our code.
-local function newTab()
+local function newSideTab()
     local tab = CreateFrame("Frame", nil, nil, "LargeSideTabButtonTemplate")
     tab:SetChecked(false)
-    tab.Icon:SetSize(ICON_SIZE, ICON_SIZE)
+    tab.iconSize, tab.gap = ICON_SIZE, TAB_GAP
     tab:SetCustomOnMouseUpHandler(function(self, button, upInside)
         if button == "LeftButton" and upInside then MailBookmarks.Fill(self.name) end
     end)
     return tab
+end
+
+-- Classic Era's spell book tab: a CheckButton whose NormalTexture is the icon, sized by the
+-- template, and whose OnClick (the spell book's) is replaced by ours. Its NormalTexture element is
+-- empty, so a file is set first, as the spell book does, for there to be a texture to draw on.
+local function newSkillLineTab()
+    local tab = CreateFrame("CheckButton", nil, nil, "SpellBookSkillLineTabTemplate")
+    tab:SetNormalTexture(UNKNOWN_ICON)
+    tab.Icon, tab.gap = tab:GetNormalTexture(), SKILL_LINE_TAB_GAP
+    tab:SetScript("OnClick", function(self)
+        self:SetChecked(false)
+        MailBookmarks.Fill(self.name)
+    end)
+    return tab
+end
+
+local function newTab()
+    if C_XMLUtil.GetTemplateInfo("LargeSideTabButtonTemplate") then return newSideTab() end
+    return newSkillLineTab()
 end
 
 local function setIcon(tab, name)
@@ -86,12 +108,12 @@ local function setIcon(tab, name)
         tab.Icon:SetTexture(UNKNOWN_ICON)
         tab.Icon:SetTexCoord(0, 1, 0, 1)
     end
-    tab.Icon:SetSize(ICON_SIZE, ICON_SIZE)
+    if tab.iconSize then tab.Icon:SetSize(tab.iconSize, tab.iconSize) end
 end
 
 function MailBookmarks:Apply()
     local frame = SendMailFrame
-    if not frame then return end
+    if not (frame and MailFrame) then return end
     local names = bookmarks()
     for index, name in ipairs(names) do
         local tab = self.tabs[index]
@@ -99,14 +121,14 @@ function MailBookmarks:Apply()
             tab = newTab()
             tab:SetParent(frame)
             if index == 1 then
-                tab:SetPoint("TOPLEFT", frame, "TOPRIGHT", 0, FIRST_TAB_Y)
+                tab:SetPoint("TOPLEFT", MailFrame, "TOPRIGHT", 0, FIRST_TAB_Y)
             else
-                tab:SetPoint("TOPLEFT", self.tabs[index - 1], "BOTTOMLEFT", 0, -TAB_GAP)
+                tab:SetPoint("TOPLEFT", self.tabs[index - 1], "BOTTOMLEFT", 0, -tab.gap)
             end
             self.tabs[index] = tab
         end
-        -- tooltipText is what SidePanelTabButtonMixin's OnEnter shows.
-        tab.name, tab.tooltipText = name, name
+        -- tooltipText is what SidePanelTabButtonMixin's OnEnter shows, tooltip the spell book tab's.
+        tab.name, tab.tooltipText, tab.tooltip = name, name, name
         setIcon(tab, name)
         tab:Show()
     end
