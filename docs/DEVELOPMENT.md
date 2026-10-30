@@ -258,6 +258,25 @@ Blizzard function is hooked and the frames' events and scripts stay theirs. Font
 protected, but the change goes through `ns.Later` like the other HideFrames options. Forever has no Camelot copy of this code;
 its player and pet frames use Mainline's `CombatFeedback`.
 
+Classic Era (1.15) names two of these frames differently, so `HideFrames.TARGETS` takes whichever
+the client has, the same way. It has no Quick Join: the social button by its chat is
+`FriendsMicroButton` on `ChatFrame1ButtonFrame` (`Blizzard_ChatFrameBase/Classic/FloatingChatFrame.xml`),
+which the Hide the social button option hides instead of `QuickJoinToastButton`. Its player frame is
+the old one, without `PlayerFrameContent`: the player's hit text is the global `PlayerHitIndicator`
+font string straight on `PlayerFrame` (`Blizzard_UnitFrame/Classic/PlayerFrame.xml`), next to the same
+`PetHitIndicator`. The micro menu (`MicroMenuContainer`), the bags bar and the chat menu and channel
+buttons have the same names there; it has no voice buttons, which are skipped as missing.
+
+Quests on Classic Era: its quest greeting (`QUEST_GREETING`, the old list of quests) has no quest
+IDs: there's no `GetActiveQuestID`, and `GetAvailableQuestInfo` returns only isTrivial, isDaily,
+isRepeatable and isLegendary (`Blizzard_UIPanels_Game/Classic/QuestFrame.lua`). Where
+`GetActiveQuestID` is missing, `Quests:OnQuestGreeting` keys the quests it opened by their title
+(`GetActiveTitle`, `GetAvailableTitle`) instead of their ID, so each still opens once per NPC.
+`QUEST_ACCEPTED` there carries the quest log index before the quest ID, so the handler takes the
+second value when there is one. Accepting or turning a quest in forgets its ID and, there, its title
+(`C_QuestLog.GetQuestInfo`), so a repeatable turn-in
+opens again at the same NPC. The gossip window (`C_GossipInfo`) has quest IDs there as everywhere.
+
 The combat log can't be closed in the default UI, and the dock's own functions (`FCF_Close`,
 `FCF_UnDockFrame`) write to the chat frames and the dock. So `ChatFrame2` goes to the hidden holder
 and its tab is scaled down to 0.001: the dock gives every tab its parent, width and anchor again on
@@ -962,6 +981,12 @@ itself when the client knows none.
   distance) keep the game default.
 - **Measuring them.** `/qol probe` measures the ranges, game defaults and the game sliders in the
   client it runs in; see "The hidden settings probe" under "Trying it in game".
+- **Classic Era** has the same `C_CVar` calls and the same View Distance, Environment Detail and
+  Ground Clutter sliders (`Blizzard_SettingsDefinitions_Shared/Graphics.lua`), so the page needs no
+  path of its own there: a hidden setting its client doesn't know reads as nil and its row drops
+  out, the sliders keep the ranges measured on Forever (its Max Camera Distance slider stops at 2.0
+  too), and a value it refuses shows the old one after the read-back, with no error. Which hidden
+  settings it knows and which ranges it takes are for `/qol probe` there.
 
 The history below is from the time the pages were in the game's settings; the workarounds it led to
 stay since they cost nothing.
@@ -1099,8 +1124,13 @@ day `GameTimeFrame` on `MinimapBackdrop`), the unit frames' health bars lose `lo
 `CreateFrame` errors on a template Classic Era lacks (`MISSING_TEMPLATES`), as the client does, so a template
 only Forever and retail have can't slip into the login unnoticed. `tests/classicera_spec.lua` logs in
 on it and opens the settings window; the ring and click casting specs have Classic Era cases of
-their own. `Stubs.SetHealth` moves a unit frame's health bar to a new value, as the
-game's OnUpdate does: an unlocked bar turns green before its `OnValueChanged` hook runs.
+their own.
+
+Classic Era's chat has `FriendsMicroButton` and no `QuickJoinToastButton`, its player
+frame `PlayerHitIndicator` and no `PlayerFrameContent`, and its quest greeting no quest IDs (no
+`GetActiveQuestID`, four values from `GetAvailableQuestInfo`, the titles from `GetAvailableTitle` and
+`C_QuestLog.GetQuestInfo` over `state.quest.titles`). `Stubs.SetHealth` moves a unit frame's health
+bar to a new value, as the game's OnUpdate does: an unlocked bar turns green before its `OnValueChanged` hook runs.
 
 The fake `C_CVar` refuses what the game refuses (a value outside `state.cvarRanges`, a
 `state.cvarSecure` CVar in combat, an unknown CVar), drops the fraction for one in `state.cvarWhole`,
@@ -1164,7 +1194,10 @@ Things only the real client can confirm:
   inside the screen; no "tainted by" error in combat afterwards (the action bars are protected).
 - Quests: accepting from a gossip NPC and from a quest greeting NPC (several quests in a row), a
   shared quest, turning in with one reward and with none, a choice of rewards and a quest that costs
-  gold staying open, and Shift leaving everything to the player.
+  gold staying open, and Shift leaving everything to the player. On Classic Era, a quest greeting
+  NPC with several quests to accept and to turn in, and a repeatable turn-in done twice in a row.
+- On Classic Era: Hide the social button hides the Friends button by the chat, and portrait hit text
+  shows no numbers over the player's and the pet's portrait.
 - Faster auto loot: with Auto Loot on, a corpse, an herb, a catch and a container empty at once; the
   auto loot key held keeps the window open; with Auto Loot off, holding the key takes it all at once.
   Full bags leave the rest in the window, a bind-on-pickup item in a group asks first, and a group

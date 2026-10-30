@@ -62,11 +62,11 @@ read_globals = {
     -- Units
     "UnitIsPlayer", "UnitTreatAsPlayerForDisplay", "UnitClass", "UnitGUID", "UnitName", "GetNormalizedRealmName",
     "RegionalUniqueNamesEnabled", "RAID_CLASS_COLORS",
-    "UnitPowerType", "UnitPower", "UnitPowerMax", "PlayerFrame", "PetHitIndicator",
+    "UnitPowerType", "UnitPower", "UnitPowerMax", "PlayerFrame", "PetHitIndicator", "PlayerHitIndicator", "FriendsMicroButton",
     -- Quests
     "AcceptQuest", "CompleteQuest", "GetQuestReward", "GetNumQuestChoices", "IsQuestCompletable", "GetQuestMoneyToGet",
     "QuestGetAutoAccept", "QuestIsFromAdventureMap", "GetNumActiveQuests", "GetNumAvailableQuests", "GetActiveTitle",
-    "GetActiveQuestID", "GetAvailableQuestInfo", "SelectActiveQuest", "SelectAvailableQuest",
+    "GetActiveQuestID", "GetAvailableQuestInfo", "GetAvailableTitle", "C_QuestLog", "SelectActiveQuest", "SelectAvailableQuest",
     -- Bags, items and merchants
     "NUM_BAG_SLOTS", "NUM_TOTAL_EQUIPPED_BAG_SLOTS",
     "CanMerchantRepair", "GetRepairAllCost", "RepairAllItems", "GetMoney",

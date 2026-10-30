@@ -81,6 +81,18 @@ describe("the stubbed Classic Era client", function()
         T.same(bar.color, { 0.5, 0.5, 0.5, 1 })
     end)
 
+    it("has the Friends button by the chat, the old hit indicator and a greeting without quest IDs", function()
+        Stubs.Reset({ client = "classicEra" })
+        T.eq(QuickJoinToastButton, nil)
+        T.eq(FriendsMicroButton:GetParent(), ChatFrame1ButtonFrame)
+        T.eq(PlayerHitIndicator:GetParent(), PlayerFrame)
+        T.falsy(PlayerFrame.PlayerFrameContent)
+        T.eq(GetActiveQuestID, nil)
+        Stubs.state().quest.greetingAvailable = { { title = "C" } }
+        T.eq(select("#", GetAvailableQuestInfo(1)), 4)
+        T.eq(GetAvailableTitle(1), "C")
+    end)
+
     it("keeps every template on Forever", function()
         Stubs.Reset()
         T.truthy(pcall(CreateFrame, "Frame", nil, UIParent, "PortraitFrameFlatTemplate"))
