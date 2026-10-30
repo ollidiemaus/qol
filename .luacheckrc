@@ -43,7 +43,7 @@ read_globals = {
     "InCombatLockdown", "GetPhysicalScreenSize", "ReloadUI", "IsSecureCmd", "geterrorhandler", "CinematicFrame", "MovieFrame",
     "IsShiftKeyDown", "GamepadMainActionBarFrame", "GamepadMode", "SettingsPanel", "GameMenuFrame", "GetCursorPosition", "GetCursorInfo",
     "SecureHandlerWrapScript", "EditModeManagerFrame",
-    "SendMailFrame", "SendMailNameEditBox", "SendMailSubjectEditBox",
+    "MailFrame", "SendMailFrame", "SendMailNameEditBox", "SendMailSubjectEditBox",
     -- Performance
     "GetFramerate", "GetNetStats",
     -- Key bindings

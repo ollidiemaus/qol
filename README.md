@@ -76,7 +76,8 @@ the price of one, as its buttons may not say how many items a slot holds.
   **Subject**. A tab shows the character's class once they've logged in with Quality of Life, else
   the mail icon; point at it for the name. The character you're playing gets no tab. Type the names
   on the Mail page of the settings as you would in To: on WoW Forever with the surname (Name
-  Surname), elsewhere the name, or Name-Realm for a character on another realm.
+  Surname), elsewhere the name, or Name-Realm for a character on another realm. On Classic Era the
+  tabs are the small ones of its spell book.
 
 ### Minimap
 

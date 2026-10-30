@@ -625,10 +625,11 @@ end
 
 -- The frame templates a client lacks (the rest it has): Classic Era has neither the flat portrait
 -- frame nor the large side tab, and the tab system is only in the shared XML of TBC Anniversary and
--- later clients.
+-- later clients. Forever's spell book is the new one, without Classic Era's skill line tabs.
 local MISSING_TEMPLATES = {
     classicEra = { PortraitFrameFlatTemplate = true, LargeSideTabButtonTemplate = true,
         TabSystemTopButtonTemplate = true, TabSystemTemplate = true },
+    forever = { SpellBookSkillLineTabTemplate = true },
 }
 
 local function hasTemplate(template)
@@ -884,6 +885,23 @@ local function install()
                 G.GameTooltip:Show()
             end)
             frame:SetScript("OnLeave", function() G.GameTooltip:Hide() end)
+        end
+        -- Classic Era's spell book side tab (a CheckButton): its empty NormalTexture, the template's
+        -- OnClick for the spell book's own tabs, and self.tooltip on hover.
+        if template == "SpellBookSkillLineTabTemplate" then
+            -- The empty element may make no texture before a file is set, as the spell book does.
+            function frame:SetNormalTexture(file)
+                self.normalTexture = self.normalTexture or newRegion("Texture", self)
+                self.normalTexture:SetTexture(file)
+            end
+            function frame:GetNormalTexture() return self.normalTexture end
+            frame:SetScript("OnClick", function(self) G.SpellBookSkillLineTab_OnClick(self) end)
+            frame:SetScript("OnEnter", function(self)
+                G.GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+                G.GameTooltip:SetText(self.tooltip)
+            end)
+            frame:SetScript("OnLeave", function() G.GameTooltip:Hide() end)
+            frame:Hide()
         end
         if kind == "EditBox" then Stubs.MakeEditBox(frame) end
         -- The template's Tab, as Forever's EditBox_OnTabPressed: the previous box with Shift, else the next.
