@@ -18,43 +18,39 @@ local function plain(value)
     return ns.IsUsable(value) and value
 end
 
+local Buttons = ns.Buttons
+
 local function setUsable(button, usable, noMana)
-    if plain(usable) then
-        button.icon:SetVertexColor(1, 1, 1)
-    elseif plain(noMana) then
-        button.icon:SetVertexColor(0.5, 0.5, 1)
-    else
-        button.icon:SetVertexColor(0.4, 0.4, 0.4)
-    end
+    Buttons.SetUsable(button.icon, usable, noMana)
 end
 
 local function showSpell(button, id)
     setUsable(button, C_Spell.IsSpellUsable(id))
     -- A count for spells that use up something or have charges, as the action buttons show it.
     if plain(C_Spell.IsConsumableSpell(id)) or plain(C_Spell.GetSpellCharges(id)) then
-        button.count:SetText(C_Spell.GetSpellDisplayCount(id, 9999))
+        Buttons.SetCount(button.count, C_Spell.GetSpellDisplayCount(id, 9999))
     else
-        button.count:SetText("")
+        Buttons.SetCount(button.count, "")
     end
     local duration = C_Spell.GetSpellCooldownDuration(id)
     if duration then
-        button.cooldown:SetCooldownFromDurationObject(duration)
+        Buttons.SetCooldownDuration(button.cooldown, duration)
     else
-        button.cooldown:Clear()
+        Buttons.ClearCooldown(button.cooldown)
     end
 end
 
 local function itemCooldown(button, id)
     local start, duration = C_Item.GetItemCooldown(id)
-    button.cooldown:SetCooldown(start, duration)
+    Buttons.SetCooldown(button.cooldown, start, duration)
 end
 
 local function showItem(button, id)
     setUsable(button, C_Item.IsUsableItem(id))
     if plain(C_Item.IsConsumableItem(id)) or (plain(C_Item.GetItemMaxStackSizeByID(id)) or 1) > 1 then
-        button.count:SetText(C_Item.GetItemCount(id, false, true))
+        Buttons.SetCount(button.count, C_Item.GetItemCount(id, false, true))
     else
-        button.count:SetText("")
+        Buttons.SetCount(button.count, "")
     end
     itemCooldown(button, id)
 end
@@ -112,7 +108,7 @@ local KINDS = {
         show = function(button, id)
             -- Not in Blizzard's API documentation; a client without it shows every toy as usable.
             setUsable(button, not (C_ToyBox and C_ToyBox.IsToyUsable) or C_ToyBox.IsToyUsable(id))
-            button.count:SetText("")
+            Buttons.SetCount(button.count, "")
             itemCooldown(button, id)
         end,
         tooltip = function(tooltip, id)
@@ -137,12 +133,12 @@ local KINDS = {
         show = function(button, id)
             local info = mount(id)
             setUsable(button, info and info.usable)
-            button.count:SetText("")
+            Buttons.SetCount(button.count, "")
             local duration = info and C_Spell.GetSpellCooldownDuration(info.spellID)
             if duration then
-                button.cooldown:SetCooldownFromDurationObject(duration)
+                Buttons.SetCooldownDuration(button.cooldown, duration)
             else
-                button.cooldown:Clear()
+                Buttons.ClearCooldown(button.cooldown)
             end
         end,
         tooltip = function(tooltip, id)
@@ -179,8 +175,8 @@ local KINDS = {
                 showItem(button, itemID)
             else
                 setUsable(button, true)
-                button.count:SetText("")
-                button.cooldown:Clear()
+                Buttons.SetCount(button.count, "")
+                Buttons.ClearCooldown(button.cooldown)
             end
         end,
         tooltip = function(tooltip, name) tooltip:SetText(name) end,
@@ -236,11 +232,11 @@ function Entries.Refresh(button, entry)
     local info = kind(entry)
     if not info then
         button.icon:Hide()
-        button.count:SetText("")
-        button.cooldown:Clear()
+        Buttons.SetCount(button.count, "")
+        Buttons.ClearCooldown(button.cooldown)
         return
     end
-    button.icon:SetTexture(info.icon(entry.id))
+    Buttons.SetIcon(button.icon, info.icon(entry.id))
     button.icon:Show()
     info.show(button, entry.id)
 end

@@ -18,19 +18,34 @@ local ABOVE_MONEY = 4 -- the grid's bottom right corner sits this far above the 
 
 -- The bag's item buttons in Blizzard's order: bag by bag from the backpack, slot by slot, and the
 -- locked extra slots of an account without an authenticator last (SortItemsByExtendedState).
+local function byPlace(a, b)
+    if a.extended ~= b.extended then return not a.extended end
+    if a.bag ~= b.bag then return a.bag < b.bag end
+    return a.slot < b.slot
+end
+
+-- Reused on every run: it runs after every bag change while the bag is open. Each button keeps its
+-- entry (the bag's buttons come from a pool, so they live on).
+local ordered = {}
+local entryOf = setmetatable({}, { __mode = "k" })
+
 local function inOrder(bag)
-    local entries = {}
+    local count = 0
     for _, button in ipairs(bag.Items) do
         local bagID, slot = button:GetAttribute("bagid"), button:GetID()
         if not (ns.IsUsable(bagID) and ns.IsUsable(slot)) then return nil end
-        entries[#entries + 1] = { button = button, bag = bagID, slot = slot, extended = button.isExtended == true }
+        local entry = entryOf[button]
+        if not entry then
+            entry = { button = button }
+            entryOf[button] = entry
+        end
+        entry.bag, entry.slot, entry.extended = bagID, slot, button.isExtended == true
+        count = count + 1
+        ordered[count] = entry
     end
-    table.sort(entries, function(a, b)
-        if a.extended ~= b.extended then return not a.extended end
-        if a.bag ~= b.bag then return a.bag < b.bag end
-        return a.slot < b.slot
-    end)
-    return entries
+    for index = count + 1, #ordered do ordered[index] = nil end
+    table.sort(ordered, byPlace)
+    return ordered
 end
 
 -- Offsets of a cell of Blizzard's grid, counted from the bottom right, right to left and upwards.

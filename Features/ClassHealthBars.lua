@@ -48,13 +48,21 @@ end
 -- what the game had. A bar is in here while it shows a class color.
 local originals = {}
 
+local function near(value, wanted)
+    return ns.IsUsable(value) and math.abs(value - wanted) < 0.001
+end
+
+-- Sets only what differs: on Classic Era this runs after every health change of a bar.
 local function colorBar(bar, color)
+    local r, g, b, a = bar:GetStatusBarColor()
+    local desaturated = bar:IsStatusBarDesaturated()
     if not originals[bar] then
-        local r, g, b, a = bar:GetStatusBarColor()
-        originals[bar] = { r = r, g = g, b = b, a = a, desaturated = bar:IsStatusBarDesaturated() }
+        originals[bar] = { r = r, g = g, b = b, a = a, desaturated = desaturated }
     end
-    bar:SetStatusBarDesaturated(true)
-    bar:SetStatusBarColor(color.r, color.g, color.b)
+    if not desaturated then bar:SetStatusBarDesaturated(true) end
+    if not (near(r, color.r) and near(g, color.g) and near(b, color.b)) then
+        bar:SetStatusBarColor(color.r, color.g, color.b)
+    end
 end
 
 local function restoreBar(bar)
@@ -73,17 +81,20 @@ local function barOf(info)
 end
 
 -- The health bar's unit is the one it shows right now: "vehicle" on the player frame in a vehicle.
+function ClassHealthBars:ApplyBar(info)
+    local bar = barOf(info)
+    if not bar then return end
+    local color = Options:Get(info.key) and self.ClassColor(bar.unit)
+    if color then
+        colorBar(bar, color)
+    else
+        restoreBar(bar)
+    end
+end
+
 function ClassHealthBars:Apply()
     for _, info in ipairs(self.BARS) do
-        local bar = barOf(info)
-        if bar then
-            local color = Options:Get(info.key) and self.ClassColor(bar.unit)
-            if color then
-                colorBar(bar, color)
-            else
-                restoreBar(bar)
-            end
-        end
+        self:ApplyBar(info)
     end
 end
 
@@ -95,11 +106,12 @@ local function schedule()
     ns.Later("classHealthBars", apply, true)
 end
 
+-- The bars' options that are on, as keys: read on every health change on Classic Era, so kept
+-- here by the option watcher instead of asking Options each time.
+local enabled = {}
+
 local function isActive()
-    for _, key in ipairs(KEYS) do
-        if Options:Get(key) then return true end
-    end
-    return next(originals) ~= nil
+    return next(enabled) ~= nil or next(originals) ~= nil
 end
 
 -- Events are wake-ups: Apply looks at every bar again. Some only matter because Blizzard redraws
@@ -124,7 +136,13 @@ local PLAYER_EVENTS = {
 }
 
 function ClassHealthBars:Init()
-    Options:Watch(KEYS, schedule)
+    for _, key in ipairs(KEYS) do
+        enabled[key] = Options:Get(key) and true or nil
+    end
+    Options:Watch(KEYS, function(key, value)
+        enabled[key] = value and true or nil
+        schedule()
+    end)
 
     local function wake()
         if isActive() then schedule() end
@@ -140,10 +158,17 @@ function ClassHealthBars:Init()
     for _, event in ipairs(PLAYER_EVENTS) do
         playerListener:On(event, wake)
     end
-    for _, info in ipairs(self.BARS) do
+    -- A health change on Classic Era colors that bar again, not all five.
+    for index, info in ipairs(self.BARS) do
         local bar = barOf(info)
         if bar and not bar.lockColor then
-            bar:HookScript("OnValueChanged", wake)
+            local key = "classHealthBar" .. index
+            local function applyBar()
+                ClassHealthBars:ApplyBar(info)
+            end
+            bar:HookScript("OnValueChanged", function()
+                if enabled[info.key] or originals[bar] then ns.Later(key, applyBar, true) end
+            end)
         end
     end
     wake()

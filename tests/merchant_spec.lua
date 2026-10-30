@@ -50,6 +50,48 @@ describe("selling junk", function()
         T.same(state.used, { "0:1", "3:7" })
     end)
 
+    it("waits for the client to load an item's info, then sells all the junk at once", function()
+        local _, state = start()
+        Stubs.SetBags({
+            { bag = 0, slot = 1, itemID = 100, quality = POOR, count = 3, price = 10 },
+            { bag = 2, slot = 5, itemID = 101, quality = POOR, count = 1, price = 250 },
+        })
+        Stubs.UnloadItem(101)
+        openMerchant()
+        T.eq(state.soldAll, 0, "waits")
+        T.same(state.itemRequests, { 101 })
+        Stubs.LoadItem(101)
+        T.eq(state.soldAll, 1)
+        T.same(state.messages, { "|cff33ff99Quality of Life|r: Sold 2 junk |4item:items; for 280c." })
+        Stubs.AdvanceTime()
+        T.eq(state.soldAll, 1, "the timer ends nothing more")
+    end)
+
+    it("sells what it knows when an item's info doesn't come within a second", function()
+        local _, state = start()
+        Stubs.SetBags({
+            { bag = 0, slot = 1, itemID = 100, quality = POOR, count = 3, price = 10 },
+            { bag = 2, slot = 5, itemID = 101, quality = POOR, count = 1, price = 250 },
+        })
+        Stubs.UnloadItem(101)
+        openMerchant()
+        Stubs.AdvanceTime()
+        T.eq(state.soldAll, 1)
+        T.same(state.messages, { "|cff33ff99Quality of Life|r: Sold 1 junk |4item:items; for 30c." })
+    end)
+
+    it("stops waiting when the merchant closes", function()
+        local _, state = start()
+        Stubs.SetBags({ { bag = 0, slot = 1, itemID = 100, quality = POOR, price = 10 } })
+        Stubs.UnloadItem(100)
+        openMerchant()
+        Stubs.Fire("MERCHANT_CLOSED")
+        Stubs.LoadItem(100)
+        Stubs.AdvanceTime()
+        T.eq(state.soldAll, 0)
+        T.eq(#state.messages, 0)
+    end)
+
     it("does nothing without junk", function()
         local _, state = start()
         Stubs.SetBags({ { bag = 0, slot = 1, itemID = 200, quality = COMMON, price = 50 } })

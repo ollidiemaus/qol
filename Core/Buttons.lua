@@ -18,34 +18,85 @@ Buttons.REFRESH_EVENTS = {
     "PLAYER_ENTERING_WORLD",
 }
 
+-- Setters for a slot's regions that skip a value the region shows already: the slots refresh on
+-- every cooldown and usability event, many times a second in combat. A secret value can't be
+-- compared, so it is always set. Every change to these regions goes through them.
+local shown = setmetatable({}, { __mode = "k" })
+local shownDuration = setmetatable({}, { __mode = "k" })
+
+local function differs(region, value)
+    if not ns.IsUsable(value) then
+        shown[region] = nil
+        return true
+    end
+    if shown[region] == value then return false end
+    shown[region] = value
+    return true
+end
+
+function Buttons.SetIcon(icon, texture)
+    if differs(icon, texture) then icon:SetTexture(texture) end
+end
+
+function Buttons.SetCount(count, text)
+    if differs(count, text) then count:SetText(text) end
+end
+
+-- The icon's tint for an action that can be used, lacks the power for it, or can't be used.
+local TINTS = { usable = { 1, 1, 1 }, noMana = { 0.5, 0.5, 1 }, unusable = { 0.4, 0.4, 0.4 } }
+
+function Buttons.SetUsable(icon, usable, noMana)
+    local tint = (ns.IsUsable(usable) and usable and "usable")
+        or (ns.IsUsable(noMana) and noMana and "noMana") or "unusable"
+    if differs(icon, tint) then
+        local color = TINTS[tint]
+        icon:SetVertexColor(color[1], color[2], color[3])
+    end
+end
+
+local CLEARED = "cleared"
+
+function Buttons.ClearCooldown(cooldown)
+    if differs(cooldown, CLEARED) then cooldown:Clear() end
+end
+
+-- A duration object is new on each call and can't be compared: it is always set.
+function Buttons.SetCooldownDuration(cooldown, duration)
+    shown[cooldown] = nil
+    cooldown:SetCooldownFromDurationObject(duration)
+end
+
+function Buttons.SetCooldown(cooldown, start, duration)
+    if shown[cooldown] == start and shownDuration[cooldown] == duration and ns.IsUsable(start)
+        and ns.IsUsable(duration) then
+        return
+    end
+    shown[cooldown] = ns.IsUsable(start) and start or nil
+    shownDuration[cooldown] = ns.IsUsable(duration) and duration or nil
+    cooldown:SetCooldown(start, duration)
+end
+
 -- Icon, usability, count and cooldown of an action slot on a button's own regions (icon, count,
 -- cooldown), as the game's action buttons show them. Returns whether the slot holds an action.
 function Buttons.RefreshAction(button, slot)
     local actions = C_ActionBar
     if not (slot and actions and actions.HasAction(slot)) then
         button.icon:Hide()
-        button.count:SetText("")
-        button.cooldown:Clear()
+        Buttons.SetCount(button.count, "")
+        Buttons.ClearCooldown(button.cooldown)
         return false
     end
-    button.icon:SetTexture(actions.GetActionTexture(slot))
+    Buttons.SetIcon(button.icon, actions.GetActionTexture(slot))
     button.icon:Show()
-    local usable, noMana = actions.IsUsableAction(slot)
-    if ns.IsUsable(usable) and usable then
-        button.icon:SetVertexColor(1, 1, 1)
-    elseif ns.IsUsable(noMana) and noMana then
-        button.icon:SetVertexColor(0.5, 0.5, 1)
-    else
-        button.icon:SetVertexColor(0.4, 0.4, 0.4)
-    end
+    Buttons.SetUsable(button.icon, actions.IsUsableAction(slot))
     if actions.GetActionDisplayCount then
-        button.count:SetText(actions.GetActionDisplayCount(slot, 9999))
+        Buttons.SetCount(button.count, actions.GetActionDisplayCount(slot, 9999))
     end
     local duration = actions.GetActionCooldownDuration and actions.GetActionCooldownDuration(slot)
     if duration then
-        button.cooldown:SetCooldownFromDurationObject(duration)
+        Buttons.SetCooldownDuration(button.cooldown, duration)
     else
-        button.cooldown:Clear()
+        Buttons.ClearCooldown(button.cooldown)
     end
     return true
 end

@@ -588,7 +588,7 @@ end
 local PERFORMANCE_SECONDS = 1
 local PERFORMANCE_HEIGHT = 16 -- the clock button's, so either sits alike in a row
 local performance
-local ticking = false
+local ticker
 
 local function performanceShown()
     return type(positionOf(elementFor(PERFORMANCE))) == "table"
@@ -604,11 +604,11 @@ end
 
 local function tick()
     if not performanceShown() then
-        ticking = false
+        ticker:Cancel()
+        ticker = nil
         return
     end
     updatePerformance()
-    C_Timer.After(PERFORMANCE_SECONDS, tick)
 end
 
 function MinimapLayout:Performance()
@@ -623,9 +623,9 @@ function MinimapLayout:Performance()
         -- The colors may have been applied before it was there.
         self:ApplyColors()
     end
-    if shown and not ticking then
-        ticking = true
-        tick()
+    if shown and not ticker then
+        updatePerformance()
+        ticker = C_Timer.NewTicker(PERFORMANCE_SECONDS, tick)
     end
     return performance
 end

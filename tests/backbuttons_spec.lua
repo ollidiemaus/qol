@@ -249,6 +249,22 @@ describe("controller back buttons", function()
             T.eq(QoLBackButton4.icon.texture, 136048)
         end)
 
+        it("sets only what changed on a refresh", function()
+            start(on(), function(state)
+                state.actions[177] = { texture = 136048, count = "3" }
+            end)
+            local count = QoLBackButton1.count
+            local textSets = count.textSets
+            Stubs.Fire("SPELL_UPDATE_COOLDOWN")
+            Stubs.RunTimers()
+            T.eq(count.textSets, textSets, "same count")
+            Stubs.state().actions[177].count = "2"
+            Stubs.Fire("SPELL_UPDATE_COOLDOWN")
+            Stubs.RunTimers()
+            T.eq(count:GetText(), "2")
+            T.eq(count.textSets, textSets + 1)
+        end)
+
         it("looks pressed while its key is down", function()
             start(on())
             QoLBackButton1:RunScript("PostClick", "LeftButton", true)
