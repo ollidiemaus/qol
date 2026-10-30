@@ -31,7 +31,11 @@ local function buildAutomation(page)
     page:Header("left", L.SECTION_MERCHANT)
     page:Checkbox("left", "sellJunk", L.SELL_JUNK, L.SELL_JUNK_TIP)
     page:Checkbox("left", "autoRepair", L.AUTO_REPAIR, L.AUTO_REPAIR_TIP)
-    page:Checkbox("left", "guildRepair", L.GUILD_REPAIR, L.GUILD_REPAIR_TIP, { indent = true, enabled = is("autoRepair") })
+    -- Classic Era has no guild banks.
+    if ns.Merchant.HasGuildBank() then
+        page:Checkbox("left", "guildRepair", L.GUILD_REPAIR, L.GUILD_REPAIR_TIP,
+            { indent = true, enabled = is("autoRepair") })
+    end
 
     page:Header("right", L.SECTION_QUESTS)
     page:Checkbox("right", "questAccept", L.QUEST_ACCEPT, L.QUEST_ACCEPT_TIP)
@@ -48,11 +52,16 @@ local function buildInterface(page)
     page:Checkbox("left", "hideMicroMenu", L.HIDE_MICRO_MENU, L.HIDE_MICRO_MENU_TIP)
     page:Checkbox("left", "hideBagsBar", L.HIDE_BAGS_BAR, L.HIDE_BAGS_BAR_TIP)
 
-    page:Header("left", L.SECTION_COMBINED_BAGS)
-    page:Checkbox("left", "combinedBagTopLeft", L.COMBINED_BAG_TOP_LEFT, L.COMBINED_BAG_TOP_LEFT_TIP)
+    -- Classic Era has neither the combined bag nor the player frame the druid mana bar is drawn on.
+    if ns.CombinedBagLayout.IsAvailable() then
+        page:Header("left", L.SECTION_COMBINED_BAGS)
+        page:Checkbox("left", "combinedBagTopLeft", L.COMBINED_BAG_TOP_LEFT, L.COMBINED_BAG_TOP_LEFT_TIP)
+    end
 
     page:Header("left", L.SECTION_PLAYER_FRAME)
-    page:Checkbox("left", "druidManaBar", L.DRUID_MANA_BAR, L.DRUID_MANA_BAR_TIP)
+    if ns.DruidManaBar.IsAvailable() then
+        page:Checkbox("left", "druidManaBar", L.DRUID_MANA_BAR, L.DRUID_MANA_BAR_TIP)
+    end
     page:Checkbox("left", "hidePortraitHitText", L.HIDE_PORTRAIT_HIT_TEXT, L.HIDE_PORTRAIT_HIT_TEXT_TIP)
 
     page:Header("left", L.SECTION_EDIT_MODE)
@@ -156,22 +165,29 @@ local function buildMinimap(page)
         { enabled = performanceShown })
     page:Align()
 
-    page:Header("left", L.SECTION_MINIMAP_COORDS)
-    page:Checkbox("left", "minimapCoordsClassColor", L.MINIMAP_CLASS_COLOR, L.MINIMAP_COORDS_CLASS_COLOR_TIP,
-        { enabled = isNot("hideMinimapCoords") })
-    page:Checkbox("left", "hideMinimapCoords", L.HIDE_MINIMAP_COORDS, L.HIDE_MINIMAP_COORDS_TIP)
+    -- Classic Era shows no coordinates under the minimap and has no addon compartment.
+    if ns.MinimapLayout.HasCoords() then
+        page:Header("left", L.SECTION_MINIMAP_COORDS)
+        page:Checkbox("left", "minimapCoordsClassColor", L.MINIMAP_CLASS_COLOR, L.MINIMAP_COORDS_CLASS_COLOR_TIP,
+            { enabled = isNot("hideMinimapCoords") })
+        page:Checkbox("left", "hideMinimapCoords", L.HIDE_MINIMAP_COORDS, L.HIDE_MINIMAP_COORDS_TIP)
+    end
 
     page:Header("right", L.SECTION_MINIMAP_BUTTONS)
-    page:Dropdown("right", "minimapCompartment", L.MINIMAP_COMPARTMENT, positions("minimapCompartment"),
-        L.MINIMAP_POSITION_TIP)
+    if ns.MinimapLayout.HasCompartment() then
+        page:Dropdown("right", "minimapCompartment", L.MINIMAP_COMPARTMENT, positions("minimapCompartment"),
+            L.MINIMAP_POSITION_TIP)
+    end
     page:Dropdown("right", "minimapTracking", L.MINIMAP_TRACKING, positions("minimapTracking"),
         L.MINIMAP_INSIDE_POSITION_TIP)
-    -- Only Forever has the day and night icon.
+    -- Forever's day and night icon, or Classic Era's time of day icon; retail has neither.
     if ns.MinimapLayout.HasDayNight() then
         page:Dropdown("right", "minimapDayNight", L.MINIMAP_DAY_NIGHT, positions("minimapDayNight"),
             L.MINIMAP_INSIDE_POSITION_TIP)
     end
-    page:Checkbox("right", "hideMinimapCalendar", L.HIDE_MINIMAP_CALENDAR, L.HIDE_MINIMAP_CALENDAR_TIP)
+    if ns.MinimapLayout.HasCalendar() then
+        page:Checkbox("right", "hideMinimapCalendar", L.HIDE_MINIMAP_CALENDAR, L.HIDE_MINIMAP_CALENDAR_TIP)
+    end
 end
 
 -- Action bar page: the two flips side by side for each bar, then the paging keys and the buttons'

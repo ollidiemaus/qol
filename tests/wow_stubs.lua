@@ -466,13 +466,25 @@ end
 
 -- A unit frame's health bar, read-only to the addon like action bars: its color and desaturation
 -- change only through the widget methods, which work in combat too. It starts the way Blizzard
--- leaves these bars: white (the texture's own green shows) and not desaturated.
+-- leaves these bars: white (the texture's own green shows) and not desaturated. Forever and retail
+-- lock its color (lockColor, set in the bar's OnLoad); Classic Era doesn't, so there a new value
+-- turns it green again (HealthBar_OnValueChanged) before the OnValueChanged hooks run.
 local function newHealthBar(unit)
-    local raw = { unit = unit, color = { 1, 1, 1, 1 }, desaturated = false }
+    local raw = { unit = unit, color = { 1, 1, 1, 1 }, desaturated = false, lockColor = true, value = 1 }
     function raw.SetStatusBarColor(_, r, g, b, a) raw.color = { r, g, b, a or 1 } end
     function raw.GetStatusBarColor() return raw.color[1], raw.color[2], raw.color[3], raw.color[4] end
     function raw.SetStatusBarDesaturated(_, desaturated) raw.desaturated = desaturated and true or false end
     function raw.IsStatusBarDesaturated() return raw.desaturated end
+    function raw.HookScript(_, script, fn)
+        if script ~= "OnValueChanged" then error("health bar HookScript: " .. tostring(script)) end
+        raw.valueHook = fn
+    end
+    function raw.SetValue(bar, value)
+        if value == raw.value then return end -- the game runs OnValueChanged only on a change
+        raw.value = value
+        if not raw.lockColor then raw.color = { 0, 1, 0, 1 } end
+        if raw.valueHook then raw.valueHook(bar, value) end
+    end
     return setmetatable({}, {
         __index = raw,
         __newindex = function(_, key) error("the addon wrote health bar field " .. tostring(key)) end,
@@ -623,6 +635,229 @@ local function split(delimiter, text)
     return (unpack or table.unpack)(parts)
 end
 
+-- The frame templates a client lacks (the rest it has): Classic Era has neither the flat portrait
+-- frame nor the large side tab, and the tab system is only in the shared XML of TBC Anniversary and
+-- later clients. Forever's spell book is the new one, without Classic Era's skill line tabs.
+local MISSING_TEMPLATES = {
+    classicEra = { PortraitFrameFlatTemplate = true, LargeSideTabButtonTemplate = true,
+        TabSystemTopButtonTemplate = true, TabSystemTemplate = true },
+    forever = { SpellBookSkillLineTabTemplate = true },
+}
+
+local function hasTemplate(template)
+    return not (MISSING_TEMPLATES[state.client] or {})[template]
+end
+
+-- The spell book: one line of state.spellBook's slots ({ id, passive, offSpec, flyout, future }),
+-- or without it the known spells by ID. A flyout's slots: state.flyouts[id] = { { spellID, known } }.
+local function bookSlots()
+    if state.spellBook then return state.spellBook end
+    local ids = {}
+    for id in pairs(state.spells) do ids[#ids + 1] = id end
+    table.sort(ids)
+    local slots = {}
+    for index, id in ipairs(ids) do slots[index] = { id = id } end
+    return slots
+end
+
+-- Classic Era's spell book tabs: state.spellTabs ({ numSlots, offSpecID, shouldHide } each, the
+-- slots of the book in turn), or one tab with every slot.
+local function spellTabs()
+    local tabs, offset = {}, 0
+    for index, tab in ipairs(state.spellTabs or { { numSlots = #bookSlots() } }) do
+        tabs[index] = { offset = offset, numSlots = tab.numSlots, offSpecID = tab.offSpecID or 0,
+            shouldHide = tab.shouldHide == true }
+        offset = offset + tab.numSlots
+    end
+    return tabs
+end
+
+-- Classic Era's tooltips, which have no data processor (Blizzard_SharedXMLGame loads it for every
+-- game type but vanilla): the client builds a tooltip and then runs its scripts, the frame's own
+-- handler first and then the hooks. Lines are { left, right } (text: left, as GameTooltip's stub has it); the line font strings are the
+-- globals <name>TextLeft<n> and <name>TextRight<n>, and a right one counts once it is shown.
+local function makeClassicTooltip(G, name)
+    local tooltip = G[name] or {}
+    tooltip.lines, tooltip.handlers, tooltip.hookList = {}, {}, {}
+    local function fontString(n, side)
+        local fs = {}
+        function fs:SetText(text)
+            local line = tooltip.lines[n]
+            if side == "left" then line.left, line.text = text, text return end
+            line.rightText = text
+            if line.right then line.right = text end
+        end
+        function fs:GetText()
+            local line = tooltip.lines[n]
+            if side == "left" then return line.left end
+            return line.right
+        end
+        function fs:SetTextColor(r, g, b) tooltip.lines[n][side .. "Color"] = { r, g, b } end
+        function fs:Show() if side == "right" then tooltip.lines[n].right = tooltip.lines[n].rightText end end
+        function fs:Hide() if side == "right" then tooltip.lines[n].right = nil end end
+        return fs
+    end
+    local function addLine(left, right)
+        local n = #tooltip.lines + 1
+        tooltip.lines[n] = { text = left, left = left, right = right, rightText = right }
+        G[name .. "TextLeft" .. n] = fontString(n, "left")
+        G[name .. "TextRight" .. n] = fontString(n, "right")
+    end
+    function tooltip:GetName() return name end
+    function tooltip:GetOwner() return self.owner end
+    function tooltip:NumLines() return #self.lines end
+    function tooltip:AddLine(text) addLine(text, nil) end
+    function tooltip:AddDoubleLine(left, right) addLine(left, right) end
+    function tooltip:Show() self.shown = true self.resized = (self.resized or 0) + 1 end
+    function tooltip:GetItem() if self.itemID then return "Item " .. self.itemID, "item:" .. self.itemID end end
+    function tooltip:GetSpell() if self.spellID then return "Spell " .. self.spellID, self.spellID end end
+    function tooltip:GetUnit() if self.unit then return "Unit", self.unit end end
+    function tooltip:HookScript(script, fn)
+        self.hookList[script] = self.hookList[script] or {}
+        table.insert(self.hookList[script], fn)
+    end
+    function tooltip:RunScript(script, ...)
+        if self.handlers[script] then self.handlers[script](self, ...) end
+        for _, fn in ipairs(self.hookList[script] or {}) do fn(self, ...) end
+    end
+    -- GameTooltip_OnTooltipAddMoney: one line for a price, three for a range.
+    tooltip.handlers.OnTooltipAddMoney = function(self, cost, maxCost)
+        if not maxCost or maxCost < 1 then
+            self:AddLine(G.SELL_PRICE .. ": " .. cost .. "c (game)")
+        else
+            self:AddLine(G.SELL_PRICE .. ": (game)")
+            self:AddLine("    Minimum: " .. cost .. "c")
+            self:AddLine("    Maximum: " .. maxCost .. "c")
+        end
+    end
+    G[name] = tooltip
+end
+
+-- Builds a Classic Era tooltip (GameTooltip unless options.tooltip names another) the way the client
+-- does: it clears it, adds the game's sell price line for an item with a price (that of the stack,
+-- options.maxPrice for a range; options.sellPrice false for none) and runs OnTooltipSetItem,
+-- OnTooltipSetSpell or OnTooltipSetUnit. what is { item = id }, { spell = id } or { unit = token }.
+function Stubs.ShowClassicTooltip(what, options)
+    options = options or {}
+    local tooltip = _G[options.tooltip or "GameTooltip"]
+    tooltip.owner = options.owner
+    tooltip.itemID, tooltip.spellID, tooltip.unit = what.item, what.spell, what.unit
+    tooltip.lines, tooltip.resized = {}, 0
+    tooltip:RunScript("OnTooltipCleared")
+    if what.item then
+        local price = state.prices[what.item]
+        local count = type(options.owner) == "table" and options.owner.count or 1
+        if options.sellPrice ~= false and price and price > 0 then
+            tooltip:RunScript("OnTooltipAddMoney", price * count, options.maxPrice)
+        end
+        tooltip:RunScript("OnTooltipSetItem")
+    elseif what.spell then
+        tooltip:RunScript("OnTooltipSetSpell")
+    else
+        tooltip:RunScript("OnTooltipSetUnit")
+    end
+    return tooltip
+end
+
+-- Takes out what Classic Era (1.15.9) lacks: the tooltip data processor (its tooltips run scripts
+-- instead, Stubs.ShowClassicTooltip), the spell book's skill
+-- lines, toys, the addon compartment, combined bags, Forever's controller interface, the player
+-- frame's art container (Classic Era's frame is the old one, without a second mana bar), the
+-- minimap's player coordinates and guild banks. Its UI still names the guild bank calls in dead
+-- code; they are gone here, so a call to one fails the spec.
+local function makeClassicEra(G)
+    G.GetBuildInfo = function() return "1.15.9", "70576", "Oct 21 2026", 11509 end
+    G.TooltipDataProcessor = nil
+    G.SELL_PRICE = "Sell Price"
+    for _, name in ipairs({ "GameTooltip", "ItemRefTooltip", "ShoppingTooltip1", "ShoppingTooltip2" }) do
+        makeClassicTooltip(G, name)
+    end
+    G.C_SpellBook.GetNumSpellBookSkillLines = nil
+    G.C_SpellBook.GetSpellBookSkillLineInfo = nil
+    G.C_SpellBook.GetSpellBookItemInfo = nil
+    G.C_ToyBox, G.PlayerHasToy = nil, nil
+    G.AddonCompartmentFrame = nil
+    G.ContainerFrameCombinedBags = nil
+    G.C_InputInterfaceStyle, G.GamepadMode, G.BuffFrameTooltip = nil, nil, nil
+    -- false, not nil: a stub frame answers any other capitalized field with a no-op method. The
+    -- player frame's raw table, as the addon may not write the frame.
+    state.playerFrame.PlayerFrameContainer = false
+    G.MinimapCluster.MinimapContainer.PlayerCoords = false
+    -- Only its arena frames lock their health bars' color.
+    for _, raw in pairs(state.healthBars) do raw.lockColor = nil end
+    -- Its chat's social button is FriendsMicroButton (FloatingChatFrame.xml), no Quick Join, and the
+    -- player's portrait hit text is PlayerHitIndicator, straight on the old player frame.
+    G.QuickJoinToastButton = nil
+    G.FriendsMicroButton = newRegion("Button", G.ChatFrame1ButtonFrame)
+    state.playerFrame.PlayerFrameContent = false
+    G.PlayerHitIndicator = G.PlayerFrame:CreateFontString()
+    G.PlayerHitIndicator:Hide()
+    -- Its quest greeting: no GetActiveQuestID, and GetAvailableQuestInfo stops before the quest ID
+    -- (isTrivial, isDaily, isRepeatable, isLegendary), so a quest there is known by its title.
+    -- QUEST_ACCEPTED carries the quest log index before the quest ID.
+    G.GetActiveQuestID = nil
+    G.GetAvailableQuestInfo = function() return false, false, false, false end
+    G.GetAvailableTitle = function(i) return state.quest.greetingAvailable[i].title end
+    G.C_QuestLog = { GetQuestInfo = function(questID) return state.quest.titles[questID] end }
+    -- Its minimap (Blizzard_Minimap/Classic): the round border is MinimapBorder, with no compass
+    -- underlay; the tracking button (MiniMapTracking) and the time of day icon (GameTimeFrame, as
+    -- there is no calendar) sit on MinimapBackdrop, not on the cluster.
+    local cluster = G.MinimapCluster
+    cluster.Tracking, cluster.DielFrame = false, false
+    G.ToggleCalendar = nil
+    G.Minimap:SetSize(140, 140)
+    G.MinimapBackdrop = newRegion("Frame", G.Minimap)
+    G.MinimapBackdrop:SetSize(192, 192)
+    G.MinimapBorder = newRegion("Texture", G.MinimapBackdrop)
+    G.MinimapCompassTextureUnderlay = nil
+    G.MiniMapTracking = newRegion("Frame", G.MinimapBackdrop)
+    G.MiniMapTracking:SetSize(33, 33)
+    G.MiniMapTracking:SetPoint("TOPLEFT", G.MinimapBackdrop, "TOPLEFT", 3, -50)
+    G.MiniMapTracking:Hide() -- the game shows it while something is tracked
+    G.GameTimeFrame = newRegion("Frame", G.MinimapBackdrop)
+    G.GameTimeFrame:SetSize(50, 50)
+    G.GameTimeFrame:SetPoint("TOPRIGHT", G.MinimapBackdrop, "TOPRIGHT", -4, -23)
+    G.GuildBankFrame_LoadUI, G.CanGuildBankRepair = nil, nil
+    G.GetGuildBankWithdrawMoney, G.GetGuildBankMoney = nil, nil
+    -- Its own circle mask atlas instead of Forever's.
+    state.atlases.CircleMask, state.atlases.CircleMaskScalable = nil, { width = 64, height = 64 }
+    -- No boat icon on the map's atlas (flightmasterferry); the garrison's ship icons are there.
+    state.atlases.flightmasterferry = nil
+    state.atlases["Ships_CargoShip-Map"] = { width = 94, height = 94 }
+    -- Its world: no Zephras Isle, and Stormwind's and the Eastern Plaguelands' maps cover other
+    -- parts of the Eastern Kingdoms than Forever's (left, right, top, bottom there).
+    local getMapInfo, getMapRect = G.C_Map.GetMapInfo, G.C_Map.GetMapRectOnMap
+    local rects = { ["1453>1415"] = { 0.38, 0.46, 0.66, 0.74 }, ["1423>1415"] = { 0.53, 0.67, 0.18, 0.33 } }
+    G.C_Map.GetMapInfo = function(mapID)
+        if mapID == 2521 then return nil end
+        return getMapInfo(mapID)
+    end
+    G.C_Map.GetMapRectOnMap = function(mapID, topMapID)
+        local rect = rects[mapID .. ">" .. topMapID]
+        if not rect then return getMapRect(mapID, topMapID) end
+        return rect[1], rect[2], rect[3], rect[4]
+    end
+    -- What it has instead of the skill lines: the spell book's tabs, read by slot.
+    G.BOOKTYPE_SPELL = "spell"
+    G.GetNumSpellTabs = function() return #spellTabs() end
+    G.GetSpellTabInfo = function(index)
+        local tab = spellTabs()[index]
+        if not tab then return nil end
+        return "Tab " .. index, 136243, tab.offset, tab.numSlots, false, tab.offSpecID, tab.shouldHide, 0
+    end
+    G.GetSpellBookItemInfo = function(slot, bookType)
+        assert(bookType == "spell", "the player's spell book")
+        local s = bookSlots()[slot]
+        if not s then return nil end
+        return s.future and "FUTURESPELL" or "SPELL", s.id
+    end
+    G.IsPassiveSpell = function(slot, bookType)
+        assert(bookType == "spell", "the player's spell book")
+        local s = bookSlots()[slot]
+        return s ~= nil and s.passive == true
+    end
+end
+
 local function install()
     local G = _G
     G.issecretvalue = function(value) return value == Stubs.SECRET end
@@ -639,7 +874,21 @@ local function install()
     G.NUM_TOTAL_EQUIPPED_BAG_SLOTS = 5
     G.DEFAULT_CHAT_FRAME = { AddMessage = function(_, text) state.messages[#state.messages + 1] = text end }
 
+    G.C_XMLUtil = { GetTemplateInfo = function(template)
+        if hasTemplate(template) then return { type = "Frame", width = 0, height = 0, keyValues = {} } end
+    end }
+    -- The panel templates' tab functions: a tab as wide as its text (7 a letter), its sides and the
+    -- padding (24 without one); a selected tab is disabled.
+    G.PanelTemplates_TabResize = function(tab, padding)
+        tab:SetWidth(#(tab:GetText() or "") * 7 + (padding or 24) + 32)
+    end
+    G.PanelTemplates_SelectTab = function(tab) tab:SetEnabled(false) end
+    G.PanelTemplates_DeselectTab = function(tab) tab:SetEnabled(true) end
     G.CreateFrame = function(kind, name, parent, template)
+        -- As the client: a template it doesn't have, alone or in a list, is an error.
+        for each in tostring(template or ""):gmatch("[^,%s]+") do
+            if not hasTemplate(each) then error("CreateFrame(): Couldn't find inherited node \"" .. each .. "\"", 2) end
+        end
         local frame = newRegion(kind or "Frame", parent, template)
         if name then G[name], frame.name = frame, name end
         if template == "MinimalSliderWithSteppersTemplate" then Stubs.BuildSlider(frame) end
@@ -675,6 +924,12 @@ local function install()
                 if not was and self.isSelected then system:PlayTabSelectSound() end
             end)
         end
+        -- A top tab of the panel templates (Classic Era's TabButtonTemplate): PanelTemplates_SelectTab
+        -- disables it, PanelTemplates_DeselectTab enables it again.
+        if template == "PanelTopTabButtonTemplate" then
+            frame.Text = frame:CreateFontString()
+            frame:SetSize(115, 32)
+        end
         -- A side tab (SidePanelTabButtonMixin): its icon, SetChecked showing the selected art, a mouse
         -- up calling the handler SetCustomOnMouseUpHandler gave, and tooltipText on hover.
         if template == "LargeSideTabButtonTemplate" then
@@ -692,6 +947,23 @@ local function install()
                 G.GameTooltip:Show()
             end)
             frame:SetScript("OnLeave", function() G.GameTooltip:Hide() end)
+        end
+        -- Classic Era's spell book side tab (a CheckButton): its empty NormalTexture, the template's
+        -- OnClick for the spell book's own tabs, and self.tooltip on hover.
+        if template == "SpellBookSkillLineTabTemplate" then
+            -- The empty element may make no texture before a file is set, as the spell book does.
+            function frame:SetNormalTexture(file)
+                self.normalTexture = self.normalTexture or newRegion("Texture", self)
+                self.normalTexture:SetTexture(file)
+            end
+            function frame:GetNormalTexture() return self.normalTexture end
+            frame:SetScript("OnClick", function(self) G.SpellBookSkillLineTab_OnClick(self) end)
+            frame:SetScript("OnEnter", function(self)
+                G.GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+                G.GameTooltip:SetText(self.tooltip)
+            end)
+            frame:SetScript("OnLeave", function() G.GameTooltip:Hide() end)
+            frame:Hide()
         end
         if kind == "EditBox" then Stubs.MakeEditBox(frame) end
         -- The template's Tab, as Forever's EditBox_OnTabPressed: the previous box with Shift, else the next.
@@ -824,6 +1096,8 @@ local function install()
     G.CanGuildBankRepair = function() return state.guildCanRepair end
     G.GetGuildBankWithdrawMoney = function() return state.guildLimit end
     G.GetGuildBankMoney = function() return state.guildMoney end
+    -- The guild bank's loader, which Blizzard_GuildBankUI's bootstrap defines at startup.
+    G.GuildBankFrame_LoadUI = function() end
 
     -- Loot: the loot window's slots, and the slots taken, in order. The game takes a slot later, so
     -- the window keeps its slots.
@@ -919,6 +1193,8 @@ local function install()
     cluster.DielFrame = newRegion("Frame", cluster)
     cluster.DielFrame:SetSize(42, 42)
     cluster.DielFrame:SetPoint("CENTER", cluster, "CENTER", 63, 72)
+    -- Forever's calendar button is GameTimeFrame; the calendar's bootstrap defines this at startup.
+    G.ToggleCalendar = function() end
     G.C_Texture = {
         GetAtlasInfo = function(atlas) return state.atlases[atlas] end,
     }
@@ -1075,17 +1351,6 @@ local function install()
         end,
     }
     G.C_Spell.GetSpellSubtext = function(id) return (spell(id) or {}).subtext end
-    -- The spell book: one line of state.spellBook's slots ({ id, passive, offSpec, flyout }), or
-    -- without it the known spells by ID. A flyout's slots: state.flyouts[id] = { { spellID, known } }.
-    local function bookSlots()
-        if state.spellBook then return state.spellBook end
-        local ids = {}
-        for id in pairs(state.spells) do ids[#ids + 1] = id end
-        table.sort(ids)
-        local slots = {}
-        for index, id in ipairs(ids) do slots[index] = { id = id } end
-        return slots
-    end
     G.Enum.SpellBookSpellBank = { Player = 0, Pet = 1 }
     G.Enum.SpellBookItemType = { None = 0, Spell = 1, FutureSpell = 2, PetAction = 3, Flyout = 4 }
     G.C_SpellBook = {
@@ -1244,7 +1509,10 @@ local function install()
     G.IsShiftKeyDown = function() return state.shift end
     G.IsControlKeyDown = function() return state.ctrl end
     G.IsAltKeyDown = function() return state.alt end
-    G.UnitGUID = function(unit) if unit == "npc" then return quest().npc end return nil end
+    G.UnitGUID = function(unit)
+        if unit == "npc" then return quest().npc end
+        return state.guids[unit]
+    end
     G.C_GossipInfo = {
         GetActiveQuests = function() return quest().gossipActive end,
         GetAvailableQuests = function() return quest().gossipAvailable end,
@@ -1359,6 +1627,7 @@ local function install()
         FocusFrame = "focus", FocusFrameToT = "focustarget" }) do
         local bar, raw = newHealthBar(unit)
         state.healthBars[name] = raw
+        raw.bar = bar
         newUnitButton(unit, name).healthbar = bar
     end
     G.PlayerFrame = newPlayerFrame(G.PlayerFrame)
@@ -1420,6 +1689,7 @@ local ADDON_GLOBALS = {
     "SLASH_QOL_RELOAD1", "hash_SlashCmdList", "IsSecureCmd", "SLASH_OTHERADDON1", "SLASH_RELOAD1",
     "HUD_EDIT_MODE_ACTION_BAR_LABEL", "HUD_EDIT_MODE_STANCE_BAR_LABEL", "HUD_EDIT_MODE_PET_ACTION_BAR_LABEL",
     "GetMinimapShape", "HybridMinimap", "TimeManagerClockButton", "GameTimeFrame", "AddonCompartmentFrame",
+    "ToggleCalendar", "MinimapBackdrop", "MinimapBorder", "MiniMapTracking",
     "TimeManagerClockTicker", "QoLNoAction", "ColorPickerFrame", "SettingsPanel", "GameMenuFrame",
     "GamepadMainActionBarFrame", "BINDING_HEADER_QOL",
     "QoLRing", "QoLRingButton", "QoLRingEditor", "QoLSettings",
@@ -1466,6 +1736,8 @@ end
 function Stubs.Reset(options)
     options = options or {}
     state = {
+        -- The game client: "forever" (WoW Forever, the default) or "classicEra".
+        client = options.client or "forever",
         locale = options.locale or "enUS",
         version = options.version, loadedAddons = {},
         restricted = 0, regions = {}, timers = {}, delayed = {}, messages = {}, registry = {}, postCalls = {}, linePreCalls = {},
@@ -1481,9 +1753,11 @@ function Stubs.Reset(options)
         now = 1000, -- GetTime: seconds since the computer started
         layouts = {}, reloads = 0, errors = {},
         units = { player = { isPlayer = true, class = "MAGE", name = "Testmage" } }, realm = "TestRealm",
+        guids = {}, -- UnitGUID by unit token (but "npc", the quest giver's)
         regionalNames = false,
         focus = nil,
-        atlases = { ["ui-hud-minimap-frame-generic-mask"] = { width = 215, height = 226 } },
+        atlases = { ["ui-hud-minimap-frame-generic-mask"] = { width = 215, height = 226 },
+            CircleMask = { width = 64, height = 64 }, flightmasterferry = { width = 32, height = 32 } },
         fonts = { GameFontNormal = { "Fonts\\FRIZQT__.TTF", 12, "" },
             WhiteNormalNumberFont = { "Fonts\\ARIALN.TTF", 10, "OUTLINE" } },
         -- The hidden settings with their ranges, measured in Forever's client (ground clutter fade
@@ -1507,7 +1781,8 @@ function Stubs.Reset(options)
         gameSliders = {}, gameSliderRewrites = true,
         shift = false,
         quest = { npc = "Creature-0-1-0-1-3139-0001", gossipActive = {}, gossipAvailable = {}, greetingActive = {},
-            greetingAvailable = {}, autoAccept = false, completable = true, money = 0, choices = 0, calls = {} },
+            greetingAvailable = {}, titles = {}, autoAccept = false, completable = true, money = 0, choices = 0,
+            calls = {} },
         -- A few of Forever's maps; a retail client has none of them (state.maps = {}).
         maps = { [1413] = { name = "The Barrens", mapType = 3, parentMapID = 1414 },
             [1414] = { name = "Kalimdor", mapType = 2, parentMapID = 947 } },
@@ -1536,6 +1811,7 @@ function Stubs.Reset(options)
     for _, name in ipairs(ADDON_GLOBALS) do _G[name] = nil end
     _G.SlashCmdList = {}
     install()
+    if state.client == "classicEra" then makeClassicEra(_G) end
 end
 
 local function tocFiles()
@@ -2137,6 +2413,12 @@ end
 -- change bar.unit here, the way Blizzard switches the player frame to a vehicle.
 function Stubs.HealthBar(frameName)
     return state.healthBars[frameName]
+end
+
+-- The game moves a unit frame's health bar to a new health value, as its OnUpdate does.
+function Stubs.SetHealth(frameName, value)
+    local raw = state.healthBars[frameName]
+    raw.SetValue(raw.bar, value)
 end
 
 -- The whole bag contents: items ={ { bag, slot, itemID, quality, count, price, hasNoValue } }.

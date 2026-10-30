@@ -10,7 +10,7 @@ map, rings of actions for mouse and controller, click casting on unit frames, ba
 controller bar, and switches to hide UI pieces you never click (also the buff tooltips that pop up
 in the controller interface). Everything is set up in the game's own options window. There's no minimap button.
 
-It's made for WoW Forever and also runs on retail (Midnight).
+It's made for WoW Forever and also runs on retail (Midnight) and Classic Era (1.15).
 
 ## Features
 
@@ -43,6 +43,10 @@ Hold **Shift** while talking to an NPC to do everything yourself that time.
 - **Vendor price:** what an item sells for, everywhere, not just while a merchant is open, as a
   `Vendor` line with the price of one. Hold Shift for the whole stack.
 
+On Classic Era there are no quest IDs (buff and debuff IDs aren't confirmed there yet), and the
+game's own sell price line becomes the `Vendor` line. With a bag addon there, Shift may still show
+the price of one, as its buttons may not say how many items a slot holds.
+
 ### Interface
 
 - **Hide the system bar:** the micro menu (character, spellbook, ..., game menu). Your key
@@ -59,7 +63,7 @@ Hold **Shift** while talking to an NPC to do everything yourself that time.
 
 ### Chat
 
-- **Hide the social button** on top of the chat window.
+- **Hide the social button** on top of the chat window (the Friends button on Classic Era).
 - **Hide the other chat buttons:** the chat menu, channel, voice chat and text to speech buttons.
 - **Hide the combat log:** the Combat Log tab leaves the chat window. The combat log keeps running,
   so addons that read it still work.
@@ -72,7 +76,8 @@ Hold **Shift** while talking to an NPC to do everything yourself that time.
   **Subject**. A tab shows the character's class once they've logged in with Quality of Life, else
   the mail icon; point at it for the name. The character you're playing gets no tab. Type the names
   on the Mail page of the settings as you would in To: on WoW Forever with the surname (Name
-  Surname), elsewhere the name, or Name-Realm for a character on another realm.
+  Surname), elsewhere the name, or Name-Realm for a character on another realm. On Classic Era the
+  tabs are the small ones of its spell book.
 
 ### Minimap
 
@@ -84,11 +89,12 @@ Hold **Shift** while talking to an NPC to do everything yourself that time.
   friendly, hostile or contested territory.
 - **Font size of the zone text, the clock and FPS and ping,** from 9 to 24 or the game's own. With a
   larger font the clock's button grows with it, and the rows above and below the minimap make room.
-- **Clock, addon compartment, tracking button and Forever's day and night icon:** each can move to
-  a row above or below the minimap (left, center or right), or be hidden. The tracking button and
-  the day and night icon can also sit inside the map: in a corner, or in the middle of its top or
-  bottom edge. Things in the same spot sit side by side; with something below the minimap, the
-  coordinates move under it.
+- **Clock, addon compartment, tracking button and the day and night icon** (Forever's, or the
+  time of day icon on Classic Era): each can move to a row above or below the minimap (left,
+  center or right), or be hidden. The tracking button and the day and night icon can also sit
+  inside the map: in a corner, or in the middle of its top or bottom edge. Things in the same spot
+  sit side by side; with something below the minimap, the coordinates move under it. On Classic
+  Era the tracking button shows only while you track something, as the game has it.
 - **FPS and ping** in a row above or below the minimap (left, center or right), like the clock,
   updated every second, also in class color and at another font size. The ping is the higher of
   your home and world latency.
@@ -105,8 +111,10 @@ Hold **Shift** while talking to an NPC to do everything yourself that time.
   map of that place opens. Forever's new routes are there too: the boat from Stormwind Harbor, the
   stop at Southshore, the boat between Tanaris and the Riverglades and the airships to Zephras Isle.
 
-The places come from Forever's own game data, so these options only show on Forever. On retail,
-the default map marks dungeon entrances itself.
+The places come from Forever's own game data, and Classic Era has the same zone maps, so these
+options show on Forever and Classic Era. On Classic Era the pins follow its world: Forever's new
+routes aren't there, the boat from Menethil Harbor goes straight to Auberdine, and boats get a ship
+icon (Classic Era has no ferry icon). On retail, the default map marks dungeon entrances itself.
 
 ### Unit frames
 
@@ -174,7 +182,8 @@ combat, shows cooldowns and charges, and names the action you point at in the mi
   tabs for **Spells**, **Items** (the ones with a use, in the bags or worn), **Toys**, **Mounts**
   and **Macros**, a search box, and the page buttons (the mouse wheel turns pages too). Click one to
   put it on the ring, and click it again (it has a check mark) to take it off. The toys are the ones
-  the Toy Box shows with its own filters.
+  the Toy Box shows with its own filters. Classic Era has no Toy Box, so there's no Toys tab there;
+  its spells are the ranks its spell book shows (its **Show all spell ranks** box).
 - **Arranging them:** drag one from the list, the spell book, the bags or an action bar onto the
   ring's empty slot (the **+**) to add it, onto a slot to put it there, or off the ring to take it
   away; a right-click takes one away too. With a controller, click a slot to pick up or put down
@@ -342,9 +351,9 @@ setting your client doesn't have isn't shown.
 ## Settings
 
 Type `/qol` (or `/qualityoflife`): the settings open in a window of their own, in Forever's bronze
-frame and laid out like the game's options, with the pages on the left and their options on the
-right. Drag its title bar to move it; `/qol` again, Escape or the X closes it. It also opens in
-combat; Escape then goes to the game, so close it with the X.
+frame (on Classic Era in its own window art) and laid out like the game's options, with the pages
+on the left and their options on the right. Drag its title bar to move it; `/qol` again, Escape or
+the X closes it. It also opens in combat; Escape then goes to the game, so close it with the X.
 
 **Esc > Options > AddOns > Quality of Life** has an information page with the chat commands, the
 author's other addons (with links to copy) and an **Open settings (/qol)** button. In Forever's
@@ -357,10 +366,14 @@ The pages:
   text, frames past the screen edge, tooltips, health bars in class color.
 - **Chat:** the chat buttons, the combat log, names in class color, `/rl`.
 - **Mail:** the bookmarks' names.
-- **Action Bars**, **Minimap**, **World map** (on Forever), **Viewport**, **Ring**, **Click casting**
+- **Action Bars**, **Minimap**, **World map** (on Forever and Classic Era), **Viewport**, **Ring**, **Click casting**
   and **Controller** (on Forever).
 - **Advanced settings:** the game's hidden graphics, draw distance and camera settings, last in the
   list.
+
+On Classic Era the pages leave out what it doesn't have: the combined bags, mana in bear and cat
+form, guild bank repairs, the addon compartment's place, the calendar button and the player
+coordinates. Junk selling and repairs with your own gold work as everywhere.
 
 Every page fits without scrolling, most in two columns. With a controller, the
 arrows next to a viewport margin move it one pixel per press. In Forever's controller interface a
@@ -379,11 +392,12 @@ Quality of Life is available in English and German.
 
 ## Good to know
 
-- Quality of Life never replaces or hooks Blizzard's action bar, Edit Mode or tooltip code. It only
-  moves the button slots of the bars you flipped, changes the textures of the buttons whose borders
-  you hid, widens how far Edit Mode frames may go, parents hidden frames to a hidden holder, adds
-  lines to tooltips, and puts a bookmark's name in the mail's To box. That keeps it clear
-  of the "tainted by an addon" errors Midnight-era clients are strict about.
+- Quality of Life never replaces Blizzard's action bar, Edit Mode or tooltip code or hooks their
+  functions. It only moves the button slots of the bars you flipped, changes the textures of the
+  buttons whose borders you hid, widens how far Edit Mode frames may go, parents hidden frames to
+  a hidden holder, adds lines to tooltips (on Classic Era from the tooltips' own scripts, turning
+  the game's sell price line into its vendor line), and puts a bookmark's name in the mail's To
+  box. That keeps it clear of the "tainted by an addon" errors Midnight-era clients are strict about.
 - Don't run it together with another viewport or action bar growth addon: both would move the
   same frames. Hiding the button borders is the same: leave it off when another addon styles your
   buttons.

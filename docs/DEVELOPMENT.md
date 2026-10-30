@@ -105,6 +105,14 @@ Forever beta. So:
   stay: the copy behind `SlashCmdList`'s metatable (nothing runs it) and
   `hash_ChatTypeInfoList["/RL"]`, which names no chat type, so `/rl` still tab-completes but does
   nothing.
+- Classic Era's health bars, whose color the game doesn't lock: `HookScript("OnValueChanged")` on
+  the player, target, target of target, focus and focus target bars, which only schedules the
+  class color again (see the class-colored health bars below).
+- Classic Era's tooltips, which lack the tooltip data processor: `HookScript` on `GameTooltip`,
+  `ItemRefTooltip` and the comparison tooltips' item, spell, unit, money and cleared scripts, and,
+  inside the item script, the game's `Sell Price` line's font strings rewritten in place and
+  `Show()` to fit the tooltip. Not through `ns.Later`: a line added or changed a frame later would
+  miss the tooltip. Why that's safe there is under the vendor price notes below.
 - Leave `WorldFrame` alone while a cutscene plays. Blizzard's `CinematicFrame` re-anchors it for
   the black bars and resets it to full screen at the end; `MovieFrame` hides it. Two hands on
   `WorldFrame` during a cutscene is how viewport addons crash the game. The viewport waits until
@@ -160,6 +168,20 @@ focus target bars and never colors them itself, so a color stays until we change
 follows Blizzard's raid frames: `UnitIsPlayer` or `UnitTreatAsPlayerForDisplay`, with a known,
 non-secret class (`UnitClass` is secret while a unit's identity is restricted). The bar's own
 `unit` field says what it shows, so the player frame in a vehicle (`"vehicle"`) keeps its default.
+
+Classic Era (1.15) is the exception: Blizzard sets `lockColor` there only on its arena frames
+(`Blizzard_ArenaUI.lua`), so the player, target and other bars are recolored green on every value
+change (`HealthBar_OnValueChanged`, run by `UnitFrameHealthBar_OnValueChanged`) and on every
+`UnitFrameHealthBar_Update`. Its bars poll their health (`frequentUpdates`, `UnitFrameHealthBar_OnUpdate`
+calls `SetValue`), so no event marks the change. So at Init each bar without `lockColor` (a read)
+gets `HookScript("OnValueChanged", ...)`, which runs after the game's handler and only asks
+`ns.Later("classHealthBars", ..., true)` for `Apply` again, in combat too; a colored bar is then
+tinted again within a drawn frame. It asks for the client's lack of `lockColor`, not which client
+it is, so Forever's and retail's bars (locked in their OnLoad) get no hook. Whether the game draws
+the green for one frame before `Apply` runs (our OnUpdate may run before or after the bar's) is
+for the in-game check. An `UnitFrameHealthBar_Update` that sets green without a new value (no
+`OnValueChanged`) comes from the events `Apply` already follows (target and focus changes, login),
+except `UNIT_MAXHEALTH` at unchanged health, rare enough to wait for the next health change.
 
 Forever's player frame has a third bar only for the druid's astral power (moonkin), so bear and cat
 form show no mana. The druid mana bar follows the rule of Blizzard's Wrath to Mists clients
@@ -236,6 +258,25 @@ Blizzard function is hooked and the frames' events and scripts stay theirs. Font
 protected, but the change goes through `ns.Later` like the other HideFrames options. Forever has no Camelot copy of this code;
 its player and pet frames use Mainline's `CombatFeedback`.
 
+Classic Era (1.15) names two of these frames differently, so `HideFrames.TARGETS` takes whichever
+the client has, the same way. It has no Quick Join: the social button by its chat is
+`FriendsMicroButton` on `ChatFrame1ButtonFrame` (`Blizzard_ChatFrameBase/Classic/FloatingChatFrame.xml`),
+which the Hide the social button option hides instead of `QuickJoinToastButton`. Its player frame is
+the old one, without `PlayerFrameContent`: the player's hit text is the global `PlayerHitIndicator`
+font string straight on `PlayerFrame` (`Blizzard_UnitFrame/Classic/PlayerFrame.xml`), next to the same
+`PetHitIndicator`. The micro menu (`MicroMenuContainer`), the bags bar and the chat menu and channel
+buttons have the same names there; it has no voice buttons, which are skipped as missing.
+
+Quests on Classic Era: its quest greeting (`QUEST_GREETING`, the old list of quests) has no quest
+IDs: there's no `GetActiveQuestID`, and `GetAvailableQuestInfo` returns only isTrivial, isDaily,
+isRepeatable and isLegendary (`Blizzard_UIPanels_Game/Classic/QuestFrame.lua`). Where
+`GetActiveQuestID` is missing, `Quests:OnQuestGreeting` keys the quests it opened by their title
+(`GetActiveTitle`, `GetAvailableTitle`) instead of their ID, so each still opens once per NPC.
+`QUEST_ACCEPTED` there carries the quest log index before the quest ID, so the handler takes the
+second value when there is one. Accepting or turning a quest in forgets its ID and, there, its title
+(`C_QuestLog.GetQuestInfo`), so a repeatable turn-in
+opens again at the same NPC. The gossip window (`C_GossipInfo`) has quest IDs there as everywhere.
+
 The combat log can't be closed in the default UI, and the dock's own functions (`FCF_Close`,
 `FCF_UnDockFrame`) write to the chat frames and the dock. So `ChatFrame2` goes to the hidden holder
 and its tab is scaled down to 0.001: the dock gives every tab its parent, width and anchor again on
@@ -248,6 +289,32 @@ would call the game's tooltip rebuild (`RefreshData`, `SetBagItem`, ...) from in
 can blank tooltips holding secret lines. Bag, bank and merchant buttons rebuild their own tooltip
 about every 0.2 s while hovered, so the line flips there anyway; a chat link or quest reward keeps
 what it showed when it opened.
+
+Classic Era (1.15) has no tooltip data processor: `Blizzard_SharedXMLGame.toc` loads
+`TooltipDataHandler.lua` for every game type but vanilla. Its tooltips still run the scripts older
+clients had, so there `Tooltips.InitScripts` hooks them (`HookScript`, which runs after the game's
+own handler and leaves it in place) on `GameTooltip`, `ItemRefTooltip` and the two comparison
+tooltips: `OnTooltipSetItem`, `OnTooltipSetSpell` and `OnTooltipSetUnit` add the ID lines (the item
+from `GetItem`'s link, the spell from `GetSpell`, the NPC from `UnitGUID` of `GetUnit`'s unit), and
+the item one the vendor price on `GameTooltip` and `ItemRefTooltip`. Quests, currencies and
+achievements have no such script, so those IDs don't show there (Classic Era has neither of the
+last two anyway). The game's own sell price comes from `OnTooltipAddMoney`, which the client runs
+while it builds an item tooltip, before `OnTooltipSetItem`; the frame's handler
+(`GameTooltip_OnTooltipAddMoney`) adds a `Sell Price: <money>` line, or a heading and two lines for
+a price range. Lines can't be taken out of a tooltip, so the `OnTooltipAddMoney` hook notes which
+line the game's is (`NumLines`; a range is kept, as on retail), and where QoL can price the item the
+`OnTooltipSetItem` hook turns that line into the vendor line in place, after checking it still
+starts with `SELL_PRICE` (another addon's money hook may have run first and added a line; then the
+game's line stays and QoL adds none): the label in the line's left
+font string (`<tooltip>TextLeft<n>`), the money in its right one, shown, then `Show()` to fit the
+tooltip to the new text. Without a game line it adds its own line, as on retail. `OnTooltipCleared`
+forgets the noted line, so one left over from an item tooltip the client gave up on can't be
+rewritten in the next one. Classic Era hands out no secret values and these tooltips aren't
+protected, so the hooks and the font string writes can't taint anything that matters there; on
+Forever and retail, which have the data processor, none of this runs.
+Classic Era has no `GetProcessingTooltipInfo`, so a stack's size comes only from the hovered
+button's `count`, which Blizzard's item buttons carry (`SetItemButtonCount`); a bag addon's
+button without it gets the price of one with Shift held too.
 
 The tooltips Forever's controller interface shows for new buffs come from the buff frame
 (`BuffFrameMixin:Update` queues each aura gained or refreshed, `ShowNextAuraForTooltip` shows it
@@ -320,6 +387,20 @@ for text that wasn't typed, and `SendMailFrame_CanSend`) from our call. Nothing 
 hooked or written. `OpenMailFrame` sits 46 right of the mail frame (`MailFrame.xml`), so a letter
 left open covers the tabs' right edge, mostly their transparent part.
 
+The first tab is placed against `MailFrame`'s top right, not `SendMailFrame`'s: on Forever and
+retail the Send Mail frame fills the mail frame, so it's the same place, but Classic Era's
+(`Classic/MailFrame.xml`) is its old 384×512 art frame anchored top left inside a mail frame 338
+wide (`ButtonFrameTemplate`), and against it the tabs hung 46 off the edge. Classic Era (1.15) also
+has no `LargeSideTabButtonTemplate` (its Cooldown Viewer inherits it, but nothing there defines it),
+so `CreateFrame` with it was an error each time a bookmark was saved. Where
+`C_XMLUtil.GetTemplateInfo` doesn't know it, a tab is Classic Era's spell book side tab,
+`SpellBookSkillLineTabTemplate` (a CheckButton, 32×32, in `Vanilla/SpellBookFrame.xml`, which
+`Blizzard_UIPanels_Game` loads at startup): its icon is its `NormalTexture`, sized by the template
+(the element is empty, so the mail icon is set with `SetNormalTexture` before `GetNormalTexture`),
+its OnClick (the spell book's `SpellBookSkillLineTab_OnClick`) is replaced by ours on our frame,
+which unchecks it and fills in To, and it shows `tooltip` on hover. The tabs are 17 apart, as the
+spell book spaces them. The `classicon-<class>` atlases are in Classic Era too.
+
 The square minimap's bronze border, `Media/MinimapSquareBorder.tga` (512×512), is Forever's own
 round frame (`ui-hud-minimap-frame-c60-2x`, file 8026708 of build 1.60.1.70291) unwrapped onto a
 square: each pixel of a band along the square's edges, with rounded corners, takes the ring's pixel
@@ -358,6 +439,25 @@ the one a text already has, so that alone left the larger font until a `/reload`
 wider and higher and the zone text's button and font string higher (`MinimapZoneText` has a height
 of 12 and shows nothing of a line that doesn't fit), by the ratio to the game's size; a smaller one
 leaves them as they are. The sizes are set before the positions, which go by the buttons' sizes.
+
+Classic Era (1.15) has the same minimap with other names (`Blizzard_Minimap/Classic/Minimap.xml`),
+so a few frames have a Classic Era path. Each asks the client for the frame, not which client it is:
+- The round border is `MinimapBorder`, a texture on `MinimapBackdrop`; there is no compass
+  underlay, and `MinimapCompassTexture` is the compass ring the game shows only while the map
+  rotates. The square shape hides all three that exist.
+- The tracking button is `MiniMapTracking` on `MinimapBackdrop` (`MinimapTracking_Simple.xml`), not
+  `MinimapCluster.Tracking`. The game shows it only while something is tracked; the layout moves it
+  the same either way.
+- There is no calendar (no `ToggleCalendar`, which Forever's calendar bootstrap defines at startup):
+  `GameTimeFrame` is the time of day icon on the round border (`GameTime_NoCalendar.xml`), not the
+  calendar button. So without `ToggleCalendar` the day and night option moves `GameTimeFrame` (where
+  the cluster has no `DielFrame`), and the calendar option and its row are left out, or it would
+  hide the icon.
+- The map is 140 across, not 198. The rows' distances from the round frame (`EDGES.round`) and the
+  inside spots' cover of the round frame (`ROUND_COVER`) keep Forever's numbers until they're checked
+  in game.
+The zone text, the clock, the class colors, the font sizes and the FPS and ping text use the same
+frames as Forever.
 
 The FPS and ping text is a frame of ours (a child of `MinimapCluster`, like the clock) that the rows
 place like any other element. The game has no place for it, so it has no "Default" position (an
@@ -687,6 +787,54 @@ settings are open, and closing our window is a plain `Hide` of a frame of ours.
   `options_categoryheader_1-c60`, `options_list_hover-c60`, the tabs and the divider) that no UI
   code names, as it has for the metal frame: the client swaps them in for the plain names, which is
   what we use. `options_list_active` has none.
+- Classic Era (1.15) has no `PortraitFrameFlatTemplate` (Forever's and retail's shared templates
+  have it, Classic Era's `Classic/SharedUIPanelTemplates.xml` doesn't): `CreateFrame` with it is an
+  error there, which kept the window, and with it `/qol` and the information page's button, from
+  being built at login. Where `C_XMLUtil.GetTemplateInfo` doesn't know it, the window is the plain
+  `PortraitFrameTemplate`, which Classic Era has with the same `SetTitle`, `SetPortraitToAsset` and
+  `CloseButton`, in Classic Era's own frame art and rock background. The options art inside
+  (`Options_InnerFrame`, the list's atlases) exists there too.
+- The Ring and Click casting pages' editors (`Features/RingPicker.lua`) have a Classic Era path for
+  what Forever's and retail's spell book is built on, each taken where the newer one is missing:
+  - Tabs: the game's tab system (`TabSystemTopButtonTemplate`) is only in the shared XML of TBC
+    Anniversary and later clients, and `CreateFrame` with it is an error on Classic Era. Where
+    `C_XMLUtil.GetTemplateInfo` doesn't know it, a tab is Classic Era's `PanelTopTabButtonTemplate`
+    (its `TabButtonTemplate`, the help window's top tabs), sized with `PanelTemplates_TabResize`
+    and selected with `PanelTemplates_SelectTab`/`DeselectTab` (a selected tab is disabled, as in
+    the tab system), its click our `ShowKind`. The panel functions find its art by parent key, but
+    the template also names it `$parentLeft` and so on, so each tab gets a name of ours
+    (`QoLPickerTab<n>`) for those names to start with.
+  - Spells: Classic Era has no skill lines (`C_SpellBook.GetNumSpellBookSkillLines`). Its spell
+    book is read by tab and slot instead, as its own spell book does (`GetNumSpellTabs`,
+    `GetSpellTabInfo`, `GetSpellBookItemInfo(slot, BOOKTYPE_SPELL)`, `IsPassiveSpell`): `SPELL`
+    slots only (not `FUTURESPELL`), no passives, no hidden or off-spec tab. The client hands out the
+    ranks its spell book shows, so the game's "Show all spell ranks" decides whether lower ranks
+    are listed.
+  - Ring slots: Forever's `CircleMask` atlas isn't in Classic Era; its own circle mask is
+    `CircleMaskScalable`.
+  - Toys: Classic Era has no toy box (`C_ToyBox`, `PlayerHasToy`), so the list has no Toys tab
+    there. A ring that already holds a toy (saved on another client) leaves it out as one the
+    character doesn't have, and keeps it; the toy calls are behind a check all the same.
+  The click casting engine needs nothing of its own: Classic Era's unit frames are the same
+  `PlayerFrame`, `TargetFrame`, `PartyFrame` pool and boss frames.
+- On Classic Era the pages offer only what changes something there. Each check asks the client for
+  the thing the option works on, not which client it is: a row whose frame or system is missing is
+  left out, and a section whose rows all are with it.
+  - Combined bags (`ContainerFrameCombinedBags`): Classic Era has only the separate bags.
+  - Mana in bear and cat form (`PlayerFrame.PlayerFrameContainer`): Classic Era's player frame is the
+    old one, without the art container the bar is drawn into; QoL doesn't draw a bar of its own
+    there. The Player frame section keeps the portrait hit text.
+  - The calendar button (`ToggleCalendar`): Classic Era has no calendar; its `GameTimeFrame` is the
+    time of day icon, which the day and night row moves instead (see the minimap notes).
+  - The addon compartment's place (`AddonCompartmentFrame`) and the Coordinates section
+    (`MinimapCluster.MinimapContainer.PlayerCoords`): Classic Era's minimap has neither.
+  - Guild bank repair (`GuildBankFrame_LoadUI`, which Blizzard_GuildBankUI's bootstrap defines at
+    startup on Forever and retail): Classic Era has no guild banks; its merchant frame names
+    `CanGuildBankRepair` only in a button that is never shown. `Merchant:Repair` asks the same check
+    before the guild bank calls, so a guild repair saved on another client pays with own gold
+    there. Junk selling and own gold repairs work as everywhere.
+  - The controller's buff tooltips and back buttons are on the Controller page, which only Forever
+    (with `GamepadMainActionBarFrame`) lists.
 - The list is drawn as the game's (`Blizzard_CategoryList`) but with frames of ours, not its
   templates: `SettingsCategoryListButtonMixin` reads its scroll box's element data and a file local
   of the game's settings. A header (`Options_CategoryHeader_1`, drawn on the list itself so the
@@ -833,6 +981,12 @@ itself when the client knows none.
   distance) keep the game default.
 - **Measuring them.** `/qol probe` measures the ranges, game defaults and the game sliders in the
   client it runs in; see "The hidden settings probe" under "Trying it in game".
+- **Classic Era** has the same `C_CVar` calls and the same View Distance, Environment Detail and
+  Ground Clutter sliders (`Blizzard_SettingsDefinitions_Shared/Graphics.lua`), so the page needs no
+  path of its own there: a hidden setting its client doesn't know reads as nil and its row drops
+  out, the sliders keep the ranges measured on Forever (its Max Camera Distance slider stops at 2.0
+  too), and a value it refuses shows the old one after the read-back, with no error. Which hidden
+  settings it knows and which ranges it takes are for `/qol probe` there.
 
 The history below is from the time the pages were in the game's settings; the workarounds it led to
 stay since they cost nothing.
@@ -893,6 +1047,19 @@ they're in the player's language. Forever's UiMap IDs (1411 and up) don't exist 
 `MapPins.IsAvailable()` is false: the settings leave the World map page out and the map is never
 touched.
 
+Classic Era (1.15) has the same UiMap IDs for its zones, so the pins show there too, with a path of
+their own for the places where its world differs from Forever's. `MapPins.World()` tells the two
+apart by asking for Forever's Zephras Isle map (2521), not the build: a pin marked `world =
+"forever"` (the Southshore stop, Stormwind Harbor, the Riverglades boat, the Zephras Isle airships)
+is left out on Classic Era, and one marked `world = "classicEra"` (its direct Menethil Harbor–Auberdine
+boat) on Forever. Classic Era's Stormwind City and Eastern Plaguelands maps cover another part of
+the world than Forever's (Forever's Stormwind takes in the harbor), so the Stockade, the Deeprun
+Tram, Stratholme and Naxxramas carry a `classicEra = { x, y }` place, converted through both
+clients' zone rects; the continent pins follow from it, since `GetMapRectOnMap` gives Classic
+Era's own rects. Classic Era has no `flightmasterferry` atlas, so the boat style names an
+`orAtlas`, the garrison's `Ships_CargoShip-Map`, used where `C_Texture.GetAtlasInfo` doesn't know
+the first.
+
 The Controller page is registered only when `GamepadMainActionBarFrame` exists (Forever); on retail
 there's nothing for it to change.
 
@@ -943,6 +1110,28 @@ to a frame registered with `RegisterUnitEvent` only when its first argument is o
 units, as the game does, and `Stubs.Listens(event, unit)` says whether any of our frames would get
 the event for that unit, so a spec can check that other units' events never reach QoL.
 
+`Stubs.Reset({ client = "classicEra" })` (or `LoadAddon` with it) makes the stubbed client Classic Era
+(1.15.9, interface 11509): the tooltip data processor (its tooltips run their scripts
+instead: `Stubs.ShowClassicTooltip` builds one, with the game's sell price line for an item with a
+price), the spell book's skill-line calls, toys, the
+addon compartment, the combined bags, Forever's `CircleMask` atlas and controller globals and the
+guild bank calls and `ToggleCalendar` are gone, the player frame's art container, the minimap's
+coordinates, its tracking button and day and night icon are `false` (a stub frame answers any
+other capitalized field with a no-op method, so a check reads them with `type(...) == "table"`),
+the minimap is Classic Era's (140 across, `MinimapBorder`, and `MiniMapTracking` and the time of
+day `GameTimeFrame` on `MinimapBackdrop`), the unit frames' health bars lose `lockColor`, the spell book is read by tab (`GetSpellTabInfo`, from
+`state.spellTabs` or one tab of every slot; a slot's `future` makes it `FUTURESPELL`), and
+`CreateFrame` errors on a template Classic Era lacks (`MISSING_TEMPLATES`), as the client does, so a template
+only Forever and retail have can't slip into the login unnoticed. `tests/classicera_spec.lua` logs in
+on it and opens the settings window; the ring and click casting specs have Classic Era cases of
+their own.
+
+Classic Era's chat has `FriendsMicroButton` and no `QuickJoinToastButton`, its player
+frame `PlayerHitIndicator` and no `PlayerFrameContent`, and its quest greeting no quest IDs (no
+`GetActiveQuestID`, four values from `GetAvailableQuestInfo`, the titles from `GetAvailableTitle` and
+`C_QuestLog.GetQuestInfo` over `state.quest.titles`). `Stubs.SetHealth` moves a unit frame's health
+bar to a new value, as the game's OnUpdate does: an unlocked bar turns green before its `OnValueChanged` hook runs.
+
 The fake `C_CVar` refuses what the game refuses (a value outside `state.cvarRanges`, a
 `state.cvarSecure` CVar in combat, an unknown CVar), drops the fraction for one in `state.cvarWhole`,
 and logs every write in `state.cvarSets`. A game slider is a `state.gameSliders` entry: per step
@@ -982,6 +1171,13 @@ Things only the real client can confirm:
   stack total while Shift is held (pressing Shift while pointing flips it within a moment), with
   and without a merchant open, and only once (the game's own sell price line is replaced, not
   doubled).
+- On Classic Era: the same vendor price checks, in bags, at a merchant (the game's `Sell Price` line
+  becomes the `Vendor` line, fitted to the tooltip, not doubled), on a chat link, and none on the
+  comparison tooltips; item, spell and NPC IDs show, and whether a buff's or debuff's tooltip gets
+  its spell ID (only if Classic Era runs `OnTooltipSetSpell` for auras).
+- On Classic Era's minimap: the square shape hides the round border (and the compass ring with
+  rotate minimap on); the tracking button (track herbs or minerals) and the time of day icon in
+  every row and inside spot, and whether Forever's distances from the round frame fit its border.
 - Class-colored health bars: the shading matches the default bar, an NPC target (and a rare or
   "minus" one) shows the default green, switching targets in combat recolors at once, and turning
   an option off brings the green back without a `/reload`. Also on the target of target, focus and
@@ -998,7 +1194,10 @@ Things only the real client can confirm:
   inside the screen; no "tainted by" error in combat afterwards (the action bars are protected).
 - Quests: accepting from a gossip NPC and from a quest greeting NPC (several quests in a row), a
   shared quest, turning in with one reward and with none, a choice of rewards and a quest that costs
-  gold staying open, and Shift leaving everything to the player.
+  gold staying open, and Shift leaving everything to the player. On Classic Era, a quest greeting
+  NPC with several quests to accept and to turn in, and a repeatable turn-in done twice in a row.
+- On Classic Era: Hide the social button hides the Friends button by the chat, and portrait hit text
+  shows no numbers over the player's and the pet's portrait.
 - Faster auto loot: with Auto Loot on, a corpse, an herb, a catch and a container empty at once; the
   auto loot key held keeps the window open; with Auto Loot off, holding the key takes it all at once.
   Full bags leave the rest in the window, a bind-on-pickup item in a group asks first, and a group
@@ -1048,7 +1247,10 @@ Things only the real client can confirm:
   row making room, nothing cut off), and gone when hidden.
 - World map pins: in the right places on the zone and continent maps (the entrance positions are
   the instance portals, like retail's encounter journal pins), the tooltips' names in German, and a
-  click opening the destination's map. Open the map in combat too.
+  click opening the destination's map. Open the map in combat too. On Classic Era: the Stockade
+  (~39.7, 54.0) and the Deeprun Tram (~64.5, 7.6) in Stormwind, Stratholme (~30.8, 15.7) and
+  Naxxramas (~31.4, 25.9) in the Eastern Plaguelands, the Menethil Harbor–Auberdine boat at both
+  docks, and the ship icon's size next to the others.
 - Controller back buttons (Options > Controller), on a Steam Deck with F13 to F16 (or other free
   keys) given to L4, L5, R4 and R5 in Steam Input, bound under Key Bindings > AddOns > Quality of
   Life:

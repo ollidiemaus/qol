@@ -300,26 +300,52 @@ function Picker.PageButton(parent, direction, onClick)
     return button
 end
 
--- The tabs are the game's (TabSystemTopButtonTemplate, as the spell book's), standing on the
--- parchment's top edge, rise above the column's top: from its left edge, or ending at its right one
--- when they're wider. A strip of ours stands in for the game's tab system: a tab calls its parent's
--- SetTab when clicked.
+local function playTabSound()
+    if PlaySound and SOUNDKIT then PlaySound(SOUNDKIT.IG_CHARACTER_INFO_TAB) end
+end
+
+-- A tab of the game's tab system (TabSystemTopButtonTemplate, as the spell book's). A strip of
+-- ours stands in for the tab system (newTabs): a tab calls its parent's SetTab when clicked.
+local function newSystemTab(_, strip, index, kind)
+    local tab = CreateFrame("Button", nil, strip, "TabSystemTopButtonTemplate")
+    tab:Init(index, LABELS[kind])
+    return tab
+end
+
+-- Classic Era has no tab system: there a top tab of its panel templates (PanelTopTabButtonTemplate,
+-- its help window's), selected as the panel templates do it. Named, so the template's "$parent.."
+-- art gets our prefix too.
+local panelTabs = 0
+local function newPanelTab(self, strip, _, kind)
+    panelTabs = panelTabs + 1
+    local tab = CreateFrame("Button", "QoLPickerTab" .. panelTabs, strip, "PanelTopTabButtonTemplate")
+    tab:SetText(LABELS[kind])
+    PanelTemplates_TabResize(tab, 10)
+    tab.SetTabSelected = function(_, selected)
+        if selected then PanelTemplates_SelectTab(tab) else PanelTemplates_DeselectTab(tab) end
+    end
+    tab:SetScript("OnClick", function()
+        playTabSound()
+        self:ShowKind(kind)
+    end)
+    return tab
+end
+
+-- The tabs stand on the parchment's top edge, rise above the column's top: from its left edge, or
+-- ending at its right one when they're wider.
 local function newTabs(self, column, rise)
     local strip = CreateFrame("Frame", nil, column)
     strip:SetAllPoints()
     strip.GetTabWidthConstraints = function() return nil, nil end
-    strip.PlayTabSelectSound = function()
-        if PlaySound and SOUNDKIT then PlaySound(SOUNDKIT.IG_CHARACTER_INFO_TAB) end
-    end
-    local kinds = self.handlers.kinds
-    strip.SetTab = function(_, id) self:ShowKind(kinds[id]) end
+    strip.PlayTabSelectSound = playTabSound
+    strip.SetTab = function(_, id) self:ShowKind(self.handlers.kinds[id]) end
+    local newTab = C_XMLUtil.GetTemplateInfo("TabSystemTopButtonTemplate") and newSystemTab or newPanelTab
     local tabs = {}
     self.tabs = tabs
     local width = -1
-    for index, kind in ipairs(kinds) do
-        local tab = CreateFrame("Button", nil, strip, "TabSystemTopButtonTemplate")
+    for index, kind in ipairs(self.handlers.kinds) do
+        local tab = newTab(self, strip, index, kind)
         tab.kind = kind
-        tab:Init(index, LABELS[kind])
         if index > 1 then tab:SetPoint("BOTTOMLEFT", tabs[index - 1], "BOTTOMRIGHT", 1, 0) end
         width = width + tab:GetWidth() + 1
         tabs[index] = tab
@@ -336,7 +362,12 @@ end
 -- page).
 function Picker.Create(column, rise, handlers)
     local self = setmetatable({ handlers = handlers, shown = { query = "", page = 1, entries = {} } }, List)
-    handlers.kinds = handlers.kinds or KINDS
+    -- Without the toy box (Classic Era), no toys tab.
+    local kinds = {}
+    for _, kind in ipairs(handlers.kinds or KINDS) do
+        if kind ~= "toy" or C_ToyBox then kinds[#kinds + 1] = kind end
+    end
+    handlers.kinds = kinds
     handlers.clicks = handlers.clicks or { "LeftButtonUp" }
     handlers.click = handlers.click or function(entry) handlers.toggle(entry) end
     handlers.hint = handlers.hint or function(entry)

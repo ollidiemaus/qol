@@ -14,9 +14,10 @@ ns.Quests = Quests
 
 local ACCEPT, TURN_IN = "questAccept", "questTurnIn"
 
--- Quests we opened from an NPC's list ourselves, by quest ID. Each is opened once per NPC: one we
--- couldn't finish (a reward to choose, gold to pay, a full quest log) would otherwise open again
--- every time the NPC's list shows. Accepting or turning a quest in takes it off the list.
+-- Quests we opened from an NPC's list ourselves, by quest ID (by title in Classic Era's greeting,
+-- which has no quest IDs). Each is opened once per NPC: one we couldn't finish (a reward to choose,
+-- gold to pay, a full quest log) would otherwise open again every time the NPC's list shows.
+-- Accepting or turning a quest in takes it off the list.
 local opened = {}
 local openedAt -- the NPC they were opened at
 
@@ -43,10 +44,14 @@ local function usableID(questID)
     return ns.IsUsable(questID) and type(questID) == "number" and questID > 0
 end
 
+local function usableIDOrTitle(key)
+    return usableID(key) or (ns.IsUsable(key) and type(key) == "string" and key ~= "")
+end
+
 -- Opens the quest with choose() unless we did before at this NPC. Returns whether it did.
-local function open(questID, choose)
-    if not usableID(questID) or opened[questID] then return false end
-    opened[questID] = true
+local function open(key, choose)
+    if not usableIDOrTitle(key) or opened[key] then return false end
+    opened[key] = true
     choose()
     return true
 end
@@ -73,21 +78,28 @@ function Quests:OnGossipShow()
     end
 end
 
--- The same for NPCs that greet with a plain list of quests, addressed by their place in it.
+-- The same for NPCs that greet with a plain list of quests, addressed by their place in it. Classic
+-- Era's has no quest IDs (no GetActiveQuestID, and GetAvailableQuestInfo stops before the ID), so
+-- there a quest is known by its title.
+local function byTitle()
+    return not GetActiveQuestID
+end
+
 function Quests:OnQuestGreeting()
     rememberNpc()
     if on(TURN_IN) then
         for i = 1, GetNumActiveQuests() do
-            local _, isComplete = GetActiveTitle(i)
-            if isComplete and open(GetActiveQuestID(i), function() SelectActiveQuest(i) end) then
+            local title, isComplete = GetActiveTitle(i)
+            local key = byTitle() and title or GetActiveQuestID(i)
+            if isComplete and open(key, function() SelectActiveQuest(i) end) then
                 return
             end
         end
     end
     if on(ACCEPT) then
         for i = 1, GetNumAvailableQuests() do
-            local questID = select(5, GetAvailableQuestInfo(i))
-            if open(questID, function() SelectAvailableQuest(i) end) then
+            local key = byTitle() and GetAvailableTitle(i) or select(5, GetAvailableQuestInfo(i))
+            if open(key, function() SelectAvailableQuest(i) end) then
                 return
             end
         end
@@ -125,8 +137,20 @@ function Quests:OnQuestComplete()
     GetQuestReward(choices)
 end
 
-local function forget(_, questID)
-    if usableID(questID) then opened[questID] = nil end
+-- The quest's title, for a client whose greeting knows quests by their title. Nil where the
+-- client can't say.
+local function titleOf(questID)
+    local log = C_QuestLog
+    local getTitle = log and log.GetQuestInfo
+    return getTitle and getTitle(questID)
+end
+
+local function forget(questID)
+    if not usableID(questID) then return end
+    opened[questID] = nil
+    if not byTitle() then return end
+    local title = titleOf(questID)
+    if usableIDOrTitle(title) then opened[title] = nil end
 end
 
 function Quests:Init()
@@ -136,8 +160,9 @@ function Quests:Init()
         QUEST_DETAIL = function(_, questStartItemID) Quests:OnQuestDetail(questStartItemID) end,
         QUEST_PROGRESS = function() Quests:OnQuestProgress() end,
         QUEST_COMPLETE = function() Quests:OnQuestComplete() end,
-        QUEST_ACCEPTED = forget,
-        QUEST_TURNED_IN = forget,
+        -- Classic Era's QUEST_ACCEPTED carries the quest log index first, then the quest ID.
+        QUEST_ACCEPTED = function(_, first, second) forget(second or first) end,
+        QUEST_TURNED_IN = function(_, questID) forget(questID) end,
     }
     for event, handler in pairs(events) do
         ns.Events:On(event, handler)

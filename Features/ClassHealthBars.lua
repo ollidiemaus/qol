@@ -9,6 +9,10 @@ local Options = ns.Options
 -- Blizzard never colors these bars itself (they're locked to their texture's green), so only
 -- widget methods are called and nothing on the frames is written. The game allows color changes
 -- in combat, so a new target gets its color right away.
+--
+-- Classic Era doesn't lock these bars' color (only its arena frames set lockColor), so the game
+-- turns them green again on every health change. There each unlocked bar's OnValueChanged is
+-- hooked (HookScript, after the game's handler) to ask for Apply again, through the same queue.
 local ClassHealthBars = {}
 ns.ClassHealthBars = ClassHealthBars
 
@@ -61,12 +65,18 @@ local function restoreBar(bar)
     originals[bar] = nil
 end
 
+-- The unit frame's health bar, or nil when the client has none we can color.
+local function barOf(info)
+    local frame = _G[info.frame]
+    local bar = frame and frame.healthbar
+    if bar and bar.SetStatusBarDesaturated then return bar end
+end
+
 -- The health bar's unit is the one it shows right now: "vehicle" on the player frame in a vehicle.
 function ClassHealthBars:Apply()
     for _, info in ipairs(self.BARS) do
-        local frame = _G[info.frame]
-        local bar = frame and frame.healthbar
-        if bar and bar.SetStatusBarDesaturated then
+        local bar = barOf(info)
+        if bar then
             local color = Options:Get(info.key) and self.ClassColor(bar.unit)
             if color then
                 colorBar(bar, color)
@@ -129,6 +139,12 @@ function ClassHealthBars:Init()
     local playerListener = ns.Events:NewUnitListener("player")
     for _, event in ipairs(PLAYER_EVENTS) do
         playerListener:On(event, wake)
+    end
+    for _, info in ipairs(self.BARS) do
+        local bar = barOf(info)
+        if bar and not bar.lockColor then
+            bar:HookScript("OnValueChanged", wake)
+        end
     end
     wake()
 end

@@ -20,6 +20,7 @@ local Options = ns.Options
 --     font, so the rows around the minimap make room for them.
 --   * FPS and ping: a text of ours with the frame rate and the latency, placed in the rows like the
 --     clock, also in class color and at another font size.
+-- Classic Era names some of these differently (see its frames below).
 -- Only widget methods are called; the game's own minimap code is never called or hooked.
 local MinimapLayout = {}
 ns.MinimapLayout = MinimapLayout
@@ -52,11 +53,28 @@ local SLOTS = {
 -- The zone text only goes to the middle of a row: "above" or "below".
 local ZONE_SLOTS = { above = "top", below = "bottom" }
 
+-- A frame the cluster holds, or nil where this client has none (Classic Era's cluster lacks them).
+local function clusterFrame(key)
+    local frame = MinimapCluster and MinimapCluster[key]
+    return type(frame) == "table" and frame or nil
+end
+
+-- Classic Era has no calendar: its GameTimeFrame is the time of day icon on the round border,
+-- which the day and night option moves. Elsewhere it is the calendar button.
+local function hasCalendar()
+    return ToggleCalendar ~= nil and GameTimeFrame ~= nil
+end
+
+local function dayNightFrame()
+    -- Without a calendar, GameTimeFrame is the time of day icon.
+    return clusterFrame("DielFrame") or (ToggleCalendar == nil and GameTimeFrame or nil)
+end
+
 -- The elements that move, in the order they sit side by side within a spot (the first one at the
 -- minimap's edge for left and right, the first one on the left in the middle).
 MinimapLayout.ELEMENTS = {
     { key = "minimapTracking", inside = true,
-        frame = function() return MinimapCluster and MinimapCluster.Tracking end },
+        frame = function() return clusterFrame("Tracking") or MiniMapTracking end },
     { key = ZONE_TEXT, isZoneText = true,
         frame = function() return MinimapCluster and MinimapCluster.ZoneTextButton end },
     { key = "minimapClock", frame = function() return TimeManagerClockButton end },
@@ -66,9 +84,8 @@ MinimapLayout.ELEMENTS = {
         frame = function() return MinimapLayout:Performance() end,
         align = function(frame, side) MinimapLayout.AlignPerformance(frame, side) end },
     { key = "minimapCompartment", frame = function() return AddonCompartmentFrame end },
-    -- Forever only: the day and night icon on the round frame.
-    { key = "minimapDayNight", inside = true,
-        frame = function() return MinimapCluster and MinimapCluster.DielFrame end },
+    -- Forever's day and night icon on the round frame, Classic Era's time of day icon.
+    { key = "minimapDayNight", inside = true, frame = dayNightFrame },
 }
 
 local function elementFor(key)
@@ -140,9 +157,10 @@ local function setHidden(hidden, ...)
     end
 end
 
--- The round frame around the map: Forever and retail draw it with these two textures.
+-- The round frame around the map: Forever and retail draw it with the two compass textures,
+-- Classic Era with MinimapBorder (its compass ring shows only while the map rotates).
 local function ringTextures()
-    return MinimapCompassTexture, MinimapCompassTextureUnderlay
+    return MinimapCompassTexture, MinimapCompassTextureUnderlay, MinimapBorder
 end
 
 -- The zone text's frame: before Forever 1.60.1 the header bar BorderTop, since then the zone text
@@ -485,7 +503,7 @@ function MinimapLayout:ApplyPositions()
         end
     end
 
-    setHidden(Options:Get(CALENDAR), GameTimeFrame)
+    if hasCalendar() then setHidden(Options:Get(CALENDAR), GameTimeFrame) end
 end
 
 ------------------------------------------------------------------------------------------------
@@ -676,9 +694,25 @@ end
 ------------------------------------------------------------------------------------------------
 -- Setup
 
--- Whether this client has Forever's day and night icon (the settings offer it only there).
+-- Whether this client has the addon compartment (Classic Era doesn't).
+function MinimapLayout.HasCompartment()
+    return AddonCompartmentFrame ~= nil
+end
+
+-- Whether this client shows the player's coordinates under the minimap (Classic Era doesn't).
+function MinimapLayout.HasCoords()
+    local container = MinimapCluster and MinimapCluster.MinimapContainer
+    return container ~= nil and type(container.PlayerCoords) == "table"
+end
+
+-- Whether this client has a day and night icon: Forever's, or Classic Era's time of day icon.
 function MinimapLayout.HasDayNight()
-    return MinimapCluster ~= nil and type(MinimapCluster.DielFrame) == "table"
+    return dayNightFrame() ~= nil
+end
+
+-- Whether this client has the calendar button (Classic Era doesn't).
+function MinimapLayout.HasCalendar()
+    return hasCalendar()
 end
 
 local LAYOUT_KEYS = { SQUARE, BORDER, CALENDAR, ZONE_TEXT_FRAME, ZONE_TEXT_SIZE, CLOCK_SIZE, PERFORMANCE_SIZE }

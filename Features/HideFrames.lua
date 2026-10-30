@@ -8,7 +8,7 @@ local HideFrames = {}
 ns.HideFrames = HideFrames
 
 -- Option key -> the frames it hides. Looked up when needed, since not every client has every frame
--- (retail has no minimap coordinates, for example).
+-- (Classic Era has no minimap coordinates, for example).
 HideFrames.TARGETS = {
     -- The container, not MicroMenu itself: in vehicles and pet battles the game moves MicroMenu
     -- onto the vehicle bar, where it should still show.
@@ -18,7 +18,8 @@ HideFrames.TARGETS = {
         local container = MinimapCluster and MinimapCluster.MinimapContainer
         return container and container.PlayerCoords
     end,
-    hideChatSocial = function() return QuickJoinToastButton end,
+    -- Quick Join's toast button, or on Classic Era (no Quick Join) the Friends button by the chat.
+    hideChatSocial = function() return QuickJoinToastButton or FriendsMicroButton end,
     -- The chat menu, the channel button, the voice buttons (only shown in a voice channel) and the
     -- text to speech button (only shown while text to speech is on).
     hideChatButtons = function()
@@ -26,12 +27,13 @@ HideFrames.TARGETS = {
             ChatFrameToggleVoiceMuteButton, TextToSpeechButtonFrame
     end,
     -- The damage, heal and miss text over the player's and the pet's portrait. The game shows it on
-    -- every hit and fades it with an OnUpdate that only runs while it's visible.
+    -- every hit and fades it with an OnUpdate that only runs while it's visible. Classic Era's old
+    -- player frame has no content frames: its hit text is PlayerHitIndicator.
     hidePortraitHitText = function()
         local content = PlayerFrame and PlayerFrame.PlayerFrameContent
         local main = content and content.PlayerFrameContentMain
         local indicator = main and main.HitIndicator
-        return indicator and indicator.HitText, PetHitIndicator
+        return (indicator and indicator.HitText) or PlayerHitIndicator, PetHitIndicator
     end,
 }
 

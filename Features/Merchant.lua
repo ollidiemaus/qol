@@ -68,12 +68,19 @@ local function guildFunds()
     return math.min(limit or 0, bank)
 end
 
+-- Whether this client has guild banks: Blizzard_GuildBankUI's bootstrap defines the loader at
+-- startup on Forever and retail. Classic Era has no guild banks; its UI names the guild bank calls
+-- only in dead code.
+function Merchant.HasGuildBank()
+    return GuildBankFrame_LoadUI ~= nil
+end
+
 function Merchant:Repair()
     if not CanMerchantRepair() then return end
     local cost, canRepair = GetRepairAllCost()
     if not canRepair or not cost or cost <= 0 then return end
 
-    if Options:Get("guildRepair") and IsInGuild() and CanGuildBankRepair() then
+    if Options:Get("guildRepair") and Merchant.HasGuildBank() and IsInGuild() and CanGuildBankRepair() then
         local guild = guildFunds()
         if guild >= cost then
             RepairAllItems(true)

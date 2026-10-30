@@ -878,3 +878,66 @@ describe("click casting page", function()
         T.eq(tabsBottom, -edges.top)
     end)
 end)
+
+describe("click casting on Classic Era", function()
+    local function page() return QoLClickCastEditor end
+    local function note() return page().note:GetText() end
+    local function action(name)
+        for _, row in ipairs(page().list.rows) do
+            if row:IsShown() and row.name:GetText() == name then return row end
+        end
+        error("no " .. name .. " in the list")
+    end
+    local function names()
+        local found = {}
+        for _, row in ipairs(page().list.rows) do
+            if row:IsShown() then found[#found + 1] = row.name:GetText() end
+        end
+        return found
+    end
+    -- Logs in on Classic Era as the priest, click casting on, and opens the page.
+    local function open()
+        Stubs.LoadAddon({ client = "classicEra" })
+        priest(Stubs.state())
+        Stubs.Login({ clickCast = true })
+        SlashCmdList.QOL("click")
+    end
+
+    it("lists the spell book's spells, and its tabs switch to items and macros", function()
+        open()
+        T.same(names(), { "Renew", "Power Word: Fortitude", "Flash Heal" }, "the spell book's order")
+        local labels = {}
+        for index, tab in ipairs(page().list.tabs) do labels[index] = tab:GetText() end
+        T.same(labels, { "Spells", "Items", "Macros" })
+        page().list.tabs[2]:Click()
+        T.same(names(), { "Linen Bandage" })
+        page().list.tabs[3]:Click()
+        T.same(names(), { "Heal" })
+        T.same(Stubs.state().errors, {})
+    end)
+
+    it("binds an action clicked on the right, which then acts on a party frame", function()
+        open()
+        action("Flash Heal"):Click()
+        Stubs.Hold("SHIFT")
+        Stubs.PressMouse("LeftButton")
+        Stubs.Hold()
+        Stubs.RunTimers()
+        T.eq(click(party(1), "LeftButton", "SHIFT"), "spell:2061 on party1")
+        T.same(Stubs.state().errors, {})
+    end)
+
+    it("binds through quick bind, and the binding acts on the player frame", function()
+        open()
+        page().quick:Click()
+        local renew = action("Renew")
+        Stubs.Hover(renew)
+        Stubs.Hold("CTRL")
+        renew:RunScript("OnClick", "RightButton")
+        Stubs.Hold()
+        T.eq(note(), "Ctrl-Right: Renew")
+        Stubs.RunTimers()
+        T.eq(click(PlayerFrame, "RightButton", "CTRL"), "spell:139 on player")
+        T.same(Stubs.state().errors, {})
+    end)
+end)

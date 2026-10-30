@@ -36,14 +36,14 @@ read_globals = {
     "MicroMenuContainer", "ContainerFrameCombinedBags",
     "BagsBar", "QuickJoinToastButton", "MinimapCluster", "Minimap", "MinimapZoneText", "MinimapCompassTexture",
     "MinimapCompassTextureUnderlay", "HybridMinimap", "TimeManagerClockButton",
-    "TimeManagerClockTicker", "GameTimeFrame", "AddonCompartmentFrame", "WorldMapFrame", "MapCanvasDataProviderMixin", "CreateFromMixins",
-    "GameTooltip",
+    "TimeManagerClockTicker", "GameTimeFrame", "AddonCompartmentFrame", "ToggleCalendar", "MiniMapTracking", "MinimapBorder", "WorldMapFrame", "MapCanvasDataProviderMixin", "CreateFromMixins",
+    "GameTooltip", "SELL_PRICE",
     "ChatFrame2", "ChatFrame2Tab", "ChatFrameMenuButton", "ChatFrameChannelButton", "ChatFrameToggleVoiceDeafenButton",
     "ChatFrameToggleVoiceMuteButton", "TextToSpeechButtonFrame", "BuffFrameTooltip",
     "InCombatLockdown", "GetPhysicalScreenSize", "ReloadUI", "IsSecureCmd", "geterrorhandler", "CinematicFrame", "MovieFrame",
     "IsShiftKeyDown", "GamepadMainActionBarFrame", "GamepadMode", "SettingsPanel", "GameMenuFrame", "GetCursorPosition", "GetCursorInfo",
     "SecureHandlerWrapScript", "EditModeManagerFrame",
-    "SendMailFrame", "SendMailNameEditBox", "SendMailSubjectEditBox",
+    "MailFrame", "SendMailFrame", "SendMailNameEditBox", "SendMailSubjectEditBox",
     -- Performance
     "GetFramerate", "GetNetStats",
     -- Key bindings
@@ -54,26 +54,29 @@ read_globals = {
     "PickupAction", "PlaceAction", "ClearCursor", "PlayerHasToy", "GetMacroInfo", "GetMacroIndexByName",
     "GetMacroSpell", "GetMacroItem", "PickupMacro", "GetNumMacros", "MAX_ACCOUNT_MACROS", "GetInventoryItemID",
     "GetFlyoutInfo", "GetFlyoutSlotInfo", "SPELLBOOK_FONT_COLOR",
+    -- Classic Era's spell book and tabs
+    "GetNumSpellTabs", "GetSpellTabInfo", "GetSpellBookItemInfo", "IsPassiveSpell", "BOOKTYPE_SPELL",
+    "PanelTemplates_TabResize", "PanelTemplates_SelectTab", "PanelTemplates_DeselectTab",
     -- Strings and formatting
     "GetLocale", "GetMoneyString", "AbbreviateLargeNumbers",
     -- Units
     "UnitIsPlayer", "UnitTreatAsPlayerForDisplay", "UnitClass", "UnitGUID", "UnitName", "GetNormalizedRealmName",
     "RegionalUniqueNamesEnabled", "RAID_CLASS_COLORS",
-    "UnitPowerType", "UnitPower", "UnitPowerMax", "PlayerFrame", "PetHitIndicator",
+    "UnitPowerType", "UnitPower", "UnitPowerMax", "PlayerFrame", "PetHitIndicator", "PlayerHitIndicator", "FriendsMicroButton",
     -- Quests
     "AcceptQuest", "CompleteQuest", "GetQuestReward", "GetNumQuestChoices", "IsQuestCompletable", "GetQuestMoneyToGet",
     "QuestGetAutoAccept", "QuestIsFromAdventureMap", "GetNumActiveQuests", "GetNumAvailableQuests", "GetActiveTitle",
-    "GetActiveQuestID", "GetAvailableQuestInfo", "SelectActiveQuest", "SelectAvailableQuest",
+    "GetActiveQuestID", "GetAvailableQuestInfo", "GetAvailableTitle", "C_QuestLog", "SelectActiveQuest", "SelectAvailableQuest",
     -- Bags, items and merchants
     "NUM_BAG_SLOTS", "NUM_TOTAL_EQUIPPED_BAG_SLOTS",
     "CanMerchantRepair", "GetRepairAllCost", "RepairAllItems", "GetMoney",
-    "IsInGuild", "CanGuildBankRepair", "GetGuildBankWithdrawMoney", "GetGuildBankMoney",
+    "IsInGuild", "GuildBankFrame_LoadUI", "CanGuildBankRepair", "GetGuildBankWithdrawMoney", "GetGuildBankMoney",
     -- Loot, and the clock its throttle reads
     "GetNumLootItems", "LootSlot", "GetTime",
     "GetAddOnMetadata", "IsAddOnLoaded", "IsMacClient", "GetBuildInfo",
     -- Namespaces
     "Enum", "C_ActionBar", "C_AddOns", "C_Container", "C_CVar", "C_EventUtils", "C_GossipInfo", "C_Item", "C_Map", "C_MerchantFrame",
-    "C_InputInterfaceStyle", "C_KeyBindings", "C_Texture", "C_Timer",
+    "C_InputInterfaceStyle", "C_KeyBindings", "C_Texture", "C_Timer", "C_XMLUtil",
     "C_GamePad", "C_TooltipInfo", "C_Spell", "C_SpellBook", "C_MountJournal", "C_ToyBox",
 }
 
