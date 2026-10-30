@@ -702,21 +702,95 @@ describe("advanced settings page", function()
             "Object cull size", "Max camera distance" })
     end)
 
-    it("stays on Classic Era, without the settings it doesn't know, keeping the old value for a refused one", function()
-        local ns, state = start(function(s) s.cvars.ResampleAlwaysSharpen = nil end, "classicEra")
+    it("stays on Classic Era with every setting, keeping the old value for a refused one", function()
+        local ns, state = start(nil, "classicEra")
         T.truthy(page(ns), "the page is there")
         T.same(labels(ns), { "Ground clutter distance", "Ground clutter fade", "Ground clutter density",
-            "Weather density", "World distance", "Horizon start", "Horizon end", "Object fade scale",
-            "Object cull size", "Object cull distance", "Max camera distance" })
+            "Weather density", "Always sharpen", "World distance", "Horizon start", "Horizon end",
+            "Object fade scale", "Object cull size", "Object cull distance", "Max camera distance" })
+        show(ns)
+        local clutter = row(ns, "Ground clutter distance")
+        state.cvarRanges.groundEffectDist = { 70, 300 }
+        clutter.widget:SetValue(400)
+        T.same(state.cvarSets, { "groundEffectDist=400" })
+        T.eq(state.cvars.groundEffectDist, "70")
+        T.eq(clutter.box:GetText(), "70")
+    end)
+
+    it("covers the ranges Classic Era takes: the camera distance to 4, ground clutter distance from 70", function()
+        local ns, state = start(nil, "classicEra")
         show(ns)
         local camera = row(ns, "Max camera distance")
-        T.same({ camera.widget.minValue, camera.widget.maxValue }, { 1, 2.6 }, "the range measured on Forever")
-        state.cvarRanges.cameraDistanceMaxZoomFactor = { 1, 2 }
-        camera.widget:SetValue(2.5)
-        T.same(state.cvarSets, { "cameraDistanceMaxZoomFactor=2.5" })
-        T.eq(state.cvars.cameraDistanceMaxZoomFactor, "1.9")
-        T.eq(camera.widget:GetValue(), 1.9)
-        T.eq(camera.box:GetText(), "1.9")
+        T.same({ camera.widget.minValue, camera.widget.maxValue }, { 1, 4 })
+        T.truthy(math.abs(camera.widget.step - 0.1) < 1e-9, "Max camera distance steps 0.1")
+        camera.widget:SetValue(4)
+        T.eq(state.cvars.cameraDistanceMaxZoomFactor, "4")
+        T.eq(camera.box:GetText(), "4.0")
+        local clutter = row(ns, "Ground clutter distance")
+        T.same({ clutter.widget.minValue, clutter.widget.maxValue, clutter.widget.step }, { 70, 500, 1 })
+    end)
+
+    it("puts World distance and the horizon back to the game default on Classic Era, without View Distance", function()
+        local ns, state = start(nil, "classicEra")
+        show(ns)
+        for label, cvar in pairs({ ["World distance"] = "farclip", ["Horizon start"] = "horizonStart",
+            ["Horizon end"] = "horizonClip" }) do
+            local c = row(ns, label)
+            T.falsy(c.resetButton:IsEnabled(), label .. " greyed out at the default")
+            c.widget.Forward:Click()
+            T.truthy(c.resetButton:IsEnabled(), label .. " away from the default")
+            state.cvarSets = {}
+            c.resetButton:Click()
+            T.same(state.cvarSets, { cvar .. "=" .. state.cvarDefaults[cvar] }, label)
+            T.eq(c.box:GetText(), state.cvarDefaults[cvar], label)
+            T.falsy(c.resetButton:IsEnabled(), label .. " greyed out again")
+        end
+        T.same({ state.cvars.farclip, state.cvars.horizonStart, state.cvars.horizonClip }, { "2112", "777", "1600" })
+
+        -- Ground Clutter and Environment Detail still put theirs back.
+        local density = row(ns, "Ground clutter density")
+        density.widget.Forward:Click()
+        state.cvarSets = {}
+        density.resetButton:Click()
+        T.same(state.cvarSets, { "graphicsGroundClutter=2" })
+        T.eq(state.cvars.groundEffectDensity, "16")
+        local fade = row(ns, "Object fade scale")
+        fade.widget.Forward:Click()
+        state.cvarSets = {}
+        fade.resetButton:Click()
+        T.same(state.cvarSets, { "graphicsEnvironmentDetail=4" })
+    end)
+
+    it("says on Classic Era what its client does", function()
+        local ns = start(nil, "classicEra")
+        show(ns)
+        local tips = {
+            ["Ground clutter distance"] = { "how far away", "Ground Clutter sets 70 to 320",
+                "sets it again when you move it" },
+            ["World distance"] = { "how far away the world is drawn", "No game setting changes it", "2112" },
+            ["Horizon start"] = { "horizon begins", "No game setting changes it", "777" },
+            ["Horizon end"] = { "horizon ends", "No game setting changes it", "1600" },
+            ["Max camera distance"] = { "zoom out", "Max Camera Distance slider", "2.0" },
+        }
+        for label, words in pairs(tips) do
+            local c = row(ns, label)
+            c.row:RunScript("OnEnter")
+            local text = GameTooltip.lines[2].text:lower()
+            for _, word in ipairs(words) do T.truthy(text:find(word:lower(), 1, true), label .. " says " .. word) end
+            T.falsy(text:find("view distance", 1, true), label .. " names no View Distance")
+            c.row:RunScript("OnLeave")
+        end
+    end)
+
+    it("says Classic Era's Ground clutter distance in German", function()
+        local ns = Stubs.LoadAddon({ client = "classicEra", locale = "deDE" })
+        Stubs.InstallSettings()
+        Stubs.Login()
+        show(ns)
+        local c = row(ns, ns.L.GROUND_CLUTTER_DISTANCE)
+        c.row:RunScript("OnEnter")
+        T.truthy(GameTooltip.lines[2].text:find("setzt 70 bis 320", 1, true))
+        c.row:RunScript("OnLeave")
     end)
 
     it("leaves the page out of the list on a client that knows none of the settings", function()

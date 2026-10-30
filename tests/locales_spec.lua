@@ -16,6 +16,9 @@ for _, key in ipairs({ "WORLD_DISTANCE", "HORIZON_START", "HORIZON_END", "OBJECT
     "OBJECT_CULL_DISTANCE" }) do
     ENGLISH_ONLY[key], ENGLISH_ONLY[key .. "_TIP"] = true, true
 end
+for _, key in ipairs({ "WORLD_DISTANCE", "HORIZON_START", "HORIZON_END" }) do
+    ENGLISH_ONLY[key .. "_TIP_CLASSIC_ERA"] = true
+end
 
 local function strings(locale)
     return Stubs.LoadAddon({ locale = locale }).L

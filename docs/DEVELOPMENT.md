@@ -939,8 +939,8 @@ itself when the client knows none.
 - **Read back after every set.** The game quietly ignores a value outside a CVar's range (no error,
   no clamping), so after each `SetCVar` the page refreshes and shows what `GetCVar` returns: a
   refused value shows the old one. The sliders cover exactly the ranges measured in Forever's client
-  (2026-10-27). `cameraDistanceMaxZoomFactor` takes 1.0 to 2.6 there, while the game's own Max Camera
-  Distance slider (`Camelot/ControlsOverrides.lua`) stops at 2.0 and moving it sets 2.0 or lower.
+  (2026-10-27); Classic Era's differ (below). `cameraDistanceMaxZoomFactor` takes 1.0 to 2.6 on
+  Forever, while the game's own Max Camera Distance slider (`Camelot/ControlsOverrides.lua`) stops at 2.0 and moving it sets 2.0 or lower.
   Draw distance's were measured with `/qol probe` in retail's client (12.1.5, 2026-10-28), not yet in
   Forever's, which has the same CVars, game defaults and first-run values. `farclip`, `horizonStart`
   and `horizonClip` take any number, so their sliders cover what View Distance sets and a bit below
@@ -988,15 +988,27 @@ itself when the client knows none.
   leave out the game default, and Reset's tooltip names the slider and the other rows it resets.
   Defaults writes each slider once, through the `done` table its rows share. Rows the probe found
   no slider setting (`groundEffectFade`, `weatherDensity`, `lodObjectCullDist` and the camera
-  distance) keep the game default.
+  distance) keep the game default. A game slider the client doesn't know counts as none
+  (`HiddenSettings.GameSlider`): Classic Era has no View Distance, so its World distance and horizon
+  rows Reset to the game default, grey out there and show it in their tooltips, as any row no
+  slider sets; and in combat only their own secure flag counts. Writing the missing slider would
+  do nothing, leaving no way back to the game's values.
 - **Measuring them.** `/qol probe` measures the ranges, game defaults and the game sliders in the
   client it runs in; see "The hidden settings probe" under "Trying it in game".
-- **Classic Era** has the same `C_CVar` calls and the same View Distance, Environment Detail and
-  Ground Clutter sliders (`Blizzard_SettingsDefinitions_Shared/Graphics.lua`), so the page needs no
-  path of its own there: a hidden setting its client doesn't know reads as nil and its row drops
-  out, the sliders keep the ranges measured on Forever (its Max Camera Distance slider stops at 2.0
-  too), and a value it refuses shows the old one after the read-back, with no error. Which hidden
-  settings it knows and which ranges it takes are for `/qol probe` there.
+- **Classic Era** has the same `C_CVar` calls and the Environment Detail and Ground Clutter
+  sliders, but no View Distance (`slider.graphicsViewDistance = missing`). It knows every hidden
+  setting in the table, Always sharpen too. `/qol probe` there (1.15.9 build 70576, deDE,
+  2026-10-30) measured other ranges than Forever's: `cameraDistanceMaxZoomFactor` 1 to 4 (its own
+  Max Camera Distance slider still stops at 2.0), `groundEffectDist` from 70 (its Ground Clutter sets
+  70 to 320), and game defaults `farclip` 2112, `horizonStart` 777, `horizonClip` 1600. A row's
+  `classicEra` table holds what it takes there in place of its own (min, max, tooltip), so one row
+  says what a setting does on each client; `HiddenSettings` applies it at load when `WOW_PROJECT_ID`
+  is `WOW_PROJECT_CLASSIC`. That's the one place the page names the flavor: elsewhere QoL tells
+  clients apart by what they have, but the game doesn't report a setting's range. Other Classic
+  clients (TBC Anniversary and later) have their own project IDs and keep the row's values until
+  they're measured. Their World distance and horizon tooltips say no game setting changes them,
+  in English only like the rest of Draw distance; Ground clutter distance's names 70 to 320 in
+  German too. The probe's report stays diagnostics: nothing reads it back.
 
 The history below is from the time the pages were in the game's settings; the workarounds it led to
 stay since they cost nothing.
@@ -1148,7 +1160,10 @@ and logs every write in `state.cvarSets`. A game slider is a `state.gameSliders`
 from 0, the settings that step sets. Writing its CVar sets them, also when it already had that step,
 unless `state.gameSliderRewrites` is false. `Stubs.Reset` starts every spec with the three game
 sliders as retail's probe measured them (`GAME_SLIDERS` in `tests/wow_stubs.lua`), each at a step
-whose values the hidden settings start at.
+whose values the hidden settings start at. The Classic Era client takes its probe's values instead:
+its game defaults (each setting starts at its own), camera distance 1 to 4, ground clutter distance
+from 70, Ground Clutter's steps, and no View Distance. `WOW_PROJECT_ID` is Forever's
+(`WOW_PROJECT_CAMELOT`, 18) or, on Classic Era, `WOW_PROJECT_CLASSIC`.
 
 ## Trying it in game
 
@@ -1380,7 +1395,9 @@ command instead of `/run` lines pasted into chat. It's in the release package bu
   didn't come back). It's printed to chat and kept in `QoLDB.probe` (`client`, `date`, `lines`),
   replaced each run; after a `/reload` or logout it's in
   `WTF/Account/<account>/SavedVariables/QoL.lua`. Nothing reads it back: it's diagnostics, and the
-  CVar stays the only truth for the page. The report lines aren't translated; its two chat lines
+  CVar stays the only truth for the page. Classic Era's row overrides (`classicEra` in
+  `Features/HiddenSettings.lua`) are copied from its run on 1.15.9 build 70576 (2026-10-30); after a
+  patch, run it again and compare. The report lines aren't translated; its two chat lines
   (the refusal in combat, where the report is kept) are in `ns.L` in English only, which
   `tests/locales_spec.lua` lists in `ENGLISH_ONLY`, as it does the Draw distance section's labels
   and tooltips, not translated yet.

@@ -767,6 +767,24 @@ end
 -- code; they are gone here, so a call to one fails the spec.
 local function makeClassicEra(G)
     G.GetBuildInfo = function() return "1.15.9", "70576", "Oct 21 2026", 11509 end
+    G.WOW_PROJECT_ID = G.WOW_PROJECT_CLASSIC
+    -- Its hidden settings as /qol probe measured them (1.15.9 build 70576, 2026-10-30): the game
+    -- defaults and ranges, Ground Clutter's steps, and no View Distance slider. Each starts at its
+    -- game default.
+    local cvars, defaults = state.cvars, state.cvarDefaults
+    for cvar, value in pairs({ groundEffectDist = "70", groundEffectDensity = "16", weatherDensity = "3",
+        farclip = "2112", horizonStart = "777", horizonClip = "1600", lodObjectFadeScale = "100",
+        lodObjectCullSize = "15", cameraDistanceMaxZoomFactor = "1" }) do
+        cvars[cvar], defaults[cvar] = value, value
+    end
+    state.cvarRanges.groundEffectDist = { 70, 500 }
+    state.cvarRanges.cameraDistanceMaxZoomFactor = { 1, 4 }
+    cvars.graphicsViewDistance, state.cvarRanges.graphicsViewDistance = nil, nil
+    state.gameSliders.graphicsViewDistance = nil
+    local clutter = { 70, 70, 70, 110, 160, 185, 200, 260, 300, 320 }
+    for step, settings in pairs(state.gameSliders.graphicsGroundClutter) do
+        settings.groundEffectDist = tostring(clutter[step + 1])
+    end
     G.TooltipDataProcessor = nil
     G.SELL_PRICE = "Sell Price"
     for _, name in ipairs({ "GameTooltip", "ItemRefTooltip", "ShoppingTooltip1", "ShoppingTooltip2" }) do
@@ -871,6 +889,9 @@ local function install()
     G.GetLocale = function() return state.locale end
     -- version, build, date, interface
     G.GetBuildInfo = function() return "1.60.1", "70630", "Oct 21 2026", 16001 end
+    -- Forever's project (Blizzard_ProjectConstants); Classic Era's is WOW_PROJECT_CLASSIC.
+    G.WOW_PROJECT_MAINLINE, G.WOW_PROJECT_CLASSIC, G.WOW_PROJECT_CAMELOT = 1, 2, 18
+    G.WOW_PROJECT_ID = G.WOW_PROJECT_CAMELOT
     G.date = os.date
     G.GetMoneyString = function(copper) return tostring(copper) .. "c" end
     G.NORMAL_FONT_COLOR = { r = 1, g = 0.82, b = 0 }

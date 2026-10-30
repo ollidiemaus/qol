@@ -21,6 +21,7 @@ globals = {
 
 -- WoW API the addon reads. Keep this list explicit: an unexpected global is usually a typo.
 read_globals = {
+    "WOW_PROJECT_ID", "WOW_PROJECT_CLASSIC",
     -- Click casting
     "C_ClickBindings", "GetStringFromModifiers", "SHIFT_KEY_TEXT", "CTRL_KEY_TEXT", "ALT_KEY_TEXT",
     "PartyFrame", "CompactUnitFrame_SetUpFrame", "hooksecurefunc", "SecureHandlerSetFrameRef",

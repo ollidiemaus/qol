@@ -293,12 +293,12 @@ local function hiddenBacking(page, setting, inCombat)
     local cvar = setting.cvar
     local backing = {
         canChange = function() return Hidden.CanChange(cvar, inCombat()) end,
-        isDefault = function() return not setting.gameSlider and Hidden.IsAtGameDefault(cvar) end,
+        isDefault = function() return not Hidden.GameSlider(cvar) and Hidden.IsAtGameDefault(cvar) end,
     }
     -- done: shared by the rows of one Defaults click, which write each game slider once.
     backing.reset = function(done)
         if not backing.canChange() then return end
-        local slider = setting.gameSlider
+        local slider = Hidden.GameSlider(cvar)
         if done and slider then
             if done[slider] then return end
             done[slider] = true
@@ -361,9 +361,10 @@ local function buildAdvanced(page)
         local backing = hiddenBacking(page, setting, inCombat)
         -- The game default, from the game, ends the row's tooltip and is on its Reset button's. Not
         -- on a row its game slider sets, as Reset doesn't go there.
-        local gameDefault = not setting.gameSlider and gameDefaultText(setting)
+        local gameSlider = ns.HiddenSettings.GameSlider(setting.cvar)
+        local gameDefault = not gameSlider and gameDefaultText(setting)
         local tooltip, resetTooltip = setting.tooltip, nil
-        if setting.gameSlider then
+        if gameSlider then
             resetTooltip = gameSliderResetText(setting, known)
         elseif gameDefault then
             tooltip = tooltip .. "\n\n" .. L.GAME_DEFAULT:format(gameDefault)

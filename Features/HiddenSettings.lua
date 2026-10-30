@@ -17,11 +17,15 @@ ns.HiddenSettings = HiddenSettings
 -- than the distance. The camera distance goes to 2.6, past the 2.0 where the game's own Max Camera
 -- Distance slider stops. Draw distance's were measured in retail's (2026-10-28): World distance and
 -- the horizon take any value, so their sliders cover what View Distance sets, World distance down
--- to its game default of 1000.
+-- to its game default of 1000. classicEra: what the row takes on Classic Era in place of its own
+-- (min, max, tooltip), as /qol probe measured it there (1.15.9 build 70576, 2026-10-30): the camera
+-- distance goes to 4, ground clutter distance starts at 70, and as it has no View Distance, nothing
+-- in its options changes World distance or the horizon.
 HiddenSettings.SETTINGS = {
     { cvar = "groundEffectDist", label = L.GROUND_CLUTTER_DISTANCE, tooltip = L.GROUND_CLUTTER_DISTANCE_TIP,
         kind = "slider", min = 40, max = 500, step = 1, section = L.SECTION_HIDDEN_GRAPHICS,
-        gameSlider = "graphicsGroundClutter" },
+        gameSlider = "graphicsGroundClutter",
+        classicEra = { min = 70, tooltip = L.GROUND_CLUTTER_DISTANCE_TIP_CLASSIC_ERA } },
     { cvar = "groundEffectFade", label = L.GROUND_CLUTTER_FADE, tooltip = L.GROUND_CLUTTER_FADE_TIP,
         kind = "slider", min = 40, max = 500, step = 1, section = L.SECTION_HIDDEN_GRAPHICS },
     { cvar = "groundEffectDensity", label = L.GROUND_CLUTTER_DENSITY, tooltip = L.GROUND_CLUTTER_DENSITY_TIP,
@@ -33,13 +37,13 @@ HiddenSettings.SETTINGS = {
         kind = "checkbox", section = L.SECTION_HIDDEN_GRAPHICS },
     { cvar = "farclip", label = L.WORLD_DISTANCE, tooltip = L.WORLD_DISTANCE_TIP,
         kind = "slider", min = 1000, max = 10000, step = 100, section = L.SECTION_DRAW_DISTANCE,
-        gameSlider = "graphicsViewDistance" },
+        gameSlider = "graphicsViewDistance", classicEra = { tooltip = L.WORLD_DISTANCE_TIP_CLASSIC_ERA } },
     { cvar = "horizonStart", label = L.HORIZON_START, tooltip = L.HORIZON_START_TIP,
         kind = "slider", min = 400, max = 4000, step = 100, section = L.SECTION_DRAW_DISTANCE,
-        gameSlider = "graphicsViewDistance" },
+        gameSlider = "graphicsViewDistance", classicEra = { tooltip = L.HORIZON_START_TIP_CLASSIC_ERA } },
     { cvar = "horizonClip", label = L.HORIZON_END, tooltip = L.HORIZON_END_TIP,
         kind = "slider", min = 1500, max = 10000, step = 100, section = L.SECTION_DRAW_DISTANCE,
-        gameSlider = "graphicsViewDistance" },
+        gameSlider = "graphicsViewDistance", classicEra = { tooltip = L.HORIZON_END_TIP_CLASSIC_ERA } },
     { cvar = "lodObjectFadeScale", label = L.OBJECT_FADE_SCALE, tooltip = L.OBJECT_FADE_SCALE_TIP,
         kind = "slider", min = 50, max = 5000, step = 10, section = L.SECTION_DRAW_DISTANCE,
         gameSlider = "graphicsEnvironmentDetail" },
@@ -49,8 +53,17 @@ HiddenSettings.SETTINGS = {
     { cvar = "lodObjectCullDist", label = L.OBJECT_CULL_DISTANCE, tooltip = L.OBJECT_CULL_DISTANCE_TIP,
         kind = "slider", min = 1, max = 200, step = 1, section = L.SECTION_DRAW_DISTANCE },
     { cvar = "cameraDistanceMaxZoomFactor", label = L.MAX_CAMERA_DISTANCE, tooltip = L.MAX_CAMERA_DISTANCE_TIP,
-        kind = "slider", min = 1, max = 2.6, step = 0.1, section = L.SECTION_HIDDEN_CAMERA },
+        kind = "slider", min = 1, max = 2.6, step = 0.1, section = L.SECTION_HIDDEN_CAMERA,
+        classicEra = { max = 4 } },
 }
+
+-- Classic Era by its project ID: the game doesn't report a setting's range, so this is the one place
+-- QoL names the flavor for them.
+if WOW_PROJECT_ID ~= nil and WOW_PROJECT_ID == WOW_PROJECT_CLASSIC then
+    for _, setting in ipairs(HiddenSettings.SETTINGS) do
+        for key, value in pairs(setting.classicEra or {}) do setting[key] = value end
+    end
+end
 
 -- The game sliders by their CVar, as the game's options name them.
 HiddenSettings.GAME_SLIDER_NAMES = { graphicsViewDistance = L.GAME_VIEW_DISTANCE,
@@ -58,12 +71,6 @@ HiddenSettings.GAME_SLIDER_NAMES = { graphicsViewDistance = L.GAME_VIEW_DISTANCE
 
 local byCVar = {}
 for _, setting in ipairs(HiddenSettings.SETTINGS) do byCVar[setting.cvar] = setting end
-
--- The CVar of the game slider that sets it, nil for one none sets.
-local function gameSliderOf(cvar)
-    local setting = byCVar[cvar]
-    return setting and setting.gameSlider
-end
 
 -- Through C_CVar where the client has it. A setting this client doesn't know reads as nil.
 local function call(name, ...)
@@ -83,6 +90,15 @@ function HiddenSettings.IsKnown(cvar)
     return HiddenSettings.Get(cvar) ~= nil
 end
 
+-- The CVar of the game slider that sets it, nil for one none sets or whose slider this client
+-- doesn't know (Classic Era's View Distance).
+function HiddenSettings.GameSlider(cvar)
+    local setting = byCVar[cvar]
+    local slider = setting and setting.gameSlider
+    if slider and HiddenSettings.IsKnown(slider) then return slider end
+    return nil
+end
+
 -- Whether the game won't change it in combat: the secure flag, the sixth value of
 -- C_CVar.GetCVarInfo. False on a client without it.
 function HiddenSettings.IsProtected(cvar)
@@ -97,7 +113,7 @@ end
 -- in combat, as PLAYER_REGEN_DISABLED comes before InCombatLockdown.
 function HiddenSettings.CanChange(cvar, inCombat)
     if not inCombat then return true end
-    local slider = gameSliderOf(cvar)
+    local slider = HiddenSettings.GameSlider(cvar)
     return not (HiddenSettings.IsProtected(cvar) or (slider and HiddenSettings.IsProtected(slider)))
 end
 
@@ -130,12 +146,12 @@ function HiddenSettings.IsAtGameDefault(cvar)
     return value == gameDefault
 end
 
--- Sets it to what its game slider sets, or else to the game's default; like Set, read back what the
--- game kept. Writing a game slider's step again makes the game set every setting behind it again, so
--- that puts back the slider's other settings too. Not to the game default for these: farclip's
--- (1000) is below anything View Distance sets.
+-- Sets it to what its game slider sets, or else (also where the client doesn't know that slider) to
+-- the game's default; like Set, read back what the game kept. Writing a game slider's step again
+-- makes the game set every setting behind it again, so that puts back the slider's other settings
+-- too. Not to the game default for these: farclip's (1000) is below anything View Distance sets.
 function HiddenSettings.Reset(cvar)
-    local slider = gameSliderOf(cvar)
+    local slider = HiddenSettings.GameSlider(cvar)
     if slider then
         HiddenSettings.Set(slider, HiddenSettings.Get(slider))
         return

@@ -348,6 +348,11 @@ rows it sets, its Max Camera Distance slider the camera distance), and in raids 
 battlegrounds the game uses its Raid and Battleground graphics instead, while those are on. A
 setting your client doesn't have isn't shown.
 
+On Classic Era the ranges are Classic Era's: Max camera distance goes up to 4.0 and Ground clutter
+distance starts at 70 (its Ground Clutter sets 70 to 320). Classic Era has no View Distance, so
+nothing in its options changes World distance or the horizon, and their Reset puts back the game's
+default (World distance 2112, Horizon start 777, Horizon end 1600), greyed out while it's there.
+
 ## Settings
 
 Type `/qol` (or `/qualityoflife`): the settings open in a window of their own, in Forever's bronze
