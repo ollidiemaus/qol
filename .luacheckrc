@@ -64,7 +64,7 @@ read_globals = {
     -- Units
     "UnitIsPlayer", "UnitTreatAsPlayerForDisplay", "UnitClass", "UnitGUID", "UnitName", "GetNormalizedRealmName",
     "RegionalUniqueNamesEnabled", "RAID_CLASS_COLORS",
-    "UnitPowerType", "UnitPower", "UnitPowerMax", "PlayerFrame", "PetHitIndicator", "PlayerHitIndicator", "FriendsMicroButton",
+    "UnitPowerType", "UnitPower", "UnitPowerMax", "UnitPowerPercent", "CurveConstants", "PlayerFrame", "PetHitIndicator", "PlayerHitIndicator", "FriendsMicroButton",
     -- Quests
     "AcceptQuest", "CompleteQuest", "GetQuestReward", "GetNumQuestChoices", "IsQuestCompletable", "GetQuestMoneyToGet",
     "QuestGetAutoAccept", "QuestIsFromAdventureMap", "GetNumActiveQuests", "GetNumAvailableQuests", "GetActiveTitle",

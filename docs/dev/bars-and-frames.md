@@ -102,8 +102,21 @@ on it in `Apply` when the bar shows and off when it hides, so with the option of
 and in caster and travel form no mana event reaches QoL. A tick sets the value (passed as it
 is, never compared: it can be secret) and only the texts that changed, so with Status Text off and
 the bar not hovered it sets no text. The range is set in `Apply`, which `UNIT_MAXPOWER` wakes. The
-two Status Text CVars are read when the bar is made and on `CVAR_UPDATE` for them, not on a tick:
-the game's Status Text dropdown sets both with `SetCVar`, which fires it.
+two Status Text CVars are read in `Apply` while the bar shows (so also when it is made and when it
+comes back) and on `CVAR_UPDATE` for them, not on a tick: the game's Status Text dropdown sets both
+with `SetCVar`, which fires it, but a value that arrives another way, as at login, doesn't.
+
+On Forever a druid's mana is secret in bear form, in and out of combat (its maximum isn't, but the
+text checks it with `ns.IsUsable` too and handles it the same way if that changes; `ShouldShow` then
+hides the bar at the next `Apply`), so the text can't come from sums. On that path the mana goes through `AbbreviateLargeNumbers`, and the percentage comes from
+`UnitPowerPercent` with `CurveConstants.ScaleTo100`, and both reach the font string through
+`SetFormattedText`; the API docs allow secret arguments there in tainted code. `AbbreviateLargeNumbers`
+hands back a secret string, so its result isn't tested either (no `x and y or z`). The specs can't
+catch that one: plain Lua has no hook for a truth test. A secret text can't be compared, so it is set
+on every tick, nothing of it is kept, and the next usable text is set in turn. This percentage
+rounds to nearest while `TextStatusBar` rounds up, so it can read 1% lower; a curve to match isn't
+worth it. Clients without secret values keep the computed percentage and never touch those two
+globals.
 
 Every Edit Mode frame is clamped to the screen (`EditModeSystemTemplate`), and Edit Mode makes the
 clamped rectangle the frame's selection box: `EditModeSystemMixin:UpdateClampOffsets` sets the clamp

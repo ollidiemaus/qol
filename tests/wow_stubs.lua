@@ -177,12 +177,23 @@ local function newRegion(kind, parent, template)
     end
     function region:SetEnabled(enabled) self.enabled = enabled and true or false end
     function region:IsEnabled() return self.enabled end
-    -- textSets counts the SetText calls.
+    -- textSets counts the SetText and SetFormattedText calls.
     function region:SetText(text)
         self.text = text
         self.textSets = (self.textSets or 0) + 1
     end
-    function region:SetFormattedText(format, ...) self.text = format:format(...) end
+    -- A secret argument shows as "<SECRET>" in its format's place, so that a spec sees it got there:
+    -- format() itself takes no secret in plain Lua.
+    function region:SetFormattedText(format, ...)
+        local args, index = { ... }, 0
+        self.text = format:gsub("%%[%d%.]*[%a%%]", function(spec)
+            if spec == "%%" then return "%" end
+            index = index + 1
+            if args[index] == Stubs.SECRET then return tostring(Stubs.SECRET) end
+            return spec:format(args[index])
+        end)
+        self.textSets = (self.textSets or 0) + 1
+    end
     function region:GetText() return self.text end
     -- 5 units a character, whatever the font.
     function region:GetStringWidth() return #(self.text or "") * 5 end
@@ -1753,7 +1764,19 @@ local function install()
         if powerType == G.Enum.PowerType.Mana then return info.maxMana or 0 end
         return info.maxPower or 0
     end
-    G.AbbreviateLargeNumbers = function(value) return tostring(value) end
+    -- Mana only, on the one curve the addon uses. Secret when the mana or its maximum is.
+    G.CurveConstants = { ScaleTo100 = {} }
+    G.UnitPowerPercent = function(unit, powerType, _, curve)
+        assert(powerType == G.Enum.PowerType.Mana, "UnitPowerPercent: the stub fakes mana only")
+        assert(curve == G.CurveConstants.ScaleTo100, "UnitPowerPercent: the stub fakes CurveConstants.ScaleTo100 only")
+        local value, maxValue = G.UnitPower(unit, powerType), G.UnitPowerMax(unit, powerType)
+        if value == Stubs.SECRET or maxValue == Stubs.SECRET then return Stubs.SECRET end
+        return value / maxValue * 100
+    end
+    G.AbbreviateLargeNumbers = function(value)
+        if value == Stubs.SECRET then return Stubs.SECRET end
+        return tostring(value)
+    end
     G.RAID_CLASS_COLORS = {
         MAGE = { r = 0.25, g = 0.78, b = 0.92 },
         PRIEST = { r = 1, g = 1, b = 1 },
