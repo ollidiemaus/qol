@@ -15,7 +15,10 @@ that kind. All three were made with small numpy scripts, not kept in the reposit
 The square minimap replaces the minimap's mask and hides the round frame textures
 (`MinimapCompassTexture` and its underlay). Forever's minimap code (`Blizzard_Minimap/Camelot/Minimap.lua`)
 sets its round mask again when `rotateMinimap` changes, so a `CVAR_UPDATE` for it applies the square
-mask again; the hybrid minimap has a mask of its own (`HybridMinimap.CircleMask`). The zone text is
+mask again; the hybrid minimap has a mask of its own (`HybridMinimap.CircleMask`). `GetMinimapShape`
+is set on `ADDON_LOADED`, not with the rest of the layout: LibDBIcon places its buttons on
+`PLAYER_LOGIN` by what it answers then, and `ns.Later` runs a frame later, which would put them on the
+circle after every reload. It is only a global of ours, so it needs no `ns.Later`. The zone text is
 the game's own `MinimapCluster.ZoneTextButton`, moved: it keeps its tooltip and click. Its frame
 goes to the hidden holder when it moves, or at its default spot when the player asks: before
 Forever 1.60.1 the separate `MinimapCluster.BorderTop`, since then the button's own `StateTexture`

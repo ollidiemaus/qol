@@ -69,6 +69,21 @@ describe("square minimap", function()
         T.eq(GetMinimapShape(), "SQUARE")
     end)
 
+    -- LibDBIcon places its buttons on PLAYER_LOGIN, by what GetMinimapShape answers then.
+    it("answers the shape before login, for the addons that place their buttons on PLAYER_LOGIN", function()
+        Stubs.LoadAddon()
+        QoLDB = { options = { squareMinimap = true } }
+        Stubs.Fire("ADDON_LOADED", "QoL")
+        T.eq(GetMinimapShape(), "SQUARE")
+    end)
+
+    it("leaves the shape to the game before login on a round minimap", function()
+        Stubs.LoadAddon()
+        QoLDB = {}
+        Stubs.Fire("ADDON_LOADED", "QoL")
+        T.eq(GetMinimapShape, nil)
+    end)
+
     it("frames the square map in Forever's bronze, or with a thin black line", function()
         local ns = start({ squareMinimap = true })
         local frame = border()

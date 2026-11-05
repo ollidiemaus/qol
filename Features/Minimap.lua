@@ -220,9 +220,30 @@ local function showBorder(style)
     border:Show()
 end
 
--- Whether the map is square because of us, and the GetMinimapShape we replaced.
+-- Whether the map is square because of us, whether GetMinimapShape says so, and the one we replaced.
 local squared = false
+local shapeAnswered = false
 local previousShape
+
+local function answerShape(square)
+    if square and not shapeAnswered then
+        previousShape = _G.GetMinimapShape
+        _G.GetMinimapShape = squareShape
+        shapeAnswered = true
+    elseif not square and shapeAnswered then
+        if _G.GetMinimapShape == squareShape then
+            _G.GetMinimapShape = previousShape
+        end
+        previousShape = nil
+        shapeAnswered = false
+    end
+end
+
+-- Before login: LibDBIcon places its buttons on PLAYER_LOGIN by what GetMinimapShape answers then,
+-- and the layout runs after that. Only a global of ours is set, no Blizzard frame is touched.
+function MinimapLayout:ProvideShape()
+    answerShape(Options:Get(SQUARE))
+end
 
 -- Some zones draw the minimap with the hybrid minimap (loaded on demand), masked on its own.
 local function setHybridMask(mask)
@@ -236,20 +257,14 @@ function MinimapLayout:ApplyShape()
         setHybridMask(SQUARE_MASK)
         setHidden(true, ringTextures())
         showBorder(borderStyle())
-        if not squared then
-            previousShape = _G.GetMinimapShape
-            _G.GetMinimapShape = squareShape
-        end
+        answerShape(true)
         squared = true
     elseif squared then
         Minimap:SetMaskTexture(self.RoundMask())
         setHybridMask(ROUND_MASK_FILE)
         setHidden(false, ringTextures())
         border:Hide()
-        if _G.GetMinimapShape == squareShape then
-            _G.GetMinimapShape = previousShape
-        end
-        previousShape = nil
+        answerShape(false)
         squared = false
     end
 end
