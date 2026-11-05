@@ -776,6 +776,22 @@ function Stubs.ShowClassicTooltip(what, options)
     return tooltip
 end
 
+-- Retail's hidden settings as /qol probe measured them (12.1.5 build 70575, 2026-10-28), where they
+-- differ from Forever's: the camera distance and what View Distance and Ground Clutter set.
+local function makeRetail(G)
+    G.GetBuildInfo = function() return "12.1.5", "70575", "Oct 21 2026", 120105 end
+    G.WOW_PROJECT_ID = G.WOW_PROJECT_MAINLINE
+    state.cvars.cameraDistanceMaxZoomFactor, state.cvarDefaults.cameraDistanceMaxZoomFactor = "1.9", "1.9"
+    state.cvarRanges.cameraDistanceMaxZoomFactor = { 1, 2.6 }
+    local density = { 16, 16, 16, 40, 64, 80, 80, 128, 128, 256 }
+    for step, settings in pairs(state.gameSliders.graphicsGroundClutter) do
+        settings.groundEffectDensity = tostring(density[step + 1])
+    end
+    local view = state.gameSliders.graphicsViewDistance
+    view[0].farclip, view[0].horizonClip = "1500", "1500"
+    view[1].farclip, view[1].horizonClip = "2000", "2000"
+end
+
 -- Takes out what Classic Era (1.15.9) lacks: the tooltip data processor (its tooltips run scripts
 -- instead, Stubs.ShowClassicTooltip), the spell book's skill
 -- lines, toys, the addon compartment, combined bags, Forever's controller interface, the player
@@ -795,12 +811,13 @@ local function makeClassicEra(G)
         cvars[cvar], defaults[cvar] = value, value
     end
     state.cvarRanges.groundEffectDist = { 70, 500 }
-    state.cvarRanges.cameraDistanceMaxZoomFactor = { 1, 4 }
     cvars.graphicsViewDistance, state.cvarRanges.graphicsViewDistance = nil, nil
     state.gameSliders.graphicsViewDistance = nil
     local clutter = { 70, 70, 70, 110, 160, 185, 200, 260, 300, 320 }
+    local density = { 16, 32, 48, 48, 64, 80, 80, 128, 128, 256 }
     for step, settings in pairs(state.gameSliders.graphicsGroundClutter) do
         settings.groundEffectDist = tostring(clutter[step + 1])
+        settings.groundEffectDensity = tostring(density[step + 1])
     end
     G.TooltipDataProcessor = nil
     G.SELL_PRICE = "Sell Price"
@@ -1760,20 +1777,20 @@ for index = 1, 4 do
     ADDON_GLOBALS[#ADDON_GLOBALS + 1] = "BINDING_NAME_CLICK QoLBackButton" .. index .. ":LeftButton"
 end
 
--- The game sliders as retail's probe measured them (2026-10-28): what each step sets, from step 1.
+-- The game sliders as Forever's probe measured them (2026-11-05): what each step sets, from step 1.
 -- The client starts at step 5 of View Distance and Environment Detail, as Forever's first-run config
 -- has it, and at step 3 of Ground Clutter, which sets its settings' game defaults.
 local GAME_SLIDERS = {
     graphicsViewDistance = { start = 4,
-        farclip = { 1500, 2000, 3000, 5000, 6000, 6000, 7000, 8000, 8000, 10000 },
+        farclip = { 3000, 3000, 3000, 5000, 6000, 6000, 7000, 8000, 8000, 10000 },
         horizonStart = { 400, 600, 800, 1000, 1400, 1700, 1900, 2400, 3000, 4000 },
-        horizonClip = { 1500, 2000, 3000, 5000, 6000, 6000, 7000, 8000, 8000, 10000 } },
+        horizonClip = { 3000, 3000, 3000, 5000, 6000, 6000, 7000, 8000, 8000, 10000 } },
     graphicsEnvironmentDetail = { start = 4,
         lodObjectCullSize = { 35, 30, 27, 22, 20, 19, 18, 17, 16, 14 },
         lodObjectFadeScale = { 50, 50, 80, 80, 90, 90, 100, 110, 125, 150 } },
     graphicsGroundClutter = { start = 2,
         groundEffectDist = { 40, 55, 70, 110, 160, 185, 200, 260, 300, 320 },
-        groundEffectDensity = { 16, 16, 16, 40, 64, 80, 80, 128, 128, 256 } },
+        groundEffectDensity = { 16, 16, 16, 32, 32, 32, 48, 48, 48, 48 } },
 }
 
 -- The game sliders' CVars in the state: their step (from 0), range and, per step, what it sets.
@@ -1827,17 +1844,17 @@ function Stubs.Reset(options)
             groundEffectDensity = "16", weatherDensity = "2", ResampleAlwaysSharpen = "0",
             farclip = "6000", horizonStart = "1400", horizonClip = "6000", lodObjectFadeScale = "90",
             lodObjectCullSize = "20", lodObjectCullDist = "30",
-            cameraDistanceMaxZoomFactor = "1.9", RAIDgroundEffectDist = "70", RAIDgroundEffectFade = "70", RAIDgroundEffectDensity = "16",
+            cameraDistanceMaxZoomFactor = "1", RAIDgroundEffectDist = "70", RAIDgroundEffectFade = "70", RAIDgroundEffectDensity = "16",
             RAIDweatherDensity = "2", RAIDfarclip = "6000" },
         cvarRanges = { groundEffectDist = { 40, 500 }, groundEffectDensity = { 16, 256 }, weatherDensity = { 0, 3 },
             lodObjectFadeScale = { 50, 5000 }, lodObjectCullSize = { 1, 100 }, lodObjectCullDist = { 1, 200 },
-            cameraDistanceMaxZoomFactor = { 1, 2.6 } },
+            cameraDistanceMaxZoomFactor = { 1, 4 } },
         -- The hidden settings' game defaults: each starts at its own, but those its game slider sets.
         cvarDefaults = { chatClassColorOverride = "2", groundEffectDist = "70", groundEffectFade = "70",
             groundEffectDensity = "16", weatherDensity = "2", ResampleAlwaysSharpen = "0",
             farclip = "1000", horizonStart = "800", horizonClip = "1600", lodObjectFadeScale = "100",
             lodObjectCullSize = "15", lodObjectCullDist = "30",
-            cameraDistanceMaxZoomFactor = "1.9" }, cvarSecure = {}, cvarWhole = {}, cvarSets = {}, cvarReads = 0,
+            cameraDistanceMaxZoomFactor = "1" }, cvarSecure = {}, cvarWhole = {}, cvarSets = {}, cvarReads = 0,
         gameSliders = {}, gameSliderRewrites = true,
         shift = false,
         quest = { npc = "Creature-0-1-0-1-3139-0001", gossipActive = {}, gossipAvailable = {}, greetingActive = {},
@@ -1872,6 +1889,7 @@ function Stubs.Reset(options)
     _G.SlashCmdList = {}
     install()
     if state.client == "classicEra" then makeClassicEra(_G) end
+    if state.client == "retail" then makeRetail(_G) end
 end
 
 local function tocFiles()

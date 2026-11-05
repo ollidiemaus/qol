@@ -308,7 +308,7 @@ has:
 The **Draw distance** section after them has:
 
 - **World distance:** how far away the world is drawn (1000 to 10000 yards, in steps of 100). The
-  game's View Distance sets 1500 to 10000.
+  game's View Distance sets 3000 to 10000.
 - **Horizon start** and **Horizon end:** how far away the horizon begins (400 to 4000) and ends
   (1500 to 10000), in steps of 100. View Distance keeps the end equal to World distance, so move
   both, or distant terrain stops where the horizon ended.
@@ -324,7 +324,7 @@ English in every language.
 
 The **Camera** section after them has:
 
-- **Max camera distance:** how far the camera can zoom out (1.0 to 2.6, in steps of 0.1). The game's
+- **Max camera distance:** how far the camera can zoom out (1.0 to 4.0, in steps of 0.1). The game's
   own Max Camera Distance slider stops at 2.0; moving it brings this back to 2.0 or lower.
 
 Each slider covers the range the game takes (World distance and the horizon take any value, so
@@ -348,8 +348,9 @@ rows it sets, its Max Camera Distance slider the camera distance), and in raids 
 battlegrounds the game uses its Raid and Battleground graphics instead, while those are on. A
 setting your client doesn't have isn't shown.
 
-On Classic Era the ranges are Classic Era's: Max camera distance goes up to 4.0 and Ground clutter
-distance starts at 70 (its Ground Clutter sets 70 to 320). Classic Era has no View Distance, so
+On retail Max camera distance goes up to 2.6, and the game's View Distance sets World distance from
+1500. On Classic Era Ground clutter distance starts at 70 (its Ground Clutter sets 70 to 320), and
+Classic Era has no View Distance, so
 nothing in its options changes World distance or the horizon, and their Reset puts back the game's
 default (World distance 2112, Horizon start 777, Horizon end 1600), greyed out while it's there.
 
