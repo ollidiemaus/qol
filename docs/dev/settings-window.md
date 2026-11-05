@@ -116,7 +116,9 @@ templates (`SettingsCheckboxTemplate`, `WowStyle2DropdownTemplate`,
 keyboard (Enter, Tab, a click elsewhere), and then, and on Escape, the box shows what the row has
 again; Tab goes on to the page's next box through the template's own `nextEditBox` and
 `previousEditBox`. A refresh leaves a box alone while it has the keyboard, and greys a disabled
-box's text, which the game doesn't. A text row trims what's typed. A slider's box (the Advanced
+box's text, which the game doesn't. A text row trims what's typed. A `NumberPair` row (the minimap's
+offsets, as a column can't hold two sliders) is two controls on one row, each a box between two plain
+buttons with the slider's arrow atlases: Buttons and EditBoxes, so the controller cursor stops on them. A slider's box (the Advanced
 page's, in place of the slider's value text) takes a number, set through the slider so it goes
 where a dragged value does: rounded to the row's `step`, out of range to the nearest end, and
 anything else, or a number that rounds to the value, sets nothing. It shows as many decimals as the

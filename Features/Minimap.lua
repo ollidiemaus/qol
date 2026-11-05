@@ -18,8 +18,9 @@ local Options = ns.Options
 --     by its PvP status each time the zone changes; the class color is put back right after.
 --   * Font sizes for the zone text, the clock and the FPS and ping. Their frames grow with a larger
 --     font, so the rows around the minimap make room for them.
---   * FPS and ping: a text of ours with the frame rate and the latency, placed in the rows like the
---     clock, also in class color and at another font size.
+--   * FPS and ping: a text of ours with the frame rate, the ping or both, placed in the rows like
+--     the clock, also in class color and at another font size.
+--   * Offsets: each of these can shift a little from its spot, the coordinates too.
 -- Classic Era names some of these differently (see its frames below).
 -- Only widget methods are called; the game's own minimap code is never called or hooked.
 local MinimapLayout = {}
@@ -31,7 +32,8 @@ local CLOCK_COLOR, COORDS_COLOR = "minimapClockClassColor", "minimapCoordsClassC
 local CALENDAR, ZONE_TEXT_FRAME = "hideMinimapCalendar", "hideMinimapZoneTextFrame"
 local ZONE_TEXT_SIZE, CLOCK_SIZE = "minimapZoneTextSize", "minimapClockSize"
 local PERFORMANCE, PERFORMANCE_COLOR = "minimapPerformance", "minimapPerformanceClassColor"
-local PERFORMANCE_SIZE = "minimapPerformanceSize"
+local PERFORMANCE_SIZE, PERFORMANCE_SHOW = "minimapPerformanceSize", "minimapPerformanceShow"
+local COORDS = "minimapCoords" -- what the coordinates' offset options start with
 
 -- The choices for a moving element, in the order the settings list them (PositionsFor). "default"
 -- leaves it where the game puts it.
@@ -71,12 +73,20 @@ local function dayNightFrame()
 end
 
 -- The elements that move, in the order they sit side by side within a spot (the first one at the
--- minimap's edge for left and right, the first one on the left in the middle).
+-- minimap's edge for left and right, the first one on the left in the middle). parts: what an
+-- offset moves at the game's own place instead of the frame, where the game anchors other frames
+-- to it (the zone text's button holds the clock, the calendar and the mail icon, Retail's tracking
+-- frame the mail icon).
 MinimapLayout.ELEMENTS = {
     { key = "minimapTracking", inside = true,
-        frame = function() return clusterFrame("Tracking") or MiniMapTracking end },
+        frame = function() return clusterFrame("Tracking") or MiniMapTracking end,
+        parts = function()
+            local tracking = clusterFrame("Tracking")
+            return tracking and { tracking.Button, tracking.Background } or nil
+        end },
     { key = ZONE_TEXT, isZoneText = true,
-        frame = function() return MinimapCluster and MinimapCluster.ZoneTextButton end },
+        frame = function() return MinimapCluster and MinimapCluster.ZoneTextButton end,
+        parts = function() return { MinimapZoneText } end },
     { key = "minimapClock", frame = function() return TimeManagerClockButton end },
     -- Our own FPS and ping text (see below): the game has no place for it, so it has no default,
     -- and its text keeps to the side of the row it's on.
@@ -280,26 +290,73 @@ local function savePoints(frame)
     return points
 end
 
-local function restorePoints(frame, points)
+-- An anchor's offset, 0 if it isn't one we can compute with.
+local function anchorOffset(value)
+    return ns.IsUsable(value) and value or 0
+end
+
+-- dx, dy (optional): a shift on top, in the frame's own units.
+local function restorePoints(frame, points, dx, dy)
     frame:ClearAllPoints()
     for _, p in ipairs(points) do
-        frame:SetPoint(p[1], p[2], p[3], p[4], p[5])
+        if dx then
+            frame:SetPoint(p[1], p[2], p[3], anchorOffset(p[4]) + dx, anchorOffset(p[5]) + dy)
+        else
+            frame:SetPoint(p[1], p[2], p[3], p[4], p[5])
+        end
     end
 end
 
--- What each frame we moved looked like before (anchors, and the zone text's width and alignment).
+local POINT_TOLERANCE = 0.01
+
+local function samePoints(a, b)
+    if #a ~= #b then return false end
+    for i, p in ipairs(a) do
+        local q = b[i]
+        if p[1] ~= q[1] or p[2] ~= q[2] or p[3] ~= q[3]
+            or math.abs(anchorOffset(p[4]) - anchorOffset(q[4])) > POINT_TOLERANCE
+            or math.abs(anchorOffset(p[5]) - anchorOffset(q[5])) > POINT_TOLERANCE then
+            return false
+        end
+    end
+    return true
+end
+
+-- What each frame we moved looked like before (anchors, and the zone text's width and alignment),
+-- and in placed the anchors the last layout left it with. Font strings and textures have no level.
 local originals = {}
 
 local function remember(frame, extra)
     if originals[frame] then return end
-    local saved = { points = savePoints(frame), level = frame:GetFrameLevel() }
+    local points = savePoints(frame)
+    -- A texture with no anchors in the game's XML fills its parent.
+    if #points == 0 then
+        local parent = frame:GetParent()
+        points = { { "TOPLEFT", parent, "TOPLEFT", 0, 0 }, { "BOTTOMRIGHT", parent, "BOTTOMRIGHT", 0, 0 } }
+    end
+    local saved = { points = points, level = frame.GetFrameLevel and frame:GetFrameLevel() }
     if extra then extra(saved) end
     originals[frame] = saved
+end
+
+-- The game can anchor a frame anew while we hold it (Edit Mode's "Header underneath", Forever's day
+-- and night icon on every minimap scale). Anchors that aren't the ones we left are the game's new
+-- originals, or a shift or going back would use an old place.
+local function followGame()
+    for frame, saved in pairs(originals) do
+        local points = savePoints(frame)
+        if saved.placed and not samePoints(points, saved.placed) then saved.points = points end
+    end
+end
+
+local function notePlaced()
+    for frame, saved in pairs(originals) do saved.placed = savePoints(frame) end
 end
 
 -- A button inside the map is drawn above it (the cluster's buttons sit below the map's level).
 local function setInside(frame, inside)
     local level = originals[frame].level
+    if not level then return end
     if inside then level = math.max(level, Minimap:GetFrameLevel() + INSIDE_LEVELS) end
     if frame:GetFrameLevel() ~= level then frame:SetFrameLevel(level) end
 end
@@ -308,9 +365,18 @@ local function putBack(frame, extra)
     local saved = originals[frame]
     if not saved then return end
     restorePoints(frame, saved.points)
-    if frame:GetFrameLevel() ~= saved.level then frame:SetFrameLevel(saved.level) end
+    if saved.level and frame:GetFrameLevel() ~= saved.level then frame:SetFrameLevel(saved.level) end
     if extra then extra(saved) end
     originals[frame] = nil
+end
+
+-- At the game's own place: its anchors, moved by dx, dy (screen units at this scale). A frame with
+-- no offset goes back, and one we never held isn't touched at all.
+local function shift(frame, dx, dy, scale, extra)
+    if dx == 0 and dy == 0 then return putBack(frame, extra) end
+    remember(frame, extra)
+    restorePoints(frame, originals[frame].points, dx / scale, dy / scale)
+    setInside(frame, false)
 end
 
 local function rememberZoneText(saved)
@@ -355,6 +421,29 @@ end
 -- Sizes in screen units, so frames of different scales (Edit Mode scales the minimap alone) line up.
 local function screen(frame, size) return size * frame:GetEffectiveScale() end
 
+-- The largest offset either way; Position is what moves something far.
+MinimapLayout.MAX_OFFSET = 30
+
+-- The two options of an offset: an element's key, or COORDS for the coordinates.
+function MinimapLayout.OffsetKeys(key)
+    return key .. "OffsetX", key .. "OffsetY"
+end
+
+-- An offset, in screen units.
+local function offsetOf(key)
+    local x, y = MinimapLayout.OffsetKeys(key)
+    return Options:Get(x), Options:Get(y)
+end
+
+-- Puts a row's or the map's element at x, y (screen units) from a point of relativeTo. The layouts
+-- work out places and widths without the offsets, so neighbors don't make room for a shifted element.
+local function placeItem(item, relativeTo, point, x, y)
+    local scale = item.frame:GetEffectiveScale()
+    local dx, dy = offsetOf(item.element.key)
+    item.frame:ClearAllPoints()
+    item.frame:SetPoint("CENTER", relativeTo, point, (x + dx) / scale, (y + dy) / scale)
+end
+
 local function widthOf(item)
     return item.width or screen(item.frame, item.frame:GetWidth())
 end
@@ -395,11 +484,7 @@ local function layoutRow(row, which, anchor, edgeWidth)
 
     local point = which == "top" and "TOP" or "BOTTOM"
     local y = which == "top" and ROW_GAP + height / 2 or -(ROW_GAP + height / 2)
-    local function place(item, x)
-        local scale = item.frame:GetEffectiveScale()
-        item.frame:ClearAllPoints()
-        item.frame:SetPoint("CENTER", anchor, point, x / scale, y / scale)
-    end
+    local function place(item, x) placeItem(item, anchor, point, x, y) end
     local cursor = -edgeWidth / 2
     for _, item in ipairs(row.left) do
         place(item, cursor + widthOf(item) / 2)
@@ -428,11 +513,7 @@ local function layoutInside(row, which)
     local round = not Options:Get(SQUARE)
     local radius = halfHeight * (1 - ROUND_COVER)
     local up = which == "top" and 1 or -1
-    local function place(item, x, y)
-        local scale = item.frame:GetEffectiveScale()
-        item.frame:ClearAllPoints()
-        item.frame:SetPoint("CENTER", Minimap, "CENTER", x / scale, y / scale)
-    end
+    local function place(item, x, y) placeItem(item, Minimap, "CENTER", x, y) end
     for side, items in pairs(row) do
         if #items > 0 then
             local height = 0
@@ -476,6 +557,7 @@ end
 function MinimapLayout:ApplyPositions()
     local cluster = MinimapCluster
     if not cluster then return end
+    followGame()
     local rows, inside = newRows(), newRows()
     local zoneTextMoved = false
     for _, element in ipairs(self.ELEMENTS) do
@@ -483,6 +565,12 @@ function MinimapLayout:ApplyPositions()
         if frame then
             local position = positionOf(element)
             setHidden(position == "hidden", frame)
+            -- The offset at the game's own place; anywhere else what it moved goes back.
+            local dx, dy = 0, 0
+            if position == "default" then dx, dy = offsetOf(element.key) end
+            local parts = element.parts and element.parts()
+            local scale = frame:GetEffectiveScale()
+            for _, part in ipairs(parts or {}) do shift(part, dx, dy, scale) end
             if type(position) == "table" then
                 remember(frame, element.isZoneText and rememberZoneText or nil)
                 setInside(frame, position.inside == true)
@@ -490,8 +578,10 @@ function MinimapLayout:ApplyPositions()
                 local side = (position.inside and inside or rows)[position.row][position.side]
                 side[#side + 1] = { element = element, frame = frame }
                 zoneTextMoved = zoneTextMoved or element.isZoneText == true
-            else
+            elseif parts then
                 putBack(frame, element.isZoneText and putBackZoneText or nil)
+            else
+                shift(frame, dx, dy, scale)
             end
         end
     end
@@ -509,16 +599,19 @@ function MinimapLayout:ApplyPositions()
     local container = cluster.MinimapContainer
     local coords = container and container.PlayerCoords
     if coords then
+        local scale = coords:GetEffectiveScale()
+        local dx, dy = offsetOf(COORDS)
         if below > 0 then
             remember(coords)
             coords:ClearAllPoints()
-            coords:SetPoint("TOP", anchor, "BOTTOM", 0, -(ROW_GAP + below + COORDS_GAP) / coords:GetEffectiveScale())
+            coords:SetPoint("TOP", anchor, "BOTTOM", dx / scale, (dy - (ROW_GAP + below + COORDS_GAP)) / scale)
         else
-            putBack(coords)
+            shift(coords, dx, dy, scale)
         end
     end
 
     if hasCalendar() then setHidden(Options:Get(CALENDAR), GameTimeFrame) end
+    notePlaced()
 end
 
 ------------------------------------------------------------------------------------------------
@@ -596,25 +689,56 @@ end
 ------------------------------------------------------------------------------------------------
 -- FPS and ping
 
--- A frame of ours with the frame rate and the latency (the higher of home and world, as the game's
--- own latency meter goes by), made the first time it has a row. A timer updates it once a second
--- while it has one; no OnUpdate runs every frame for it. It keeps the width of a three-digit
--- reading, so nothing in its row moves as the numbers change, and its text keeps to its side.
+-- A frame of ours with the frame rate, the ping (the higher of home and world latency, as the
+-- game's own latency meter goes by) or both, made the first time it has a row. A timer updates it
+-- once a second while it has one; no OnUpdate runs every frame for it. It keeps the width of a
+-- three-digit reading of what it shows, so nothing in its row moves as the numbers change, and its
+-- text keeps to its side.
 local PERFORMANCE_SECONDS = 1
 local PERFORMANCE_HEIGHT = 16 -- the clock button's, so either sits alike in a row
 local performance
 local ticker
+local measuredShow -- the Show choice the frame's width was measured for
 
 local function performanceShown()
     return type(positionOf(elementFor(PERFORMANCE))) == "table"
+end
+
+local function setReading(fps, ping)
+    local show = Options:Get(PERFORMANCE_SHOW)
+    if show == "fps" then
+        performance.text:SetFormattedText(L.MINIMAP_PERFORMANCE_FPS, fps)
+    elseif show == "ping" then
+        performance.text:SetFormattedText(L.MINIMAP_PERFORMANCE_PING, ping)
+    else
+        performance.text:SetFormattedText(L.MINIMAP_PERFORMANCE_TEXT, fps, ping)
+    end
 end
 
 local function updatePerformance()
     local fps = GetFramerate()
     local _, _, home, world = GetNetStats()
     fps = ns.IsUsable(fps) and math.floor(fps + 0.5) or 0
-    local latency = (ns.IsUsable(home) and ns.IsUsable(world)) and math.max(home, world) or 0
-    performance.text:SetFormattedText(L.MINIMAP_PERFORMANCE_TEXT, fps, latency)
+    local ping = (ns.IsUsable(home) and ns.IsUsable(world)) and math.max(home, world) or 0
+    setReading(fps, ping)
+end
+
+-- Measures the frame for the Show choice, once per change. The text may be at a font size of ours:
+-- applySize grows the width from what it is at the game's font, which it then gets from here.
+local function fitPerformance()
+    local show = Options:Get(PERFORMANCE_SHOW)
+    if show == measuredShow then return end
+    measuredShow = show
+    setReading(999, 999)
+    local width = performance.text:GetStringWidth()
+    local saved = gameFonts[PERFORMANCE_SIZE]
+    if saved then
+        local _, height = performance.text:GetFont()
+        saved.frameWidth = ns.IsUsable(height) and width * saved.height / height or width
+    else
+        performance:SetWidth(width)
+    end
+    updatePerformance()
 end
 
 local function tick()
@@ -632,12 +756,12 @@ function MinimapLayout:Performance()
     if not performance then
         performance = CreateFrame("Frame", nil, MinimapCluster)
         local text = performance:CreateFontString(nil, "ARTWORK", "WhiteNormalNumberFont")
-        text:SetFormattedText(L.MINIMAP_PERFORMANCE_TEXT, 999, 999)
-        performance:SetSize(text:GetStringWidth(), PERFORMANCE_HEIGHT)
+        performance:SetHeight(PERFORMANCE_HEIGHT)
         performance.text = text
         -- The colors may have been applied before it was there.
         self:ApplyColors()
     end
+    fitPerformance()
     if shown and not ticker then
         updatePerformance()
         ticker = C_Timer.NewTicker(PERFORMANCE_SECONDS, tick)
@@ -730,8 +854,18 @@ function MinimapLayout.HasCalendar()
     return hasCalendar()
 end
 
-local LAYOUT_KEYS = { SQUARE, BORDER, CALENDAR, ZONE_TEXT_FRAME, ZONE_TEXT_SIZE, CLOCK_SIZE, PERFORMANCE_SIZE }
-for _, element in ipairs(MinimapLayout.ELEMENTS) do LAYOUT_KEYS[#LAYOUT_KEYS + 1] = element.key end
+local LAYOUT_KEYS = { SQUARE, BORDER, CALENDAR, ZONE_TEXT_FRAME, ZONE_TEXT_SIZE, CLOCK_SIZE, PERFORMANCE_SIZE,
+    PERFORMANCE_SHOW }
+local function addOffsetKeys(key)
+    local x, y = MinimapLayout.OffsetKeys(key)
+    LAYOUT_KEYS[#LAYOUT_KEYS + 1] = x
+    LAYOUT_KEYS[#LAYOUT_KEYS + 1] = y
+end
+for _, element in ipairs(MinimapLayout.ELEMENTS) do
+    LAYOUT_KEYS[#LAYOUT_KEYS + 1] = element.key
+    addOffsetKeys(element.key)
+end
+addOffsetKeys(COORDS)
 
 local function apply()
     MinimapLayout:Apply()
@@ -791,6 +925,8 @@ function MinimapLayout:Init()
     end)
     -- Edit Mode resizes the minimap, and Forever's skin puts the day and night icon back in place
     -- whenever the minimap's scale is set.
+    -- A layout can also change outside Edit Mode (a spec with its own), with "Header underneath".
+    ns.Events:On("EDIT_MODE_LAYOUTS_UPDATED", relayout)
     if EventRegistry and EventRegistry.RegisterCallback then
         EventRegistry:RegisterCallback("EditMode.Exit", relayout, MinimapLayout)
         EventRegistry:RegisterCallback("Minimap.OnScaleUpdated", relayout, MinimapLayout)

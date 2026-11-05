@@ -160,7 +160,11 @@ local function newRegion(kind, parent, template)
     function region:EnableMouse(enabled) self.mouseEnabled = enabled end
     -- EnableMouse takes the mouse's motion too; SetMouseMotionEnabled only that (OnEnter, OnLeave).
     function region:SetMouseMotionEnabled(enabled) self.mouseMotion = enabled end
-    function region:IsMouseMotionEnabled() return (self.mouseMotion or self.mouseEnabled) == true end
+    -- secretMouse: a part whose answer is secret, seen on Forever's party frames.
+    function region:IsMouseMotionEnabled()
+        if self.secretMouse then return Stubs.SECRET end
+        return (self.mouseMotion or self.mouseEnabled) == true
+    end
     function region:EnableMouseWheel(enabled) self.mouseWheel = enabled end
     -- Whether the mouse is over it (Stubs.Hover), or over a region in it.
     function region:IsMouseOver()
@@ -1236,6 +1240,7 @@ local function install()
     G.MinimapZoneText = newRegion("FontString", cluster.ZoneTextButton)
     G.MinimapZoneText:SetFontObject("GameFontNormal")
     G.MinimapZoneText:SetSize(130, 12)
+    G.MinimapZoneText:SetPoint("LEFT", cluster.ZoneTextButton, "LEFT", 4, 0)
     G.MinimapZoneText:SetJustifyH("LEFT")
     G.MinimapZoneText:SetTextColor(1, 0.82, 0)
     local minimapContainer = newRegion("Frame", cluster)
@@ -1254,6 +1259,10 @@ local function install()
     cluster.Tracking = newRegion("Frame", cluster)
     cluster.Tracking:SetSize(17, 17)
     cluster.Tracking:SetPoint("RIGHT", cluster.BorderTop, "LEFT", -2, 0)
+    cluster.Tracking.Button = newRegion("Button", cluster.Tracking)
+    cluster.Tracking.Button:SetPoint("CENTER", cluster.Tracking, "CENTER", 0, 0)
+    -- A texture with no anchors of its own in the game's XML: it fills its parent.
+    cluster.Tracking.Background = newRegion("Texture", cluster.Tracking)
     G.TimeManagerClockButton = newRegion("Button", cluster)
     G.TimeManagerClockButton:SetSize(40, 16)
     G.TimeManagerClockButton:SetPoint("TOPRIGHT", cluster.BorderTop, "TOPRIGHT", -4, 0)

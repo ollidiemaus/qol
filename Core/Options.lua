@@ -45,20 +45,36 @@ local DEFAULTS = {
     minimapZoneTextClassColor = false,
     hideMinimapZoneTextFrame = false, -- the zone text's frame at its default spot
     minimapZoneTextSize = 0, -- a font size, 0 for the game's own
+    -- Each element's offset: a small shift from its spot, in screen units, across and up.
+    minimapZoneTextOffsetX = 0,
+    minimapZoneTextOffsetY = 0,
     minimapCoordsClassColor = false,
     hideMinimapCoords = false,
+    minimapCoordsOffsetX = 0,
+    minimapCoordsOffsetY = 0,
     -- Where the minimap's buttons go: "default", "hidden", or "topLeft", "top", "topRight",
     -- "bottomLeft", "bottom", "bottomRight" (a row above or below the minimap). The tracking button
     -- and the day and night icon can also go inside the map: "insideTopLeft", "insideTop" and so on.
     minimapClock = "default",
     minimapClockClassColor = false,
     minimapClockSize = 0,
+    minimapClockOffsetX = 0,
+    minimapClockOffsetY = 0,
     minimapPerformance = "hidden", -- FPS and ping: a row's spot or "hidden", no "default"
     minimapPerformanceClassColor = false,
     minimapPerformanceSize = 0,
+    minimapPerformanceShow = "both", -- "both", "fps" or "ping"
+    minimapPerformanceOffsetX = 0,
+    minimapPerformanceOffsetY = 0,
     minimapCompartment = "default",
+    minimapCompartmentOffsetX = 0,
+    minimapCompartmentOffsetY = 0,
     minimapTracking = "default",
+    minimapTrackingOffsetX = 0,
+    minimapTrackingOffsetY = 0,
     minimapDayNight = "default",
+    minimapDayNightOffsetX = 0,
+    minimapDayNightOffsetY = 0,
     hideMinimapCalendar = false,
 
     mapDungeons = false,

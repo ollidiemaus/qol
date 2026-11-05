@@ -124,8 +124,24 @@ local function fontSizes()
     return choices
 end
 
--- Minimap page: the map and the texts around it on the left; the clock, FPS and ping, and the
--- buttons on the right. The sections go side by side in pairs, so their headers line up.
+-- An element's offset row.
+local function offsetRow(page, column, key, tooltip, options)
+    local Layout = ns.MinimapLayout
+    local x, y = Layout.OffsetKeys(key)
+    options = options or {}
+    options.firstCaption, options.secondCaption = L.MINIMAP_OFFSET_X, L.MINIMAP_OFFSET_Y
+    page:NumberPair(column, x, y, L.MINIMAP_OFFSET, -Layout.MAX_OFFSET, Layout.MAX_OFFSET, tooltip, options)
+end
+
+-- Whether a minimap element isn't hidden, for the rows that only apply while it shows.
+local function shown(key)
+    return function() return Options:Get(key) ~= "hidden" end
+end
+
+-- Minimap page: the map and its buttons on the left, the clock and FPS and ping on the right, then
+-- the two texts side by side. The first two sections on each side are of opposite sizes and end
+-- level, which is what keeps the page within its height in this order: level headers would take
+-- 610 of the 600 it has (docs/dev/minimap.md).
 local function buildMinimap(page)
     page:Header("left", L.SECTION_MINIMAP_SHAPE)
     page:Checkbox("left", "squareMinimap", L.SQUARE_MINIMAP, L.SQUARE_MINIMAP_TIP)
@@ -136,11 +152,45 @@ local function buildMinimap(page)
 
     page:Header("right", L.SECTION_MINIMAP_CLOCK)
     page:Dropdown("right", "minimapClock", L.MINIMAP_POSITION, positions("minimapClock"), L.MINIMAP_POSITION_TIP)
-    local clockShown = function() return Options:Get("minimapClock") ~= "hidden" end
+    local clockShown = shown("minimapClock")
     page:Checkbox("right", "minimapClockClassColor", L.MINIMAP_CLASS_COLOR, L.MINIMAP_CLOCK_CLASS_COLOR_TIP,
         { enabled = clockShown })
     page:Dropdown("right", "minimapClockSize", L.FONT_SIZE, fontSizes(), L.MINIMAP_CLOCK_SIZE_TIP,
         { enabled = clockShown })
+    offsetRow(page, "right", "minimapClock", L.MINIMAP_OFFSET_TIP, { enabled = clockShown })
+
+    page:Header("left", L.SECTION_MINIMAP_BUTTONS)
+    local function buttonRows(key, label, tooltip)
+        page:Dropdown("left", key, label, positions(key), tooltip)
+        offsetRow(page, "left", key, L.MINIMAP_OFFSET_TIP, { indent = true, enabled = shown(key) })
+    end
+    -- Classic Era has no addon compartment.
+    if ns.MinimapLayout.HasCompartment() then
+        buttonRows("minimapCompartment", L.MINIMAP_COMPARTMENT, L.MINIMAP_POSITION_TIP)
+    end
+    buttonRows("minimapTracking", L.MINIMAP_TRACKING, L.MINIMAP_INSIDE_POSITION_TIP)
+    -- Forever's day and night icon, or Classic Era's time of day icon; retail has neither.
+    if ns.MinimapLayout.HasDayNight() then
+        buttonRows("minimapDayNight", L.MINIMAP_DAY_NIGHT, L.MINIMAP_INSIDE_POSITION_TIP)
+    end
+    if ns.MinimapLayout.HasCalendar() then
+        page:Checkbox("left", "hideMinimapCalendar", L.HIDE_MINIMAP_CALENDAR, L.HIDE_MINIMAP_CALENDAR_TIP)
+    end
+
+    page:Header("right", L.SECTION_MINIMAP_PERFORMANCE)
+    page:Dropdown("right", "minimapPerformance", L.MINIMAP_POSITION, positions("minimapPerformance"),
+        L.MINIMAP_PERFORMANCE_TIP)
+    local performanceShown = shown("minimapPerformance")
+    page:Dropdown("right", "minimapPerformanceShow", L.MINIMAP_PERFORMANCE_SHOW, {
+        { value = "both", label = L.PERFORMANCE_SHOW_BOTH },
+        { value = "fps", label = L.PERFORMANCE_SHOW_FPS },
+        { value = "ping", label = L.PERFORMANCE_SHOW_PING },
+    }, L.MINIMAP_PERFORMANCE_SHOW_TIP, { enabled = performanceShown })
+    page:Checkbox("right", "minimapPerformanceClassColor", L.MINIMAP_CLASS_COLOR, L.MINIMAP_PERFORMANCE_CLASS_COLOR_TIP,
+        { enabled = performanceShown })
+    page:Dropdown("right", "minimapPerformanceSize", L.FONT_SIZE, fontSizes(), L.MINIMAP_PERFORMANCE_SIZE_TIP,
+        { enabled = performanceShown })
+    offsetRow(page, "right", "minimapPerformance", L.MINIMAP_OFFSET_TIP, { enabled = performanceShown })
     page:Align()
 
     page:Header("left", L.SECTION_MINIMAP_ZONE_TEXT)
@@ -154,39 +204,15 @@ local function buildMinimap(page)
         { indent = true, enabled = function() return Options:Get("minimapZoneText") == "default" end })
     page:Checkbox("left", "minimapZoneTextClassColor", L.MINIMAP_CLASS_COLOR, L.MINIMAP_ZONE_TEXT_CLASS_COLOR_TIP)
     page:Dropdown("left", "minimapZoneTextSize", L.FONT_SIZE, fontSizes(), L.MINIMAP_ZONE_TEXT_SIZE_TIP)
+    offsetRow(page, "left", "minimapZoneText", L.MINIMAP_ZONE_TEXT_OFFSET_TIP)
 
-    page:Header("right", L.SECTION_MINIMAP_PERFORMANCE)
-    page:Dropdown("right", "minimapPerformance", L.MINIMAP_POSITION, positions("minimapPerformance"),
-        L.MINIMAP_PERFORMANCE_TIP)
-    local performanceShown = function() return Options:Get("minimapPerformance") ~= "hidden" end
-    page:Checkbox("right", "minimapPerformanceClassColor", L.MINIMAP_CLASS_COLOR, L.MINIMAP_PERFORMANCE_CLASS_COLOR_TIP,
-        { enabled = performanceShown })
-    page:Dropdown("right", "minimapPerformanceSize", L.FONT_SIZE, fontSizes(), L.MINIMAP_PERFORMANCE_SIZE_TIP,
-        { enabled = performanceShown })
-    page:Align()
-
-    -- Classic Era shows no coordinates under the minimap and has no addon compartment.
+    -- Classic Era shows no coordinates under the minimap.
     if ns.MinimapLayout.HasCoords() then
-        page:Header("left", L.SECTION_MINIMAP_COORDS)
-        page:Checkbox("left", "minimapCoordsClassColor", L.MINIMAP_CLASS_COLOR, L.MINIMAP_COORDS_CLASS_COLOR_TIP,
+        page:Header("right", L.SECTION_MINIMAP_COORDS)
+        page:Checkbox("right", "minimapCoordsClassColor", L.MINIMAP_CLASS_COLOR, L.MINIMAP_COORDS_CLASS_COLOR_TIP,
             { enabled = isNot("hideMinimapCoords") })
-        page:Checkbox("left", "hideMinimapCoords", L.HIDE_MINIMAP_COORDS, L.HIDE_MINIMAP_COORDS_TIP)
-    end
-
-    page:Header("right", L.SECTION_MINIMAP_BUTTONS)
-    if ns.MinimapLayout.HasCompartment() then
-        page:Dropdown("right", "minimapCompartment", L.MINIMAP_COMPARTMENT, positions("minimapCompartment"),
-            L.MINIMAP_POSITION_TIP)
-    end
-    page:Dropdown("right", "minimapTracking", L.MINIMAP_TRACKING, positions("minimapTracking"),
-        L.MINIMAP_INSIDE_POSITION_TIP)
-    -- Forever's day and night icon, or Classic Era's time of day icon; retail has neither.
-    if ns.MinimapLayout.HasDayNight() then
-        page:Dropdown("right", "minimapDayNight", L.MINIMAP_DAY_NIGHT, positions("minimapDayNight"),
-            L.MINIMAP_INSIDE_POSITION_TIP)
-    end
-    if ns.MinimapLayout.HasCalendar() then
-        page:Checkbox("right", "hideMinimapCalendar", L.HIDE_MINIMAP_CALENDAR, L.HIDE_MINIMAP_CALENDAR_TIP)
+        page:Checkbox("right", "hideMinimapCoords", L.HIDE_MINIMAP_COORDS, L.HIDE_MINIMAP_COORDS_TIP)
+        offsetRow(page, "right", "minimapCoords", L.MINIMAP_COORDS_OFFSET_TIP, { enabled = isNot("hideMinimapCoords") })
     end
 end
 

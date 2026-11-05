@@ -97,7 +97,14 @@ the price of one, as its buttons may not say how many items a slot holds.
   Era the tracking button shows only while you track something, as the game has it.
 - **FPS and ping** in a row above or below the minimap (left, center or right), like the clock,
   updated every second, also in class color and at another font size. The ping is the higher of
-  your home and world latency.
+  your home and world latency. **Show** picks FPS and ping, FPS or Ping; the text takes only the
+  room it needs.
+- **Offset:** the zone text, the clock, FPS and ping, the addon compartment, the tracking button, the
+  day and night icon and the coordinates can each shift a little from their spot, up to 30 either
+  way across and up or down, by the arrows or a typed number. An offset works at the game's own
+  place, in a row and inside the map, stays when you change the Position, and moves only that
+  element. At its default spot the zone text moves just its name, so the clock and the buttons
+  next to it stay put. The calendar button has no offset.
 - **Hide the calendar button.**
 - **Hide the coordinates under the minimap.**
 

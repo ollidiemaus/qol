@@ -6,8 +6,8 @@ local Options = ns.Options
 -- fits without scrolling, or in rows across the whole page ("wide", for sliders). It looks like the
 -- game's own settings pages: the title with a Defaults button, section headers, and each option as
 -- its name with a checkbox, a dropdown, a slider, a color swatch or a text box, from the game's own
--- templates, a key binding's two keys, as in the game's Key Bindings, or a button that opens
--- something. A few lines of text can say what a page's options are for. Every name uses the same
+-- templates, two number boxes with arrows, a key binding's two keys, as in the game's Key Bindings, or a
+-- button that opens something. A few lines of text can say what a page's options are for. Every name uses the same
 -- font; an option that belongs to another one sits indented below it and is greyed out while it
 -- can't apply. A page that is one thing of its own below its title (the rings' editor) can have its
 -- switch in the title bar instead of the Defaults button ("title").
@@ -37,6 +37,10 @@ local NUMBER_WIDTH = 36      -- a slider's box for its value, in that room
 local BOX_ART_LEFT = 5       -- InputBoxTemplate's left edge art reaches this far left of the box
 local WIDE_CONTROL_X = -80   -- in a wide row the control starts there from the middle, as on the game's list
 local TITLE_ROW_Y, TITLE_ROW_RIGHT, TITLE_ROW_WIDTH = 14, 28, 300 -- an option in the title bar
+local STEP_WIDTH = 14       -- an arrow of a number field, around the game's slider arrow
+local CAPTION_WIDTH = 12    -- the letter before a number field
+local FIELD_WIDTH = CAPTION_WIDTH + 2 * STEP_WIDTH + BOX_ART_LEFT + NUMBER_WIDTH
+local FIELD_GAP = 10        -- between the two number fields of a row
 local KEY_WIDTH, KEY_HEIGHT = 160, 22 -- a key binding's buttons, as in the game's Key Bindings
 local BUTTON_WIDTH, BUTTON_HEIGHT = 160, 22
 local RESET_WIDTH = 96   -- a row's Reset button, at the end of a wide row (as wide as Defaults)
@@ -499,6 +503,71 @@ function Page:Slider(column, key, label, minValue, maxValue, format, tooltip, op
         box:SetPoint("LEFT", slider, "RIGHT", LABEL_GAP + BOX_ART_LEFT, 0)
     end
     return control
+end
+
+-- An option's number in a box with an arrow on either side, one step of 1 per click, on a field that
+-- takes the row's greying through its own SetEnabled. A typed number goes to the nearest whole one,
+-- anything else puts back the value; either way it stays from minValue to maxValue.
+local function numberField(page, control, caption, minValue, maxValue)
+    local function setClamped(value)
+        control.set(math.max(minValue, math.min(maxValue, value)))
+    end
+    local field = CreateFrame("Frame", nil, control.row)
+    field:SetSize(FIELD_WIDTH, ROW_HEIGHT)
+    local letter = field:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    letter:SetPoint("LEFT", field, "LEFT")
+    letter:SetText(caption)
+
+    local function arrow(atlas, delta)
+        local button = CreateFrame("Button", nil, field)
+        button:SetSize(STEP_WIDTH, ROW_HEIGHT)
+        local art = button:CreateTexture(nil, "BACKGROUND")
+        art:SetAtlas(atlas, true)
+        art:SetPoint("CENTER", button, "CENTER")
+        button.art = art
+        button:SetScript("OnClick", function() setClamped(control.get() + delta) end)
+        button:SetScript("OnEnter", control.enter)
+        button:SetScript("OnLeave", control.leave)
+        return button
+    end
+    field.Back = arrow("Minimal_SliderBar_Button_Left", -1)
+    field.Forward = arrow("Minimal_SliderBar_Button_Right", 1)
+    field.Forward:SetPoint("RIGHT", field, "RIGHT")
+    field.Back:SetPoint("LEFT", field, "LEFT", CAPTION_WIDTH, 0)
+
+    local box = newTextBox(page, control, NUMBER_WIDTH, function(text)
+        local number = tonumber(strtrim(text))
+        -- number == number: tonumber takes "nan".
+        if number and number == number then setClamped(math.floor(number + 0.5)) end
+    end, function() return tostring(control.get()) end)
+    box:SetPoint("RIGHT", field.Forward, "LEFT")
+
+    function field:SetEnabled(enabled)
+        local color = enabled and fontColor(NORMAL_FONT_COLOR, 1, 0.82, 0) or fontColor(GRAY_FONT_COLOR, 0.5, 0.5, 0.5)
+        letter:SetTextColor(color[1], color[2], color[3])
+        for _, button in ipairs({ self.Back, self.Forward }) do
+            button:SetEnabled(enabled)
+            button.art:SetAlpha(enabled and 1 or 0.5)
+        end
+    end
+    return field
+end
+
+-- Two numbers from minValue to maxValue in one column's row (a slider each wouldn't fit), one option
+-- each, after the captions options.firstCaption and options.secondCaption: two controls on one row, so
+-- Tab, greying, the watch and Defaults see them like any other. The second shares the first's name and row.
+function Page:NumberPair(column, keyX, keyY, label, minValue, maxValue, tooltip, options)
+    local x = optionRow(self, column, "number", keyX, label, tooltip, options)
+    local backing = optionBacking(keyY)
+    local y = { kind = "number", key = keyY, name = x.name, title = x.title, tooltip = tooltip, column = column,
+        row = x.row, text = x.text, indent = x.indent, enabled = x.enabled, page = self, enter = x.enter,
+        leave = x.leave, get = backing.get, set = backing.set, reset = backing.reset }
+    self.keys[keyY] = true
+    self.controls[#self.controls + 1] = y
+    place(x, numberField(self, x, options.firstCaption, minValue, maxValue), FIELD_WIDTH + FIELD_GAP)
+    y.widget = numberField(self, y, options.secondCaption, minValue, maxValue)
+    y.widget:SetPoint("RIGHT", y.row, "RIGHT")
+    return x, y
 end
 
 -- "AARRGGBB", the format the game's color swatches save, to r, g, b from 0 to 1.
