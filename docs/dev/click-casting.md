@@ -47,7 +47,8 @@ makes one). A binding with any other action, or not shaped like one, stays saved
   leaving the frame for its bar keeps the keys. Only protected parts: in combat a handle's
   `GetParent` reaches a protected parent only, so the walk works there too. A part can have the
   secret `ObjectSecurity` aspect (seen on the health bar: `IsProtected` is secret, and so is what
-  `SecureHandlerWrapScript` tests on our taint), so it isn't wrapped then: `wrap` tries that frame's
+  `SecureHandlerWrapScript` tests on our taint; on a party frame's part `IsMouseMotionEnabled` was
+  secret too), so it isn't wrapped then: `wrap` tries that frame's
   parts again at the next update, and until then the keys go off over that bar. The tests' handles are
   one per frame, as the game's are, so they compare. The wraps stay
   once made (unwrapping could take

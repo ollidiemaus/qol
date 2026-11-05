@@ -430,13 +430,17 @@ end
 -- (TextStatusBar, with SecureFrameParentPropagationTemplate on them and the frames between): the
 -- mouse going onto one leaves the frame. Their snippets find the frame through their parents,
 -- protected too, so in combat as well. A part can answer IsProtected and IsForbidden with a secret
--- (ObjectSecurity aspect, seen on the health bar). SecureHandlerWrapScript can't take it
--- either, it tests the same aspect on our taint, so that part waits for a later update.
+-- (ObjectSecurity aspect, seen on the health bar), and whether it takes the mouse too (seen on a
+-- party frame's part). SecureHandlerWrapScript can't take it either, it tests the same aspect on
+-- our taint, so that part waits for a later update.
 local function wrapParts(frame, top)
     for _, child in ipairs({ frame:GetChildren() }) do
         if ns.IsUsable(child) then
             local takesMouse = child.IsMouseMotionEnabled or child.IsMouseEnabled
-            if takesMouse(child) then
+            local mouse = takesMouse(child)
+            if not ns.IsUsable(mouse) then
+                unwrappedParts[top] = true
+            elseif mouse then
                 local protected, forbidden = child:IsProtected(), child:IsForbidden()
                 if not ns.IsUsable(protected) or not ns.IsUsable(forbidden) then
                     unwrappedParts[top] = true

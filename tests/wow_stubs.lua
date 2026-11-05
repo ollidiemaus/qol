@@ -160,7 +160,11 @@ local function newRegion(kind, parent, template)
     function region:EnableMouse(enabled) self.mouseEnabled = enabled end
     -- EnableMouse takes the mouse's motion too; SetMouseMotionEnabled only that (OnEnter, OnLeave).
     function region:SetMouseMotionEnabled(enabled) self.mouseMotion = enabled end
-    function region:IsMouseMotionEnabled() return (self.mouseMotion or self.mouseEnabled) == true end
+    -- secretMouse: a part whose answer is secret, seen on Forever's party frames.
+    function region:IsMouseMotionEnabled()
+        if self.secretMouse then return Stubs.SECRET end
+        return (self.mouseMotion or self.mouseEnabled) == true
+    end
     function region:EnableMouseWheel(enabled) self.mouseWheel = enabled end
     -- Whether the mouse is over it (Stubs.Hover), or over a region in it.
     function region:IsMouseOver()
