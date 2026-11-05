@@ -137,3 +137,13 @@ _Avoid_: auto-rank, rank replace
 **Downrank**:
 Keeping a lower rank of a spell on the bars on purpose, such as a cheap Rank 1 Frostbolt to slow a target.
 _Avoid_: low rank (that's any rank below the highest, kept on purpose or not), old rank
+
+### Player frame
+
+**Status text**:
+The numbers or percentage on a player frame bar, chosen by the game's Status Text setting.
+_Avoid_: label, bar text
+
+**Druid mana bar**:
+The third bar on the player frame that shows a druid's mana while bear or cat form uses rage or energy.
+_Avoid_: druid-only mana bar, alternate power bar (that's Blizzard's own third bar)
