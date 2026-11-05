@@ -13,6 +13,8 @@ local function onLoaded(_, loaded)
     ns.SettingsPanel:Init()
     -- Before login, for the unit frame addons that look for it as they build their frames.
     ns.ClickCast:Provide()
+    -- Before login, for the addons that place their minimap buttons on PLAYER_LOGIN.
+    ns.MinimapLayout:ProvideShape()
 end
 ns.Events:On("ADDON_LOADED", onLoaded)
 
