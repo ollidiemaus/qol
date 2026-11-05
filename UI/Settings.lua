@@ -191,7 +191,7 @@ local function buildMinimap(page)
 end
 
 -- Action bar page: the two flips side by side for each bar, then the paging keys and the buttons'
--- look.
+-- look, and on clients with spell ranks the rank upgrades.
 local function buildActionBars(page)
     local ActionBars = ns.ActionBars
     page:Header("left", L.SECTION_FLIP_VERTICAL, L.FLIP_VERTICAL_TIP)
@@ -205,6 +205,13 @@ local function buildActionBars(page)
     page:Checkbox("left", "disableBarPaging", L.DISABLE_BAR_PAGING, L.DISABLE_BAR_PAGING_TIP)
     page:Header("right", L.SECTION_BUTTONS)
     page:Checkbox("right", "hideButtonBorders", L.HIDE_BUTTON_BORDERS, L.HIDE_BUTTON_BORDERS_TIP)
+    if ns.RankUpgrades.IsAvailable() then
+        page:Align()
+        page:Header("left", L.SECTION_RANK_UPGRADES)
+        page:Checkbox("left", "upgradeSpellRanks", L.UPGRADE_SPELL_RANKS, L.UPGRADE_SPELL_RANKS_TIP)
+        page:Button("left", L.UPGRADE_ALL_SPELLS_LABEL, L.UPGRADE_ALL_SPELLS, L.UPGRADE_ALL_SPELLS_TIP,
+            function() ns.RankUpgrades.UpgradeAll() end)
+    end
 end
 
 -- Ring page (also /qol ring): the switch in the title bar, and below it, on a page of the spell

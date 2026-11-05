@@ -781,6 +781,7 @@ end
 local function makeRetail(G)
     G.GetBuildInfo = function() return "12.1.5", "70575", "Oct 21 2026", 120105 end
     G.WOW_PROJECT_ID = G.WOW_PROJECT_MAINLINE
+    G.C_ActionBar.IsHighestSpellRank = nil
     state.cvars.cameraDistanceMaxZoomFactor, state.cvarDefaults.cameraDistanceMaxZoomFactor = "1.9", "1.9"
     state.cvarRanges.cameraDistanceMaxZoomFactor = { 1, 2.6 }
     local density = { 16, 16, 16, 40, 64, 80, 80, 128, 128, 256 }
@@ -831,6 +832,7 @@ local function makeClassicEra(G)
     G.C_SpellBook.GetNumSpellBookSkillLines = nil
     G.C_SpellBook.GetSpellBookSkillLineInfo = nil
     G.C_SpellBook.GetSpellBookItemInfo = nil
+    G.C_ActionBar.IsHighestSpellRank = nil
     G.C_ToyBox, G.PlayerHasToy = nil, nil
     G.AddonCompartmentFrame = nil
     G.ContainerFrameCombinedBags = nil
@@ -1365,7 +1367,10 @@ local function install()
     }
 
     --- Action slots: state.actions[slot] = { texture, usable (default true), noMana, count, cooldown,
-    -- current, autoRepeat }. state.cursor is what PickupAction took; PlaceAction records the slot.
+    -- current, autoRepeat, spell (the ID it holds), macro (its index), casts (the spell a macro casts) }.
+    -- state.cursor is what PickupAction took. PlaceAction records the slot; with a spell on the cursor
+    -- it puts it in the slot and picks up the spell that was there. Forever's slots go past 180 for
+    -- the controller bars, so GetActionInfo and FindSpellActionButtons take any slot.
     local function action(slot)
         assert(type(slot) == "number" and slot >= 1 and slot <= 180, "valid action slot")
         return state.actions[slot]
@@ -1382,10 +1387,35 @@ local function install()
         GetActionCooldownDuration = function(slot) return (action(slot) or {}).cooldown or { seconds = 0 } end,
         IsCurrentAction = function(slot) return (action(slot) or {}).current == true end,
         IsAutoRepeatAction = function(slot) return (action(slot) or {}).autoRepeat == true end,
+        -- Forever's: only whether a client has it matters to the addon.
+        IsHighestSpellRank = function() return true end,
+        -- As the game: nothing when no slot has it, and a macro casting it counts.
+        FindSpellActionButtons = function(id)
+            local slots = {}
+            for slot, a in pairs(state.actions) do
+                if a.spell == id or a.casts == id then slots[#slots + 1] = slot end
+            end
+            if #slots == 0 then return nil end
+            table.sort(slots)
+            return slots
+        end,
     }
+    G.GetActionInfo = function(slot)
+        local a = state.actions[slot]
+        if a and a.spell then return "spell", a.spell, "spell" end
+        if a and a.macro then return "macro", a.macro end
+        return nil
+    end
     G.IsModifiedClick = function(name) return state.modifiedClicks[name] == true end
     G.PickupAction = function(slot) state.cursor = action(slot) and slot end
-    G.PlaceAction = function(slot) state.placed[#state.placed + 1] = slot end
+    G.PlaceAction = function(slot)
+        state.placed[#state.placed + 1] = slot
+        local held = state.cursorInfo
+        if not (held and held[1] == "spell") then return end
+        local old = state.actions[slot]
+        state.actions[slot] = { spell = held[4] }
+        state.cursorInfo = old and old.spell and { "spell", 1, "spell", old.spell, old.spell } or nil
+    end
     G.GetCursorInfo = function()
         if state.cursorInfo then return unpack(state.cursorInfo) end
         if state.cursor then return "action", state.cursor end
@@ -1424,7 +1454,15 @@ local function install()
             if spell(id) then state.cursorInfo = { "spell", 1, "spell", id, id } end
         end,
     }
-    G.C_Spell.GetSpellSubtext = function(id) return (spell(id) or {}).subtext end
+    -- state.spells[id].unloaded: its subtext isn't there until RequestLoadSpellData, unless neverLoads.
+    G.C_Spell.GetSpellSubtext = function(id)
+        local info = spell(id) or {}
+        if not info.unloaded then return info.subtext end
+    end
+    G.C_Spell.IsSpellDataCached = function(id) return not (spell(id) or {}).unloaded end
+    G.C_Spell.RequestLoadSpellData = function(id)
+        if spell(id) and not spell(id).neverLoads then spell(id).unloaded = nil end
+    end
     G.Enum.SpellBookSpellBank = { Player = 0, Pet = 1 }
     G.Enum.SpellBookItemType = { None = 0, Spell = 1, FutureSpell = 2, PetAction = 3, Flyout = 4 }
     G.C_SpellBook = {
@@ -1436,7 +1474,7 @@ local function install()
         GetSpellBookItemInfo = function(slot)
             local s = bookSlots()[slot]
             if not s then return nil end
-            return { actionID = s.id, itemType = s.flyout and 4 or 1, isPassive = s.passive == true,
+            return { actionID = s.id, itemType = s.flyout and 4 or s.future and 2 or 1, isPassive = s.passive == true,
                 isOffSpec = s.offSpec == true }
         end,
     }

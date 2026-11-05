@@ -24,6 +24,32 @@ icon, and the casting and interrupt animations get alpha 0 (their animations onl
 children; reparenting them would break their `GetParent()` calls). Turning the option off puts
 back what was saved per button.
 
+Rank upgrades (`Features/RankUpgrades.lua`, the terms are in the glossary) touch no Blizzard frame:
+only action slots, through the game's API, so there's no taint to reason about beyond staying out of
+combat, which `ns.LaterOutsideWindows` does, along with the controller windows. A slot is replaced
+the way the game's controller bars place an action (`AssignActionToGamepadStandardSlot`):
+`C_Spell.PickupSpell`, `PlaceAction`, `ClearCursor` for the old spell that lands on the cursor. So
+the run needs an empty cursor; with one in use it waits for `CURSOR_CHANGED`, listening only then.
+
+The rule on learning: the ranks learned since the last run (a set, kept while the run waits, so
+ranks learned together are one step, in any event order) go to the highest of them, for the slots
+holding the highest rank not in that set; nothing else moves. A rank learned below a known one
+changes nothing. This is why nothing is saved per slot: a downrank is any slot below the previous
+highest rank, and a rank dragged back counts as one from then on. The button ignores the rule and
+the option.
+
+Ranks come from the spell book: the Spell entries (not FutureSpell) with a digit in their subtext,
+grouped by name, compared by that number. A subtext is missing until the game has loaded the
+spell's data (`GetSpellBookItemInfo`'s `subName` documents it), so a run asks for what isn't cached
+and tries again a second later, five times at most. So a spell of the same name that's not in the book never
+counts, slots are looked up by spell ID only, and "highest" means highest known. The game's "Show
+all spell ranks" filters only the book's window (`IsSpellBookItemLowRank` in
+`Blizzard_SpellBookFrame.lua`), the book's data keeps every rank. `FindSpellActionButtons` with its
+default set searches the keyboard and the controller bars (Blizzard asks it for
+`Enum.ActionBarSet.Gamepad` for the latter), so no storage slot scan. Every slot it returns is
+checked with `GetActionInfo`, so a macro casting the spell stays. `C_ActionBar.IsHighestSpellRank`
+is only what tells a client with ranks: retail and Classic Era don't have it.
+
 The class-colored health bars use only `SetStatusBarDesaturated` and `SetStatusBarColor` on the
 unit frame's own bar (`frame.healthbar`): the default green texture is desaturated and then tinted,
 so its shading stays. Blizzard sets `lockColor` on the player, target, target of target, focus and

@@ -168,6 +168,16 @@ without the dark edge some of them have, use an icon pack.
 With Forever's controller interface on, the game shows its own action bars instead of these, so
 the options above wait until you switch back to keyboard and mouse. The rings work in both.
 
+**Upgrade when learning a rank** (WoW Forever, off by default): when you learn a new rank of a spell,
+the slots holding your previous highest rank get the new one, on every bar, page and form and on the
+controller bars. Lower ranks stay where they are, so a spell you downrank on purpose isn't touched;
+to keep the rank you just replaced, drag it back once and it stays from then on. It waits for the end
+of combat, an empty cursor and, in the controller interface, for the game's windows to close.
+
+**Upgrade all spells now**, under it, moves every spell on your bars to the highest rank you know,
+once, downranks included, whether the option is on or off. Macros, the pet bar and rings are left
+alone by both. Click casting already casts the highest rank.
+
 ### Rings
 
 Rings of actions, drawn in the bronze of Forever's minimap, as many as you like. Hold a ring's key,

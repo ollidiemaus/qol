@@ -102,3 +102,17 @@ _Avoid_: conflict, duplicate (a binding that doesn't work for this character rig
 The damage, healing and miss text the game flashes over the player's and the pet's portrait when they
 take a hit or a heal.
 _Avoid_: combat text (that's the floating combat text in the world), unit frame numbers
+
+### Action bars
+
+**Highest rank**:
+The highest rank of a spell the character knows, not the highest that exists in the game.
+_Avoid_: max rank, top rank
+
+**Rank upgrade**:
+Replacing a spell in an action slot with a higher rank of it.
+_Avoid_: auto-rank, rank replace
+
+**Downrank**:
+Keeping a lower rank of a spell on the bars on purpose, such as a cheap Rank 1 Frostbolt to slow a target.
+_Avoid_: low rank (that's any rank below the highest, kept on purpose or not), old rank

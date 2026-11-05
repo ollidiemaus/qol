@@ -641,7 +641,7 @@ describe("settings pages", function()
     it("lists every bar in both columns of the action bar page, side by side, then paging and buttons", function()
         local ns = start()
         local page = pages(ns).actionBars
-        T.same(headers(page, "left"), { "Reverse vertical growth", "Paging" })
+        T.same(headers(page, "left"), { "Reverse vertical growth", "Paging", "Spell ranks" })
         T.same(headers(page, "right"), { "Reverse horizontal growth", "Buttons" })
         for _, bar in ipairs(ns.ActionBars.BARS) do
             local vertical = control(ns, ns.ActionBars.VerticalKey(bar.frame))
@@ -655,6 +655,36 @@ describe("settings pages", function()
         T.eq(control(ns, "disableBarPaging").row:PointFor("TOPLEFT")[5],
             control(ns, "hideButtonBorders").row:PointFor("TOPLEFT")[5], "paging and buttons side by side")
     end)
+
+    it("has the spell ranks section on the action bar page on Forever, its button upgrading all spells", function()
+        local ns = start()
+        local page = pages(ns).actionBars
+        T.same(headers(page, "left"), { "Reverse vertical growth", "Paging", "Spell ranks" })
+        T.eq(control(ns, "upgradeSpellRanks").column, "left")
+        local button
+        for _, c in ipairs(page.controls) do
+            if c.kind == "button" then button = c end
+        end
+        T.truthy(button, "the button")
+        T.eq(button.widget:GetText(), "Upgrade all spells now")
+        local state = Stubs.state()
+        state.spells[10] = { name = "Frostbolt", subtext = "Rank 1" }
+        state.spells[20] = { name = "Frostbolt", subtext = "Rank 2" }
+        state.actions[1] = { spell = 10 }
+        button.widget:RunScript("OnClick")
+        Stubs.RunTimers()
+        T.eq(state.actions[1].spell, 20)
+    end)
+
+    for _, client in ipairs({ "retail", "classicEra" }) do
+        it("leaves the spell ranks section out on " .. client, function()
+            local ns = Stubs.LoadAddon({ client = client })
+            Stubs.InstallSettings()
+            Stubs.Login()
+            T.eq(control(ns, "upgradeSpellRanks"), nil)
+            T.same(headers(pages(ns).actionBars, "left"), { "Reverse vertical growth", "Paging" })
+        end)
+    end
 
     it("puts the ring on a page of its own: the switch in the title bar, and the rings' editor below it", function()
         local ns = start()

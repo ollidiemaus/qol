@@ -261,3 +261,23 @@ Turn the viewport on with a margin on every side, then:
 A crash writes a report to `_classic_beta_/Errors/` (date, time and "Error" in the name). The
 `Error:` and `Description:` lines at the top say what failed. If it only happens with the viewport
 on, that report is what to look at.
+
+## Rank upgrades
+
+The stubs can't show these; on Forever with **Upgrade when learning a rank** on:
+
+1. Visit a trainer and learn a rank of a spell on the bars, then two ranks of one spell at once: the
+   slots end on the newest rank, a lower rank on another slot stays. If nothing happens, check that
+   the game really leaves the previous rank on the bars after training, that the spell book still
+   has that rank when the run comes, and that `FindSpellActionButtons` finds a rank by its own ID
+   (its documentation expects a base spell).
+2. With a rank on a page that isn't showing, on a druid's form page or a warrior's stance page, and
+   on the controller bars: all of them change (`FindSpellActionButtons` reaches them).
+3. With "Show all spell ranks" off too: the rank above still works.
+4. **Upgrade all spells now**: `C_Spell.PickupSpell` gives the rank asked for, not another one, and
+   a macro casting the spell stays a macro.
+5. Hold an item on the cursor while learning: it stays there, and the slots change once it's put down.
+6. Respec, or anything else that may fire `LEARNED_SPELL_IN_SKILL_LINE` for a rank already known:
+   with a downrank one rank below the highest on a slot, it must stay. The rule takes every spell the
+   event names as new.
+7. No flicker, sound or error worth caring about when several slots change at once.
