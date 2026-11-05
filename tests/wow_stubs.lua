@@ -19,7 +19,8 @@ local function noop() end
 local function permissive(object)
     return setmetatable(object, {
         __index = function(_, key)
-            if type(key) == "string" and key:find("^%u") then return noop end
+            -- SetNamePlateFrame tells a nameplate: only Stubs.NewPooledNamePlate has it.
+            if type(key) == "string" and key:find("^%u") and key ~= "SetNamePlateFrame" then return noop end
             return nil
         end,
     })
@@ -1769,6 +1770,8 @@ local function install()
     for index = 1, 5 do newUnitButton("boss" .. index, "Boss" .. index .. "TargetFrame") end
     -- The raid-style frames' setup (Stubs.NewRaidFrame), and secure hooks on a function.
     G.CompactUnitFrame_SetUpFrame = noop
+    -- state.attackable[unit]: true, or Stubs.SECRET for an answer the game keeps secret.
+    G.UnitCanAttack = function(_, unit) return state.attackable and state.attackable[unit] or false end
     G.hooksecurefunc = function(target, name, hook)
         if type(target) == "string" then target, name, hook = G, target, name end
         local original = target[name]
@@ -2248,6 +2251,10 @@ function runSnippet(header, frame, body, ...)
     header.snippetEnv = header.snippetEnv or {
         owner = frameHandle(header), math = math, string = string, tostring = tostring, tonumber = tonumber,
         strmatch = string.match, GetGamePadState = function() return state.gamepad end,
+        SecureCmdOptionParse = function(text)
+            local unit = text:match("^%[@([^,]+),harm%]")
+            return state.attackable and state.attackable[unit] and "1" or nil
+        end,
     }
     local chunk = compile("local self, button, down = ...\n" .. body, header.snippetEnv)
     state.restricted = state.restricted + 1
@@ -2283,6 +2290,13 @@ end
 -- Button:Click does (going up).
 local function useAction(button, mouseButton)
     local suffix = SUFFIXES[mouseButton] or ("-" .. mouseButton)
+    -- The game sends a click on an attackable unit to the button *harmbutton names; a nameplate's
+    -- click doesn't go this way, and ignores it.
+    if not button.SetNamePlateFrame and state.attackable
+        and state.attackable[modifiedAttribute(button, "unit", suffix)] then
+        mouseButton = modifiedAttribute(button, "harmbutton", suffix) or mouseButton
+        suffix = SUFFIXES[mouseButton] or ("-" .. mouseButton)
+    end
     local actionType = modifiedAttribute(button, "type", suffix)
     local unit = modifiedAttribute(button, "unit", suffix)
     local on = unit and (" on " .. unit) or ""
@@ -2383,6 +2397,27 @@ function Stubs.NewNamePlate(index)
     frame.name, frame.unit = "NamePlate" .. index .. "UnitFrame", "nameplate" .. index
     _G.CompactUnitFrame_SetUpFrame(frame, noop)
     return frame
+end
+
+-- Forever's nameplate unit frame, from a pool: no name, and set up before it has its unit, as
+-- NamePlateBaseMixin:ApplyFrameOptions does. It isn't protected, so attributes change in combat.
+function Stubs.NewPooledNamePlate(index)
+    local frame = newUnitButton(nil)
+    frame.SetNamePlateFrame = noop
+    frame.protected = false
+    function frame:SetAttribute(attribute, value)
+        if state.combat and self.protected then error("ADDON_ACTION_BLOCKED: SetAttribute in combat") end
+        self.attributes[attribute] = value
+    end
+    _G.CompactUnitFrame_SetUpFrame(frame, noop)
+    Stubs.SetPlateUnit(frame, "nameplate" .. index)
+    return frame
+end
+
+-- The pooled plate gets another unit, as the game does in combat too, and says so.
+function Stubs.SetPlateUnit(frame, unit)
+    frame.unit, frame.attributes.unit = unit, unit
+    Stubs.Fire("NAME_PLATE_UNIT_ADDED", unit)
 end
 
 -- Forever's arena frames, loaded on demand.

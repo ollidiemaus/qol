@@ -257,6 +257,7 @@ end
 -- shown.
 local function buildClickCast(page)
     page:Checkbox("title", "clickCast", L.CLICK_CAST, L.CLICK_CAST_TIP)
+    page:Checkbox("title", "clickCastEnemies", L.CLICK_CAST_ENEMIES, L.CLICK_CAST_ENEMIES_TIP)
     local Window, top = ns.SettingsWindow, ns.SettingsPage.TOP
     ns.ClickCastEditor:Create(page.frame, top, Window.PAGE_WIDTH, Window.PAGE_HEIGHT - top)
     local refresh = page.Refresh

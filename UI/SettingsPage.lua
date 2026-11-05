@@ -212,7 +212,10 @@ local function newRow(page, column, height)
     local row = CreateFrame("Frame", nil, page.frame)
     if column == "title" then
         -- In the title bar, where the other pages have their Defaults button; the rows below don't move.
-        row:SetPoint("TOPRIGHT", page.frame, "TOPRIGHT", -TITLE_ROW_RIGHT, -TITLE_ROW_Y)
+        -- A second one goes to the left of the first.
+        local right = TITLE_ROW_RIGHT + (page.titleRows or 0) * TITLE_ROW_WIDTH
+        page.titleRows = (page.titleRows or 0) + 1
+        row:SetPoint("TOPRIGHT", page.frame, "TOPRIGHT", -right, -TITLE_ROW_Y)
         row:SetSize(TITLE_ROW_WIDTH, height)
         return row
     end

@@ -318,6 +318,10 @@ L.CLICK_CAST_TIP = "Click a unit frame with a binding's combination, or press it
     .. "character has its action."
 
 -- Click casting page (/qol click)
+L.CLICK_CAST_ENEMIES = "On enemies"
+L.CLICK_CAST_ENEMIES_TIP = "Your bindings work on units you can attack too, on their nameplates and on the target "
+    .. "and focus frames. Off, Left and Right do what the game does there: target the unit and open its menu. Friendly units "
+    .. "aren't affected, and neither are the boss and arena frames."
 L.CLICK_CAST_BINDINGS = "Bindings"
 L.CLICK_CAST_QUICK_BIND = "Quick bind"
 L.CLICK_CAST_QUICK_END = "End quick bind"
