@@ -60,8 +60,27 @@ makes one). A binding with any other action, or not shaped like one, stays saved
   `ADDON_LOADED`), and the
   raid-style frames: `hooksecurefunc("CompactUnitFrame_SetUpFrame", ...)` on the global function
   (not a frame's method) only notes the frame and schedules the change, outside Blizzard's call
-  stack. Nameplates (by name or by unit) and forbidden frames are left out. A frame that turns up in
-  combat gets the bindings once it ends.
+  stack. Forbidden frames and nameplates known by name or unit are left out. Forever's nameplate
+  unit frames aren't known that way: they come from a pool without a name, and `SetUpFrame` runs
+  before `SetUnit`, so they're in. `EnableMouse` is off and the frame has no `OnClick` (checked in
+  game, the template doesn't inherit `SecureUnitButtonTemplate`), yet a click on a plate casts what
+  its click attributes say: the game's hit test reads them itself. It never gets `OnEnter`, so keys
+  and the wheel do nothing there. A frame that turns up in combat gets the bindings once it ends.
+- Enemy nameplates (`clickCastEnemies`, off by default): that click ignores `*harmbutton<n>`
+  (seen in game: set, and the spell still cast), so `SecureUnitButton_OnClick`'s remapping is no way
+  to tell friend from foe. Instead an enemy plate has no QoL attributes at all (`leftToGame`, a plate
+  told by its mixin's `SetNamePlateFrame`), so it has the game's own values. A pooled plate changes
+  unit and side in combat, so `NAME_PLATE_UNIT_ADDED` and `UNIT_FACTION` on a nameplate unit run
+  `updatePlates` through `ns.Later(..., true)`, in combat too: the template isn't protected. A plate
+  that answers `IsProtected` otherwise, or with a secret, waits for the end of combat.
+- Enemy on the target, target of target, focus and focus target frames (`EITHER_SIDE`, same option):
+  their units change in combat and they're protected, but they are real secure unit buttons, so `*harmbutton<n>` does work: `offOnEnemies` sends Left and Right to
+  `qolenemy1` and 2, with the frame's own `*type1` and `*type2`, and any other button to `qolenemy`,
+  which has no type. `SecureUnitButton_OnClick` looks at the real button's type first; that only
+  stops `target` or `menu` the game doesn't bind, and QoL writes those as `click`. Keys: `ENTER`
+  binds none on a frame with `qol-enemies-off` whose unit is `[harm]`. It's asked on entering, so
+  a unit changing under a mouse that stays keeps what was bound. Boss and arena frames only show
+  enemies, so they aren't covered: bindings there are meant for enemies.
 - Other addons' frames: unless another addon made `ClickCastHeader` first, QoL provides the shared
   `ClickCastFrames` table (writing `ClickCastFrames[frame] = true` or nil puts a frame in or out; a
   plain table a unit frame addon made before QoL loaded is taken over with its frames) and

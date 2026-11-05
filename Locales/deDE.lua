@@ -308,6 +308,10 @@ L.CLICK_CAST_TIP = "Klick ein Einheitenfenster mit der Kombination einer Belegun
     .. "Charakter ihre Aktion hat."
 
 -- Seite Klickzauber (/qol click)
+L.CLICK_CAST_ENEMIES = "Auf Feinden"
+L.CLICK_CAST_ENEMIES_TIP = "Deine Belegungen wirken auch auf Einheiten, die du angreifen kannst, auf ihren "
+    .. "Namensplaketten und auf den Ziel- und Fokusfenstern. Aus: Links und Rechts tun dort, was das Spiel tut, nämlich die Einheit "
+    .. "ins Ziel nehmen und ihr Menü öffnen. Freundliche Einheiten sind nicht betroffen, die Boss- und Arenafenster auch nicht."
 L.CLICK_CAST_BINDINGS = "Belegungen"
 L.CLICK_CAST_QUICK_BIND = "Schnellbelegung"
 L.CLICK_CAST_QUICK_END = "Schnellbelegung beenden"

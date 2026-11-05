@@ -9,6 +9,7 @@ ns.ClickCast = ClickCast
 local Options = ns.Options
 local Entries = ns.RingEntries
 local KEY = "clickCast"
+local ENEMIES = "clickCastEnemies"
 
 -- The mouse buttons, by their names in combinations: the button a click is, and the suffix of the
 -- attributes for it.
@@ -256,6 +257,8 @@ end
 -- Blizzard's unit frames that are always there; the party, boss and arena frames come and go.
 local NAMED = { "PlayerFrame", "TargetFrame", "TargetFrameToT", "FocusFrame", "FocusFrameToT", "PetFrame" }
 
+-- A nameplate known by its name or unit is left out. Forever's pooled ones have neither when
+-- CompactUnitFrame_SetUpFrame runs, so they're in; the enemy ones can be left out (leftToGame).
 local function usable(frame)
     if type(frame) ~= "table" or type(frame.SetAttribute) ~= "function" then return false end
     if frame.IsForbidden and frame:IsForbidden() then return false end
@@ -288,6 +291,8 @@ end
 
 -- An attribute to clear.
 local NIL = {}
+-- The click bindings in use and those delegated, for updatePlates; nil while click casting is off.
+local plateClicks, plateDelegated
 -- Per frame: its own value of each attribute changed (NIL: it had none), and what was set.
 local originals, written = {}, {}
 
@@ -375,6 +380,40 @@ local function clickAttributes(frame, clicks, delegated)
     return wanted
 end
 
+-- Whether the frame is a nameplate of a unit click casting leaves to the game. Asked of a pooled
+-- plate (see usable); an answer the game keeps secret counts as an enemy.
+local function leftToGame(frame)
+    if not frame.SetNamePlateFrame or Options:Get(ENEMIES) == true then return false end
+    local unit = frame:GetAttribute("unit")
+    if not unit then return false end
+    local attackable = UnitCanAttack("player", unit)
+    return not ns.IsUsable(attackable) or attackable == true
+end
+
+-- The frames whose unit can be an enemy or not (the boss and arena frames only show enemies).
+local EITHER_SIDE = {
+    TargetFrame = true, TargetFrameToT = true, FocusFrame = true, FocusFrameToT = true,
+}
+
+-- These frames' units change in combat, when attributes can't, but they are secure unit buttons:
+-- when a click comes, the game sends a click on a unit the player can attack to the button
+-- named by *harmbutton<n>. Those have the frame's own Target and Menu, any other button nothing.
+local function offOnEnemies(frame, wanted)
+    wanted["qol-enemies-off"] = true
+    wanted["*harmbutton*"] = "qolenemy"
+    for _, suffix in ipairs({ "1", "2" }) do
+        wanted["*harmbutton" .. suffix] = "qolenemy" .. suffix
+        wanted["*type-qolenemy" .. suffix] = own(frame, "*type" .. suffix)
+    end
+end
+
+local function attributesOf(frame, clicks, delegated)
+    if leftToGame(frame) then return {} end
+    local wanted = clickAttributes(frame, clicks, delegated)
+    if EITHER_SIDE[frame:GetName()] and Options:Get(ENEMIES) ~= true then offOnEnemies(frame, wanted) end
+    return wanted
+end
+
 -- The keys button's attributes: key index acts as "k<index>".
 local function keyAttributes(keys)
     local wanted = { useOnKeyDown = true }
@@ -408,6 +447,7 @@ local ENTER = [[
     owner:GetFrameRef("clicks"):SetAttribute("unit", unit)
     owner:ClearBindings()
     if not unit then return end
+    if frame:GetAttribute("qol-enemies-off") and SecureCmdOptionParse("[@" .. unit .. ",harm] 1") then return end
     for index = 1, owner:GetAttribute("qol-keys") or 0 do
         owner:SetBindingClick(true, owner:GetAttribute("qol-key" .. index), keys, "k" .. index)
     end
@@ -557,8 +597,9 @@ local function update()
     end
     for frame in pairs(frames) do
         if on then wrap(frame) end
-        apply(frame, on and clickAttributes(frame, clicks, delegated) or {})
+        apply(frame, on and attributesOf(frame, clicks, delegated) or {})
     end
+    plateClicks, plateDelegated = on and clicks or nil, delegated
     apply(clicksButton, delegate)
     apply(keysButton, keyAttributes(keys))
     local wanted = { ["qol-keys"] = #keys }
@@ -576,6 +617,26 @@ end
 -- What changes the bindings in use or the frames, while click casting is on.
 local function changed()
     if Options:Get(KEY) == true then schedule() end
+end
+
+-- A plate gets another unit, or its unit another side, in combat too, so this runs then as well: a
+-- plate isn't a protected frame. Should one be, it waits for the end of combat.
+local function updatePlates()
+    if not plateClicks then return end
+    for frame in pairs(frames) do
+        if frame.SetNamePlateFrame and frame:GetAttribute("unit") then
+            local protected = frame:IsProtected()
+            if InCombatLockdown() and not (ns.IsUsable(protected) and not protected) then
+                changed()
+            else
+                apply(frame, attributesOf(frame, plateClicks, plateDelegated))
+            end
+        end
+    end
+end
+
+local function plateChanged(_, unit)
+    if type(unit) == "string" and unit:find("^nameplate") then ns.Later("clickCastPlates", updatePlates, true) end
 end
 
 -- On ADDON_LOADED (Core/Lifecycle.lua), with click casting on: ClickCastHeader is there for the unit
@@ -596,9 +657,11 @@ function ClickCast:Init()
         end)
     end
     schedule()
-    Options:Watch({ KEY }, schedule)
+    Options:Watch({ KEY, ENEMIES }, schedule)
     for _, event in ipairs(Entries.KNOWN_EVENTS) do ns.Events:On(event, changed) end
     ns.Events:On("GROUP_ROSTER_UPDATE", changed)
+    ns.Events:On("NAME_PLATE_UNIT_ADDED", plateChanged)
+    ns.Events:On("UNIT_FACTION", plateChanged)
     ns.Events:On("ADDON_LOADED", function(_, name)
         if name == "Blizzard_ArenaUI" or name == "Blizzard_Deprecated_ArenaUI" then changed() end
     end)

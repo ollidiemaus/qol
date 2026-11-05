@@ -248,7 +248,10 @@ can heal a party member while you keep your target, and a key can heal whoever y
 - **Which frames:** the player, target, target of target, focus, focus target, pet, party (with the
   party pets), the raid-style party and raid frames, and the boss and arena frames. A unit frame
   addon that uses the usual way for addons to join click casting gets your bindings too, and so do
-  Grid2's frames. Nameplates are left alone.
+  Grid2's frames. Friendly nameplates take your Left and Right bindings. Enemy nameplates, and the
+  target, target of target, focus and focus target frames on an enemy, take yours only if you tick
+  **On enemies** at the top of the page; left off,
+  Left and Right there do what the game does, and keys go to what they're otherwise bound to.
 - **For each character:** the bindings are saved per character. A binding works while the character
   has its action, so one combination can be one spell in one specialization and another in the
   other. The page greys out the ones that don't work now and keeps them, and marks two working

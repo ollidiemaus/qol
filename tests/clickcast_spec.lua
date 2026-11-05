@@ -294,6 +294,151 @@ describe("click casting frames", function()
         T.eq(plate.wraps, nil, "no scripts wrapped")
     end)
 
+    describe("on Forever's pooled nameplates", function()
+        local function plates()
+            Stubs.state().attackable = { nameplate1 = true }
+            local enemy, friend = Stubs.NewPooledNamePlate(1), Stubs.NewPooledNamePlate(2)
+            Stubs.RunTimers()
+            return enemy, friend
+        end
+
+        it("leaves enemies to the game, and casts on friends", function()
+            start({ bind("BUTTON2", spell(RENEW)), bind("BUTTON1", spell(FLASH_HEAL)) })
+            local enemy, friend = plates()
+            T.eq(enemy.attributes.type2, nil, "none of the bindings' attributes")
+            T.eq(enemy.attributes["qol-clickcast"], nil)
+            T.eq(click(enemy, "LeftButton"), "target on nameplate1")
+            T.eq(click(enemy, "RightButton"), "menu on nameplate1")
+            T.eq(click(friend, "RightButton"), "spell:139 on nameplate2")
+            T.eq(click(friend, "LeftButton"), "spell:2061 on nameplate2")
+        end)
+
+        it("counts a side the game keeps secret as an enemy", function()
+            start({ bind("BUTTON2", spell(RENEW)) })
+            local enemy = plates()
+            Stubs.state().attackable = { nameplate1 = Stubs.SECRET }
+            Stubs.SetPlateUnit(enemy, "nameplate1")
+            Stubs.RunTimers()
+            T.eq(click(enemy, "RightButton"), "menu on nameplate1")
+        end)
+
+        it("follows a plate's new unit in combat", function()
+            start({ bind("BUTTON2", spell(RENEW)) })
+            local enemy, friend = plates()
+            Stubs.SetCombat(true)
+            Stubs.SetPlateUnit(enemy, "nameplate2")
+            Stubs.SetPlateUnit(friend, "nameplate1")
+            Stubs.RunTimers()
+            T.eq(click(enemy, "RightButton"), "spell:139 on nameplate2")
+            T.eq(click(friend, "RightButton"), "menu on nameplate1")
+        end)
+
+        it("follows a unit changing sides in combat", function()
+            start({ bind("BUTTON2", spell(RENEW)) })
+            local enemy, friend = plates()
+            Stubs.SetCombat(true)
+            Stubs.state().attackable = { nameplate2 = true }
+            Stubs.Fire("UNIT_FACTION", "nameplate1")
+            Stubs.Fire("UNIT_FACTION", "nameplate2")
+            Stubs.RunTimers()
+            T.eq(click(enemy, "RightButton"), "spell:139 on nameplate1")
+            T.eq(click(friend, "RightButton"), "menu on nameplate2")
+        end)
+
+        it("makes a protected plate wait for the end of combat", function()
+            start({ bind("BUTTON2", spell(RENEW)) })
+            local _, friend = plates()
+            friend.protected = true
+            Stubs.SetCombat(true)
+            Stubs.SetPlateUnit(friend, "nameplate1")
+            Stubs.RunTimers()
+            T.eq(click(friend, "RightButton"), "spell:139 on nameplate1", "as it was")
+            Stubs.SetCombat(false)
+            Stubs.RunTimers()
+            T.eq(click(friend, "RightButton"), "menu on nameplate1")
+        end)
+
+        it("casts on enemies with the option on, and stops when it goes off", function()
+            local ns = start({ bind("BUTTON2", spell(RENEW)) }, { clickCast = true, clickCastEnemies = true })
+            local enemy = plates()
+            T.eq(click(enemy, "RightButton"), "spell:139 on nameplate1")
+            set(ns, "clickCastEnemies", false)
+            T.eq(click(enemy, "RightButton"), "menu on nameplate1")
+        end)
+
+        it("gives a friend's plate back with click casting off", function()
+            local ns = start({ bind("BUTTON2", spell(RENEW)) })
+            local _, friend = plates()
+            set(ns, "clickCast", false)
+            T.eq(friend.attributes.type2, nil)
+            T.eq(click(friend, "RightButton"), "menu on nameplate2")
+        end)
+    end)
+
+    describe("on the target frame", function()
+        local function enemyTarget(...)
+            local ns = start(...)
+            Stubs.state().attackable = { target = true }
+            return ns
+        end
+
+        it("leaves an enemy to the game, Left and Right, with modifiers too", function()
+            enemyTarget({ bind("BUTTON2", spell(RENEW)), bind("BUTTON1", TARGET), bind("ALT-BUTTON2", MENU),
+                bind("SHIFT-BUTTON1", spell(FLASH_HEAL)), bind("BUTTON3", spell(RENEW)) })
+            T.eq(click(TargetFrame, "RightButton"), "menu on target")
+            T.eq(click(TargetFrame, "LeftButton"), "target on target")
+            T.eq(click(TargetFrame, "RightButton", "ALT"), "menu on target")
+            T.eq(click(TargetFrame, "LeftButton", "SHIFT"), "target on target")
+            T.eq(click(TargetFrame, "MiddleButton"), nil)
+        end)
+
+        it("binds no keys over an enemy", function()
+            enemyTarget({ bind("F", spell(RENEW)) })
+            Stubs.PointAt(TargetFrame)
+            T.eq(hoverBinding("F"), nil)
+            Stubs.PointAway(TargetFrame)
+        end)
+
+        it("casts on a friend, by the unit when the click comes", function()
+            enemyTarget({ bind("BUTTON2", spell(RENEW)), bind("F", spell(RENEW)) })
+            T.eq(click(TargetFrame, "RightButton"), "menu on target")
+            Stubs.SetCombat(true)
+            Stubs.state().attackable = {}
+            T.eq(click(TargetFrame, "RightButton"), "spell:139 on target")
+            T.eq(press(TargetFrame, "F"), "spell:139 on target")
+        end)
+
+        it("casts on an enemy with the option on, and gives the attributes back", function()
+            local ns = enemyTarget({ bind("BUTTON2", spell(RENEW)), bind("F", spell(RENEW)) },
+                { clickCast = true, clickCastEnemies = true })
+            T.eq(click(TargetFrame, "RightButton"), "spell:139 on target")
+            T.eq(press(TargetFrame, "F"), "spell:139 on target")
+            set(ns, "clickCastEnemies", false)
+            T.eq(click(TargetFrame, "RightButton"), "menu on target")
+            set(ns, "clickCast", false)
+            T.eq(TargetFrame.attributes["*harmbutton2"], nil)
+            T.eq(TargetFrame.attributes["*type2"], "menu")
+        end)
+
+        it("does the same on the target of target, the focus and the focus target", function()
+            start({ bind("BUTTON2", spell(RENEW)), bind("F", spell(RENEW)) })
+            Stubs.state().attackable = { targettarget = true, focus = true, focustarget = true }
+            for _, frame in ipairs({ TargetFrameToT, FocusFrame, FocusFrameToT }) do
+                local unit = frame:GetAttribute("unit")
+                T.eq(click(frame, "RightButton"), "menu on " .. unit)
+                Stubs.PointAt(frame)
+                T.eq(hoverBinding("F"), nil, unit)
+                Stubs.PointAway(frame)
+            end
+        end)
+
+        it("leaves the boss frames, which only show enemies, casting", function()
+            start({ bind("BUTTON2", spell(RENEW)) })
+            Stubs.state().attackable = { boss1 = true }
+            T.eq(click(Boss1TargetFrame, "RightButton"), "spell:139 on boss1")
+        end)
+    end)
+
     it("picks up the arena frames when the arena UI loads", function()
         start({ bind("SHIFT-BUTTON1", spell(RENEW)) })
         Stubs.LoadArenaUI()
