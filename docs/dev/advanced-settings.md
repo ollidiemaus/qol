@@ -19,14 +19,14 @@ itself when the client knows none.
   player's later choice.
 - **Read back after every set.** The game quietly ignores a value outside a CVar's range (no error,
   no clamping), so after each `SetCVar` the page refreshes and shows what `GetCVar` returns: a
-  refused value shows the old one. The sliders cover exactly the ranges measured in Forever's client
-  (2026-10-27); Classic Era's differ (below). `cameraDistanceMaxZoomFactor` takes 1.0 to 2.6 on
-  Forever, while the game's own Max Camera Distance slider (`Camelot/ControlsOverrides.lua`) stops at 2.0 and moving it sets 2.0 or lower.
-  Draw distance's were measured with `/qol probe` in retail's client (12.1.5, 2026-10-28), not yet in
-  Forever's, which has the same CVars, game defaults and first-run values. `farclip`, `horizonStart`
-  and `horizonClip` take any number, so their sliders cover what View Distance sets and a bit below
-  (`farclip` from its game default of 1000). Sets happen at once, in combat too: none of these CVars
-  is protected.
+  refused value shows the old one. The sliders cover exactly the ranges `/qol probe` measured in
+  Forever's client (1.60.1 build 70790, deDE, 2026-11-05); retail's and Classic Era's differ (below).
+  `cameraDistanceMaxZoomFactor` takes 1 to 4 on Forever (it was 1.0 to 2.6, game default 1.9, on the
+  1.60.1 client of 2026-10-27), while the game's own Max Camera Distance slider
+  (`Camelot/ControlsOverrides.lua`) stops at 2.0 and moving it sets 2.0 or lower. `farclip`,
+  `horizonStart` and `horizonClip` take any number, so their sliders cover what View Distance sets and
+  a bit below (`farclip` from its game default of 1000; `horizonClip` from retail's lowest, 1500). Sets
+  happen at once, in combat too: none of these CVars is protected.
 - **Protected in combat.** A CVar `C_CVar.GetCVarInfo` marks secure (its sixth value, `isSecure`)
   is one the game won't change in combat; `HiddenSettings.CanChange` is false for one of those in
   combat, and so is one whose game slider is, as its Reset writes that. The page tracks combat
@@ -34,8 +34,8 @@ itself when the client knows none.
   `PLAYER_REGEN_ENABLED`, and refreshes on both while it's shown. A row's `canChange` is its
   `enabled`, so the name, slider or checkbox, box and Reset grey out, and it guards the row's set
   and reset: Defaults leaves it alone, and a box typed into as combat starts writes nothing when it
-  loses the keyboard. Every other row still sets at once. None of them was secure where it was
-  measured (Forever's client, retail's for Draw distance); this guards later rows and other clients.
+  loses the keyboard. Every other row still sets at once. None of them was secure on the clients
+  measured (Forever, retail, Classic Era); this guards later rows and other clients.
 - **The raid copies stay alone.** `RAIDgroundEffectDist` and the rest are the game's, used while its
   Raid and Battleground graphics are on; the page never writes them, and its intro says raids and
   battlegrounds use those instead.
@@ -61,9 +61,10 @@ itself when the client knows none.
   others, see `GLOSSARY.md`) set several hidden settings whenever they're moved; the table names
   that slider as the row's `gameSlider`. Writing a slider's current value again makes the client set
   every setting behind it again (measured in retail: `farclip` at 5000 went back to the 8000 its
-  View Distance sets), so `HiddenSettings.Reset` does that for such a row, which also puts back the
+  View Distance sets; Forever's probe says the same for all three sliders), so
+  `HiddenSettings.Reset` does that for such a row, which also puts back the
   slider's other rows, just as moving the slider would. Don't "fix" it back to the game default:
-  `farclip`'s (1000) is below anything View Distance sets (1500 to 10000), so Reset, and Defaults
+  `farclip`'s (1000) is below anything View Distance sets (3000 to 10000), so Reset, and Defaults
   for every player, would cut the world off short. QoL can't know what a slider sets without a table
   of its own, so these rows' `isDefault` is always false (Reset never greys out), their tooltips
   leave out the game default, and Reset's tooltip names the slider and the other rows it resets.
@@ -76,17 +77,24 @@ itself when the client knows none.
   do nothing, leaving no way back to the game's values.
 - **Measuring them.** `/qol probe` measures the ranges, game defaults and the game sliders in the
   client it runs in; see "The hidden settings probe" under "Trying it in game".
+- **A row's own values are Forever's; `retail` and `classicEra` hold what differs.** Each table holds
+  what the row takes on that client in place of its own (min, max, tooltip), so one row says what a
+  setting does on each client; `HiddenSettings` applies it at load, by `WOW_PROJECT_ID` being
+  `WOW_PROJECT_MAINLINE` or `WOW_PROJECT_CLASSIC`. That's the one place the page names the flavor:
+  elsewhere QoL tells clients apart by what they have, but the game doesn't report a setting's range.
+  Forever's own ID isn't asked for, as it changed during its beta. Other Classic clients (TBC
+  Anniversary and later) have their own project IDs and keep the row's values until they're measured.
+  The probe's report stays diagnostics: nothing reads it back.
+- **Retail** (12.1.5, 2026-10-28) has the same CVars and sliders. Its `cameraDistanceMaxZoomFactor`
+  ends at 2.6 (game default 1.9; the probe's `1..2` is the last whole number), its View Distance sets
+  `farclip` and `horizonClip` from 1500 (Forever's from 3000), and its Ground Clutter sets
+  `groundEffectDensity` up to 256 (Forever's only to 48).
 - **Classic Era** has the same `C_CVar` calls and the Environment Detail and Ground Clutter
   sliders, but no View Distance (`slider.graphicsViewDistance = missing`). It knows every hidden
   setting in the table, Always sharpen too. `/qol probe` there (1.15.9 build 70576, deDE,
-  2026-10-30) measured other ranges than Forever's: `cameraDistanceMaxZoomFactor` 1 to 4 (its own
-  Max Camera Distance slider still stops at 2.0), `groundEffectDist` from 70 (its Ground Clutter sets
-  70 to 320), and game defaults `farclip` 2112, `horizonStart` 777, `horizonClip` 1600. A row's
-  `classicEra` table holds what it takes there in place of its own (min, max, tooltip), so one row
-  says what a setting does on each client; `HiddenSettings` applies it at load when `WOW_PROJECT_ID`
-  is `WOW_PROJECT_CLASSIC`. That's the one place the page names the flavor: elsewhere QoL tells
-  clients apart by what they have, but the game doesn't report a setting's range. Other Classic
-  clients (TBC Anniversary and later) have their own project IDs and keep the row's values until
-  they're measured. Their World distance and horizon tooltips say no game setting changes them,
-  in English only like the rest of Draw distance; Ground clutter distance's names 70 to 320 in
-  German too. The probe's report stays diagnostics: nothing reads it back.
+  2026-10-30) measured `groundEffectDist` from 70 (its Ground Clutter sets 70 to 320),
+  `groundEffectDensity` up to 256 from Ground Clutter, the camera distance's 1 to 4 as on Forever (its
+  own Max Camera Distance slider still stops at 2.0), and game defaults `farclip` 2112,
+  `horizonStart` 777, `horizonClip` 1600. Its World distance and horizon tooltips say no game setting
+  changes them, in English only like the rest of Draw distance; Ground clutter distance's names 70 to
+  320 in German too.

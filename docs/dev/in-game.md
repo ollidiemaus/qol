@@ -232,9 +232,10 @@ command instead of `/run` lines pasted into chat. It's in the release package bu
   didn't come back). It's printed to chat and kept in `QoLDB.probe` (`client`, `date`, `lines`),
   replaced each run; after a `/reload` or logout it's in
   `WTF/Account/<account>/SavedVariables/QoL.lua`. Nothing reads it back: it's diagnostics, and the
-  CVar stays the only truth for the page. Classic Era's row overrides (`classicEra` in
-  `Features/HiddenSettings.lua`) are copied from its run on 1.15.9 build 70576 (2026-10-30); after a
-  patch, run it again and compare. The report lines aren't translated; its two chat lines
+  CVar stays the only truth for the page. The rows in `Features/HiddenSettings.lua` are copied from
+  the runs on Forever 1.60.1 build 70790 (2026-11-05), retail 12.1.5 (`retail`, 2026-10-28) and
+  Classic Era 1.15.9 build 70576 (`classicEra`, 2026-10-30); after a patch, run it again and compare.
+  The report lines aren't translated; its two chat lines
   (the refusal in combat, where the report is kept) are in `ns.L` in English only, which
   `tests/locales_spec.lua` lists in `ENGLISH_ONLY`, as it does the Draw distance section's labels
   and tooltips, not translated yet.

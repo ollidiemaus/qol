@@ -12,15 +12,16 @@ ns.HiddenSettings = HiddenSettings
 
 -- In the page's order. kind: "slider" (min to max in steps of step) or "checkbox" ("1" or "0").
 -- gameSlider: the CVar of the game's own graphics slider that sets it whenever it's moved, for
--- Reset (HiddenSettings.Reset). The ranges were measured in Forever's client (2026-10-27): the game
--- quietly ignores a value outside them. Ground clutter fade takes any value, but goes no further
--- than the distance. The camera distance goes to 2.6, past the 2.0 where the game's own Max Camera
--- Distance slider stops. Draw distance's were measured in retail's (2026-10-28): World distance and
--- the horizon take any value, so their sliders cover what View Distance sets, World distance down
--- to its game default of 1000. classicEra: what the row takes on Classic Era in place of its own
--- (min, max, tooltip), as /qol probe measured it there (1.15.9 build 70576, 2026-10-30): the camera
--- distance goes to 4, ground clutter distance starts at 70, and as it has no View Distance, nothing
--- in its options changes World distance or the horizon.
+-- Reset (HiddenSettings.Reset). A row's own values are Forever's, as /qol probe measured them (1.60.1
+-- build 70790, 2026-11-05): the game quietly ignores a value outside them. Ground clutter fade takes
+-- any value, but goes no further than the distance. The camera distance goes to 4, past the 2.0 where
+-- the game's own Max Camera Distance slider stops. World distance and the horizon take any value, so
+-- their sliders cover what View Distance sets and a bit below, World distance down to its game
+-- default of 1000. retail and classicEra: what the row takes on that client in place of its own (min,
+-- max, tooltip), from its probe. Retail (12.1.5, 2026-10-28): the camera distance goes to 2.6, View
+-- Distance sets World distance from 1500 and Ground Clutter the density to 256. Classic Era (1.15.9
+-- build 70576, 2026-10-30): ground clutter distance starts at 70, Ground Clutter sets the density to
+-- 256, and as it has no View Distance, nothing in its options changes World distance or the horizon.
 HiddenSettings.SETTINGS = {
     { cvar = "groundEffectDist", label = L.GROUND_CLUTTER_DISTANCE, tooltip = L.GROUND_CLUTTER_DISTANCE_TIP,
         kind = "slider", min = 40, max = 500, step = 1, section = L.SECTION_HIDDEN_GRAPHICS,
@@ -30,14 +31,16 @@ HiddenSettings.SETTINGS = {
         kind = "slider", min = 40, max = 500, step = 1, section = L.SECTION_HIDDEN_GRAPHICS },
     { cvar = "groundEffectDensity", label = L.GROUND_CLUTTER_DENSITY, tooltip = L.GROUND_CLUTTER_DENSITY_TIP,
         kind = "slider", min = 16, max = 256, step = 1, section = L.SECTION_HIDDEN_GRAPHICS,
-        gameSlider = "graphicsGroundClutter" },
+        gameSlider = "graphicsGroundClutter", retail = { tooltip = L.GROUND_CLUTTER_DENSITY_TIP_TO_256 },
+        classicEra = { tooltip = L.GROUND_CLUTTER_DENSITY_TIP_TO_256 } },
     { cvar = "weatherDensity", label = L.WEATHER_DENSITY, tooltip = L.WEATHER_DENSITY_TIP,
         kind = "slider", min = 0, max = 3, step = 1, section = L.SECTION_HIDDEN_GRAPHICS },
     { cvar = "ResampleAlwaysSharpen", label = L.ALWAYS_SHARPEN, tooltip = L.ALWAYS_SHARPEN_TIP,
         kind = "checkbox", section = L.SECTION_HIDDEN_GRAPHICS },
     { cvar = "farclip", label = L.WORLD_DISTANCE, tooltip = L.WORLD_DISTANCE_TIP,
         kind = "slider", min = 1000, max = 10000, step = 100, section = L.SECTION_DRAW_DISTANCE,
-        gameSlider = "graphicsViewDistance", classicEra = { tooltip = L.WORLD_DISTANCE_TIP_CLASSIC_ERA } },
+        gameSlider = "graphicsViewDistance", retail = { tooltip = L.WORLD_DISTANCE_TIP_RETAIL },
+        classicEra = { tooltip = L.WORLD_DISTANCE_TIP_CLASSIC_ERA } },
     { cvar = "horizonStart", label = L.HORIZON_START, tooltip = L.HORIZON_START_TIP,
         kind = "slider", min = 400, max = 4000, step = 100, section = L.SECTION_DRAW_DISTANCE,
         gameSlider = "graphicsViewDistance", classicEra = { tooltip = L.HORIZON_START_TIP_CLASSIC_ERA } },
@@ -53,15 +56,22 @@ HiddenSettings.SETTINGS = {
     { cvar = "lodObjectCullDist", label = L.OBJECT_CULL_DISTANCE, tooltip = L.OBJECT_CULL_DISTANCE_TIP,
         kind = "slider", min = 1, max = 200, step = 1, section = L.SECTION_DRAW_DISTANCE },
     { cvar = "cameraDistanceMaxZoomFactor", label = L.MAX_CAMERA_DISTANCE, tooltip = L.MAX_CAMERA_DISTANCE_TIP,
-        kind = "slider", min = 1, max = 2.6, step = 0.1, section = L.SECTION_HIDDEN_CAMERA,
-        classicEra = { max = 4 } },
+        kind = "slider", min = 1, max = 4, step = 0.1, section = L.SECTION_HIDDEN_CAMERA,
+        retail = { max = 2.6 } },
 }
 
--- Classic Era by its project ID: the game doesn't report a setting's range, so this is the one place
--- QoL names the flavor for them.
+-- Retail and Classic Era by their project IDs: the game doesn't report a setting's range, so this is
+-- the one place QoL names the flavor for them. Forever's ID isn't asked for, as it changed during
+-- its beta: every client that isn't one of these two keeps the row's own values.
+local client
 if WOW_PROJECT_ID ~= nil and WOW_PROJECT_ID == WOW_PROJECT_CLASSIC then
+    client = "classicEra"
+elseif WOW_PROJECT_ID ~= nil and WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
+    client = "retail"
+end
+if client then
     for _, setting in ipairs(HiddenSettings.SETTINGS) do
-        for key, value in pairs(setting.classicEra or {}) do setting[key] = value end
+        for key, value in pairs(setting[client] or {}) do setting[key] = value end
     end
 end
 

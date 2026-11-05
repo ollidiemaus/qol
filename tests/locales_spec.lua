@@ -11,7 +11,8 @@ local SAME = {
 }
 
 -- Strings in English only: the probe's developer output, and the Draw distance section for now.
-local ENGLISH_ONLY = { PROBE_COMBAT = true, PROBE_SAVED = true, SECTION_DRAW_DISTANCE = true }
+local ENGLISH_ONLY = { PROBE_COMBAT = true, PROBE_SAVED = true, SECTION_DRAW_DISTANCE = true,
+    WORLD_DISTANCE_TIP_RETAIL = true }
 for _, key in ipairs({ "WORLD_DISTANCE", "HORIZON_START", "HORIZON_END", "OBJECT_FADE_SCALE", "OBJECT_CULL_SIZE",
     "OBJECT_CULL_DISTANCE" }) do
     ENGLISH_ONLY[key], ENGLISH_ONLY[key .. "_TIP"] = true, true

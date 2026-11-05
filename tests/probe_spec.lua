@@ -88,6 +88,9 @@ describe("hidden settings probe", function()
             s.cvars.groundEffectDist = "120"
             -- At the top of its range: a half is tried below.
             s.cvars.groundEffectDensity = "256"
+            -- A range that ends between two whole numbers, as retail's.
+            s.cvars.cameraDistanceMaxZoomFactor, s.cvarDefaults.cameraDistanceMaxZoomFactor = "1.9", "1.9"
+            s.cvarRanges.cameraDistanceMaxZoomFactor = { 1, 2.6 }
         end)
         SlashCmdList.QOL("probe")
         local r = report()
@@ -148,7 +151,7 @@ describe("hidden settings probe", function()
         T.eq(r["cvar.weatherDensity"], "missing")
         T.truthy(has(r["cvar.groundEffectFade"], "70 (no game default), "), r["cvar.groundEffectFade"])
         T.truthy(has(r["cvar.ResampleAlwaysSharpen"], "(default 0)"), r["cvar.ResampleAlwaysSharpen"])
-        T.truthy(has(r["cvar.cameraDistanceMaxZoomFactor"], "(default 1.9)"), r["cvar.cameraDistanceMaxZoomFactor"])
+        T.truthy(has(r["cvar.cameraDistanceMaxZoomFactor"], "(default 1)"), r["cvar.cameraDistanceMaxZoomFactor"])
     end)
 
     it("measures the settings considered for the page too", function()

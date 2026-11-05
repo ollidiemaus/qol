@@ -3,7 +3,8 @@ local Stubs = require("wow_stubs")
 local describe, it = T.describe, T.it
 
 -- The game's settings installed, the addon loaded and logged in. before: changes the test state
--- before the addon loads (a client without a setting); client: "classicEra" for Classic Era.
+-- before the addon loads (a client without a setting); client: "classicEra" or "retail", Forever by
+-- default.
 local function start(before, client)
     local ns = Stubs.LoadAddon({ client = client })
     if before then before(Stubs.state()) end
@@ -218,7 +219,7 @@ describe("advanced settings page", function()
             ["Weather density"] = "Game default: 2",
             ["Always sharpen"] = "Game default: On",
             ["Object cull distance"] = "Game default: 30",
-            ["Max camera distance"] = "Game default: 1.9",
+            ["Max camera distance"] = "Game default: 1",
         }
         for label, ending in pairs(expected) do
             local c = row(ns, label)
@@ -289,7 +290,7 @@ describe("advanced settings page", function()
         T.same({ state.cvars.lodObjectFadeScale, state.cvars.lodObjectCullSize }, { "90", "20" },
             "what Environment Detail sets")
         T.eq(state.cvars.lodObjectCullDist, "30")
-        T.eq(state.cvars.cameraDistanceMaxZoomFactor, "1.9")
+        T.eq(state.cvars.cameraDistanceMaxZoomFactor, "1")
         local written = {}
         for _, set in ipairs(state.cvarSets) do
             local cvar = set:match("^[^=]+")
@@ -318,7 +319,7 @@ describe("advanced settings page", function()
             T.same({ c.widget.minValue, c.widget.maxValue, c.widget.step }, { range[1], range[2], 1 }, label)
         end
         local camera = row(ns, "Max camera distance")
-        T.same({ camera.widget.minValue, camera.widget.maxValue }, { 1, 2.6 })
+        T.same({ camera.widget.minValue, camera.widget.maxValue }, { 1, 4 })
         T.truthy(math.abs(camera.widget.step - 0.1) < 1e-9, "Max camera distance steps 0.1")
         local c = row(ns, "Ground clutter density")
         T.eq(c.widget:GetValue(), 16)
@@ -364,24 +365,24 @@ describe("advanced settings page", function()
     end)
 
     it("steps the camera distance by 0.1 with its arrows and slider, never drifting off one decimal", function()
-        local ns, state = start()
+        local ns, state = start(function(s) s.cvars.cameraDistanceMaxZoomFactor = "1.9" end)
         show(ns)
         local c = row(ns, "Max camera distance")
         T.eq(c.box:GetText(), "1.9")
         c.widget.Forward:Click()
         T.eq(tonumber(state.cvars.cameraDistanceMaxZoomFactor), 2)
         T.eq(c.box:GetText(), "2.0")
-        for _ = 1, 10 do c.widget.Forward:Click() end
-        T.eq(state.cvars.cameraDistanceMaxZoomFactor, "2.6", "stops at the end")
-        T.eq(c.box:GetText(), "2.6")
-        for _ = 1, 7 do c.widget.Back:Click() end
+        for _ = 1, 25 do c.widget.Forward:Click() end
+        T.eq(state.cvars.cameraDistanceMaxZoomFactor, "4", "stops at the end")
+        T.eq(c.box:GetText(), "4.0")
+        for _ = 1, 21 do c.widget.Back:Click() end
         T.eq(state.cvars.cameraDistanceMaxZoomFactor, "1.9")
         c.widget:SetValue(2.3400000001)
         T.eq(state.cvars.cameraDistanceMaxZoomFactor, "2.3")
         T.eq(c.box:GetText(), "2.3")
         c.resetButton:Click()
-        T.eq(state.cvars.cameraDistanceMaxZoomFactor, "1.9", "Reset puts back the game default")
-        T.eq(c.box:GetText(), "1.9")
+        T.eq(state.cvars.cameraDistanceMaxZoomFactor, "1", "Reset puts back the game default")
+        T.eq(c.box:GetText(), "1.0")
         T.falsy(c.resetButton:IsEnabled())
         for _, set in ipairs(state.cvarSets) do
             T.truthy(set:match("^cameraDistanceMaxZoomFactor=%d$") or set:match("^cameraDistanceMaxZoomFactor=%d%.%d$"),
@@ -394,7 +395,7 @@ describe("advanced settings page", function()
         show(ns)
         local c = row(ns, "Max camera distance")
         T.eq(c.box:GetText(), "1.9", "the game's trailing zeros left out")
-        for _, case in ipairs({ { "2.37", 2.4, "2.4" }, { "9", 2.6, "2.6" }, { "0.2", 1, "1.0" },
+        for _, case in ipairs({ { "2.37", 2.4, "2.4" }, { "9", 4, "4.0" }, { "0.2", 1, "1.0" },
             { "-3", 1, "1.0" }, { "2.05", 2.1, "2.1" }, { "1.5", 1.5, "1.5" } }) do
             Stubs.Type(c.box, case[1])
             c.box:RunScript("OnEnterPressed")
@@ -753,7 +754,7 @@ describe("advanced settings page", function()
         state.cvarSets = {}
         density.resetButton:Click()
         T.same(state.cvarSets, { "graphicsGroundClutter=2" })
-        T.eq(state.cvars.groundEffectDensity, "16")
+        T.eq(state.cvars.groundEffectDensity, "48", "what Classic Era's Ground Clutter sets at step 3")
         local fade = row(ns, "Object fade scale")
         fade.widget.Forward:Click()
         state.cvarSets = {}
@@ -767,6 +768,7 @@ describe("advanced settings page", function()
         local tips = {
             ["Ground clutter distance"] = { "how far away", "Ground Clutter sets 70 to 320",
                 "sets it again when you move it" },
+            ["Ground clutter density"] = { "how thick", "Ground Clutter sets 16 to 256" },
             ["World distance"] = { "how far away the world is drawn", "No game setting changes it", "2112" },
             ["Horizon start"] = { "horizon begins", "No game setting changes it", "777" },
             ["Horizon end"] = { "horizon ends", "No game setting changes it", "1600" },
@@ -778,6 +780,31 @@ describe("advanced settings page", function()
             local text = GameTooltip.lines[2].text:lower()
             for _, word in ipairs(words) do T.truthy(text:find(word:lower(), 1, true), label .. " says " .. word) end
             T.falsy(text:find("view distance", 1, true), label .. " names no View Distance")
+            c.row:RunScript("OnLeave")
+        end
+    end)
+
+    it("covers what retail takes: the camera distance to 2.6", function()
+        local ns, state = start(nil, "retail")
+        show(ns)
+        local camera = row(ns, "Max camera distance")
+        T.same({ camera.widget.minValue, camera.widget.maxValue }, { 1, 2.6 })
+        T.eq(camera.box:GetText(), "1.9")
+        camera.widget:SetValue(2.6)
+        T.eq(state.cvars.cameraDistanceMaxZoomFactor, "2.6")
+        camera.resetButton:Click()
+        T.eq(state.cvars.cameraDistanceMaxZoomFactor, "1.9", "Reset puts back retail's game default")
+    end)
+
+    it("says on retail what its View Distance and Ground Clutter set", function()
+        local ns = start(nil, "retail")
+        show(ns)
+        local tips = { ["World distance"] = "View Distance sets 1500 to 10000",
+            ["Ground clutter density"] = "Ground Clutter sets 16 to 256" }
+        for label, words in pairs(tips) do
+            local c = row(ns, label)
+            c.row:RunScript("OnEnter")
+            T.truthy(GameTooltip.lines[2].text:find(words, 1, true), label .. " says " .. words)
             c.row:RunScript("OnLeave")
         end
     end)
@@ -834,12 +861,12 @@ describe("advanced settings page", function()
             ["Ground clutter distance"] = { "how far away", "in yards", "frame rate",
                 "Ground Clutter sets 40 to 320", "sets it again when you move it" },
             ["Ground clutter fade"] = { "how softly", "fades in" },
-            ["Ground clutter density"] = { "how thick", "frame rate", "Ground Clutter sets 16 to 256",
+            ["Ground clutter density"] = { "how thick", "frame rate", "Ground Clutter sets 16 to 48",
                 "sets it again when you move it" },
             ["Weather density"] = { "rain and snow", "0 (least)", "3 (most)" },
             ["Always sharpen"] = { "isn't upscaling", "Resample Sharpness" },
             ["World distance"] = { "how far away the world is drawn", "in yards", "higher costs frame rate",
-                "View Distance sets 1500 to 10000", "sets it again when you move it" },
+                "View Distance sets 3000 to 10000", "sets it again when you move it" },
             ["Horizon start"] = { "horizon begins", "in yards", "View Distance sets 400 to 4000",
                 "sets it again when you move it" },
             ["Horizon end"] = { "horizon ends", "keeps it equal to World distance", "sets it again when you move it" },
