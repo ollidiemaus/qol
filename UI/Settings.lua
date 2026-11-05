@@ -138,10 +138,8 @@ local function shown(key)
     return function() return Options:Get(key) ~= "hidden" end
 end
 
--- Minimap page: the map and its buttons on the left, the clock and FPS and ping on the right, then
--- the two texts side by side. The first two sections on each side are of opposite sizes and end
--- level, which is what keeps the page within its height in this order: level headers would take
--- 610 of the 600 it has (docs/dev/minimap.md).
+-- Minimap page: three pairs of sections side by side, so their headers line up, each pair about as
+-- high on both sides. Any other pairing takes more of the page's height (docs/dev/minimap.md).
 local function buildMinimap(page)
     page:Header("left", L.SECTION_MINIMAP_SHAPE)
     page:Checkbox("left", "squareMinimap", L.SQUARE_MINIMAP, L.SQUARE_MINIMAP_TIP)
@@ -150,14 +148,38 @@ local function buildMinimap(page)
         { value = "black", label = L.BORDER_BLACK },
     }, L.SQUARE_MINIMAP_BORDER_TIP, { indent = true, enabled = is("squareMinimap") })
 
-    page:Header("right", L.SECTION_MINIMAP_CLOCK)
-    page:Dropdown("right", "minimapClock", L.MINIMAP_POSITION, positions("minimapClock"), L.MINIMAP_POSITION_TIP)
+    -- Classic Era shows no coordinates under the minimap.
+    if ns.MinimapLayout.HasCoords() then
+        page:Header("right", L.SECTION_MINIMAP_COORDS)
+        page:Checkbox("right", "minimapCoordsClassColor", L.MINIMAP_CLASS_COLOR, L.MINIMAP_COORDS_CLASS_COLOR_TIP,
+            { enabled = isNot("hideMinimapCoords") })
+        page:Checkbox("right", "hideMinimapCoords", L.HIDE_MINIMAP_COORDS, L.HIDE_MINIMAP_COORDS_TIP)
+        offsetRow(page, "right", "minimapCoords", L.MINIMAP_COORDS_OFFSET_TIP, { enabled = isNot("hideMinimapCoords") })
+    end
+    page:Align()
+
+    page:Header("left", L.SECTION_MINIMAP_CLOCK)
+    page:Dropdown("left", "minimapClock", L.MINIMAP_POSITION, positions("minimapClock"), L.MINIMAP_POSITION_TIP)
     local clockShown = shown("minimapClock")
-    page:Checkbox("right", "minimapClockClassColor", L.MINIMAP_CLASS_COLOR, L.MINIMAP_CLOCK_CLASS_COLOR_TIP,
+    page:Checkbox("left", "minimapClockClassColor", L.MINIMAP_CLASS_COLOR, L.MINIMAP_CLOCK_CLASS_COLOR_TIP,
         { enabled = clockShown })
-    page:Dropdown("right", "minimapClockSize", L.FONT_SIZE, fontSizes(), L.MINIMAP_CLOCK_SIZE_TIP,
+    page:Dropdown("left", "minimapClockSize", L.FONT_SIZE, fontSizes(), L.MINIMAP_CLOCK_SIZE_TIP,
         { enabled = clockShown })
-    offsetRow(page, "right", "minimapClock", L.MINIMAP_OFFSET_TIP, { enabled = clockShown })
+    offsetRow(page, "left", "minimapClock", L.MINIMAP_OFFSET_TIP, { enabled = clockShown })
+
+    page:Header("right", L.SECTION_MINIMAP_ZONE_TEXT)
+    page:Dropdown("right", "minimapZoneText", L.MINIMAP_POSITION, {
+        { value = "default", label = L.POSITION_DEFAULT },
+        { value = "above", label = L.ZONE_TEXT_ABOVE },
+        { value = "below", label = L.ZONE_TEXT_BELOW },
+    }, L.MINIMAP_ZONE_TEXT_TIP)
+    page:Checkbox("right", "hideMinimapZoneTextFrame", L.HIDE_MINIMAP_ZONE_TEXT_FRAME,
+        L.HIDE_MINIMAP_ZONE_TEXT_FRAME_TIP,
+        { indent = true, enabled = function() return Options:Get("minimapZoneText") == "default" end })
+    page:Checkbox("right", "minimapZoneTextClassColor", L.MINIMAP_CLASS_COLOR, L.MINIMAP_ZONE_TEXT_CLASS_COLOR_TIP)
+    page:Dropdown("right", "minimapZoneTextSize", L.FONT_SIZE, fontSizes(), L.MINIMAP_ZONE_TEXT_SIZE_TIP)
+    offsetRow(page, "right", "minimapZoneText", L.MINIMAP_ZONE_TEXT_OFFSET_TIP)
+    page:Align()
 
     page:Header("left", L.SECTION_MINIMAP_BUTTONS)
     local function buttonRows(key, label, tooltip)
@@ -191,29 +213,6 @@ local function buildMinimap(page)
     page:Dropdown("right", "minimapPerformanceSize", L.FONT_SIZE, fontSizes(), L.MINIMAP_PERFORMANCE_SIZE_TIP,
         { enabled = performanceShown })
     offsetRow(page, "right", "minimapPerformance", L.MINIMAP_OFFSET_TIP, { enabled = performanceShown })
-    page:Align()
-
-    page:Header("left", L.SECTION_MINIMAP_ZONE_TEXT)
-    page:Dropdown("left", "minimapZoneText", L.MINIMAP_POSITION, {
-        { value = "default", label = L.POSITION_DEFAULT },
-        { value = "above", label = L.ZONE_TEXT_ABOVE },
-        { value = "below", label = L.ZONE_TEXT_BELOW },
-    }, L.MINIMAP_ZONE_TEXT_TIP)
-    page:Checkbox("left", "hideMinimapZoneTextFrame", L.HIDE_MINIMAP_ZONE_TEXT_FRAME,
-        L.HIDE_MINIMAP_ZONE_TEXT_FRAME_TIP,
-        { indent = true, enabled = function() return Options:Get("minimapZoneText") == "default" end })
-    page:Checkbox("left", "minimapZoneTextClassColor", L.MINIMAP_CLASS_COLOR, L.MINIMAP_ZONE_TEXT_CLASS_COLOR_TIP)
-    page:Dropdown("left", "minimapZoneTextSize", L.FONT_SIZE, fontSizes(), L.MINIMAP_ZONE_TEXT_SIZE_TIP)
-    offsetRow(page, "left", "minimapZoneText", L.MINIMAP_ZONE_TEXT_OFFSET_TIP)
-
-    -- Classic Era shows no coordinates under the minimap.
-    if ns.MinimapLayout.HasCoords() then
-        page:Header("right", L.SECTION_MINIMAP_COORDS)
-        page:Checkbox("right", "minimapCoordsClassColor", L.MINIMAP_CLASS_COLOR, L.MINIMAP_COORDS_CLASS_COLOR_TIP,
-            { enabled = isNot("hideMinimapCoords") })
-        page:Checkbox("right", "hideMinimapCoords", L.HIDE_MINIMAP_COORDS, L.HIDE_MINIMAP_COORDS_TIP)
-        offsetRow(page, "right", "minimapCoords", L.MINIMAP_COORDS_OFFSET_TIP, { enabled = isNot("hideMinimapCoords") })
-    end
 end
 
 -- Action bar page: the two flips side by side for each bar, then the paging keys and the buttons'

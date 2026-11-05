@@ -115,9 +115,7 @@ the originals, also with the offset back at 0 or for a frame in a row.
 
 ## The page's fit
 
-With the offset rows the Minimap page holds more than its pairs of sections can fit with every
-header level: the old order, or Buttons beside FPS and ping level with each other, would take 610 of
-the 600. So Shape and Buttons stack on the left and Clock and FPS and ping on the right, which end
-level by their sizes (376 on Forever), and Zone text and Coordinates follow side by side: 558. The
-headers of Buttons and FPS and ping are therefore 52 apart. Every header could be level at 584 with
-other pairs (Shape | Coordinates, Clock | Zone text, Buttons | FPS and ping).
+With the offset rows the sections go in pairs by height, so every header stays level within the
+page's 600: Shape | Coordinates, Clock | Zone text, Buttons | FPS and ping, 584 on Forever. The old
+order and Shape | Clock, Buttons | FPS and ping, Zone text | Coordinates would both take 610 with
+level headers, as each leaves a short section beside a much taller one.
