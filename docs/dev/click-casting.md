@@ -45,7 +45,10 @@ makes one). A binding with any other action, or not shaped like one, stays saved
   frame before it enters the bar, so without them the keys went off over the bars. The snippet walks
   up from the part with `GetParent` to the frame with `qol-clickcast`, and `hovered` is the part, so
   leaving the frame for its bar keeps the keys. Only protected parts: in combat a handle's
-  `GetParent` reaches a protected parent only, so the walk works there too. The tests' handles are
+  `GetParent` reaches a protected parent only, so the walk works there too. A part can have the
+  secret `ObjectSecurity` aspect (seen on the health bar: `IsProtected` is secret, and so is what
+  `SecureHandlerWrapScript` tests on our taint), so it isn't wrapped then: `wrap` tries that frame's
+  parts again at the next update, and until then the keys go off over that bar. The tests' handles are
   one per frame, as the game's are, so they compare. The wraps stay
   once made (unwrapping could take
   off another addon's wrap made later); with click casting off, `qol-clickcast` is gone and they do

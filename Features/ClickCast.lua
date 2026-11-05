@@ -241,6 +241,7 @@ end
 
 local header, keysButton, clicksButton
 local frames, leaving, wrapped, joined = {}, {}, {}, {}
+local unwrappedParts = {}
 local provided, ready, started, grid2
 
 -- QoL's header and buttons, made once.
@@ -428,23 +429,33 @@ end
 -- The parts of a frame that take the mouse and are protected, as Forever's health and mana bars
 -- (TextStatusBar, with SecureFrameParentPropagationTemplate on them and the frames between): the
 -- mouse going onto one leaves the frame. Their snippets find the frame through their parents,
--- protected too, so in combat as well.
-local function wrapParts(frame)
+-- protected too, so in combat as well. A part can answer IsProtected and IsForbidden with a secret
+-- (ObjectSecurity aspect, seen on the health bar). SecureHandlerWrapScript can't take it
+-- either, it tests the same aspect on our taint, so that part waits for a later update.
+local function wrapParts(frame, top)
     for _, child in ipairs({ frame:GetChildren() }) do
-        local takesMouse = child.IsMouseMotionEnabled or child.IsMouseEnabled
-        if takesMouse(child) and child:IsProtected() and not (child.IsForbidden and child:IsForbidden()) then
-            wrapScripts(child)
+        if ns.IsUsable(child) then
+            local takesMouse = child.IsMouseMotionEnabled or child.IsMouseEnabled
+            if takesMouse(child) then
+                local protected, forbidden = child:IsProtected(), child:IsForbidden()
+                if not ns.IsUsable(protected) or not ns.IsUsable(forbidden) then
+                    unwrappedParts[top] = true
+                elseif protected and not forbidden then
+                    wrapScripts(child)
+                end
+            end
+            wrapParts(child, top)
         end
-        wrapParts(child)
     end
 end
 
 -- The wraps stay once made (unwrapping could take off another addon's wrap made later); a frame
 -- without qol-clickcast, and a part of none, skips them.
 local function wrap(frame)
-    if wrapped[frame] then return end
+    if wrapped[frame] and not unwrappedParts[frame] then return end
+    unwrappedParts[frame] = nil
     wrapScripts(frame)
-    wrapParts(frame)
+    wrapParts(frame, frame)
 end
 
 ---------------------------------------------------------------------------------------------------
