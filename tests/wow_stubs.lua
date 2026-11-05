@@ -203,7 +203,15 @@ local function newRegion(kind, parent, template)
     function region:GetFont() return self.fontFile, self.fontHeight, self.fontFlags end
     function region:SetJustifyH(justify) self.justifyH = justify end
     function region:GetJustifyH() return self.justifyH or "CENTER" end
-    function region:IsProtected() return self.protected == true end
+    -- secretSecurity: the ObjectSecurity aspect, so both answers are secret.
+    function region:IsProtected()
+        if self.secretSecurity then return Stubs.SECRET end
+        return self.protected == true
+    end
+    function region:IsForbidden()
+        if self.secretSecurity then return Stubs.SECRET end
+        return self.forbidden == true
+    end
     function region:CreateTexture()
         local texture = newRegion("Texture", self)
         return texture
@@ -1509,6 +1517,7 @@ local function install()
     G.SecureHandlerWrapScript = function(frame, script, header, preBody, postBody)
         if state.combat then error("ADDON_ACTION_BLOCKED: script wrapped in combat") end
         frame = state.rawFrames[frame] or frame
+        if frame.secretSecurity then error("attempt to perform boolean test on a secret boolean value") end
         frame.wraps = frame.wraps or {}
         frame.wraps[script] = { header = header, pre = preBody, post = postBody }
     end

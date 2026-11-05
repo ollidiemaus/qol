@@ -191,6 +191,20 @@ describe("click casting keys", function()
         T.eq(hoverBinding("F"), nil, "the frame hid under the mouse")
     end)
 
+    it("leaves a part whose security is secret for a later update, and goes on with the others", function()
+        local bar
+        start({ bind("F", spell(RENEW)) }, nil, function()
+            bar = PlayerFrame.HealthBarsContainer.HealthBar
+            bar.secretSecurity = true
+        end)
+        T.eq(bar.wraps, nil, "the bar waits")
+        T.eq(press(party(2).HealthBarsContainer.HealthBar, "F"), "spell:139 on party2", "the others have theirs")
+        bar.secretSecurity = nil
+        Stubs.Fire("GROUP_ROSTER_UPDATE")
+        Stubs.RunTimers()
+        T.eq(press(bar, "F"), "spell:139 on player")
+    end)
+
     it("uses Target and Menu on other clicks on the unit of the frame whose bar the mouse is over", function()
         start({ bind("ALT-BUTTON1", TARGET) })
         Stubs.PointAt(party(1))
