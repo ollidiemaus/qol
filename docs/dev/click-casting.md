@@ -82,6 +82,16 @@ makes one). A binding with any other action, or not shaped like one, stays saved
   another click casting addon has the header, Grid2's frames are that addon's.
 - A spell with a rank (a digit in `C_Spell.GetSpellSubtext`) is cast by name, so the highest rank
   known is cast. Items use `item:<id>`, macros their name.
+- A binding's saved spell ID only says which spell it is: `ClickCast.Highest` works out the highest
+  rank whenever it's asked, for the page's icon and tooltip, for `Works` and for `ClickCast.Same`, so
+  nothing is rewritten and a rank learned needs only the page's refresh on what the character has.
+  It asks `C_Spell.GetSpellIDForSpellIdentifier` with the name (seen in game on Forever, for one
+  spell; Blizzard's cast sequences use it too) and takes the answer only if the character knows that
+  spell, as the name can be an NPC's spell too. Otherwise, or with no such API, it's the saved ID.
+  `ClickCast.Same` makes the ranks of a spell one action for the bound check, quick bind's replaced
+  list and clash marks; rings hold fixed ranks, so `Entries.Same` stays. A saved rank whose subtext
+  isn't loaded (the one a respec took away, likely) counts as having no rank until it is, so
+  `hasRank` asks for it and `SPELL_DATA_LOAD_RESULT` updates the bindings and the page.
 - The header, the buttons and the frames change on the option, the bindings, and, while it's on,
   what the character has (`RingEntries.KNOWN_EVENTS`), `GROUP_ROSTER_UPDATE`, a raid-style frame
   set up and the arena UI loading. In combat everything stays as it was when it started.

@@ -250,8 +250,9 @@ can heal a party member while you keep your target, and a key can heal whoever y
   Escape, Shift, Ctrl or Alt on their own, Cmd on the Mac, and the keys you move, turn and jump with
   can't be bound.
 - **Like the game:** a click acts when you let go of the button, a key when you press it. A spell
-  casts the highest rank you know, an item is used on the unit (a bandage), and a macro sees the
-  unit as `[@mouseover]`.
+  casts the highest rank you know, and the page shows that rank, so a binding moves up by itself
+  when you learn one and every rank of a spell counts as the same action. To keep a lower rank, bind
+  a macro. An item is used on the unit (a bandage), and a macro sees the unit as `[@mouseover]`.
 - **Which frames:** the player, target, target of target, focus, focus target, pet, party (with the
   party pets), the raid-style party and raid frames, and the boss and arena frames. A unit frame
   addon that uses the usual way for addons to join click casting gets your bindings too, and so do

@@ -674,7 +674,9 @@ end
 local function bookSlots()
     if state.spellBook then return state.spellBook end
     local ids = {}
-    for id in pairs(state.spells) do ids[#ids + 1] = id end
+    for id, info in pairs(state.spells) do
+        if not info.unknown then ids[#ids + 1] = id end
+    end
     table.sort(ids)
     local slots = {}
     for index, id in ipairs(ids) do slots[index] = { id = id } end
@@ -1440,7 +1442,8 @@ local function install()
     }
 
     --- What a ring holds, as this character has it. state.spells[id] = { name, texture, usable,
-    -- noMana, consumable, charges, count, cooldown } for the spells it knows; state.items[id] = { name,
+    -- noMana, consumable, charges, count, cooldown } for the spells it knows, and unknown = true for
+    -- one the game has but it doesn't know (the rank it unlearned); state.items[id] = { name,
     -- texture, count, equipped, usable, consumable, stack, cooldown = { start, duration } } for the
     -- items (count 0: not in the bags); state.toys[id] = { usable } for the toys it has (item data
     -- in state.items); state.mounts[id] = { name, spellID, texture, usable, collected, hidden };
@@ -1463,19 +1466,35 @@ local function install()
             if spell(id) then state.cursorInfo = { "spell", 1, "spell", id, id } end
         end,
     }
-    -- state.spells[id].unloaded: its subtext isn't there until RequestLoadSpellData, unless neverLoads.
+    -- state.spells[id].unloaded: its subtext isn't there until RequestLoadSpellData, unless neverLoads
+    -- (a spec then loads it itself and fires SPELL_DATA_LOAD_RESULT). requested: it was asked for.
     G.C_Spell.GetSpellSubtext = function(id)
         local info = spell(id) or {}
         if not info.unloaded then return info.subtext end
     end
     G.C_Spell.IsSpellDataCached = function(id) return not (spell(id) or {}).unloaded end
     G.C_Spell.RequestLoadSpellData = function(id)
+        if spell(id) then spell(id).requested = true end
         if spell(id) and not spell(id).neverLoads then spell(id).unloaded = nil end
+    end
+    -- A name's highest rank the character knows, or what state.spellIdentifiers[name] says instead,
+    -- for the answers that aren't: an NPC's spell, or a spell it doesn't know.
+    G.C_Spell.GetSpellIDForSpellIdentifier = function(identifier)
+        local answer = state.spellIdentifiers and state.spellIdentifiers[identifier]
+        if answer then return answer end
+        local found, highest
+        for id, info in pairs(state.spells) do
+            local rank = tonumber((info.subtext or ""):match("%d+")) or 0
+            if info.name == identifier and not info.unknown and (not highest or rank > highest) then
+                found, highest = id, rank
+            end
+        end
+        return found
     end
     G.Enum.SpellBookSpellBank = { Player = 0, Pet = 1 }
     G.Enum.SpellBookItemType = { None = 0, Spell = 1, FutureSpell = 2, PetAction = 3, Flyout = 4 }
     G.C_SpellBook = {
-        IsSpellKnownOrInSpellBook = function(id) return spell(id) ~= nil end,
+        IsSpellKnownOrInSpellBook = function(id) return spell(id) ~= nil and not spell(id).unknown end,
         GetNumSpellBookSkillLines = function() return 1 end,
         GetSpellBookSkillLineInfo = function()
             return { itemIndexOffset = 0, numSpellBookItems = #bookSlots(), shouldHide = false }
