@@ -142,7 +142,8 @@ describe("QoL on Classic Era", function()
         -- compartment, the player coordinates, guild banks, the controller's buff tooltips and back
         -- buttons.
         for _, key in ipairs({ "combinedBagTopLeft", "druidManaBar", "minimapCompartment",
-            "hideMinimapCoords", "minimapCoordsClassColor", "guildRepair", "hideBuffTooltips",
+            "hideMinimapCoords", "minimapCoordsClassColor", "minimapCoordsOffsetX", "minimapCompartmentOffsetY",
+            "guildRepair", "hideBuffTooltips",
             "controllerBackButtons", "hideMinimapCalendar" }) do
             T.falsy(keys[key], key)
         end

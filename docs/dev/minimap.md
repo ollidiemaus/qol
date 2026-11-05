@@ -72,7 +72,50 @@ once it hasn't; no OnUpdate of ours runs every frame for it. The frame keeps the
 999 and 999 and is as high as the clock's button, so its row never moves as the numbers change; the
 text is anchored to the side of its spot (left, right or center), so it keeps to the minimap's edge or
 to its neighbor. Its class color goes through the same code as the clock's, applied once more when the
-frame is made, in case the colors ran before it was there. Its font size goes through the clock's code
-too: the frame grows both ways with a larger font, and Default gives the text the clock's font object
+frame is made, in case the colors ran before it was there. The Show choice (both, FPS or ping) has a
+format string each; the frame is measured again from a three-digit reading of the chosen format when
+the choice changes. With a font size of ours the text is measured at that size, so the width is
+divided back to the game's size for `gameFonts`, from which the sizes grow it. Its font size goes
+through the clock's code too: the frame grows both ways with a larger font, and Default gives the text the clock's font object
 (`WhiteNormalNumberFont`) back. The sizes are applied before the positions, so the frame is made there
 when it gets a row and has its size before it's first placed.
+
+## Offsets
+
+An offset is a shift of one element in screen units (`x / GetEffectiveScale()`), so a scaled minimap
+doesn't change it. The rows and the spots inside the map work out places and widths without it and add
+it only in `placeItem`: neighbors and the coordinates under a row don't move. The coordinates have no
+element entry and no Position; their offset goes on the row's anchor or on the game's.
+
+At the game's own place the game's saved anchors are shifted (`shift`, through `ns.Later` like all the
+layout). With an offset of 0 a frame we don't hold isn't touched at all, and the offset keys count
+towards `layoutActive` only when they aren't 0, as they're compared with their defaults.
+
+Some elements hold other frames up, so there the offset moves what's inside the frame (`parts`):
+- The zone text's button: on Forever the clock, the calendar, the mail indicator (and through the
+  calendar the compartment) and the instance difficulty hang on it (`GameTimeFrameTemplate.xml`,
+  `MinimapIndicatorFrameTemplate.xml`, `Blizzard_TimeManager.xml`), so only `MinimapZoneText` moves
+  and the button with its hover area stays. In a row the whole button moves. Classic Era and Retail get
+  the same, for one way of working.
+- `MinimapCluster.Tracking`: Retail's indicator frame anchors to it (`Minimap.xml`), so
+  `Tracking.Button` and `Tracking.Background` move. Forever's template anchors the indicator to the
+  zone text's button, but its source still has `MiniMapIndicatorFrame_UpdatePosition`, which anchors
+  to `Tracking`; it gets the same path. `Background` has no anchors in the XML, which we take as
+  filling its parent (to check in game). Classic Era's `MiniMapTracking` has nothing on it and moves
+  whole.
+Checked in Forever's, Retail's and Classic Era's UI source: nothing anchors to the clock, the
+compartment, the day and night icon or the coordinates.
+
+Edit Mode's "Header underneath" anchors the zone text and the compartment anew, and Forever's skin
+the day and night icon on every minimap scale. A layout runs after leaving Edit Mode and on
+`EDIT_MODE_LAYOUTS_UPDATED`, for a layout that changes outside it; inside Edit Mode the offset waits
+for the exit. `originals` holds the game's anchors and `placed` what
+the last layout left: anchors that aren't `placed` are the game's new ones (`followGame`) and become
+the originals, also with the offset back at 0 or for a frame in a row.
+
+## The page's fit
+
+With the offset rows the sections go in pairs by height, so every header stays level within the
+page's 600: Shape | Coordinates, Clock | Zone text, Buttons | FPS and ping, 584 on Forever. The old
+order and Shape | Clock, Buttons | FPS and ping, Zone text | Coordinates would both take 610 with
+level headers, as each leaves a short section beside a much taller one.

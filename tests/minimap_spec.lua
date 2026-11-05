@@ -406,6 +406,219 @@ describe("minimap buttons inside the map", function()
     end)
 end)
 
+describe("minimap offsets", function()
+    it("shift an element in a row, and only that element", function()
+        local ns = start({ squareMinimap = true, minimapClock = "bottomLeft", minimapCompartment = "bottomLeft" })
+        local compartmentX = center(AddonCompartmentFrame).x
+        local coordsY = coords():PointFor("TOP")[5]
+        set(ns, "minimapClockOffsetX", 5)
+        set(ns, "minimapClockOffsetY", -7)
+        near(center(TimeManagerClockButton).x, -BRONZE_WIDTH / 2 + 20 + 5)
+        near(center(TimeManagerClockButton).y, -(3 + 16 / 2) - 7)
+        near(center(AddonCompartmentFrame).x, compartmentX)
+        near(coords():PointFor("TOP")[5], coordsY)
+    end)
+
+    it("shift an element in a row around a round map too", function()
+        local ns = start({ minimapClock = "topLeft" })
+        local x, y = center(TimeManagerClockButton).x, center(TimeManagerClockButton).y
+        set(ns, "minimapClockOffsetX", 2)
+        set(ns, "minimapClockOffsetY", 3)
+        near(center(TimeManagerClockButton).x, x + 2)
+        near(center(TimeManagerClockButton).y, y + 3)
+    end)
+
+    it("shift the whole zone text button in a row", function()
+        local ns = start({ squareMinimap = true, minimapZoneText = "above" })
+        set(ns, "minimapZoneTextOffsetY", 4)
+        near(center(MinimapCluster.ZoneTextButton).y, 3 + 12 / 2 + 4)
+        firstPoint(MinimapZoneText, "LEFT", MinimapCluster.ZoneTextButton, "LEFT", 4, 0)
+    end)
+
+    it("shift an element inside the map, round or square", function()
+        local ns = start({ minimapTracking = "insideTop", squareMinimap = true })
+        local y = MinimapCluster.Tracking:PointFor("CENTER")[5]
+        set(ns, "minimapTrackingOffsetX", 3)
+        set(ns, "minimapTrackingOffsetY", -2)
+        near(MinimapCluster.Tracking:PointFor("CENTER")[4], 3)
+        near(MinimapCluster.Tracking:PointFor("CENTER")[5], y - 2)
+        set(ns, "squareMinimap", false)
+        near(MinimapCluster.Tracking:PointFor("CENTER")[4], 3)
+    end)
+
+    it("look the same on a scaled minimap", function()
+        local ns = start({ squareMinimap = true, minimapClock = "topRight" })
+        TimeManagerClockButton.effectiveScale = 0.5
+        ns.MinimapLayout:Apply()
+        local x = center(TimeManagerClockButton).x
+        set(ns, "minimapClockOffsetX", -6)
+        near(center(TimeManagerClockButton).x, x - 6 / 0.5)
+    end)
+
+    it("leave a frame without an offset alone, even when another one has one", function()
+        local ns = start()
+        local touched = {}
+        local frames = { MinimapCluster.ZoneTextButton, MinimapZoneText, TimeManagerClockButton, AddonCompartmentFrame,
+            MinimapCluster.Tracking, MinimapCluster.Tracking.Button, MinimapCluster.Tracking.Background,
+            MinimapCluster.DielFrame, coords() }
+        for _, frame in ipairs(frames) do
+            frame.ClearAllPoints = function() touched[#touched + 1] = frame end
+            frame.SetPoint = function() touched[#touched + 1] = frame end
+        end
+        ns.MinimapLayout:Apply()
+        T.eq(#touched, 0)
+        -- Set and taken back, then one that moves another frame only.
+        set(ns, "minimapDayNightOffsetX", 5)
+        T.eq(#touched, 2)
+        T.eq(touched[1], MinimapCluster.DielFrame)
+        T.eq(touched[2], MinimapCluster.DielFrame)
+    end)
+
+    it("shift each kind of frame from the game's own anchors, and 0 restores them exactly", function()
+        local ns = start({ squareMinimap = true })
+        for _, case in ipairs({
+            { key = "minimapClock", frame = TimeManagerClockButton, point = "TOPRIGHT",
+                relative = MinimapCluster.BorderTop, x = -4, y = 0 },
+            { key = "minimapCompartment", frame = AddonCompartmentFrame, point = "TOPLEFT",
+                relative = GameTimeFrame, x = 0, y = 0 },
+            { key = "minimapDayNight", frame = MinimapCluster.DielFrame, point = "CENTER",
+                relative = MinimapCluster, x = 63, y = 72 },
+        }) do
+            set(ns, case.key .. "OffsetX", 5)
+            set(ns, case.key .. "OffsetY", -3)
+            local p = case.frame:PointFor(case.point)
+            T.eq(p[2], case.relative)
+            near(p[4], case.x + 5, case.key)
+            near(p[5], case.y - 3, case.key)
+            set(ns, case.key .. "OffsetX", 0)
+            set(ns, case.key .. "OffsetY", 0)
+            firstPoint(case.frame, case.point, case.relative, case.point == "CENTER" and "CENTER" or p[3], case.x, case.y)
+        end
+    end)
+
+    it("scale the shift at the game's own place too", function()
+        local ns = start()
+        TimeManagerClockButton.effectiveScale = 0.5
+        set(ns, "minimapClockOffsetX", 5)
+        near(TimeManagerClockButton:PointFor("TOPRIGHT")[4], -4 + 10)
+    end)
+
+    it("move the zone text's font string at the game's own place, not its button", function()
+        local ns = start()
+        set(ns, "minimapZoneTextOffsetX", 6)
+        set(ns, "minimapZoneTextOffsetY", 2)
+        firstPoint(MinimapZoneText, "LEFT", MinimapCluster.ZoneTextButton, "LEFT", 10, 2)
+        firstPoint(MinimapCluster.ZoneTextButton, "LEFT", MinimapCluster.BorderTop, "LEFT", 4, 0)
+        -- In a row the button moves instead, and the font string is back in it.
+        set(ns, "minimapZoneText", "above")
+        firstPoint(MinimapZoneText, "LEFT", MinimapCluster.ZoneTextButton, "LEFT", 4, 0)
+        T.truthy(MinimapCluster.ZoneTextButton:PointFor("CENTER"))
+        set(ns, "minimapZoneText", "default")
+        firstPoint(MinimapZoneText, "LEFT", MinimapCluster.ZoneTextButton, "LEFT", 10, 2)
+        firstPoint(MinimapCluster.ZoneTextButton, "LEFT", MinimapCluster.BorderTop, "LEFT", 4, 0)
+    end)
+
+    it("move what the tracking frame holds at the game's own place, as the mail icon hangs on the frame", function()
+        local ns = start()
+        local tracking = MinimapCluster.Tracking
+        set(ns, "minimapTrackingOffsetX", -4)
+        firstPoint(tracking, "RIGHT", MinimapCluster.BorderTop, "LEFT", -2, 0)
+        firstPoint(tracking.Button, "CENTER", tracking, "CENTER", -4, 0)
+        near(tracking.Background:PointFor("TOPLEFT")[4], -4)
+        near(tracking.Background:PointFor("BOTTOMRIGHT")[4], -4)
+        set(ns, "minimapTracking", "topLeft")
+        firstPoint(tracking.Button, "CENTER", tracking, "CENTER", 0, 0)
+        near(tracking.Background:PointFor("TOPLEFT")[4], 0)
+        T.truthy(tracking:PointFor("CENTER"))
+    end)
+
+    it("shift the coordinates at the game's place and under a row", function()
+        local ns = start({ squareMinimap = true })
+        set(ns, "minimapCoordsOffsetX", 2)
+        set(ns, "minimapCoordsOffsetY", 3)
+        firstPoint(coords(), "BOTTOM", Minimap, "BOTTOM", 2, -15)
+        set(ns, "minimapClock", "bottom")
+        local point = coords():PointFor("TOP")
+        near(point[4], 2)
+        near(point[5], -(3 + 16 + 2) + 3)
+        set(ns, "minimapClock", "default")
+        firstPoint(coords(), "BOTTOM", Minimap, "BOTTOM", 2, -15)
+        set(ns, "minimapCoordsOffsetX", 0)
+        set(ns, "minimapCoordsOffsetY", 0)
+        firstPoint(coords(), "BOTTOM", Minimap, "BOTTOM", 0, -18)
+    end)
+
+    it("follow the game when it anchors the frame anew", function()
+        local ns = start({ minimapCompartmentOffsetX = 5 })
+        -- Edit Mode's "Header underneath", then leaving Edit Mode.
+        AddonCompartmentFrame:ClearAllPoints()
+        AddonCompartmentFrame:SetPoint("BOTTOM", GameTimeFrame, "TOP", 0, -1)
+        ns.MinimapLayout:Apply()
+        firstPoint(AddonCompartmentFrame, "BOTTOM", GameTimeFrame, "TOP", 5, -1)
+        ns.MinimapLayout:Apply()
+        firstPoint(AddonCompartmentFrame, "BOTTOM", GameTimeFrame, "TOP", 5, -1)
+        set(ns, "minimapCompartmentOffsetX", 0)
+        firstPoint(AddonCompartmentFrame, "BOTTOM", GameTimeFrame, "TOP", 0, -1)
+    end)
+
+    it("follow a layout that changes outside Edit Mode", function()
+        start({ minimapCompartmentOffsetX = 5 })
+        AddonCompartmentFrame:ClearAllPoints()
+        AddonCompartmentFrame:SetPoint("BOTTOM", GameTimeFrame, "TOP", 0, -1)
+        Stubs.Fire("EDIT_MODE_LAYOUTS_UPDATED")
+        Stubs.RunTimers()
+        firstPoint(AddonCompartmentFrame, "BOTTOM", GameTimeFrame, "TOP", 5, -1)
+    end)
+
+    it("keep the game's new anchors when the offset goes to 0 right after them", function()
+        local ns = start({ minimapCompartmentOffsetX = 5 })
+        AddonCompartmentFrame:ClearAllPoints()
+        AddonCompartmentFrame:SetPoint("BOTTOM", GameTimeFrame, "TOP", 0, -1)
+        set(ns, "minimapCompartmentOffsetX", 0)
+        firstPoint(AddonCompartmentFrame, "BOTTOM", GameTimeFrame, "TOP", 0, -1)
+    end)
+
+    it("go back to the game's new anchors from a row", function()
+        local ns = start({ minimapZoneText = "above" })
+        MinimapCluster.ZoneTextButton:ClearAllPoints()
+        MinimapCluster.ZoneTextButton:SetPoint("BOTTOM", MinimapCluster, "BOTTOM", -1, 8)
+        ns.MinimapLayout:Apply()
+        T.truthy(MinimapCluster.ZoneTextButton:PointFor("CENTER"))
+        set(ns, "minimapZoneText", "default")
+        firstPoint(MinimapCluster.ZoneTextButton, "BOTTOM", MinimapCluster, "BOTTOM", -1, 8)
+    end)
+
+    it("do nothing while the element is hidden, and hold when it comes back", function()
+        local ns = start({ minimapClock = "hidden", minimapClockOffsetX = 5 })
+        firstPoint(TimeManagerClockButton, "TOPRIGHT", MinimapCluster.BorderTop, "TOPRIGHT", -4, 0)
+        set(ns, "minimapClock", "default")
+        firstPoint(TimeManagerClockButton, "TOPRIGHT", MinimapCluster.BorderTop, "TOPRIGHT", 1, 0)
+    end)
+
+    it("work on Classic Era's own frames", function()
+        Stubs.LoadAddon({ client = "classicEra" })
+        Stubs.Login({ minimapTrackingOffsetX = 2, minimapDayNightOffsetY = 3, minimapZoneTextOffsetX = 1 })
+        firstPoint(MiniMapTracking, "TOPLEFT", MinimapBackdrop, "TOPLEFT", 5, -50)
+        firstPoint(GameTimeFrame, "TOPRIGHT", MinimapBackdrop, "TOPRIGHT", -4, -20)
+        T.same(Stubs.state().errors, {})
+    end)
+
+    it("give a button its level back when it leaves the map for the game's own place", function()
+        local ns = start({ minimapDayNight = "insideTop" })
+        local level = MinimapCluster.DielFrame:GetFrameLevel()
+        set(ns, "minimapDayNightOffsetX", 2)
+        set(ns, "minimapDayNight", "default")
+        T.truthy(MinimapCluster.DielFrame:GetFrameLevel() < level)
+        firstPoint(MinimapCluster.DielFrame, "CENTER", MinimapCluster, "CENTER", 65, 72)
+    end)
+
+    it("stay when the Position changes", function()
+        local ns = start({ squareMinimap = true, minimapClock = "topRight", minimapClockOffsetX = 5 })
+        set(ns, "minimapClock", "topLeft")
+        near(center(TimeManagerClockButton).x, -BRONZE_WIDTH / 2 + 20 + 5)
+    end)
+end)
+
 describe("minimap FPS and ping", function()
     -- The frame keeps the width of "999 fps  999 ms": 15 characters, 5 units each in the stubs.
     local WIDTH = 15 * 5
@@ -418,6 +631,57 @@ describe("minimap FPS and ping", function()
         local ns = start()
         T.eq(performance(ns), nil)
         T.eq(#Stubs.state().delayed, 0)
+    end)
+
+    it("show only what the Show choice says, and take only the room it needs", function()
+        local ns = start({ squareMinimap = true, minimapPerformance = "topRight", minimapPerformanceShow = "fps" })
+        local frame = performance(ns)
+        T.eq(frame.text:GetText(), "60 fps")
+        -- "999 fps"
+        T.eq(frame:GetWidth(), 7 * 5)
+        near(center(frame).x, BRONZE_WIDTH / 2 - 7 * 5 / 2)
+
+        set(ns, "minimapPerformanceShow", "ping")
+        T.eq(frame.text:GetText(), "45 ms")
+        T.eq(frame:GetWidth(), 6 * 5)
+        near(center(frame).x, BRONZE_WIDTH / 2 - 6 * 5 / 2)
+
+        set(ns, "minimapPerformanceShow", "both")
+        T.eq(frame.text:GetText(), "60 fps  45 ms")
+        T.eq(frame:GetWidth(), WIDTH)
+    end)
+
+    it("keep their width as the numbers change, whatever they show", function()
+        local ns = start({ minimapPerformance = "top", minimapPerformanceShow = "ping" })
+        local frame = performance(ns)
+        Stubs.state().latencyWorld = 7
+        Stubs.state().latencyHome = 7
+        Stubs.AdvanceTime()
+        T.eq(frame.text:GetText(), "7 ms")
+        T.eq(frame:GetWidth(), 6 * 5)
+    end)
+
+    it("measure the Show choice at a larger font too", function()
+        local ns = start({ minimapPerformance = "top", minimapPerformanceSize = 15 })
+        local frame = performance(ns)
+        frame.text.GetStringWidth = function(self) return #self.text * 5 * self.fontHeight / 10 end
+        set(ns, "minimapPerformanceShow", "fps")
+        T.eq(frame:GetWidth(), 7 * 5 * 1.5)
+        -- Defaults sets both at once: the width at the game's font comes back.
+        ns.Options:Set("minimapPerformanceSize", 0)
+        ns.Options:Set("minimapPerformanceShow", "both")
+        Stubs.RunTimers()
+        T.eq(frame:GetWidth(), 75)
+    end)
+
+    it("go by the Show choice even if it was changed while hidden", function()
+        local ns = start({ minimapPerformance = "top" })
+        local frame = performance(ns)
+        set(ns, "minimapPerformance", "hidden")
+        set(ns, "minimapPerformanceShow", "ping")
+        set(ns, "minimapPerformance", "top")
+        T.eq(frame.text:GetText(), "45 ms")
+        T.eq(frame:GetWidth(), 6 * 5)
     end)
 
     it("show the frame rate and the higher latency at the right end of the row above", function()

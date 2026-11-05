@@ -50,6 +50,27 @@ One of the game's own graphics sliders that sets several hidden settings at once
 View Distance, Environment Detail and Ground Clutter.
 _Avoid_: proxy, index CVar, Graphics Quality (that's the preset that moves all of them)
 
+### Minimap
+
+**Minimap element**:
+Something around or on the minimap that the player can place on its own: the zone text, the clock, FPS
+and ping, the addon compartment, the tracking button, the day and night icon, or the coordinates.
+_Avoid_: minimap feature, minimap widget
+
+**Spot**:
+Where an element's Position puts it: the game's own place, a row above or below the minimap, or a place
+inside the map.
+_Avoid_: position (that's the setting that picks the spot), slot, anchor
+
+**Offset**:
+A small shift of one element from its spot, across and up or down. It moves only that element; the
+others stay where their spots put them.
+_Avoid_: nudge, position, custom position
+
+**Ping**:
+The higher of the player's home and world latency, shown next to the FPS.
+_Avoid_: latency (alone, as the game has two), lag, ms
+
 ### Tooltips
 
 **Vendor price**:
