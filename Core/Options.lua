@@ -84,6 +84,7 @@ local DEFAULTS = {
 
     disableBarPaging = false,
     hideButtonBorders = false,
+    upgradeSpellRanks = false,
     ring = false,
     clickCast = false,
 

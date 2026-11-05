@@ -43,7 +43,7 @@ read_globals = {
     "ChatFrame2", "ChatFrame2Tab", "ChatFrameMenuButton", "ChatFrameChannelButton", "ChatFrameToggleVoiceDeafenButton",
     "ChatFrameToggleVoiceMuteButton", "TextToSpeechButtonFrame", "BuffFrameTooltip",
     "InCombatLockdown", "GetPhysicalScreenSize", "ReloadUI", "IsSecureCmd", "geterrorhandler", "CinematicFrame", "MovieFrame",
-    "IsShiftKeyDown", "GamepadMainActionBarFrame", "GamepadMode", "SettingsPanel", "GameMenuFrame", "GetCursorPosition", "GetCursorInfo",
+    "IsShiftKeyDown", "GamepadMainActionBarFrame", "GamepadMode", "SettingsPanel", "GameMenuFrame", "GetCursorPosition", "GetCursorInfo", "GetActionInfo",
     "SecureHandlerWrapScript", "EditModeManagerFrame",
     "MailFrame", "SendMailFrame", "SendMailNameEditBox", "SendMailSubjectEditBox",
     -- Performance
