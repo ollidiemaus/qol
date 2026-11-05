@@ -48,7 +48,9 @@ Things only the real client can confirm:
   shapeshifted (whether the server sends mana updates in a form), shifting in and out in combat
   shows and hides it, the threat glow fits the frame in combat with and without the bar, a change
   of the Status Text setting shows on the bar at once, and a vehicle shows its own art. Something
-  in the bottom container (a pet frame) isn't covered by it.
+  in the bottom container (a pet frame) isn't covered by it. Its status text in bear and cat form,
+  in and out of combat, in each Status Text mode (Numeric, Percentage, Both, and None under the
+  mouse), with no Lua errors: the specs can't prove the client takes secret mana in these calls.
 - Frames past the screen edge, with Snap to Elements off: an action bar, the minimap and a unit frame
   dragged to each edge go up to 30 past it, also right after changing a setting of theirs in Edit
   Mode. After saving, a `/reload` and switching layouts (by hand and with AutoSetup on a resolution

@@ -53,6 +53,14 @@ local function texts(field)
     return found
 end
 
+-- The game's Status Text setting changes, as its dropdown does it.
+local function statusText(on, mode)
+    local cvars = Stubs.state().cvars
+    cvars.statusText, cvars.statusTextDisplay = on, mode
+    Stubs.Fire("CVAR_UPDATE", "statusText", on)
+    Stubs.Fire("CVAR_UPDATE", "statusTextDisplay", mode)
+end
+
 -- Where the threat glow is centered: the last CENTER point (SetPoint replaces it in the game).
 local function glowOffset()
     local offset
@@ -226,11 +234,72 @@ describe("druid mana bar", function()
 
     it("passes secret mana on to the bar without doing sums with it", function()
         start({ druidManaBar = true })
-        Stubs.state().cvars.statusText = "1"
-        Stubs.state().units.player.mana = Stubs.SECRET
-        Stubs.Fire("UNIT_POWER_FREQUENT", "player", "MANA")
+        statusText("1", "NUMERIC")
+        tick(Stubs.SECRET)
         T.eq(manaBar().value, Stubs.SECRET)
-        T.same(texts(), { CENTER = "", LEFT = "", RIGHT = "" })
+        T.same(texts(), { CENTER = "<SECRET> / 2000", LEFT = "", RIGHT = "" })
+    end)
+
+    it("shows secret mana in every Status Text mode, and when the mode changes", function()
+        start({ druidManaBar = true })
+        statusText("1", "NUMERIC")
+        tick(Stubs.SECRET)
+        for _, mode in ipairs({
+            { "NUMERIC", { CENTER = "<SECRET> / 2000", LEFT = "", RIGHT = "" } },
+            { "PERCENT", { CENTER = "<SECRET>%", LEFT = "", RIGHT = "" } },
+            { "BOTH", { CENTER = "", LEFT = "<SECRET>%", RIGHT = "<SECRET>" } },
+            { "NUMERIC", { CENTER = "<SECRET> / 2000", LEFT = "", RIGHT = "" } },
+        }) do
+            statusText("1", mode[1])
+            T.same(texts(), mode[2], mode[1])
+        end
+    end)
+
+    it("shows secret mana only under the mouse with Status Text on None", function()
+        start({ druidManaBar = true })
+        statusText("0", "NONE")
+        tick(Stubs.SECRET)
+        T.same(texts(), { CENTER = "", LEFT = "", RIGHT = "" }, "nothing without the mouse")
+        manaBar():RunScript("OnEnter")
+        T.same(texts(), { CENTER = "<SECRET> / 2000", LEFT = "", RIGHT = "" })
+        manaBar():RunScript("OnLeave")
+        T.same(texts(), { CENTER = "", LEFT = "", RIGHT = "" }, "gone when the mouse leaves")
+    end)
+
+    it("sets the text on every tick of secret mana, then the next usable mana", function()
+        start({ druidManaBar = true })
+        statusText("1", "BOTH")
+        tick(600)
+        local before = texts("textSets")
+        tick(Stubs.SECRET)
+        tick(Stubs.SECRET)
+        T.same(texts("textSets"), { CENTER = before.CENTER, LEFT = before.LEFT + 2, RIGHT = before.RIGHT + 2 },
+            "each tick, and not the blank text")
+        tick(600)
+        T.same(texts(), { CENTER = "", LEFT = "30%", RIGHT = "600" }, "the same text as before the secret")
+        tick(Stubs.SECRET)
+        T.same(texts(), { CENTER = "", LEFT = "<SECRET>%", RIGHT = "<SECRET>" }, "and back")
+    end)
+
+    it("treats a secret maximum like secret mana", function()
+        start({ druidManaBar = true })
+        statusText("1", "PERCENT")
+        -- Only between wake-ups: the next Apply hides the bar, which needs a maximum it can read.
+        Stubs.state().units.player.maxMana = Stubs.SECRET
+        tick(600)
+        T.same(texts(), { CENTER = "<SECRET>%", LEFT = "", RIGHT = "" })
+        statusText("1", "NUMERIC")
+        T.same(texts(), { CENTER = "600 / <SECRET>", LEFT = "", RIGHT = "" })
+    end)
+
+    it("needs neither UnitPowerPercent nor curves on a client without secret values", function()
+        Stubs.LoadAddon()
+        _G.UnitPowerPercent, _G.CurveConstants, _G.issecretvalue = nil, nil, nil
+        Stubs.SetUnit("player", druid(ENERGY))
+        Stubs.Login({ druidManaBar = true })
+        statusText("1", "BOTH")
+        tick(611)
+        T.same(texts(), { CENTER = "", LEFT = "31%", RIGHT = "611" }, "rounded up, as Blizzard does")
     end)
 
     it("hears the mana only for the player, and only while the bar shows", function()
@@ -307,7 +376,7 @@ describe("druid mana bar", function()
             "the percentage stays")
         tick(Stubs.SECRET)
         T.eq(manaBar().value, Stubs.SECRET)
-        T.same(texts(), { CENTER = "", LEFT = "", RIGHT = "" }, "no sums with secret mana")
+        T.same(texts(), { CENTER = "", LEFT = "<SECRET>%", RIGHT = "<SECRET>" }, "no sums with secret mana")
     end)
 
     it("reads the Status Text setting when it changes, not on a mana tick", function()
@@ -325,6 +394,25 @@ describe("druid mana bar", function()
         Stubs.Fire("CVAR_UPDATE", "statusTextDisplay", "PERCENT")
         shift(ENERGY)
         T.same(texts(), { CENTER = "38%", LEFT = "", RIGHT = "" })
+    end)
+
+    it("reads the Status Text setting again each time the bar shows", function()
+        start({ druidManaBar = true })
+        local state = Stubs.state()
+        shift(MANA)
+        -- No CVAR_UPDATE: what the bar read before is out of date.
+        state.cvars.statusText, state.cvars.statusTextDisplay = "1", "PERCENT"
+        shift(ENERGY)
+        T.same(texts(), { CENTER = "30%", LEFT = "", RIGHT = "" })
+    end)
+
+    it("reads the setting at login in any form, also when it arrives after the bar is made", function()
+        start({ druidManaBar = true })
+        local cvars = Stubs.state().cvars
+        cvars.statusText, cvars.statusTextDisplay = "1", "NUMERIC"
+        Stubs.Fire("PLAYER_ENTERING_WORLD")
+        Stubs.RunTimers()
+        T.same(texts(), { CENTER = "600 / 2000", LEFT = "", RIGHT = "" })
     end)
 
     it("never hears the mana with the option off or without mana", function()

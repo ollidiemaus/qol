@@ -66,9 +66,41 @@ function ClickCast.List()
     return list
 end
 
+-- The spells asked for by hasRank: the saved rank of a respec can be one that isn't loaded.
+local requested = {}
+
+-- Whether the spell has a rank: a digit in the line under its name, whatever the locale. "Racial"
+-- is no rank. One that isn't loaded has none until it is (SPELL_DATA_LOAD_RESULT).
+local function hasRank(id)
+    if not C_Spell.GetSpellSubtext then return false end
+    if C_Spell.IsSpellDataCached and not C_Spell.IsSpellDataCached(id) and not requested[id] then
+        requested[id] = true
+        C_Spell.RequestLoadSpellData(id)
+    end
+    local subtext = C_Spell.GetSpellSubtext(id)
+    return type(subtext) == "string" and ns.IsUsable(subtext) and subtext:find("%d") ~= nil
+end
+
+-- What a binding's action casts: for a spell with a rank, the highest rank the character knows. The
+-- saved ID only says which spell it is, and stays the answer when the character knows no rank, or
+-- the name is an NPC's spell too.
+function ClickCast.Highest(action)
+    local lookup = C_Spell.GetSpellIDForSpellIdentifier
+    if action.kind ~= "spell" or not lookup or not hasRank(action.id) then return action end
+    local id = lookup(C_Spell.GetSpellName(action.id))
+    local highest = { kind = "spell", id = ns.IsUsable(id) and id or nil }
+    return Entries.Known(highest) and highest or action
+end
+
+-- Whether two actions are one in click casting: the ranks of a spell are. Rings hold fixed ranks,
+-- so Entries.Same stays as it is for them.
+function ClickCast.Same(a, b)
+    return Entries.Same(ClickCast.Highest(a), ClickCast.Highest(b))
+end
+
 -- Whether the character has the binding's action now.
 function ClickCast.Works(binding)
-    return UNIT_ACTIONS[binding.action.kind] ~= nil or Entries.Known(binding.action)
+    return UNIT_ACTIONS[binding.action.kind] ~= nil or Entries.Known(ClickCast.Highest(binding.action))
 end
 
 -- A combination's modifiers ({ ALT = true, CTRL = true, SHIFT = true }) and its key.
@@ -140,17 +172,30 @@ function ClickCast.Remove(index)
     schedule()
 end
 
+-- The bindings with an action other than this one, one binding for each action.
+local function otherActions(action, bindings)
+    local others = {}
+    for _, binding in ipairs(bindings) do
+        local seen = ClickCast.Same(binding.action, action)
+        for _, other in ipairs(others) do
+            seen = seen or ClickCast.Same(binding.action, other.action)
+        end
+        if not seen then others[#others + 1] = binding end
+    end
+    return others
+end
+
 -- Quick bind: binds the combination to the action. The working bindings on the combination make way
--- for it (it takes the first one's place), and their other actions are returned in the list's order;
--- bindings that don't work now keep theirs.
+-- for it (it takes the first one's place), and their other actions are returned in the list's
+-- order, each once; bindings that don't work now keep theirs.
 function ClickCast.Bind(action, combination)
-    local list, replaced, placed = savedBindings(), {}, nil
+    local list, moved, placed = savedBindings(), {}, nil
     for index = #list, 1, -1 do
         local binding = list[index]
         if valid(binding) and binding.combination == combination and ClickCast.Works(binding) then
             if placed then table.remove(list, placed) end
             placed = index
-            if not Entries.Same(binding.action, action) then table.insert(replaced, 1, binding.action) end
+            table.insert(moved, 1, binding)
         end
     end
     local binding = { combination = combination, action = action }
@@ -160,6 +205,8 @@ function ClickCast.Bind(action, combination)
         list[#list + 1] = binding
     end
     schedule()
+    local replaced = {}
+    for index, other in ipairs(otherActions(action, moved)) do replaced[index] = other.action end
     return replaced
 end
 
@@ -208,9 +255,9 @@ local function takenOver(kind)
     return kind ~= nil and (kind == types.Spell or kind == types.Macro or kind == types.PetAction)
 end
 
--- For the page, each binding's marks: clashes (the other working bindings on its combination, if
--- any) and takenOver (the game's own Click Casting binds its click to a spell, a macro or a pet
--- action).
+-- For the page, each binding's marks: clashes (the working bindings on its combination with another
+-- action, if any) and takenOver (the game's own Click Casting binds its click to a spell, a macro
+-- or a pet action).
 function ClickCast.Marks()
     local list, marks, working = ClickCast.List(), {}, {}
     local game = gameBindings()
@@ -223,14 +270,11 @@ function ClickCast.Marks()
         end
     end
     for _, indexes in pairs(working) do
-        if #indexes > 1 then
-            for _, index in ipairs(indexes) do
-                local clashes = {}
-                for _, other in ipairs(indexes) do
-                    if other ~= index then clashes[#clashes + 1] = list[other] end
-                end
-                marks[index].clashes = clashes
-            end
+        local bindings = {}
+        for at, index in ipairs(indexes) do bindings[at] = list[index] end
+        for _, index in ipairs(indexes) do
+            local clashes = otherActions(list[index].action, bindings)
+            marks[index].clashes = clashes[1] and clashes or nil
         end
     end
     return marks
@@ -333,12 +377,7 @@ end
 -- The secure action for a binding's spell, item or macro: a spell with a rank is cast by name, so
 -- the highest rank known is cast.
 local function actionOf(action)
-    if action.kind == "spell" and C_Spell.GetSpellSubtext then
-        local subtext = C_Spell.GetSpellSubtext(action.id)
-        if type(subtext) == "string" and ns.IsUsable(subtext) and subtext:find("%d") then
-            return "spell", C_Spell.GetSpellName(action.id)
-        end
-    end
+    if action.kind == "spell" and hasRank(action.id) then return "spell", C_Spell.GetSpellName(action.id) end
     return Entries.Action(action)
 end
 
@@ -659,6 +698,12 @@ function ClickCast:Init()
     schedule()
     Options:Watch({ KEY, ENEMIES }, schedule)
     for _, event in ipairs(Entries.KNOWN_EVENTS) do ns.Events:On(event, changed) end
+    ns.Events:On("SPELL_DATA_LOAD_RESULT", function(_, id)
+        if requested[id] then
+            requested[id] = nil
+            changed()
+        end
+    end)
     ns.Events:On("GROUP_ROSTER_UPDATE", changed)
     ns.Events:On("NAME_PLATE_UNIT_ADDED", plateChanged)
     ns.Events:On("UNIT_FACTION", plateChanged)

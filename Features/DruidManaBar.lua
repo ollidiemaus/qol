@@ -61,8 +61,10 @@ function DruidManaBar.ShouldShow()
     return ns.IsUsable(maxMana) and maxMana > 0
 end
 
+-- The result of a secret value is secret too, so no "x and y or z": that tests it.
 local function number(value)
-    return AbbreviateLargeNumbers and AbbreviateLargeNumbers(value) or tostring(value)
+    if AbbreviateLargeNumbers then return AbbreviateLargeNumbers(value) end
+    return tostring(value)
 end
 
 local function percent(value, maxValue)
@@ -78,10 +80,17 @@ local function setText(fontString, value)
     fontString:SetText(value)
 end
 
+-- A text made from a secret can't be compared, so it is set on every tick, and whatever comes next
+-- has to be set too: nothing is kept of it.
+local function setSecretText(fontString, format, ...)
+    shownText[fontString] = nil
+    fontString:SetFormattedText(format, ...)
+end
+
 -- Like the frame's other bars (TextStatusBar): the game's Status Text setting shows the text always
 -- ("statusText") or only under the mouse, as numbers, a percentage or both ("statusTextDisplay";
--- both puts the percentage left and the mana right, as on a mana bar). Read when the bar is made
--- and when the setting changes, not on a mana tick.
+-- both puts the percentage left and the mana right, as on a mana bar). Read whenever the bar is set
+-- up (also the first time) and when the setting changes, not on a mana tick.
 local alwaysText, textMode
 
 local function readStatusText()
@@ -89,11 +98,38 @@ local function readStatusText()
     textMode = C_CVar.GetCVar("statusTextDisplay")
 end
 
+-- The same texts from a secret: no sums and no comparing, only what the game lets addon code hand
+-- on to a font string. The game works out the percentage; rounded to nearest, so it can read 1%
+-- below Blizzard's, which rounds up with a sum addon code can't do.
+local function showSecretPercent(fontString)
+    setSecretText(fontString, "%.0f%%", UnitPowerPercent("player", MANA, false, CurveConstants.ScaleTo100))
+end
+
+local function updateSecretText(value, maxValue)
+    if textMode == "BOTH" then
+        setText(text, "")
+        showSecretPercent(leftText)
+        setSecretText(rightText, "%s", number(value))
+        return
+    end
+    if textMode == "PERCENT" then
+        showSecretPercent(text)
+    else
+        setSecretText(text, "%s / %s", number(value), number(maxValue))
+    end
+    setText(leftText, "")
+    setText(rightText, "")
+end
+
 local function updateText()
     local center, left, right = "", "", ""
     if hovered or alwaysText then
         local value, maxValue = UnitPower("player", MANA), UnitPowerMax("player", MANA)
-        if ns.IsUsable(value) and ns.IsUsable(maxValue) and maxValue > 0 then
+        if not (ns.IsUsable(value) and ns.IsUsable(maxValue)) then
+            updateSecretText(value, maxValue)
+            return
+        end
+        if maxValue > 0 then
             if textMode == "BOTH" then
                 left, right = percent(value, maxValue), number(value)
             elseif textMode == "PERCENT" then
@@ -141,7 +177,6 @@ local function create()
     bar:SetStatusBarTexture(BAR)
     bar:Hide()
     text, leftText, rightText = newText("CENTER", 0), newText("LEFT", 2), newText("RIGHT", -2)
-    readStatusText()
     -- Under the mouse it shows its text, like the frame's mana bar; clicks reach the frame.
     bar:SetMouseMotionEnabled(true)
     bar:SetMouseClickEnabled(false)
@@ -178,6 +213,7 @@ function DruidManaBar:Apply()
         end
         glowChanged = true
         bar:SetMinMaxValues(0, UnitPowerMax("player", MANA))
+        readStatusText()
         updateValue()
         bar:Show()
         playerListener:On("UNIT_POWER_FREQUENT", onPower)

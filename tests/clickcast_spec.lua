@@ -3,6 +3,8 @@ local Stubs = require("wow_stubs")
 local describe, it = T.describe, T.it
 
 local RENEW, FLASH_HEAL, FORTITUDE, SMITE = 139, 2061, 1243, 585
+local RENEW_2, RENEW_6 = 6074, 6078
+local RENEW_ICON = { [RENEW] = 135953, [RENEW_2] = 135954, [RENEW_6] = 135958 }
 local BANDAGE = 1251
 local ME = "testmage-testrealm"
 
@@ -14,6 +16,14 @@ local function priest(state)
     state.items[BANDAGE] = { name = "Linen Bandage", texture = 133685, count = 5, use = 746 }
     state.bags[0] = { size = 16, [1] = { itemID = BANDAGE } }
     state.macros = { { name = "Heal", texture = 134400 } }
+end
+
+-- The priest's Renew at the ranks known (a rank in `unknown` is in the game, not known).
+local function renews(state, unknown)
+    local ranks = { [RENEW] = "Rank 1", [RENEW_2] = "Rank 2", [RENEW_6] = "Rank 6" }
+    for id, rank in pairs(ranks) do
+        state.spells[id] = { name = "Renew", texture = RENEW_ICON[id], subtext = rank, unknown = unknown and unknown[id] }
+    end
 end
 
 local function spell(id) return { kind = "spell", id = id } end
@@ -711,6 +721,136 @@ describe("click casting page", function()
         T.same(QoLDB.clickCast[ME], { toy, bind("G", spell(RENEW)) })
     end)
 
+    describe("with spell ranks", function()
+        it("shows the highest rank known in a binding's icon and tooltip, and keeps the saved one", function()
+            local saved = spell(RENEW_2)
+            open({ bind("SHIFT-BUTTON1", saved) }, nil, renews)
+            local row = page().rows[1]
+            T.eq(row.icon.texture, RENEW_ICON[RENEW_6])
+            row:RunScript("OnEnter")
+            T.eq(GameTooltip.spell, RENEW_6)
+            T.eq(saved.id, RENEW_2, "the binding isn't rewritten")
+            T.same(QoLDB.clickCast[ME], { bind("SHIFT-BUTTON1", spell(RENEW_2)) })
+        end)
+
+        it("moves a row to a rank when it's learned, not to one the character doesn't know", function()
+            open({ bind("SHIFT-BUTTON1", spell(RENEW)) }, nil, function(state)
+                renews(state, { [RENEW_6] = true })
+            end)
+            T.eq(page().rows[1].icon.texture, RENEW_ICON[RENEW_2], "Rank 2, the highest known")
+            Stubs.state().spells[RENEW_6].unknown = nil
+            Stubs.Fire("SPELLS_CHANGED")
+            Stubs.RunTimers()
+            T.eq(page().rows[1].icon.texture, RENEW_ICON[RENEW_6])
+        end)
+
+        it("keeps a binding working on the lower rank a respec left, and shows that rank", function()
+            open({ bind("SHIFT-BUTTON1", spell(RENEW_6)) }, nil, function(state)
+                renews(state, { [RENEW_6] = true })
+            end)
+            local row = page().rows[1]
+            T.eq(row:GetAlpha(), 1)
+            T.eq(row.icon.texture, RENEW_ICON[RENEW_2])
+            row:RunScript("OnEnter")
+            T.eq(GameTooltip.spell, RENEW_2)
+            T.eq(click(party(1), "LeftButton", "SHIFT"), "spell:Renew on party1")
+        end)
+
+        it("asks for a saved rank's data when it isn't loaded, and works when it comes", function()
+            open({ bind("SHIFT-BUTTON1", spell(RENEW_6)) }, nil, function(state)
+                renews(state, { [RENEW_6] = true })
+                state.spells[RENEW_6].unloaded, state.spells[RENEW_6].neverLoads = true, true
+            end)
+            local data = Stubs.state().spells[RENEW_6]
+            T.truthy(data.requested, "asked for")
+            T.eq(page().rows[1]:GetAlpha(), 0.5, "not yet")
+            data.unloaded = nil
+            Stubs.Fire("SPELL_DATA_LOAD_RESULT", RENEW_6, true)
+            Stubs.RunTimers()
+            T.eq(page().rows[1]:GetAlpha(), 1)
+            T.eq(page().rows[1].icon.texture, RENEW_ICON[RENEW_2])
+            T.eq(click(party(1), "LeftButton", "SHIFT"), "spell:Renew on party1")
+        end)
+
+        it("marks a binding unusable with no rank known, and keeps its saved icon and name", function()
+            open({ bind("SHIFT-BUTTON1", spell(RENEW_2)) }, nil, function(state)
+                renews(state, { [RENEW] = true, [RENEW_2] = true, [RENEW_6] = true })
+            end)
+            local row = page().rows[1]
+            T.eq(row:GetAlpha(), 0.5)
+            T.eq(row.icon.texture, RENEW_ICON[RENEW_2])
+            T.eq(shown()[1], "Renew: Shift-Left")
+            T.eq(click(party(1), "LeftButton", "SHIFT"), nil)
+        end)
+
+        it("leaves what the character doesn't know out, as with an NPC's spell of that name", function()
+            open({ bind("SHIFT-BUTTON1", spell(RENEW_2)) }, nil, function(state)
+                renews(state)
+                state.spells[99999] = { name = "Renew", texture = 1, unknown = true }
+                state.spellIdentifiers = { Renew = 99999 }
+            end)
+            T.eq(page().rows[1].icon.texture, RENEW_ICON[RENEW_2])
+            T.eq(page().rows[1]:GetAlpha(), 1)
+        end)
+
+        it("shows a spell without a rank as saved, whatever its name looks up to", function()
+            open({ bind("SHIFT-BUTTON1", spell(FLASH_HEAL)), bind("SHIFT-BUTTON2", spell(FORTITUDE)) }, nil,
+                function(state)
+                    state.spells[FORTITUDE].subtext = "Racial"
+                    state.spellIdentifiers = { ["Flash Heal"] = RENEW, ["Power Word: Fortitude"] = RENEW }
+                end)
+            T.eq(page().rows[1].icon.texture, 135907)
+            T.eq(page().rows[2].icon.texture, 135987)
+            page().rows[2]:RunScript("OnEnter")
+            T.eq(GameTooltip.spell, FORTITUDE)
+        end)
+
+        it("counts a spell as bound whichever of its ranks is", function()
+            open({ bind("SHIFT-BUTTON1", spell(RENEW)) }, nil, renews)
+            local checks = 0
+            for _, row in ipairs(page().list.rows) do
+                if row:IsShown() and row.name:GetText() == "Renew" then
+                    checks = checks + (row.check:IsShown() and 1 or 0)
+                else
+                    T.falsy(row:IsShown() and row.check:IsShown(), "only Renew")
+                end
+            end
+            T.eq(checks, 3, "each rank in the list")
+        end)
+
+        it("doesn't mark two ranks on one combination as a clash", function()
+            open({ bind("SHIFT-BUTTON1", spell(RENEW)), bind("SHIFT-BUTTON1", spell(RENEW_2)) }, nil, renews)
+            local rows = page().rows
+            T.same({ red(rows[1]), red(rows[2]) }, { false, false })
+            rows[1]:RunScript("OnEnter")
+            T.same(tooltip(), { "Click the box to change the combination. A right-click removes the binding." })
+        end)
+
+        it("names a spell once in a real clash with two of its ranks", function()
+            open({ bind("SHIFT-BUTTON1", spell(RENEW)), bind("SHIFT-BUTTON1", spell(RENEW_2)),
+                bind("SHIFT-BUTTON1", spell(FLASH_HEAL)) }, nil, renews)
+            local rows = page().rows
+            T.same({ red(rows[1]), red(rows[2]), red(rows[3]) }, { true, true, true })
+            rows[3]:RunScript("OnEnter")
+            T.eq(tooltip()[1], "Clashes with Renew on the same combination: only one of them works.")
+            rows[1]:RunScript("OnEnter")
+            T.eq(tooltip()[1], "Clashes with Flash Heal on the same combination: only one of them works.")
+        end)
+
+        it("keeps a clash of spells without ranks, and of a macro and a spell", function()
+            open({ bind("SHIFT-BUTTON1", spell(FLASH_HEAL)), bind("SHIFT-BUTTON1", HEAL_MACRO) }, nil, renews)
+            T.same({ red(page().rows[1]), red(page().rows[2]) }, { true, true })
+        end)
+
+        it("keeps a game without the lookup at the saved rank", function()
+            open({ bind("SHIFT-BUTTON1", spell(RENEW_2)) }, nil, function(state)
+                renews(state)
+                C_Spell.GetSpellIDForSpellIdentifier = nil
+            end)
+            T.eq(page().rows[1].icon.texture, RENEW_ICON[RENEW_2])
+        end)
+    end)
+
     it("names every other binding a clash is with", function()
         open({ bind("SHIFT-BUTTON1", spell(RENEW)), bind("SHIFT-BUTTON1", spell(FLASH_HEAL)),
             bind("SHIFT-BUTTON1", spell(FORTITUDE)) })
@@ -988,6 +1128,29 @@ describe("click casting page", function()
                 T.eq(note(), "Shift-Left: Flash Heal", "nothing replaced")
                 T.eq(#QoLDB.clickCast[ME], 2)
             end)
+
+        it("reports nothing replaced when another rank of the spell takes the combination", function()
+            open({ bind("SHIFT-BUTTON1", spell(RENEW)) }, nil, renews)
+            page().quick:Click()
+            local rank
+            for _, row in ipairs(page().list.rows) do
+                if row:IsShown() and row.entry and row.entry.id == RENEW_6 then rank = row end
+            end
+            T.truthy(rank, "Rank 6 in the list")
+            Stubs.Hover(rank)
+            clickAction(rank, "LeftButton", "SHIFT")
+            T.eq(note(), "Shift-Left: Renew")
+            T.same(QoLDB.clickCast[ME], { bind("SHIFT-BUTTON1", spell(RENEW_6)) })
+        end)
+
+        it("names a spell once when two of its ranks make way", function()
+            open({ bind("SHIFT-BUTTON1", spell(RENEW)), bind("SHIFT-BUTTON1", spell(RENEW_2)) }, nil, renews)
+            page().quick:Click()
+            local flash = action("Flash Heal")
+            Stubs.Hover(flash)
+            clickAction(flash, "LeftButton", "SHIFT")
+            T.eq(note(), "Shift-Left: Flash Heal (was Renew)")
+        end)
 
         it("moves both working bindings of a clash to the new action and names both", function()
             open({ bind("SHIFT-BUTTON1", spell(RENEW)), bind("SHIFT-BUTTON1", spell(FORTITUDE)) })

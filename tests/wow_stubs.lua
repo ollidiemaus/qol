@@ -178,12 +178,23 @@ local function newRegion(kind, parent, template)
     end
     function region:SetEnabled(enabled) self.enabled = enabled and true or false end
     function region:IsEnabled() return self.enabled end
-    -- textSets counts the SetText calls.
+    -- textSets counts the SetText and SetFormattedText calls.
     function region:SetText(text)
         self.text = text
         self.textSets = (self.textSets or 0) + 1
     end
-    function region:SetFormattedText(format, ...) self.text = format:format(...) end
+    -- A secret argument shows as "<SECRET>" in its format's place, so that a spec sees it got there:
+    -- format() itself takes no secret in plain Lua.
+    function region:SetFormattedText(format, ...)
+        local args, index = { ... }, 0
+        self.text = format:gsub("%%[%d%.]*[%a%%]", function(spec)
+            if spec == "%%" then return "%" end
+            index = index + 1
+            if args[index] == Stubs.SECRET then return tostring(Stubs.SECRET) end
+            return spec:format(args[index])
+        end)
+        self.textSets = (self.textSets or 0) + 1
+    end
     function region:GetText() return self.text end
     -- 5 units a character, whatever the font.
     function region:GetStringWidth() return #(self.text or "") * 5 end
@@ -675,7 +686,9 @@ end
 local function bookSlots()
     if state.spellBook then return state.spellBook end
     local ids = {}
-    for id in pairs(state.spells) do ids[#ids + 1] = id end
+    for id, info in pairs(state.spells) do
+        if not info.unknown then ids[#ids + 1] = id end
+    end
     table.sort(ids)
     local slots = {}
     for index, id in ipairs(ids) do slots[index] = { id = id } end
@@ -1441,7 +1454,8 @@ local function install()
     }
 
     --- What a ring holds, as this character has it. state.spells[id] = { name, texture, usable,
-    -- noMana, consumable, charges, count, cooldown } for the spells it knows; state.items[id] = { name,
+    -- noMana, consumable, charges, count, cooldown } for the spells it knows, and unknown = true for
+    -- one the game has but it doesn't know (the rank it unlearned); state.items[id] = { name,
     -- texture, count, equipped, usable, consumable, stack, cooldown = { start, duration } } for the
     -- items (count 0: not in the bags); state.toys[id] = { usable } for the toys it has (item data
     -- in state.items); state.mounts[id] = { name, spellID, texture, usable, collected, hidden };
@@ -1464,19 +1478,35 @@ local function install()
             if spell(id) then state.cursorInfo = { "spell", 1, "spell", id, id } end
         end,
     }
-    -- state.spells[id].unloaded: its subtext isn't there until RequestLoadSpellData, unless neverLoads.
+    -- state.spells[id].unloaded: its subtext isn't there until RequestLoadSpellData, unless neverLoads
+    -- (a spec then loads it itself and fires SPELL_DATA_LOAD_RESULT). requested: it was asked for.
     G.C_Spell.GetSpellSubtext = function(id)
         local info = spell(id) or {}
         if not info.unloaded then return info.subtext end
     end
     G.C_Spell.IsSpellDataCached = function(id) return not (spell(id) or {}).unloaded end
     G.C_Spell.RequestLoadSpellData = function(id)
+        if spell(id) then spell(id).requested = true end
         if spell(id) and not spell(id).neverLoads then spell(id).unloaded = nil end
+    end
+    -- A name's highest rank the character knows, or what state.spellIdentifiers[name] says instead,
+    -- for the answers that aren't: an NPC's spell, or a spell it doesn't know.
+    G.C_Spell.GetSpellIDForSpellIdentifier = function(identifier)
+        local answer = state.spellIdentifiers and state.spellIdentifiers[identifier]
+        if answer then return answer end
+        local found, highest
+        for id, info in pairs(state.spells) do
+            local rank = tonumber((info.subtext or ""):match("%d+")) or 0
+            if info.name == identifier and not info.unknown and (not highest or rank > highest) then
+                found, highest = id, rank
+            end
+        end
+        return found
     end
     G.Enum.SpellBookSpellBank = { Player = 0, Pet = 1 }
     G.Enum.SpellBookItemType = { None = 0, Spell = 1, FutureSpell = 2, PetAction = 3, Flyout = 4 }
     G.C_SpellBook = {
-        IsSpellKnownOrInSpellBook = function(id) return spell(id) ~= nil end,
+        IsSpellKnownOrInSpellBook = function(id) return spell(id) ~= nil and not spell(id).unknown end,
         GetNumSpellBookSkillLines = function() return 1 end,
         GetSpellBookSkillLineInfo = function()
             return { itemIndexOffset = 0, numSpellBookItems = #bookSlots(), shouldHide = false }
@@ -1735,7 +1765,19 @@ local function install()
         if powerType == G.Enum.PowerType.Mana then return info.maxMana or 0 end
         return info.maxPower or 0
     end
-    G.AbbreviateLargeNumbers = function(value) return tostring(value) end
+    -- Mana only, on the one curve the addon uses. Secret when the mana or its maximum is.
+    G.CurveConstants = { ScaleTo100 = {} }
+    G.UnitPowerPercent = function(unit, powerType, _, curve)
+        assert(powerType == G.Enum.PowerType.Mana, "UnitPowerPercent: the stub fakes mana only")
+        assert(curve == G.CurveConstants.ScaleTo100, "UnitPowerPercent: the stub fakes CurveConstants.ScaleTo100 only")
+        local value, maxValue = G.UnitPower(unit, powerType), G.UnitPowerMax(unit, powerType)
+        if value == Stubs.SECRET or maxValue == Stubs.SECRET then return Stubs.SECRET end
+        return value / maxValue * 100
+    end
+    G.AbbreviateLargeNumbers = function(value)
+        if value == Stubs.SECRET then return Stubs.SECRET end
+        return tostring(value)
+    end
     G.RAID_CLASS_COLORS = {
         MAGE = { r = 0.25, g = 0.78, b = 0.92 },
         PRIEST = { r = 1, g = 1, b = 1 },

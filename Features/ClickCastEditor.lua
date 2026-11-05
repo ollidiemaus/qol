@@ -77,7 +77,7 @@ end
 local function actionIcon(action)
     local unit = UNIT_ACTIONS[action.kind]
     if unit then return unit.icon end
-    return Entries.Icon(action)
+    return Entries.Icon(ClickCast.Highest(action))
 end
 
 -- "Shift-Left", "Ctrl-F", "Wheel up".
@@ -327,7 +327,7 @@ end
 
 local function bound(entry)
     for _, binding in ipairs(bindings()) do
-        if Entries.Same(binding.action, entry) then return true end
+        if ClickCast.Same(binding.action, entry) then return true end
     end
     return false
 end
@@ -378,7 +378,7 @@ local function onRowEnter(row)
     if UNIT_ACTIONS[binding.action.kind] then
         GameTooltip:SetText(actionName(binding.action))
     else
-        Entries.Tooltip(GameTooltip, binding.action)
+        Entries.Tooltip(GameTooltip, ClickCast.Highest(binding.action))
     end
     local mark = row.mark or {}
     if not ClickCast.Works(binding) then
@@ -560,11 +560,12 @@ function Editor:Create(parent, top, width, height)
         render()
         picker:Fill()
     end
-    for _, event in ipairs(Entries.KNOWN_EVENTS) do
-        ns.Events:On(event, function()
-            if editor:IsVisible() and not InCombatLockdown() then ns.Later("clickCastEditor", shownNow) end
-        end)
+    local function changed()
+        if editor:IsVisible() and not InCombatLockdown() then ns.Later("clickCastEditor", shownNow) end
     end
+    for _, event in ipairs(Entries.KNOWN_EVENTS) do ns.Events:On(event, changed) end
+    -- A saved rank's data, which ClickCast asked for, says whether the binding works.
+    ns.Events:On("SPELL_DATA_LOAD_RESULT", changed)
 end
 
 -- Shows the bindings and what this character has as they are now: the settings window does it
