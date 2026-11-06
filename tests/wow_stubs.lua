@@ -2186,12 +2186,29 @@ function Stubs.SetControllerWindow(window)
     state.controllerWindow = window
 end
 
+local fireAttribute
+
+-- UpdateAction, in the game's order: the slot's action is read, pressandholdaction is set for every
+-- slot, the icon is drawn from what was read, and ping-receiver is set only if the button's action
+-- then holds one (clearing it fires nothing). So a button moved during pressandholdaction gets the
+-- old slot's icon drawn over the new one. button.icon is the icon the player sees.
+local function updateBarButton(button, force)
+    local id = button:GetID()
+    if id == button.action and not force then return end
+    button.action = id
+    local read = state.actions[id]
+    fireAttribute(button, "pressandholdaction", false)
+    button.icon = read and read.texture
+    if state.actions[button.action] then fireAttribute(button, "ping-receiver", true) end
+end
+
 -- One of the game's secure bar buttons. Following bars may change it only from secure code, so
 -- its own SetID and SetAttribute fail; an attribute updates its action, as
 -- ActionBarActionButtonMixin:OnAttributeChanged does.
 local function newBarButton(group, slotID)
     local button = newRegion("CheckButton", group)
     button.protected, button.attributes, button.pageUnitSlotID = true, {}, slotID
+    button.wraps = {}
     local id = _G.GamepadActionBarBindingUtil.GetGamepadStorageSlotIndexFromPageAndPageUnitSlotID(1, slotID) or 0
     button.action = id
     function button:GetID() return id end
@@ -2201,7 +2218,7 @@ local function newBarButton(group, slotID)
     function button:GetAttribute(name) return self.attributes[name] end
     function button:SetAttribute() error("ADDON_ACTION_BLOCKED: SetAttribute on a game button") end
     function button:GetGamepadPageUnitSlotID() return self.pageUnitSlotID end
-    button:SetScript("OnAttributeChanged", function(self) self.action = id end)
+    button:SetScript("OnAttributeChanged", function(self) updateBarButton(self) end)
     return button
 end
 
@@ -2220,6 +2237,19 @@ local function newPageUnit(parent)
         unit.actionBars[key] = actionBar
     end
     return unit
+end
+
+-- The player flips a page unit (the bar's or the editor's) to page 1, 2 or 3: as
+-- GamepadActionBarStandardButtonMixin:UpdateWithStorageId does, every button is reset to its slot on
+-- that page, whatever it held, and updates. frame is GamepadMainActionBarFrame or the editor.
+function Stubs.FlipPage(frame, page)
+    local slotOnPage = _G.GamepadActionBarBindingUtil.GetGamepadStorageSlotIndexFromPageAndPageUnitSlotID
+    for _, key in ipairs(BAR_ORDER) do
+        for _, button in ipairs(frame.PageUnit.actionBars[key].actionButtons) do
+            button:SetSecureID(slotOnPage(page, button.pageUnitSlotID) or 0)
+            updateBarButton(button, true)
+        end
+    end
 end
 
 -- Forever's controller action bar, with the anchors of its page unit: the middle of the d-pad
@@ -2261,7 +2291,22 @@ local function setShownSecurely(region, shown)
 end
 
 local handles = setmetatable({}, { __mode = "k" })
-local runSnippet
+local runSnippet, runBody
+
+-- A wrapped OnAttributeChanged's snippet runs first, in secure code, then the script itself, which
+-- like its hooks is insecure code.
+function fireAttribute(region, name, value)
+    local wrap = region.wraps and region.wraps.OnAttributeChanged
+    if wrap and wrap.pre then runBody(wrap.header, region, "self, name, value", wrap.pre, name, value) end
+    local script, hook = region.scripts.OnAttributeChanged, region.hooks.OnAttributeChanged
+    if script or hook then
+        local depth = state.restricted
+        state.restricted = 0
+        if script then script(region, name, value) end
+        if hook then hook(region, name, value) end
+        state.restricted = depth
+    end
+end
 
 -- A handle is no frame outside secure code: insecure code that gets one (an attribute, the value
 -- OnAttributeChanged gets) can't use it.
@@ -2284,17 +2329,9 @@ local function frameHandle(region)
         if type(value) == "table" and not handles[value] then return nil end
         return value
     end
-    -- OnAttributeChanged is insecure code.
     function methods:SetAttribute(name, value)
         region.attributes[name] = value
-        local script, hook = region.scripts.OnAttributeChanged, region.hooks.OnAttributeChanged
-        if script or hook then
-            local depth = state.restricted
-            state.restricted = 0
-            if script then script(region, name, value) end
-            if hook then hook(region, name, value) end
-            state.restricted = depth
-        end
+        fireAttribute(region, name, value)
     end
     function methods:GetID() return region:GetID() end
     function methods:SetID(id) region:SetSecureID(id) end
@@ -2309,7 +2346,9 @@ local function frameHandle(region)
         if not parent or (state.combat and not parent.protected) then return nil end
         return frameHandle(parent)
     end
-    function methods:RunAttribute(name, ...) return runSnippet(region, region, region.attributes[name], ...) end
+    function methods:RunAttribute(name, ...)
+        return runBody(region, region, "self, ...", region.attributes[name], ...)
+    end
     -- Bindings a snippet makes, owned by its frame: priority ones win over the others.
     function methods:SetBindingClick(priority, key, target, mouseButton)
         target = handles[target] or target
@@ -2361,19 +2400,25 @@ local function compile(body, env)
     return assert(load(body, "snippet", "t", env))
 end
 
--- The restricted environment, one per header as in the game, with owner its handle.
-function runSnippet(header, frame, body, ...)
+-- The restricted environment, one per header as in the game, with owner its handle. signature:
+-- what the snippet is called with, which differs per kind of snippet.
+function runBody(header, frame, signature, body, ...)
     header.snippetEnv = header.snippetEnv or {
         owner = frameHandle(header), math = math, string = string, tostring = tostring, tonumber = tonumber,
         strmatch = string.match, GetGamePadState = function() return state.gamepad end,
+        HasAction = function(slot) return state.actions[slot] ~= nil end,
         SecureCmdOptionParse = function(text)
             local unit = text:match("^%[@([^,]+),harm%]")
             return state.attackable and state.attackable[unit] and "1" or nil
         end,
     }
-    local chunk = compile("local self, button, down = ...\n" .. body, header.snippetEnv)
+    local chunk = compile("return (function(" .. signature .. ")\n" .. body .. "\nend)(...)", header.snippetEnv)
     state.restricted = state.restricted + 1
     return leaveSnippet(chunk(frameHandle(frame), ...))
+end
+
+function runSnippet(header, frame, body, ...)
+    return runBody(header, frame, "self, button, down", body, ...)
 end
 
 function Stubs.Handle(region) return frameHandle(region) end

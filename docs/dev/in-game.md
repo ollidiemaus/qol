@@ -124,6 +124,10 @@ Things only the real client can confirm:
   and the normal ones come back; a `/reload` and a logout keep them. Tick Right too: it has its own
   slots. Set the game's Stance bar setting to Left: Left shows ticked and greyed out, and its own
   stance spells are back. Untick a bar in a stance: the normal spells return at once, or after combat.
+  Flip to pages 2 and 3 in the stance, in and out of combat: they show as usual, and page 1 shows the
+  stance's spells and icons again, also with an empty normal slot, and with a spell on the normal
+  slot and an empty stance slot. Leave the stance on page 2 and flip back: page 1's normal spells.
+  Enter the stance on page 2 and flip back. Flip pages in the game's editor too.
 - Controller back buttons (Options > Controller), on a Steam Deck with F13 to F16 (or other free
   keys) given to L4, L5, R4 and R5 in Steam Input, bound under Key Bindings > AddOns > Quality of
   Life:

@@ -109,7 +109,9 @@ Forever beta. So:
   nothing.
 - Following bars change the ID of the game's controller bar buttons, and set an attribute on them, from
   a secure snippet on a frame of ours (`HANDLE:SetID`, `HANDLE:SetAttribute`), which the game allows in
-  combat; nothing is written or hooked. Frame refs to those buttons are taken out of combat. See
+  combat; nothing is written or hooked. To catch a page flip, `SecureHandlerWrapScript` wraps those
+  buttons' `OnAttributeChanged`; a wrap runs secure code and taints nothing. The wraps and the frame
+  refs to those buttons are made out of combat. See
   [`dev/controller.md`](dev/controller.md).
 - Classic Era's health bars, whose color the game doesn't lock: `HookScript("OnValueChanged")` on
   the player, target, target of target, focus and focus target bars, which only schedules the

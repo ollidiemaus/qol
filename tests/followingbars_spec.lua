@@ -5,6 +5,8 @@ local describe, it = T.describe, T.it
 -- The first page's normal slots: the Top bar takes 181 to 184 (its face buttons have none). The
 -- spec checks which slot each game button holds, never what the feature keeps.
 local NORMAL = { left = 185, right = 193, bottom = 201 }
+-- The same bars on pages 2 and 3, 28 slots further each.
+local PAGE2_LEFT, PAGE3_LEFT = 213, 241
 local BEAR, CAT = 3, 1
 local SPARE = 305
 
@@ -41,6 +43,21 @@ local function holds(frame, name, first)
         local game = button(frame, name, index)
         T.eq(game:GetID(), first + index - 1, name .. " button " .. index)
         T.eq(game.action, first + index - 1, name .. " button " .. index .. "'s action")
+    end
+end
+
+-- Puts a spell in each of the eight slots from first; each has an icon of its own.
+local function fill(first)
+    local actions = Stubs.state().actions
+    for slot = first, first + 7 do actions[slot] = { texture = "icon" .. slot } end
+end
+
+-- The bar holds those slots and draws what's in them, a hidden icon for an empty one.
+local function draws(frame, name, first)
+    holds(frame, name, first)
+    for index = 1, 8 do
+        local slot = Stubs.state().actions[first + index - 1]
+        T.eq(button(frame, name, index).icon, slot and slot.texture, name .. " button " .. index .. "'s icon")
     end
 end
 
@@ -113,6 +130,125 @@ describe("following bars", function()
         Stubs.SetStance(BEAR)
         T.falsy(GetActionInfo(SPARE), "nothing placed there")
         holds(bar, "left", SPARE)
+    end)
+
+    it("shows pages 2 and 3 as usual in a stance", function()
+        local ns, bar = start()
+        tick(ns, "left")
+        Stubs.SetStance(BEAR)
+        Stubs.FlipPage(bar, 2)
+        holds(bar, "left", PAGE2_LEFT)
+        Stubs.FlipPage(bar, 3)
+        holds(bar, "left", PAGE3_LEFT)
+    end)
+
+    it("shows the stance's slots again on flipping back to page 1, also in combat", function()
+        local ns, bar = start()
+        fill(NORMAL.left)
+        fill(SPARE)
+        tick(ns, "left")
+        Stubs.SetStance(BEAR)
+        Stubs.SetCombat(true)
+        Stubs.FlipPage(bar, 2)
+        Stubs.FlipPage(bar, 1)
+        draws(bar, "left", SPARE)
+        Stubs.SetCombat(false)
+    end)
+
+    it("draws the stance's actions when the normal slots are empty, also in combat", function()
+        local ns, bar = start()
+        fill(SPARE)
+        tick(ns, "left")
+        Stubs.SetStance(BEAR)
+        Stubs.SetCombat(true)
+        Stubs.FlipPage(bar, 2)
+        Stubs.FlipPage(bar, 1)
+        draws(bar, "left", SPARE)
+        Stubs.SetCombat(false)
+    end)
+
+    it("draws an empty stance slot empty, whatever the normal slot holds", function()
+        local ns, bar = start()
+        fill(NORMAL.left)
+        tick(ns, "left")
+        Stubs.SetStance(BEAR)
+        Stubs.FlipPage(bar, 2)
+        Stubs.FlipPage(bar, 1)
+        draws(bar, "left", SPARE)
+    end)
+
+    it("handles a bar of mixed slots, and flips again after that", function()
+        local ns, bar = start()
+        local actions = Stubs.state().actions
+        actions[NORMAL.left] = { texture = "normal" }
+        actions[SPARE + 1] = { texture = "stance" }
+        tick(ns, "left")
+        Stubs.SetStance(BEAR)
+        for _ = 1, 2 do
+            Stubs.FlipPage(bar, 2)
+            Stubs.FlipPage(bar, 1)
+            draws(bar, "left", SPARE)
+        end
+    end)
+
+    it("shows page 1's normal slots after leaving the stance on another page", function()
+        local ns, bar = start()
+        fill(NORMAL.left)
+        fill(SPARE)
+        tick(ns, "left")
+        Stubs.SetStance(BEAR)
+        Stubs.FlipPage(bar, 2)
+        Stubs.SetStance(0)
+        holds(bar, "left", PAGE2_LEFT)
+        Stubs.FlipPage(bar, 1)
+        draws(bar, "left", NORMAL.left)
+    end)
+
+    it("leaves pages 2 and 3 alone when the stance changes on them, and follows on flipping back", function()
+        local ns, bar = start()
+        tick(ns, "left")
+        Stubs.FlipPage(bar, 2)
+        Stubs.SetStance(BEAR)
+        holds(bar, "left", PAGE2_LEFT)
+        Stubs.SetStance(CAT)
+        holds(bar, "left", PAGE2_LEFT)
+        Stubs.FlipPage(bar, 1)
+        holds(bar, "left", SPARE + 8)
+    end)
+
+    it("leaves other pages alone when the ticks change, and page 1 gets them on flipping back", function()
+        local ns, bar = start()
+        tick(ns, "left")
+        Stubs.SetStance(BEAR)
+        Stubs.FlipPage(bar, 2)
+        tick(ns, "left", false)
+        holds(bar, "left", PAGE2_LEFT)
+        Stubs.FlipPage(bar, 1)
+        holds(bar, "left", NORMAL.left)
+    end)
+
+    it("leaves the game's bar alone on flipping back", function()
+        local ns, bar = start()
+        tick(ns, "left")
+        Stubs.state().cvars.GamepadStanceBarOverride = tostring(Enum.GamepadStanceBarOverride.Page1LeftBar)
+        Stubs.Fire("GAMEPAD_STANCE_BAR_OVERRIDE_CHANGED")
+        settle()
+        Stubs.SetStance(BEAR)
+        Stubs.FlipPage(bar, 2)
+        Stubs.FlipPage(bar, 1)
+        holds(bar, "left", NORMAL.left)
+    end)
+
+    it("follows the editor's own page: it flips apart from the bar", function()
+        local ns, bar = start()
+        local editor = _G.GamepadActionBarEditFrame
+        tick(ns, "left")
+        Stubs.FlipPage(editor, 2)
+        Stubs.SetStance(BEAR)
+        holds(bar, "left", SPARE)
+        holds(editor, "left", PAGE2_LEFT)
+        Stubs.FlipPage(editor, 1)
+        holds(editor, "left", SPARE)
     end)
 
     it("saves the ticks and slots per character", function()
@@ -225,6 +361,8 @@ describe("following bars", function()
         _G.hooksecurefunc = function() error("hooksecurefunc called") end
         tick(ns, "left")
         Stubs.SetStance(BEAR)
+        Stubs.FlipPage(bar, 2)
+        Stubs.FlipPage(bar, 1)
         Stubs.SetStance(0)
         for key in pairs(game) do
             T.truthy(fields[key], "field " .. tostring(key))

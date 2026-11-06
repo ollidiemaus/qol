@@ -317,6 +317,8 @@ stealth all count, and Prowl is a stance of its own.
 - Each ticked bar has its own actions per stance. Enter the stance and fill the bar with the game's
   action bar editor; a slot you leave empty stays empty. The normal actions come back when you leave
   the stance.
+- Only page 1 follows: pages 2 and 3 show as usual in a stance, and flipping back to page 1 shows
+  the stance's actions again, also in combat.
 - One list of bars holds for all your stances, saved per character. Unticking a bar keeps its
   actions for when you tick it again. A change made in combat applies when combat ends.
 - The bar the game's Stance bar setting uses shows ticked and greyed out: the game handles that one.

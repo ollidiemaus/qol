@@ -7,9 +7,14 @@ local _, ns = ...
 -- A following bar's buttons really change their ID, so the press, the icon and the editor (which
 -- writes to button:GetID()) all use the stance's slot. A secure handler does that, in combat too:
 -- a state driver on the stance runs a snippet that calls SetID on the game's buttons and sets an
--- attribute, whose OnAttributeChanged makes the button update its action. Nothing else touches the
--- buttons: no field is written and nothing is hooked. The editor has a page unit of its own, so
--- both page units' buttons change.
+-- attribute, whose OnAttributeChanged makes the button update its action. Only secure snippets
+-- touch the buttons: no field is written and nothing is hooked. The editor has a page unit of its
+-- own, so both page units' buttons change.
+--
+-- Only page 1 follows. The game resets the IDs on every page flip, so a wrap on each button's
+-- OnAttributeChanged, which runs in combat, moves it again when it lands on its normal slot in the
+-- stance. A page unit's page is read off its buttons: one on neither its normal slot nor a spare one
+-- is on another page and is left alone. docs/dev/controller.md has why the wrap works as it does.
 --
 -- The slots are the spare ones after the five stance bars (ADR 0003). Each stance and bar gets its
 -- slots the first time it's needed, which can be in combat, so the snippet hands them out; they're
@@ -32,35 +37,85 @@ local STANCE_BAR_CVAR = "GamepadStanceBarOverride"
 -- Its Enum.GamepadStanceBarOverride value for each bar.
 local GAME_BAR_SETTINGS = { left = "Page1LeftBar", right = "Page1RightBar", bottom = "Page1BottomBar" }
 
--- Moves every bar to where it belongs now. A bar that isn't following and hasn't moved is left alone.
-local APPLY = ([[
+-- The first of the slots a bar shows on page 1 in the stance now, nil if it stays on its normal ones.
+local FIND_SLOTS = ([[
+    local name = ...
     local stance = tonumber(self:GetAttribute("state-stance")) or 0
+    if stance == 0 or not self:GetAttribute("following-" .. name) then return nil end
+    local key = "slots-" .. stance .. "-" .. name
+    local first = self:GetAttribute(key)
+    local free = self:GetAttribute("nextslot")
+    if not first and free + %d <= %d then
+        first = free
+        self:SetAttribute("nextslot", free + %d)
+        self:SetAttribute(key, first)
+    end
+    return first
+]]):format(SLOTS_PER_BAR - 1, LAST_SPARE_SLOT, SLOTS_PER_BAR)
+
+-- Changes a button's slot. The attribute is what makes it update.
+local MOVE = [[
+    local ref, id = ...
+    local button = self:GetFrameRef(ref)
+    button:SetID(id)
+    button:SetAttribute("qolfollowing", id)
+]]
+
+-- Moves every button on page 1 to where it belongs now. One that's there already is left alone, so
+-- with nothing following the game's buttons aren't touched, and so is one on another page.
+local APPLY = ([[
     for bar = 1, self:GetAttribute("barcount") do
         local name = self:GetAttribute("bar-" .. bar)
-        local first
-        if stance > 0 and self:GetAttribute("following-" .. name) then
-            local key = "slots-" .. stance .. "-" .. name
-            first = self:GetAttribute(key)
-            local free = self:GetAttribute("nextslot")
-            if not first and free + %d <= %d then
-                first = free
-                self:SetAttribute("nextslot", free + %d)
-                self:SetAttribute(key, first)
-            end
-        end
-        if first or self:GetAttribute("moved-" .. name) then
-            self:SetAttribute("moved-" .. name, first and true or nil)
-            for index = 1, %d do
-                local id = first and first + index - 1 or self:GetAttribute("normal-" .. name .. index)
-                local shown, edited = self:GetFrameRef("main" .. name .. index), self:GetFrameRef("edit" .. name .. index)
-                shown:SetID(id)
-                shown:SetAttribute("qolfollowing", id)
-                edited:SetID(id)
-                edited:SetAttribute("qolfollowing", id)
+        local first = self:RunAttribute("findslots", name)
+        for index = 1, %d do
+            local normal = self:GetAttribute("normal-" .. name .. index)
+            local id = first and first + index - 1 or normal
+            for pageUnit = 1, 2 do
+                local ref = (pageUnit == 1 and "main" or "edit") .. name .. index
+                local current = self:GetFrameRef(ref):GetID()
+                if current ~= id and (current == normal or current >= %d) then
+                    self:RunAttribute("move", ref, id)
+                end
             end
         end
     end
-]]):format(SLOTS_PER_BAR - 1, LAST_SPARE_SLOT, SLOTS_PER_BAR, SLOTS_PER_BAR)
+]]):format(SLOTS_PER_BAR, FIRST_SPARE_SLOT)
+
+-- Runs inside the game's update of a button, on the two attributes it sets (controller.md has their
+-- order). A button that lands on its normal slot in the stance moves on the last one it'll get. An
+-- empty normal slot gets no ping-receiver, so that one moves at pressandholdaction, but the game then
+-- draws the empty slot over it, and only if the new slot holds an action is there a ping-receiver
+-- to redraw it at. The redraw goes by the normal slot since the attribute alone updates nothing on
+-- the slot the button is on.
+local FLIP = [[
+    if self:GetAttribute("redrawing") then return end
+    local ref, name, index, normal, attribute = ...
+    local id = self:GetFrameRef(ref):GetID()
+    if attribute == "ping-receiver" and self:GetAttribute("redraw-" .. ref) then
+        self:SetAttribute("redraw-" .. ref, nil)
+        self:SetAttribute("redrawing", true)
+        self:RunAttribute("move", ref, normal)
+        self:RunAttribute("move", ref, id)
+        self:SetAttribute("redrawing", nil)
+    elseif id == normal and (attribute == "ping-receiver" or not HasAction(normal)) then
+        local first = self:RunAttribute("findslots", name)
+        if first then
+            local slot = first + index - 1
+            self:RunAttribute("move", ref, slot)
+            if attribute ~= "ping-receiver" and HasAction(slot) then
+                self:SetAttribute("redraw-" .. ref, true)
+            end
+        end
+    end
+]]
+
+-- What a button knows of itself goes in here, so that the snippet builds no strings for every update:
+-- its frame ref, bar, index and normal slot.
+local WRAP = [[
+    if name == "pressandholdaction" or name == "ping-receiver" then
+        owner:RunAttribute("flip", "%s", "%s", %d, %d, name)
+    end
+]]
 
 local header
 local driven = false
@@ -122,18 +177,25 @@ local function create()
         end
     end
     header:SetAttribute("nextslot", nextSlot)
-    local main, edit = GamepadMainActionBarFrame.PageUnit, GamepadActionBarEditFrame.PageUnit
+    local main = GamepadMainActionBarFrame.PageUnit
+    local pageUnits = { main = main, edit = GamepadActionBarEditFrame.PageUnit }
     for bar, name in ipairs(BARS) do
         header:SetAttribute("bar-" .. bar, name)
         for index = 1, SLOTS_PER_BAR do
-            local shown = barButton(main, name, index)
-            header:SetAttribute("normal-" .. name .. index, GamepadActionBarBindingUtil
-                .GetGamepadStorageSlotIndexFromPageAndPageUnitSlotID(1, shown:GetGamepadPageUnitSlotID()))
-            SecureHandlerSetFrameRef(header, "main" .. name .. index, shown)
-            SecureHandlerSetFrameRef(header, "edit" .. name .. index, barButton(edit, name, index))
+            local normal = GamepadActionBarBindingUtil.GetGamepadStorageSlotIndexFromPageAndPageUnitSlotID(1,
+                barButton(main, name, index):GetGamepadPageUnitSlotID())
+            header:SetAttribute("normal-" .. name .. index, normal)
+            for prefix, pageUnit in pairs(pageUnits) do
+                local button, ref = barButton(pageUnit, name, index), prefix .. name .. index
+                SecureHandlerSetFrameRef(header, ref, button)
+                SecureHandlerWrapScript(button, "OnAttributeChanged", header, WRAP:format(ref, name, index, normal))
+            end
         end
     end
+    header:SetAttribute("findslots", FIND_SLOTS)
+    header:SetAttribute("move", MOVE)
     header:SetAttribute("apply", APPLY)
+    header:SetAttribute("flip", FLIP)
     header:SetAttribute("_onstate-stance", [[ self:RunAttribute("apply") ]])
     header:HookScript("OnAttributeChanged", onAttribute)
 end

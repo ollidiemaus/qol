@@ -77,10 +77,10 @@ rebuilds no window for them.
 Decided 2026-11-06; storage and the button change are in
 [ADR 0003](../adr/0003-following-bars-in-spare-controller-slots.md). Terms are in `GLOSSARY.md`.
 Built so far, in `Features/FollowingBars.lua`: Left, Right and Bottom following a stance, in and out
-of combat, with the slots from the spare range. Still design, each with its ticket: page flips
-(ticket 93, until then a stance change on page 2 or 3 moves the buttons as on page 1), the Top bar
-(94), running out of slots (95, for now a stance that doesn't fit stays normal and the page says
-nothing) and the live switch of interfaces (96, for now the ticks apply from the next login).
+of combat and across page flips, with the slots from the spare range. Still design, each with its
+ticket: the Top bar (94), running out of slots (95, for now a stance that doesn't fit stays normal
+and the page says nothing) and the live switch of interfaces (96, for now the ticks apply from the
+next login).
 
 How it's built:
 
@@ -94,10 +94,18 @@ How it's built:
 - The snippet hands out slots, because a stance can first come up in combat, when insecure code
   can't change a secure frame's attributes. Our `HookScript` on `OnAttributeChanged` writes each
   one to the saved data: insecure code may read them, and a write to `QoLDB` taints nothing.
-- A bar that doesn't follow and hasn't moved is never touched, so with no stance, nothing ticked or
-  only the game's bar nothing happens to the game's buttons. A bar that moved goes back to its
-  normal slots, which are worked out once with the game's own
+- A button that's where it belongs is never touched, so with no stance, nothing ticked or only the
+  game's bar nothing happens to the game's buttons. A button that moved goes back to its normal slot,
+  which is worked out once with the game's own
   `GetGamepadStorageSlotIndexFromPageAndPageUnitSlotID`, for page 1.
+- There's no record of the page: a button on neither its normal slot nor a spare one is on another
+  page, and the snippet leaves it alone. That's checked per button because the editor's page unit
+  flips apart from the bar. So a stance or tick change on page 2 or 3 changes nothing there, and page
+  1 is put right by the flip back. "A spare one" means 305 and up, in `apply`; ticket 95, which adds
+  the stance bars a class doesn't use, has to widen that check.
+- A `SecureHandlerWrapScript` on each button's `OnAttributeChanged` (both page units) catches the
+  flip back, as below. Wrapped from the same out-of-combat setup as the rest, so a character who never
+  ticks a bar gets no wraps.
 - The stance is the offset as the game gives it, and it only names a group of slots of ours. So no
   offset is assumed to be a certain form, and nothing needs the game's own stance slots yet; ticket
   95 will, to find the groups a class doesn't use.
@@ -150,7 +158,10 @@ So, on a flip back to page 1 in the stance, for a button on its normal slot:
   under a guard so that this doesn't move the button again. If it holds none, the hidden icon is right.
 
 `HasAction` is in the restricted environment, which tells the two cases apart. The attribute that makes the
-button update is one of ours, which the wrap ignores.
+button update is one of ours, which the wrap ignores. A button goes by its own slot alone: only one
+that lands on its normal slot, in a stance, on a bar that follows, moves, so a flip to page 2 or 3,
+or back with no stance left, passes through. The `flip` snippet in
+`Features/FollowingBars.lua` is this list; `Stubs.FlipPage` runs the same order in the spec.
 
 Tested in game on 2026-11-06, on the Left bar in bear with throwaway code: the slot changes on
 entering and leaving the stance and the press casts the new spell, in and out of combat; the icon
