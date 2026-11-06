@@ -71,3 +71,40 @@ fires `UPDATE_BINDINGS`, and the back buttons' override bindings follow from the
 `ns.LaterOutsideWindows`. All frames (the buttons and the listener) are created when the pages are
 built at login, not while a controller window is open, so SmartNavigation's `CreateFrame` hook
 rebuilds no window for them.
+
+## Following bars (design, not built yet)
+
+Decided 2026-11-06; storage and the button change are in
+[ADR 0003](../adr/0003-following-bars-in-spare-controller-slots.md). Terms are in `GLOSSARY.md`.
+
+What the player gets:
+
+- The Controller page has a "Bars that follow the stance" section with four checkboxes (Top, Left,
+  Right, Bottom), not a dropdown: dropdown menus have caused trouble in Forever's controller
+  interface. The list is saved per character and one list holds for every stance.
+- A stance is what the game treats as one: forms, warrior stances, stealth. Check with
+  `GetBonusBarOffset()` or `[bonusbar:1/2/3/4/5]`; Easy Controller found plain `[bonusbar]` false in
+  stealth on Forever.
+- Each following bar has its own slots per stance. An empty slot stays empty, as on the game's stance
+  bar; there's no fallback to the normal spell.
+- Only page 1 follows. Flipping to page 2 or 3 in a stance shows those pages as usual.
+- Only the Top bar's D-pad half follows: A, B, X and Y are reserved by the game.
+- The game's `GamepadStanceBarOverride` is left alone. The bar it names keeps the game's stance slots
+  and shows ticked and greyed out; QoL only adds bars.
+- Spells are placed with the game's own editor, in the stance.
+- Unticking a bar or turning the feature off keeps its spells, so ticking it again brings them back.
+
+Slots: 181-264 are the pages and 265-304 the five stance bars (bear, offset 3, is 281). 305-360 are
+spare, plus the groups of stance bars the class doesn't use. A bar's Top half needs 4 slots, any other
+bar 8. Each stance and bar gets its slots the first time they're needed and keeps them. When there's
+no room the stances learned first keep their bars, the others stay normal, and the page says so.
+
+Mechanism: a secure handler calls `SetID` on the game's buttons (`HANDLE:SetID`, works in combat) and
+sets an attribute so `OnAttributeChanged` runs `UpdateAction`. Blizzard resets the IDs on every page
+flip, so page 1 has to be reapplied after one, in combat too; `ChangePageButton` isn't a protected
+frame, so how to catch the flip is part of the test.
+
+To test in game first, on one bar in bear, in and out of combat: the slot changes on entering and
+leaving the stance, the press casts the new spell, the icon follows, page flips and back, and the
+game's editor writes to the new slot. If this fails the design changes, see the ADR's options.
+Easy Controller gets no special handling; test with it on and fix what shows up.

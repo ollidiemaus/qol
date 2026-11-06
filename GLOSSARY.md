@@ -138,6 +138,18 @@ _Avoid_: auto-rank, rank replace
 Keeping a lower rank of a spell on the bars on purpose, such as a cheap Rank 1 Frostbolt to slow a target.
 _Avoid_: low rank (that's any rank below the highest, kept on purpose or not), old rank
 
+**Controller bar**:
+One of the four bars on a page of the controller interface: Top (no trigger), Left, Right and Bottom (both triggers).
+_Avoid_: gamepad bar, trigger bar
+
+**Stance**:
+Anything that makes the game swap in other actions: a warrior's stance, a druid's form, stealth.
+_Avoid_: form (that's one kind of stance), bonus bar
+
+**Following bar**:
+A controller bar that shows its own actions while the character is in a stance.
+_Avoid_: overridden bar (the game uses that for its own stance and possess bars), stance bar (that's the game's single bar)
+
 ### Player frame
 
 **Status text**:
