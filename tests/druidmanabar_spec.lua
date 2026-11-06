@@ -12,8 +12,8 @@ local function druid(powerType)
         maxMana = 2000 }
 end
 
-local function start(savedOptions, player)
-    local ns = Stubs.LoadAddon()
+local function start(savedOptions, player, client)
+    local ns = Stubs.LoadAddon({ client = client })
     Stubs.SetUnit("player", player or druid(ENERGY))
     Stubs.Login(savedOptions)
     return ns
@@ -102,6 +102,14 @@ local function shift(powerType)
     Stubs.Fire("UPDATE_SHAPESHIFT_FORM")
     Stubs.Fire("UNIT_DISPLAYPOWER", "player")
     Stubs.RunTimers()
+end
+
+-- The Personal Resource Display's class bar, once built: it sits under the display and takes the
+-- player frame's field, as ClassPowerBar:Setup does for every class bar.
+local function displayClassBar()
+    local classBar = Stubs.NewFrame(_G.PersonalResourceDisplayFrame.ClassFrameContainer)
+    Stubs.PlayerFrame().classPowerBar = classBar
+    return classBar
 end
 
 describe("druid mana bar", function()
@@ -205,6 +213,51 @@ describe("druid mana bar", function()
         Stubs.PlayerFrame().classPowerBar:Hide()
         shift(RAGE)
         T.truthy(shown(), "back once the class bar hides")
+    end)
+
+    it("doesn't stand aside for the Personal Resource Display's class bar", function()
+        start({ druidManaBar = true })
+        displayClassBar()
+        shift(ENERGY)
+        T.truthy(shown(), "in cat form, with its class bar shown")
+        withThirdBar()
+    end)
+
+    it("stays while the Personal Resource Display's class bar hides and shows again", function()
+        start({ druidManaBar = true })
+        local classBar = displayClassBar()
+        classBar:Hide()
+        shift(ENERGY)
+        T.truthy(shown(), "with the display's class bar hidden")
+        classBar:Show()
+        shift(ENERGY)
+        T.truthy(shown(), "with the display's class bar shown again, as when combat starts")
+    end)
+
+    it("still stands aside for a class bar under any other parent", function()
+        start({ druidManaBar = true })
+        Stubs.PlayerFrame().classPowerBar = Stubs.NewFrame(Stubs.PlayerFrame().PlayerFrameContent)
+        shift(ENERGY)
+        T.falsy(shown(), "no mana bar over the combo points")
+    end)
+
+    it("still stands aside for a class bar on a client without the Personal Resource Display", function()
+        start({ druidManaBar = true })
+        Stubs.PlayerFrame().classPowerBar = Stubs.NewFrame()
+        _G.PersonalResourceDisplayFrame = nil
+        shift(ENERGY)
+        T.falsy(shown(), "no mana bar over the combo points")
+    end)
+
+    it("stands aside for retail's combo points when the display's class bar took the field", function()
+        start({ druidManaBar = true }, nil, "retail")
+        displayClassBar()
+        _G.DruidComboPointBarFrame:Show()
+        shift(ENERGY)
+        T.falsy(shown(), "no mana bar over the combo points")
+        _G.DruidComboPointBarFrame:Hide()
+        shift(ENERGY)
+        T.truthy(shown(), "the display hides them on the player frame")
     end)
 
     it("puts the frame back when switched off", function()

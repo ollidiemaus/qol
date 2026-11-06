@@ -45,6 +45,14 @@ function DruidManaBar.IsAvailable()
     return PlayerFrame ~= nil and type(PlayerFrame.PlayerFrameContainer) == "table"
 end
 
+-- Whether a class bar is the Personal Resource Display's: once built, it takes the player frame's
+-- class bar field too, but it isn't on the player frame.
+local function isPersonalResourceBar(classBar)
+    local display = PersonalResourceDisplayFrame
+    local holder = display and display.ClassFrameContainer
+    return type(holder) == "table" and classBar:GetParent() == holder
+end
+
 -- Shown while the player's own art is drawn (not a vehicle's), without a third bar of Blizzard's
 -- (moonkin on retail) or a class bar where ours goes (retail's combo points in cat form).
 function DruidManaBar.ShouldShow()
@@ -54,7 +62,10 @@ function DruidManaBar.ShouldShow()
     if frame.state ~= "player" then return false end
     if frame.activeAlternatePowerBar then return false end
     local classBar = frame.classPowerBar
-    if classBar and classBar:IsShown() then return false end
+    if classBar and classBar:IsShown() and not isPersonalResourceBar(classBar) then return false end
+    -- That field may be the display's while retail's combo points show. Forever has no such frame.
+    local comboPoints = DruidComboPointBarFrame
+    if comboPoints and comboPoints:IsShown() then return false end
     local powerType = UnitPowerType("player")
     if not ns.IsUsable(powerType) or powerType == MANA then return false end
     local maxMana = UnitPowerMax("player", MANA)

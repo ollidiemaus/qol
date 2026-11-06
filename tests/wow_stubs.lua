@@ -800,6 +800,8 @@ local function makeRetail(G)
     G.GetBuildInfo = function() return "12.1.5", "70575", "Oct 21 2026", 120105 end
     G.WOW_PROJECT_ID = G.WOW_PROJECT_MAINLINE
     G.C_ActionBar.IsHighestSpellRank = nil
+    G.DruidComboPointBarFrame = newRegion("Frame")
+    G.DruidComboPointBarFrame:Hide()
     state.cvars.cameraDistanceMaxZoomFactor, state.cvarDefaults.cameraDistanceMaxZoomFactor = "1.9", "1.9"
     state.cvarRanges.cameraDistanceMaxZoomFactor = { 1, 2.6 }
     local density = { 16, 16, 16, 40, 64, 80, 80, 128, 128, 256 }
@@ -820,6 +822,7 @@ end
 local function makeClassicEra(G)
     G.GetBuildInfo = function() return "1.15.9", "70576", "Oct 21 2026", 11509 end
     G.WOW_PROJECT_ID = G.WOW_PROJECT_CLASSIC
+    G.PersonalResourceDisplayFrame = nil
     -- Its hidden settings as /qol probe measured them (1.15.9 build 70576, 2026-10-30): the game
     -- defaults and ranges, Ground Clutter's steps, and no View Distance slider. Each starts at its
     -- game default.
@@ -1796,6 +1799,12 @@ local function install()
         newUnitButton(unit, name).healthbar = bar
     end
     G.PlayerFrame = newPlayerFrame(G.PlayerFrame)
+    -- The Personal Resource Display's container for its class bar: that bar, once built, sits under
+    -- it and still registers as PlayerFrame.classPowerBar. Classic Era has no such display.
+    G.PersonalResourceDisplayFrame = newRegion("Frame")
+    G.PersonalResourceDisplayFrame.ClassFrameContainer = newRegion("Frame", G.PersonalResourceDisplayFrame)
+    -- Retail's combo points on the player frame; makeRetail makes them. Forever has none.
+    G.DruidComboPointBarFrame = nil
     -- The pet frame's portrait hit text, a global font string in a frame under it.
     G.PetHitIndicator = newRegion("Frame", newUnitButton("pet", "PetFrame")):CreateFontString()
     G.PetHitIndicator:Hide()

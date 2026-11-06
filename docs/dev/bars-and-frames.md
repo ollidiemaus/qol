@@ -90,7 +90,21 @@ Blizzard sets the glow again in `PlayerFrame_UpdateArt` (entering the world, the
 those events are wake-ups. When the bar hides, the glow gets the usual atlas back only while the
 frame shows the player (not a vehicle), Blizzard has no third bar of its own, and the glow still has
 ours. The bar stands aside for Blizzard's own third bar (`activeAlternatePowerBar`, moonkin on
-retail) and for a shown `classPowerBar` (retail's combo points sit where it goes). Left as they are:
+retail) and for a shown `classPowerBar` (retail's combo points sit where it goes), unless that class
+bar is the Personal Resource Display's.
+
+`PlayerFrame.classPowerBar` doesn't mean "on the player frame". Every `ClassPowerBar` writes it in
+`Setup`, so the last one wins, and the display's bar keeps doing that once it is built (the first time
+the display shows, also in Edit Mode). Forever has no class bar on the player frame, its combo points
+are around the target portrait, so the one it reports is always the display's, shown while the power
+is energy. So the test is the bar's parent, the display's `ClassFrameContainer`. Not the bar's
+visibility, or our bar would vanish in cat form when the display shows in combat, and not the player
+frame's own managed container, since retail's layout may nest that frame and a wrong answer there puts
+our bar over the combo points. On retail the display's bar can hide the real one from that field, so
+a shown `DruidComboPointBarFrame` stops our bar too. Forever doesn't load that frame, and the display's
+setting to hide class info on the player frame hides it, which brings our bar back.
+
+Left as they are:
 the rage or energy bar's mask (Blizzard switches it to `Unit_BarMask` for a third bar; the two differ
 by a pixel the frame art covers) and the bottom managed container (pet frame and the like), which
 Blizzard moves 10 down for its third bar. The text follows `TextStatusBar`: `statusText` shows it
