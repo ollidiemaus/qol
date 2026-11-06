@@ -72,15 +72,40 @@ fires `UPDATE_BINDINGS`, and the back buttons' override bindings follow from the
 built at login, not while a controller window is open, so SmartNavigation's `CreateFrame` hook
 rebuilds no window for them.
 
-## Following bars (design, not built yet)
+## Following bars
 
 Decided 2026-11-06; storage and the button change are in
 [ADR 0003](../adr/0003-following-bars-in-spare-controller-slots.md). Terms are in `GLOSSARY.md`.
+Built so far, in `Features/FollowingBars.lua`: Left, Right and Bottom following a stance, in and out
+of combat, with the slots from the spare range. Still design, each with its ticket: page flips
+(ticket 93, until then a stance change on page 2 or 3 moves the buttons as on page 1), the Top bar
+(94), running out of slots (95, for now a stance that doesn't fit stays normal and the page says
+nothing) and the live switch of interfaces (96, for now the ticks apply from the next login).
+
+How it's built:
+
+- A `SecureHandlerStateTemplate` frame of ours, made the first time a bar is ticked in the controller
+  interface, holds everything the snippet needs as attributes: the ticks (`following-<bar>`), the
+  normal slots, the slots handed out (`slots-<stance>-<bar>`) and frame refs to both page units'
+  buttons. Attribute names are lower case: the game lowers them. There are no restricted tables.
+- A state driver on `[bonusbar:1]` to `[bonusbar:5]` runs the `apply` snippet on every stance change.
+  A change of the ticks or of the game's setting runs the same snippet, through
+  `ns.LaterOutsideWindows`.
+- The snippet hands out slots, because a stance can first come up in combat, when insecure code
+  can't change a secure frame's attributes. Our `HookScript` on `OnAttributeChanged` writes each
+  one to the saved data: insecure code may read them, and a write to `QoLDB` taints nothing.
+- A bar that doesn't follow and hasn't moved is never touched, so with no stance, nothing ticked or
+  only the game's bar nothing happens to the game's buttons. A bar that moved goes back to its
+  normal slots, which are worked out once with the game's own
+  `GetGamepadStorageSlotIndexFromPageAndPageUnitSlotID`, for page 1.
+- The stance is the offset as the game gives it, and it only names a group of slots of ours. So no
+  offset is assumed to be a certain form, and nothing needs the game's own stance slots yet; ticket
+  95 will, to find the groups a class doesn't use.
 
 What the player gets:
 
-- The Controller page has a "Bars that follow the stance" section with four checkboxes (Top, Left,
-  Right, Bottom), not a dropdown: dropdown menus have caused trouble in Forever's controller
+- The Controller page has a "Bars that follow the stance" section with a checkbox per bar (Left,
+  Right and Bottom so far), not a dropdown: dropdown menus have caused trouble in Forever's controller
   interface. The list is saved per character and one list holds for every stance.
 - A stance is what the game treats as one: forms, warrior stances, stealth. Check with
   `GetBonusBarOffset()` or `[bonusbar:1/2/3/4/5]`; Easy Controller found plain `[bonusbar]` false in

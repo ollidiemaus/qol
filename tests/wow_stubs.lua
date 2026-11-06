@@ -1364,6 +1364,8 @@ local function install()
     --- The game's own Click Casting: state.clickBindings is its profile, { type, actionID, button,
     -- modifiers }. Modifiers are bits here (Shift 1, Ctrl 2, Alt 4), named by GetStringFromModifiers.
     G.Enum.ClickBindingType = { None = 0, Spell = 1, Macro = 2, Interaction = 3, PetAction = 4 }
+    G.Enum.GamepadStanceBarOverride = { None = 1, Page1LeftBar = 2, Page1RightBar = 3, Page1BottomBar = 4,
+        Page2TopBar = 5 }
     G.Enum.ClickBindingInteraction = { Target = 1, OpenContextMenu = 2 }
     G.C_ClickBindings = {
         GetProfileInfo = function()
@@ -1624,6 +1626,23 @@ local function install()
         frame:SetAttribute("frameref-" .. label, Stubs.Handle(state.rawFrames[ref] or ref))
     end
     G.SecureHandlerExecute = function(frame, body, ...) return Stubs.Execute(frame, body, ...) end
+    --- State drivers: Stubs.SetStance moves them. One evaluates right away when registered.
+    G.RegisterStateDriver = function(frame, id, conditions)
+        if state.combat then error("ADDON_ACTION_BLOCKED: RegisterStateDriver in combat") end
+        local driver = { frame = frame, id = id, conditions = conditions }
+        state.stateDrivers[#state.stateDrivers + 1] = driver
+        Stubs.RunStateDriver(driver)
+    end
+    --- Forever's controller slots: three pages of 28 from 181, and how the game maps a button to its
+    -- slot on a page (ActionBindingUtil.lua).
+    G.C_GamepadUI = { GetFirstGamepadActionStorageSlotIndex = function() return 181 end }
+    G.GamepadActionBarBindingUtil = {
+        GetGamepadStorageSlotIndexFromPageAndPageUnitSlotID = function(page, slotID)
+            if slotID >= 5 and slotID < 9 then return nil end
+            local slot = G.C_GamepadUI.GetFirstGamepadActionStorageSlotIndex() + (page - 1) * 28 + slotID - 1
+            return slotID >= 5 and slot - 4 or slot
+        end,
+    }
 
     --- Settings the client keeps (C_CVar), as strings. cvarReads counts the GetCVar calls.
     G.C_CVar = {
@@ -1919,6 +1938,8 @@ function Stubs.Reset(options)
         restricted = 0, regions = {}, timers = {}, delayed = {}, messages = {}, registry = {}, postCalls = {}, linePreCalls = {},
         unknownEvents = options.unknownEvents or {},
         combat = false,
+        -- GetBonusBarOffset: 0 outside a stance. Stubs.SetStance moves it and the state drivers.
+        bonusBarOffset = 0, stateDrivers = {},
         interfaceStyle = 0,
         screenWidth = 2560, screenHeight = 1440,
         framerate = 59.7, latencyHome = 45, latencyWorld = 38,
@@ -1941,7 +1962,7 @@ function Stubs.Reset(options)
         -- The hidden settings with their ranges, measured in Forever's client (ground clutter fade
         -- and Always sharpen have none) and, for Draw distance, in retail's (farclip and the horizon
         -- have none), and their raid copies. The game sliders are added below.
-        cvars = { chatClassColorOverride = "2", groundEffectDist = "70", groundEffectFade = "70",
+        cvars = { GamepadStanceBarOverride = "1", chatClassColorOverride = "2", groundEffectDist = "70", groundEffectFade = "70",
             groundEffectDensity = "16", weatherDensity = "2", ResampleAlwaysSharpen = "0",
             farclip = "6000", horizonStart = "1400", horizonClip = "6000", lodObjectFadeScale = "90",
             lodObjectCullSize = "20", lodObjectCullDist = "30",
@@ -2165,13 +2186,53 @@ function Stubs.SetControllerWindow(window)
     state.controllerWindow = window
 end
 
+-- One of the game's secure bar buttons. Following bars may change it only from secure code, so
+-- its own SetID and SetAttribute fail; an attribute updates its action, as
+-- ActionBarActionButtonMixin:OnAttributeChanged does.
+local function newBarButton(group, slotID)
+    local button = newRegion("CheckButton", group)
+    button.protected, button.attributes, button.pageUnitSlotID = true, {}, slotID
+    local id = _G.GamepadActionBarBindingUtil.GetGamepadStorageSlotIndexFromPageAndPageUnitSlotID(1, slotID) or 0
+    button.action = id
+    function button:GetID() return id end
+    function button:SetID() error("a game button's ID changed outside secure code") end
+    -- What a secure handle's SetID reaches.
+    function button:SetSecureID(newID) id = newID end
+    function button:GetAttribute(name) return self.attributes[name] end
+    function button:SetAttribute() error("ADDON_ACTION_BLOCKED: SetAttribute on a game button") end
+    function button:GetGamepadPageUnitSlotID() return self.pageUnitSlotID end
+    button:SetScript("OnAttributeChanged", function(self) self.action = id end)
+    return button
+end
+
+-- A page unit's four pageable bars, as PageUnit.lua numbers them: topBar's slots are 1 to 8, of
+-- which 5 to 8 are the reserved face buttons, and so on.
+local BAR_ORDER = { "topBar", "leftBar", "rightBar", "bottomBar" }
+local function newPageUnit(parent)
+    local unit = _G.CreateFrame("Frame", nil, parent)
+    unit.actionBars = {}
+    for barIndex, key in ipairs(BAR_ORDER) do
+        local actionBar = _G.CreateFrame("Frame", nil, unit)
+        actionBar.actionButtons = {}
+        for index = 1, 8 do
+            actionBar.actionButtons[index] = newBarButton(actionBar, (barIndex - 1) * 8 + index)
+        end
+        unit.actionBars[key] = actionBar
+    end
+    return unit
+end
+
 -- Forever's controller action bar, with the anchors of its page unit: the middle of the d-pad
 -- buttons (left) and of the face buttons (right). Call between LoadAddon and Login.
 function Stubs.NewGamepadBar()
     local bar = _G.CreateFrame("Frame", "GamepadMainActionBarFrame", _G.UIParent)
-    bar.PageUnit = _G.CreateFrame("Frame", nil, bar)
+    bar.PageUnit = newPageUnit(bar)
     bar.PageUnit.LeftCenteredAnchor = _G.CreateFrame("Frame", nil, bar.PageUnit)
     bar.PageUnit.RightCenteredAnchor = _G.CreateFrame("Frame", nil, bar.PageUnit)
+    -- The game's editor is a window with a page unit of its own.
+    local editor = _G.CreateFrame("Frame", "GamepadActionBarEditFrame", _G.UIParent)
+    editor:Hide()
+    editor.PageUnit = newPageUnit(editor)
     return bar
 end
 
@@ -2226,14 +2287,17 @@ local function frameHandle(region)
     -- OnAttributeChanged is insecure code.
     function methods:SetAttribute(name, value)
         region.attributes[name] = value
-        local script = region.scripts.OnAttributeChanged
-        if script then
+        local script, hook = region.scripts.OnAttributeChanged, region.hooks.OnAttributeChanged
+        if script or hook then
             local depth = state.restricted
             state.restricted = 0
-            script(region, name, value)
+            if script then script(region, name, value) end
+            if hook then hook(region, name, value) end
             state.restricted = depth
         end
     end
+    function methods:GetID() return region:GetID() end
+    function methods:SetID(id) region:SetSecureID(id) end
     function methods:GetFrameRef(label)
         local ref = region.attributes and region.attributes["frameref-" .. label]
         return handles[ref] and ref or nil
@@ -2313,6 +2377,36 @@ function runSnippet(header, frame, body, ...)
 end
 
 function Stubs.Handle(region) return frameHandle(region) end
+
+-- What a state driver's conditions give now: only [bonusbar:N] and a default, in the game's order.
+local function driverValue(conditions)
+    for clause in conditions:gmatch("[^;]+") do
+        local number, value = clause:match("%[bonusbar:(%d)%]%s*(%S+)")
+        if not number then return _G.strtrim(clause) end
+        if tonumber(number) == state.bonusBarOffset then return value end
+    end
+    return nil
+end
+
+-- Sets the state attribute, then runs the frame's _onstate- snippet in secure code, in combat too.
+local function runDriver(driver)
+    local value = driverValue(driver.conditions)
+    if value == driver.value then return end
+    driver.value = value
+    local frame = driver.frame
+    frame.attributes["state-" .. driver.id] = value
+    local body = frame.attributes["_onstate-" .. driver.id]
+    if body then
+        runSnippet(frame, frame, "local stateid, newstate = button, down\n" .. body, driver.id, value)
+    end
+end
+Stubs.RunStateDriver = runDriver
+
+-- The game enters or leaves a stance: 0 for none, otherwise the bonus bar offset.
+function Stubs.SetStance(offset)
+    state.bonusBarOffset = offset
+    for _, driver in ipairs(state.stateDrivers) do runDriver(driver) end
+end
 
 -- A snippet run on a frame's handle (SecureHandlerExecute), as a secure header's own code runs.
 function Stubs.Execute(frame, body, ...)
@@ -2520,11 +2614,13 @@ function Stubs.SetCombat(inCombat)
     end
 end
 
--- Loads the saved variables (options, rings, the characters seen, click casting's bindings), logs
+-- Loads the saved variables (options, rings, the characters seen, click casting's bindings,
+-- following bars), logs
 -- in and lets every deferred change run.
-function Stubs.Login(savedOptions, savedRings, savedCharacters, savedClickCast)
-    _G.QoLDB = (savedOptions or savedRings or savedCharacters or savedClickCast)
-        and { options = savedOptions, rings = savedRings, characters = savedCharacters, clickCast = savedClickCast } or nil
+function Stubs.Login(savedOptions, savedRings, savedCharacters, savedClickCast, savedFollowingBars)
+    _G.QoLDB = (savedOptions or savedRings or savedCharacters or savedClickCast or savedFollowingBars)
+        and { options = savedOptions, rings = savedRings, characters = savedCharacters, clickCast = savedClickCast,
+            followingBars = savedFollowingBars } or nil
     Stubs.Fire("ADDON_LOADED", "QoL")
     Stubs.Fire("PLAYER_LOGIN")
     Stubs.Fire("PLAYER_ENTERING_WORLD")

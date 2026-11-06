@@ -309,6 +309,20 @@ like the bar's other buttons.
 The buttons show and hide with the controller action bar, follow it when you move or scale it in
 Edit Mode, and keep their place in its compact layout.
 
+**Bars that follow the stance:** the game's Stance bar setting changes one controller bar when you
+enter a stance. Tick the **Left**, **Right** or **Bottom** bar here and that bar changes too, so a
+druid in bear form can have a whole set of bear actions, also in combat. Forms, warrior stances and
+stealth all count, and Prowl is a stance of its own.
+
+- Each ticked bar has its own actions per stance. Enter the stance and fill the bar with the game's
+  action bar editor; a slot you leave empty stays empty. The normal actions come back when you leave
+  the stance.
+- One list of bars holds for all your stances, saved per character. Unticking a bar keeps its
+  actions for when you tick it again. A change made in combat applies when combat ends.
+- The bar the game's Stance bar setting uses shows ticked and greyed out: the game handles that one.
+- Pick the bars with the controller interface on; a character who logs in with keyboard and mouse
+  gets no changes.
+
 **Buff tooltips:** the controller interface shows the tooltip of every buff or debuff you gain or
 refresh for a few seconds. **Hide new buff tooltips** keeps those away; a buff you select or point
 at still shows its tooltip.

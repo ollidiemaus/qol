@@ -119,6 +119,11 @@ Things only the real client can confirm:
   (~39.7, 54.0) and the Deeprun Tram (~64.5, 7.6) in Stormwind, Stratholme (~30.8, 15.7) and
   Naxxramas (~31.4, 25.9) in the Eastern Plaguelands, the Menethil Harbor–Auberdine boat at both
   docks, and the ship icon's size next to the others.
+- Following bars (Options > Controller, a druid or warrior): tick Left, enter a stance and fill the bar
+  with the game's editor, then leave and enter it, in and out of combat: the spells and icons change
+  and the normal ones come back; a `/reload` and a logout keep them. Tick Right too: it has its own
+  slots. Set the game's Stance bar setting to Left: Left shows ticked and greyed out, and its own
+  stance spells are back. Untick a bar in a stance: the normal spells return at once, or after combat.
 - Controller back buttons (Options > Controller), on a Steam Deck with F13 to F16 (or other free
   keys) given to L4, L5, R4 and R5 in Steam Input, bound under Key Bindings > AddOns > Quality of
   Life:

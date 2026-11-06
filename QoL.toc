@@ -57,6 +57,7 @@ Features\ButtonBorders.lua
 Features\BarPaging.lua
 Features\RankUpgrades.lua
 Features\BackButtons.lua
+Features\FollowingBars.lua
 Features\RingEntries.lua
 Features\Ring.lua
 Features\RingPicker.lua

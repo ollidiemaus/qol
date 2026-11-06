@@ -267,8 +267,8 @@ local function buildClickCast(page)
     end
 end
 
--- Controller page: the back buttons and the bar whose slots they use next to the buff tooltips,
--- then the back buttons' keys across the page (as in Key Bindings > AddOns), each named by its slot
+-- Controller page: the back buttons and the bar whose slots they use next to the buff tooltips and
+-- the bars that follow the stance, then the back buttons' keys across the page (as in Key Bindings > AddOns), each named by its slot
 -- on that bar.
 local function buildController(page)
     local BackButtons = ns.BackButtons
@@ -283,6 +283,19 @@ local function buildController(page)
         { indent = true, enabled = enabled })
     page:Header("right", L.SECTION_BUFFS)
     page:Checkbox("right", "hideBuffTooltips", L.HIDE_BUFF_TOOLTIPS, L.HIDE_BUFF_TOOLTIPS_TIP)
+    page:Header("right", L.SECTION_FOLLOWING_BARS)
+    local FollowingBars = ns.FollowingBars
+    for _, name in ipairs(FollowingBars.BARS) do
+        -- Saved per character, so not an option. The game's Stance bar setting has its bar already.
+        local backing = {
+            get = function() return FollowingBars.IsGameBar(name) or FollowingBars.IsTicked(name) end,
+            set = function(value) FollowingBars:SetTicked(name, value) end,
+            reset = function() FollowingBars:SetTicked(name, false) end,
+            isDefault = function() return not FollowingBars.IsTicked(name) end,
+        }
+        page:Checkbox("right", backing, L["FOLLOWING_BAR_" .. name:upper()], L.FOLLOWING_BAR_TIP,
+            { enabled = function() return not FollowingBars.IsGameBar(name) end })
+    end
 
     page:Header("wide", L.SECTION_KEYS)
     for index, info in ipairs(BackButtons.BUTTONS) do
