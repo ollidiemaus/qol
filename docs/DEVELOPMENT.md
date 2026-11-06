@@ -139,8 +139,8 @@ Forever beta. So:
   (`SaveBindings` in `SettingsPanel`'s OnHide), which fires `UPDATE_BINDINGS`; in controller mode
   the bar features ignore it, and the back buttons and the rings update only once the settings have
   been closed for half a second (`ns.LaterOutsideWindows`).
-- The other way round, the controller features (the back buttons and the buff tooltips, the
-  Controller page) act only while the controller interface is on: with keyboard and mouse the back
+- The other way round, the controller features (the back buttons, the buff tooltips and following
+  bars, the Controller page) act only while the controller interface is on: with keyboard and mouse the back
   buttons hide, lose their `type` attribute (so their keys, saved bindings included, press nothing)
   and their override bindings, and the buff tooltip keeps its alpha. The game switches interfaces
   without a reload and fires `INPUT_DEVICE_INTERFACE_TRANSITION`; `ns.OnControllerUIChange` runs

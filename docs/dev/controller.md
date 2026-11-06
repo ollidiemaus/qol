@@ -76,10 +76,9 @@ rebuilds no window for them.
 
 Decided 2026-11-06; storage and the button change are in
 [ADR 0003](../adr/0003-following-bars-in-spare-controller-slots.md). Terms are in `GLOSSARY.md`.
-Built so far, in `Features/FollowingBars.lua`: all four bars following a stance, Top with its D-pad
-half only, in and out of combat and across page flips, with the slots from the spare range and the
-stance bars the class doesn't use. Still design, with its ticket: the live switch of interfaces (96,
-for now the ticks apply from the next login).
+Built, in `Features/FollowingBars.lua`: all four bars following a stance, Top with its D-pad half
+only, in and out of combat and across page flips, with the slots from the spare range and the stance
+bars the class doesn't use, following a live switch of interfaces.
 
 How it's built:
 
@@ -93,6 +92,19 @@ How it's built:
 - The snippet hands out slots, because a stance can first come up in combat, when insecure code
   can't change a secure frame's attributes. Our `HookScript` on `OnAttributeChanged` writes each
   one to the saved data: insecure code may read them, and a write to `QoLDB` taints nothing.
+- A switch of interfaces (`ns.OnControllerUIChange`) goes through the same `update`. On the keyboard
+  interface every `following-<bar>` is cleared and `apply` runs, so the buttons go back; from there
+  `findslots` answers nil, so stance changes and flips touch nothing and no slot is handed out. The
+  state driver and the wraps stay: they do nothing there, and taking them away would only add a
+  second setup path. A character who logged in on the keyboard gets them on the switch, through the
+  same creation as a first tick. Ticks changed on the keyboard are saved and apply on the switch.
+- A switch waits like any other change: for the end of combat both ways (a stance change meanwhile
+  still follows, on bars the game has hidden), and for the game's controller windows on the way to
+  the controller interface. On the way to the keyboard there are no such windows to wait for:
+  `ns.LaterOutsideWindows` only holds in the controller interface, so that `apply` runs a frame after
+  the switch, with the settings window the player switched in possibly still open. The game's own
+  gamepad init sets no page on the buttons, and if it ever did, the flip wrap and the `apply` a frame
+  later cover it.
 - A button that's where it belongs is never touched, so with no stance, nothing ticked or only the
   game's bar nothing happens to the game's buttons. A button that moved goes back to its normal slot,
   which is worked out once with the game's own

@@ -22,6 +22,9 @@ local _, ns = ...
 -- ticked. What doesn't fit stays normal, and the Controller page says so. The stance is the game's
 -- bonus bar offset, whichever form that is. Plain [bonusbar] is false in stealth on Forever.
 --
+-- It follows a live switch of interfaces: with keyboard and mouse no bar follows and the game's
+-- buttons go back to their normal slots.
+--
 -- The list of bars and the slots are saved per character (QoLDB.followingBars[character]). The bar
 -- the game's Stance bar setting names on page 1 is left to the game; it can't name Top there. That
 -- setting is only read.
@@ -286,9 +289,11 @@ local function anyTicked(data)
     return false
 end
 
--- Out of combat and away from the game's controller windows.
+-- Out of combat and away from the game's controller windows. With keyboard and mouse no bar follows,
+-- so the snippets put the buttons back and leave them alone from there on.
 local function update()
-    if not (ns.IsControllerUI() and GamepadMainActionBarFrame) then return end
+    local controller = ns.IsControllerUI()
+    if not (GamepadMainActionBarFrame and (controller or header)) then return end
     local data = saved()
     if not header then
         if not anyTicked(data) then return end
@@ -296,7 +301,8 @@ local function update()
     end
     local byGame = gameBar()
     for _, name in ipairs(BARS) do
-        header:SetAttribute("following-" .. name, data.bars[name] == true and name ~= byGame or nil)
+        local following = controller and data.bars[name] == true and name ~= byGame
+        header:SetAttribute("following-" .. name, following or nil)
     end
     if not driven then
         driven = true
@@ -318,5 +324,6 @@ end
 function FollowingBars:Init()
     if not GamepadMainActionBarFrame then return end
     ns.Events:On("GAMEPAD_STANCE_BAR_OVERRIDE_CHANGED", schedule)
+    ns.OnControllerUIChange(schedule)
     schedule()
 end

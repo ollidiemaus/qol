@@ -137,6 +137,12 @@ Things only the real client can confirm:
   Enter the stance on page 2 and flip back. Flip pages in the game's editor too.
   Tick Top: in the stance its D-pad half changes and fills with the editor, in and out of combat and
   across page flips, while A, B, X and Y keep jumping and interacting.
+  Turn the controller interface off in a stance with Left ticked and close the options, turn it back
+  on: the stance's spells are back without a reload, once the options are closed, and the game doesn't
+  hang. Turn it off and on again without closing the options, then close them: no hang either (the
+  way to the keyboard doesn't wait for the options). Shift while it's off: nothing errors. Log in with keyboard and mouse in a form, turn the
+  controller interface on: the bars follow. Try the switch on page 2 too, and in combat if the game
+  lets you.
 - Controller back buttons (Options > Controller), on a Steam Deck with F13 to F16 (or other free
   keys) given to L4, L5, R4 and R5 in Steam Input, bound under Key Bindings > AddOns > Quality of
   Life:

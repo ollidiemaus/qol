@@ -329,8 +329,8 @@ stances and stealth all count, and Prowl is a stance of its own.
   by itself if there's room.
 - The bar the game's Stance bar setting uses on page 1 shows ticked and greyed out: the game handles
   that one. That setting can't pick page 1's Top bar, so Top can always be ticked.
-- Pick the bars with the controller interface on; a character who logs in with keyboard and mouse
-  gets no changes.
+- With keyboard and mouse nothing follows. Turning the controller interface off or on switches the
+  bars without a reload, after combat, and turning it on also waits for the game's options to close.
 
 **Buff tooltips:** the controller interface shows the tooltip of every buff or debuff you gain or
 refresh for a few seconds. **Hide new buff tooltips** keeps those away; a buff you select or point
