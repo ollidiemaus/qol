@@ -293,7 +293,8 @@ local function buildController(page)
             reset = function() FollowingBars:SetTicked(name, false) end,
             isDefault = function() return not FollowingBars.IsTicked(name) end,
         }
-        page:Checkbox("right", backing, L["FOLLOWING_BAR_" .. name:upper()], L.FOLLOWING_BAR_TIP,
+        page:Checkbox("right", backing, L["FOLLOWING_BAR_" .. name:upper()],
+            name == "top" and L.FOLLOWING_BAR_TOP_TIP or L.FOLLOWING_BAR_TIP,
             { enabled = function() return not FollowingBars.IsGameBar(name) end })
     end
 

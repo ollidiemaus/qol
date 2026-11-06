@@ -76,9 +76,9 @@ rebuilds no window for them.
 
 Decided 2026-11-06; storage and the button change are in
 [ADR 0003](../adr/0003-following-bars-in-spare-controller-slots.md). Terms are in `GLOSSARY.md`.
-Built so far, in `Features/FollowingBars.lua`: Left, Right and Bottom following a stance, in and out
-of combat and across page flips, with the slots from the spare range. Still design, each with its
-ticket: the Top bar (94), running out of slots (95, for now a stance that doesn't fit stays normal
+Built so far, in `Features/FollowingBars.lua`: all four bars following a stance, Top with its D-pad
+half only, in and out of combat and across page flips, with the slots from the spare range. Still
+design, each with its ticket: running out of slots (95, for now a stance that doesn't fit stays normal
 and the page says nothing) and the live switch of interfaces (96, for now the ticks apply from the
 next login).
 
@@ -86,7 +86,7 @@ How it's built:
 
 - A `SecureHandlerStateTemplate` frame of ours, made the first time a bar is ticked in the controller
   interface, holds everything the snippet needs as attributes: the ticks (`following-<bar>`), the
-  normal slots, the slots handed out (`slots-<stance>-<bar>`) and frame refs to both page units'
+  bars' sizes (`size-<bar>`), the normal slots, the slots handed out (`slots-<stance>-<bar>`) and frame refs to both page units'
   buttons. Attribute names are lower case: the game lowers them. There are no restricted tables.
 - A state driver on `[bonusbar:1]` to `[bonusbar:5]` runs the `apply` snippet on every stance change.
   A change of the ticks or of the game's setting runs the same snippet, through
@@ -112,8 +112,8 @@ How it's built:
 
 What the player gets:
 
-- The Controller page has a "Bars that follow the stance" section with a checkbox per bar (Left,
-  Right and Bottom so far), not a dropdown: dropdown menus have caused trouble in Forever's controller
+- The Controller page has a "Bars that follow the stance" section with a checkbox per bar, not a
+  dropdown: dropdown menus have caused trouble in Forever's controller
   interface. The list is saved per character and one list holds for every stance.
 - A stance is what the game treats as one: forms, warrior stances, stealth. Check with
   `GetBonusBarOffset()` or `[bonusbar:1/2/3/4/5]`; Easy Controller found plain `[bonusbar]` false in
@@ -121,9 +121,14 @@ What the player gets:
 - Each following bar has its own slots per stance. An empty slot stays empty, as on the game's stance
   bar; there's no fallback to the normal spell.
 - Only page 1 follows. Flipping to page 2 or 3 in a stance shows those pages as usual.
-- Only the Top bar's D-pad half follows: A, B, X and Y are reserved by the game.
+- Only the Top bar's D-pad half follows: A, B, X and Y are reserved by the game. In `actionButtons`
+  those are 5 to 8, which hold no slot (ID 0, `GetGamepadStorageSlotIndexFromPageAndPageUnitSlotID`
+  returns nil); a Top bar's buttons 1 to 4 are the only ones that get a frame ref or a wrap, so a
+  face button is never touched. Its tooltip is its own, as it says this and has no greyed-out case.
 - The game's `GamepadStanceBarOverride` is left alone. The bar it names keeps the game's stance slots
-  and shows ticked and greyed out; QoL only adds bars.
+  and shows ticked and greyed out; QoL only adds bars. `Enum.GamepadStanceBarOverride` has no
+  `Page1TopBar`, only pages 2 and 3 have a Top value, and only page 1 follows, so Top is never the
+  game's bar: with the setting on `Page2TopBar` it can still be ticked and follows on page 1.
 - Spells are placed with the game's own editor, in the stance.
 - Unticking a bar or turning the feature off keeps its spells, so ticking it again brings them back.
 
@@ -131,6 +136,8 @@ Slots: 181-264 are the pages and 265-304 the five stance bars (bear, offset 3, i
 spare, plus the groups of stance bars the class doesn't use. A bar's Top half needs 4 slots, any other
 bar 8. Each stance and bar gets its slots the first time they're needed and keeps them. When there's
 no room the stances learned first keep their bars, the others stay normal, and the page says so.
+With two sizes that can bend: if 4 slots are left, a Left that doesn't fit stays normal and a later
+stance's Top still takes them. Ticket 95 has to decide that case.
 
 Mechanism: a secure handler calls `SetID` on the game's buttons (`HANDLE:SetID`, works in combat) and
 sets an attribute so `OnAttributeChanged` runs `UpdateAction`. Two sets of buttons change, because

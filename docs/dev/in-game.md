@@ -128,6 +128,8 @@ Things only the real client can confirm:
   stance's spells and icons again, also with an empty normal slot, and with a spell on the normal
   slot and an empty stance slot. Leave the stance on page 2 and flip back: page 1's normal spells.
   Enter the stance on page 2 and flip back. Flip pages in the game's editor too.
+  Tick Top: in the stance its D-pad half changes and fills with the editor, in and out of combat and
+  across page flips, while A, B, X and Y keep jumping and interacting.
 - Controller back buttons (Options > Controller), on a Steam Deck with F13 to F16 (or other free
   keys) given to L4, L5, R4 and R5 in Steam Input, bound under Key Bindings > AddOns > Quality of
   Life:

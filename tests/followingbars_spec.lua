@@ -4,9 +4,10 @@ local describe, it = T.describe, T.it
 
 -- The first page's normal slots: the Top bar takes 181 to 184 (its face buttons have none). The
 -- spec checks which slot each game button holds, never what the feature keeps.
-local NORMAL = { left = 185, right = 193, bottom = 201 }
+local NORMAL = { top = 181, left = 185, right = 193, bottom = 201 }
 -- The same bars on pages 2 and 3, 28 slots further each.
 local PAGE2_LEFT, PAGE3_LEFT = 213, 241
+local PAGE2_TOP = 209
 local BEAR, CAT = 3, 1
 local SPARE = 305
 
@@ -37,12 +38,22 @@ local function button(frame, name, index)
     return frame.PageUnit.actionBars[name .. "Bar"].actionButtons[index]
 end
 
--- The slots a bar's eight buttons hold, and that each shows the action it presses.
-local function holds(frame, name, first)
-    for index = 1, 8 do
+-- The slots a bar's buttons hold (eight, or count), and that each shows the action it presses.
+local function holds(frame, name, first, count)
+    for index = 1, count or 8 do
         local game = button(frame, name, index)
         T.eq(game:GetID(), first + index - 1, name .. " button " .. index)
         T.eq(game.action, first + index - 1, name .. " button " .. index .. "'s action")
+    end
+end
+
+-- The slots the Top bar's D-pad half holds. Its face buttons never hold one.
+local function holdsTop(frame, first)
+    holds(frame, "top", first, 4)
+    for index = 5, 8 do
+        local game = button(frame, "top", index)
+        T.eq(game:GetID(), 0, "top face button " .. index)
+        T.eq(game.action, 0, "top face button " .. index .. "'s action")
     end
 end
 
@@ -274,6 +285,67 @@ describe("following bars", function()
         holds(bar, "left", NORMAL.left)
     end)
 
+    it("follows with the Top bar's D-pad half, on 4 slots, and the next bar's slots come after them", function()
+        local ns, bar = start()
+        tick(ns, "top")
+        tick(ns, "left")
+        Stubs.SetStance(BEAR)
+        holdsTop(bar, SPARE)
+        holds(bar, "left", SPARE + 4)
+        Stubs.SetStance(0)
+        holdsTop(bar, NORMAL.top)
+    end)
+
+    it("keeps the Top bar's face buttons as they are, on page flips and in the editor too", function()
+        local ns, bar = start()
+        tick(ns, "top")
+        Stubs.state().actions[NORMAL.top] = { texture = "normal" }
+        Stubs.SetCombat(true)
+        Stubs.SetStance(BEAR)
+        Stubs.FlipPage(bar, 2)
+        T.eq(button(bar, "top", 1):GetID(), PAGE2_TOP)
+        for index = 5, 8 do T.eq(button(bar, "top", index):GetID(), 0) end
+        Stubs.FlipPage(bar, 1)
+        holdsTop(bar, SPARE)
+        holdsTop(GamepadActionBarEditFrame, SPARE)
+    end)
+
+    it("keeps a Top group in the last 4 spare slots after a reload", function()
+        local ns, bar = start()
+        for _, name in ipairs({ "top", "left", "right", "bottom" }) do tick(ns, name) end
+        Stubs.SetStance(CAT)
+        tick(ns, "top", false)
+        Stubs.SetStance(BEAR)
+        tick(ns, "top")
+        holdsTop(bar, 357)
+        Stubs.SetStance(0)
+        local _, after = start(QoLDB.followingBars, function(state) state.bonusBarOffset = BEAR end)
+        holdsTop(after, 357)
+    end)
+
+    it("reads a saved Top group as 4 slots: the next bar's slots come right after", function()
+        local ns = start()
+        tick(ns, "top")
+        Stubs.SetStance(BEAR)
+        Stubs.SetStance(0)
+        local again, bar = start(QoLDB.followingBars, function(state) state.bonusBarOffset = BEAR end)
+        tick(again, "left")
+        holdsTop(bar, SPARE)
+        holds(bar, "left", SPARE + 4)
+    end)
+
+    it("never counts the Top bar as the game's: its setting can't name it on page 1", function()
+        for _, value in ipairs({ "1", "5", "9" }) do
+            local ns, bar = start(nil, function(state) state.cvars.GamepadStanceBarOverride = value end)
+            T.falsy(ns.FollowingBars.IsGameBar("top"), value)
+            tick(ns, "top")
+            Stubs.SetStance(BEAR)
+            holdsTop(bar, SPARE)
+        end
+        local ns = start()
+        T.falsy(ns.FollowingBars.IsGameBar("top"), "with the setting unset")
+    end)
+
     it("leaves the bar the game's Stance bar setting names alone, and never writes the setting", function()
         local ns, bar = start(nil, function(state) state.cvars.GamepadStanceBarOverride = "2" end)
         tick(ns, "left")
@@ -393,7 +465,7 @@ describe("following bars", function()
 
         it("ticks a bar, unticked by default, with the rows the controller cursor stops on", function()
             local ns = settingsStart()
-            for _, label in ipairs({ "Left bar", "Right bar", "Bottom bar" }) do
+            for _, label in ipairs({ "Top bar", "Left bar", "Right bar", "Bottom bar" }) do
                 local c = row(ns, label)
                 T.falsy(c.get())
                 T.truthy(c.enabled())
@@ -406,6 +478,13 @@ describe("following bars", function()
             holds(GamepadMainActionBarFrame, "left", SPARE)
         end)
 
+        it("says on the Top bar's row that only its D-pad half follows", function()
+            local ns = settingsStart()
+            T.truthy(ns.L.FOLLOWING_BAR_TOP_TIP:find("D-pad", 1, true))
+            T.eq(row(ns, "Top bar").tooltip, ns.L.FOLLOWING_BAR_TOP_TIP)
+            T.eq(row(ns, "Left bar").tooltip, ns.L.FOLLOWING_BAR_TIP)
+        end)
+
         it("shows the game's bar ticked and greyed out", function()
             local ns = settingsStart(function(state) state.cvars.GamepadStanceBarOverride = "4" end)
             local c = row(ns, "Bottom bar")
@@ -414,8 +493,17 @@ describe("following bars", function()
             T.truthy(row(ns, "Left bar").enabled())
         end)
 
+        it("leaves the Top bar's row free when the game's setting names Top on another page", function()
+            local ns = settingsStart(function(state) state.cvars.GamepadStanceBarOverride = "5" end)
+            local c = row(ns, "Top bar")
+            T.falsy(c.get())
+            T.truthy(c.enabled())
+        end)
+
         it("has the rows in German", function()
             local ns = Stubs.LoadAddon({ locale = "deDE" })
+            T.eq(ns.L.FOLLOWING_BAR_TOP, "Obere Leiste")
+            T.truthy(ns.L.FOLLOWING_BAR_TOP_TIP:find("Steuerkreuz", 1, true))
             T.eq(ns.L.FOLLOWING_BAR_LEFT, "Linke Leiste")
             T.eq(ns.L.SECTION_FOLLOWING_BARS, "Leisten, die der Haltung folgen")
         end)

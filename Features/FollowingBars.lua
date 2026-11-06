@@ -23,18 +23,20 @@ local _, ns = ...
 -- stealth on Forever.
 --
 -- The list of bars and the slots are saved per character (QoLDB.followingBars[character]). The bar
--- the game's Stance bar setting names on page 1 is left to the game. That setting is only read.
+-- the game's Stance bar setting names on page 1 is left to the game; it can't name Top there. That
+-- setting is only read.
 local FollowingBars = {}
 ns.FollowingBars = FollowingBars
 
--- Top is left out: its face buttons are reserved.
-local BARS = { "left", "right", "bottom" }
+local BARS = { "top", "left", "right", "bottom" }
 FollowingBars.BARS = BARS
-local SLOTS_PER_BAR = 8
+-- The buttons that follow, from a bar's first. Top stops at its D-pad half: its face buttons are
+-- reserved and hold no slot.
+local BAR_SIZES = { top = 4, left = 8, right = 8, bottom = 8 }
 local FIRST_SPARE_SLOT, LAST_SPARE_SLOT = 305, 360
 local STANCE_DRIVER = "[bonusbar:1] 1; [bonusbar:2] 2; [bonusbar:3] 3; [bonusbar:4] 4; [bonusbar:5] 5; 0"
 local STANCE_BAR_CVAR = "GamepadStanceBarOverride"
--- Its Enum.GamepadStanceBarOverride value for each bar.
+-- Its Enum.GamepadStanceBarOverride value for each bar. Top has none: the setting can't name it on page 1.
 local GAME_BAR_SETTINGS = { left = "Page1LeftBar", right = "Page1RightBar", bottom = "Page1BottomBar" }
 
 -- The first of the slots a bar shows on page 1 in the stance now, nil if it stays on its normal ones.
@@ -45,13 +47,14 @@ local FIND_SLOTS = ([[
     local key = "slots-" .. stance .. "-" .. name
     local first = self:GetAttribute(key)
     local free = self:GetAttribute("nextslot")
-    if not first and free + %d <= %d then
+    local size = self:GetAttribute("size-" .. name)
+    if not first and free + size - 1 <= %d then
         first = free
-        self:SetAttribute("nextslot", free + %d)
+        self:SetAttribute("nextslot", free + size)
         self:SetAttribute(key, first)
     end
     return first
-]]):format(SLOTS_PER_BAR - 1, LAST_SPARE_SLOT, SLOTS_PER_BAR)
+]]):format(LAST_SPARE_SLOT)
 
 -- Changes a button's slot. The attribute is what makes it update.
 local MOVE = [[
@@ -67,7 +70,7 @@ local APPLY = ([[
     for bar = 1, self:GetAttribute("barcount") do
         local name = self:GetAttribute("bar-" .. bar)
         local first = self:RunAttribute("findslots", name)
-        for index = 1, %d do
+        for index = 1, self:GetAttribute("size-" .. name) do
             local normal = self:GetAttribute("normal-" .. name .. index)
             local id = first and first + index - 1 or normal
             for pageUnit = 1, 2 do
@@ -79,7 +82,7 @@ local APPLY = ([[
             end
         end
     end
-]]):format(SLOTS_PER_BAR, FIRST_SPARE_SLOT)
+]]):format(FIRST_SPARE_SLOT)
 
 -- Runs inside the game's update of a button, on the two attributes it sets (controller.md has their
 -- order). A button that lands on its normal slot in the stance moves on the last one it'll get. An
@@ -138,8 +141,8 @@ end
 -- The bar the game's Stance bar setting names on page 1, if any.
 local function gameBar()
     local value = tonumber(C_CVar.GetCVar(STANCE_BAR_CVAR))
-    for _, name in ipairs(BARS) do
-        if value == Enum.GamepadStanceBarOverride[GAME_BAR_SETTINGS[name]] then return name end
+    for name, setting in pairs(GAME_BAR_SETTINGS) do
+        if value == Enum.GamepadStanceBarOverride[setting] then return name end
     end
     return nil
 end
@@ -152,8 +155,13 @@ function FollowingBars.IsTicked(name)
     return saved().bars[name] == true
 end
 
-local function validGroup(first)
-    return type(first) == "number" and first >= FIRST_SPARE_SLOT and first + SLOTS_PER_BAR - 1 <= LAST_SPARE_SLOT
+-- The number of slots in a saved group, nil if it's not a valid one. key is "<stance>-<bar>".
+local function groupSize(key, first)
+    local size = BAR_SIZES[key:match("%a+$")]
+    if size and type(first) == "number" and first >= FIRST_SPARE_SLOT and first + size - 1 <= LAST_SPARE_SLOT then
+        return size
+    end
+    return nil
 end
 
 -- Saves the slots the snippet hands out, also in combat.
@@ -171,9 +179,10 @@ local function create()
     header:SetAttribute("barcount", #BARS)
     local nextSlot = FIRST_SPARE_SLOT
     for key, first in pairs(saved().slots) do
-        if validGroup(first) then
+        local size = groupSize(key, first)
+        if size then
             header:SetAttribute("slots-" .. key, first)
-            nextSlot = math.max(nextSlot, first + SLOTS_PER_BAR)
+            nextSlot = math.max(nextSlot, first + size)
         end
     end
     header:SetAttribute("nextslot", nextSlot)
@@ -181,7 +190,8 @@ local function create()
     local pageUnits = { main = main, edit = GamepadActionBarEditFrame.PageUnit }
     for bar, name in ipairs(BARS) do
         header:SetAttribute("bar-" .. bar, name)
-        for index = 1, SLOTS_PER_BAR do
+        header:SetAttribute("size-" .. name, BAR_SIZES[name])
+        for index = 1, BAR_SIZES[name] do
             local normal = GamepadActionBarBindingUtil.GetGamepadStorageSlotIndexFromPageAndPageUnitSlotID(1,
                 barButton(main, name, index):GetGamepadPageUnitSlotID())
             header:SetAttribute("normal-" .. name .. index, normal)

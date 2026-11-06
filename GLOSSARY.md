@@ -139,7 +139,7 @@ Keeping a lower rank of a spell on the bars on purpose, such as a cheap Rank 1 F
 _Avoid_: low rank (that's any rank below the highest, kept on purpose or not), old rank
 
 **Controller bar**:
-One of the four bars on a page of the controller interface: Top (no trigger), Left, Right and Bottom (both triggers).
+One of the four bars on a page of the controller interface: Top (no trigger), Left, Right and Bottom (both triggers). Each has a D-pad half and a face button half; Top's face buttons are reserved by the game.
 _Avoid_: gamepad bar, trigger bar
 
 **Stance**:
