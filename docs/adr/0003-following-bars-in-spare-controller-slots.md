@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 ---
 
 # Following bars keep their spells in the spare controller slots
@@ -13,7 +13,8 @@ may claim it later, and then this has to move.
 
 The game's editor writes to the slot in `button:GetID()`, so a following bar's buttons really change
 their ID, from a secure handler so it works in combat, rather than being covered by buttons of ours.
-This depends on an in-game test that hasn't been done yet; this stays proposed until it passes.
+The editor has a page unit of its own with its own buttons, so those change ID too. An in-game test
+on one bar in bear passed on 2026-11-06, in and out of combat, page flips included.
 
 ## Considered options
 

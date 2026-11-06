@@ -100,11 +100,36 @@ bar 8. Each stance and bar gets its slots the first time they're needed and keep
 no room the stances learned first keep their bars, the others stay normal, and the page says so.
 
 Mechanism: a secure handler calls `SetID` on the game's buttons (`HANDLE:SetID`, works in combat) and
-sets an attribute so `OnAttributeChanged` runs `UpdateAction`. Blizzard resets the IDs on every page
-flip, so page 1 has to be reapplied after one, in combat too; `ChangePageButton` isn't a protected
-frame, so how to catch the flip is part of the test.
+sets an attribute so `OnAttributeChanged` runs `UpdateAction`. Two sets of buttons change, because
+the editor doesn't use the bars the player sees: `GamepadMainActionBarFrame.PageUnit` and
+`GamepadActionBarEditFrame.PageUnit` each have their own.
 
-To test in game first, on one bar in bear, in and out of combat: the slot changes on entering and
-leaving the stance, the press casts the new spell, the icon follows, page flips and back, and the
-game's editor writes to the new slot. If this fails the design changes, see the ADR's options.
+Blizzard resets the IDs on every page flip, so page 1 has to be reapplied after one, in combat too.
+`ChangePageButton` isn't protected, so a wrap on it doesn't run in combat. The catch is a
+`SecureHandlerWrapScript` on `OnAttributeChanged` of each button, which sees the two attributes the
+flip sets. The order inside `UpdateAction` decides how they can be used:
+
+1. `Update()` reads the slot's action and texture into locals.
+2. Mid-way it sets `pressAndHoldAction` (lower case in the wrap), for every slot, empty ones too.
+3. It then draws the icon from those locals, or hides the icon, count and cooldown if the slot is
+   empty. A `SetID` made at step 2 runs its own full update, and this step overwrites it.
+4. After `Update()`, `UpdatePingAttributes` sets `ping-receiver` if `self.action` holds an action,
+   else clears it. A clear doesn't fire `OnAttributeChanged`.
+
+So, on a flip back to page 1 in the stance, for a button on its normal slot:
+
+- **Normal slot holds an action**: wait for `ping-receiver` (step 4), then move the button.
+- **Normal slot empty**: step 4 won't fire for that slot, so move at `pressandholdaction` (step 2).
+  `self.action` is the following slot by step 4, so if that holds an action `ping-receiver` does
+  fire, and the button redraws there: `SetID` to the normal slot, attribute, `SetID` back, attribute,
+  under a guard so that this doesn't move the button again. If it holds none, the hidden icon is right.
+
+`HasAction` is in the restricted environment, which tells the two cases apart. The attribute that makes the
+button update is one of ours, which the wrap ignores.
+
+Tested in game on 2026-11-06, on the Left bar in bear with throwaway code: the slot changes on
+entering and leaving the stance and the press casts the new spell, in and out of combat; the icon
+follows; the editor writes to and clears the new slot; flips to pages 2 and 3 and back in combat
+leave all 8 buttons right and block nothing. Not run in game: a spell on the normal slot with an
+empty following slot, and any stance but bear. Cat is offset 1, slot 265.
 Easy Controller gets no special handling; test with it on and fix what shows up.
