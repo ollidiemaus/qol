@@ -323,6 +323,10 @@ stances and stealth all count, and Prowl is a stance of its own.
   the stance's actions again, also in combat.
 - One list of bars holds for all your stances, saved per character. Unticking a bar keeps its
   actions for when you tick it again. A change made in combat applies when combat ends.
+- There's room for a limited number of bars: all four in about two stances, a bit more for a warrior
+  or druid. The stances you enter first keep their bars and spells never move; a bar that doesn't
+  fit stays normal in the other stances, and this page says so. A form you learn later gets its bars
+  by itself if there's room.
 - The bar the game's Stance bar setting uses on page 1 shows ticked and greyed out: the game handles
   that one. That setting can't pick page 1's Top bar, so Top can always be ticked.
 - Pick the bars with the controller interface on; a character who logs in with keyboard and mouse

@@ -297,6 +297,15 @@ local function buildController(page)
             name == "top" and L.FOLLOWING_BAR_TOP_TIP or L.FOLLOWING_BAR_TIP,
             { enabled = function() return not FollowingBars.IsGameBar(name) end })
     end
+    page:Text("right", L.FOLLOWING_BARS_FULL, { shown = FollowingBars.IsOutOfSpace })
+    -- A stance can run out of slots at any moment, inside the secure snippet: the next frame, in
+    -- combat too. The one feature that gets a callback from the UI (docs/dev/controller.md).
+    local function refreshShown()
+        if page.frame:IsVisible() then page:Refresh() end
+    end
+    function FollowingBars.onSpaceChanged()
+        ns.Later("followingBarsRefresh", refreshShown, true)
+    end
 
     page:Header("wide", L.SECTION_KEYS)
     for index, info in ipairs(BackButtons.BUTTONS) do

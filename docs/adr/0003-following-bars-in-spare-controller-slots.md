@@ -9,7 +9,9 @@ pages and the five stance bars), which leaves 305-360 with no documented use. Fo
 their spells there, because the player must be able to fill them in the game's own editor, and that
 editor refuses any slot outside the valid range, so slots of QoL's own outside it were out. It's an
 undocumented range in a beta client: a spell did survive a logout there (2026-11-06), but Blizzard
-may claim it later, and then this has to move.
+may claim it later, and then this has to move. When 305-360 are used up, a warrior or druid goes on
+in the stance bars of slots 265-304 that the class has no stance for; the game's editor takes those
+too, and no other class can run out.
 
 The game's editor writes to the slot in `button:GetID()`, so a following bar's buttons really change
 their ID, from a secure handler so it works in combat, rather than being covered by buttons of ours.

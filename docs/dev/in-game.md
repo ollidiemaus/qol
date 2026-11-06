@@ -119,6 +119,13 @@ Things only the real client can confirm:
   (~39.7, 54.0) and the Deeprun Tram (~64.5, 7.6) in Stormwind, Stratholme (~30.8, 15.7) and
   Naxxramas (~31.4, 25.9) in the Eastern Plaguelands, the Menethil Harbor–Auberdine boat at both
   docks, and the ship icon's size next to the others.
+- Following bars out of space (a druid with several forms, all four bars ticked): enter each form.
+  The last ones keep normal bars and Options > Controller says so; unticking the bar that didn't fit
+  hides the line. Put a spell on a following bar in slots 297-304 with the game's editor, `/reload`:
+  it's kept. With the game's setting on a bar, that bar still shows the stance's spells. Measure Moonkin's
+  and Prowl's `GetBonusBarOffset()`, and see whether a possess or vehicle gives offset 5. In each stance
+  check `C_GamepadUI.GetFirstGamepadActionBarStorageSlotIndexForActiveStance()` is 265 + 8 × (offset - 1):
+  the free stance bars rest on that, and only bear (281) and cat (265) are known.
 - Following bars (Options > Controller, a druid or warrior): tick Left, enter a stance and fill the bar
   with the game's editor, then leave and enter it, in and out of combat: the spells and icons change
   and the normal ones come back; a `/reload` and a logout keep them. Tick Right too: it has its own

@@ -443,6 +443,132 @@ describe("following bars", function()
         _G.hooksecurefunc = hook
     end)
 
+    describe("out of spare slots", function()
+        local PROWL, MOONKIN = 2, 4
+        local FIFTH_GROUP = 297
+        local ALL = { "left", "right", "bottom" }
+
+        local function as(class)
+            return function(state) state.units.player.class = class end
+        end
+
+        -- Ticks Left, Right and Bottom, then enters each stance once, using 24 slots each.
+        local function fillStances(ns, ...)
+            for _, name in ipairs(ALL) do tick(ns, name) end
+            for _, stance in ipairs({ ... }) do Stubs.SetStance(stance) end
+        end
+
+        it("goes on in the stance groups a druid doesn't use, and then stays normal", function()
+            local ns, bar = start(nil, as("DRUID"))
+            fillStances(ns, CAT, PROWL, BEAR)
+            holds(bar, "left", 353)
+            holds(bar, "right", FIFTH_GROUP)
+            holds(bar, "bottom", NORMAL.bottom)
+            Stubs.SetStance(MOONKIN)
+            holds(bar, "left", NORMAL.left)
+            holds(bar, "right", NORMAL.right)
+            holds(bar, "bottom", NORMAL.bottom)
+        end)
+
+        it("gives a warrior the two groups of stances it doesn't have", function()
+            local ns, bar = start(nil, as("WARRIOR"))
+            tick(ns, "top")
+            fillStances(ns, 1, 2)
+            holdsTop(bar, 305 + 28)
+            Stubs.SetStance(3)
+            holdsTop(bar, 289)
+            holds(bar, "left", FIFTH_GROUP)
+            holds(bar, "right", NORMAL.right)
+            holds(bar, "bottom", NORMAL.bottom)
+        end)
+
+        it("never takes a stance group for any other class", function()
+            local ns, bar = start(nil, as("ROGUE"))
+            fillStances(ns, 1, 2)
+            for stance = 3, 5 do
+                Stubs.SetStance(stance)
+                holds(bar, "right", NORMAL.right)
+                holds(bar, "bottom", NORMAL.bottom)
+            end
+            Stubs.SetStance(3)
+            holds(bar, "left", 353)
+        end)
+
+        it("moves a bar in a stance group back on leaving the stance, and on flipping back", function()
+            local ns, bar = start(nil, as("DRUID"))
+            fillStances(ns, CAT, PROWL, BEAR)
+            Stubs.SetStance(0)
+            holds(bar, "right", NORMAL.right)
+            Stubs.SetStance(BEAR)
+            holds(bar, "right", FIFTH_GROUP)
+            fill(NORMAL.right)
+            Stubs.SetCombat(true)
+            Stubs.FlipPage(bar, 2)
+            Stubs.FlipPage(bar, 1)
+            holds(bar, "right", FIFTH_GROUP)
+        end)
+
+        it("leaves the game's bar on the game's stance slots", function()
+            local ns, bar = start(nil, function(state)
+                state.units.player.class = "DRUID"
+                state.cvars.GamepadStanceBarOverride = "2"
+            end)
+            tick(ns, "right")
+            Stubs.SetStance(BEAR)
+            local gameSlot = 281
+            for index = 1, 8 do button(bar, "left", index):SetSecureID(gameSlot + index - 1) end
+            tick(ns, "bottom")
+            Stubs.SetStance(CAT)
+            for index = 1, 8 do T.eq(button(bar, "left", index):GetID(), gameSlot + index - 1) end
+        end)
+
+        it("keeps a group in a stance group after a reload, and the next stays free of it", function()
+            local ns = start(nil, as("DRUID"))
+            fillStances(ns, CAT, PROWL, BEAR)
+            Stubs.SetStance(0)
+            local _, bar = start(QoLDB.followingBars, function(state)
+                state.units.player.class = "DRUID"
+                state.bonusBarOffset = BEAR
+            end)
+            holds(bar, "right", FIFTH_GROUP)
+            Stubs.SetStance(MOONKIN)
+            holds(bar, "left", NORMAL.left)
+        end)
+
+        it("ignores a saved group in a stance group the class uses", function()
+            local ns = start(nil, as("DRUID"))
+            tick(ns, "left")
+            local key = ns.PlayerKey()
+            local saved = { [key] = { bars = { left = true }, slots = { ["3-left"] = 281 } } }
+            local _, bar = start(saved, function(state)
+                state.units.player.class = "DRUID"
+                state.bonusBarOffset = BEAR
+            end)
+            holds(bar, "left", SPARE)
+        end)
+
+        it("gives a stance that's first entered later its slots, settings untouched", function()
+            local ns, bar = start(nil, as("DRUID"))
+            fillStances(ns, BEAR)
+            Stubs.SetStance(CAT)
+            holds(bar, "left", SPARE + 24)
+        end)
+
+        it("keeps every slot handed out when the ticks change", function()
+            local ns, bar = start(nil, as("DRUID"))
+            fillStances(ns, CAT, PROWL, BEAR)
+            tick(ns, "left", false)
+            tick(ns, "bottom", false)
+            tick(ns, "top")
+            holds(bar, "right", FIFTH_GROUP)
+            holds(bar, "left", NORMAL.left)
+            tick(ns, "left")
+            holds(bar, "left", 353)
+            Stubs.SetStance(CAT)
+            holds(bar, "right", SPARE + 8)
+        end)
+    end)
+
     describe("on the Controller page", function()
         local function settingsStart(setup, forever)
             local ns = Stubs.LoadAddon()
@@ -506,6 +632,102 @@ describe("following bars", function()
             T.truthy(ns.L.FOLLOWING_BAR_TOP_TIP:find("Steuerkreuz", 1, true))
             T.eq(ns.L.FOLLOWING_BAR_LEFT, "Linke Leiste")
             T.eq(ns.L.SECTION_FOLLOWING_BARS, "Leisten, die der Haltung folgen")
+        end)
+
+        describe("when something didn't fit", function()
+            local LINE = "Out of slots: the bars that didn't fit stay normal in the stances that came last."
+
+            local function openAsDruid(setup)
+                local ns = settingsStart(function(state)
+                    state.units.player.class = "DRUID"
+                    if setup then setup(state) end
+                end)
+                ns.SettingsPanel:Open("controller")
+                return ns
+            end
+
+            local function fillUp(ns)
+                for _, name in ipairs({ "left", "right", "bottom" }) do tick(ns, name) end
+                for stance = 1, 3 do Stubs.SetStance(stance) end
+                settle()
+            end
+
+            local function line(ns)
+                for _, text in ipairs(ns.SettingsPanel.pages.controller.texts) do
+                    if text.shown then return text end
+                end
+                return nil
+            end
+
+            it("shows no line while everything fits", function()
+                local ns = openAsDruid()
+                for _, name in ipairs({ "left", "right", "bottom" }) do tick(ns, name) end
+                Stubs.SetStance(1)
+                Stubs.SetStance(2)
+                settle()
+                T.eq(line(ns).text, LINE)
+                T.falsy(line(ns).string:IsShown())
+            end)
+
+            it("shows the line as soon as a bar doesn't fit, and hides it once that bar is unticked", function()
+                local ns = openAsDruid()
+                fillUp(ns)
+                T.truthy(line(ns).string:IsShown())
+                row(ns, "Bottom bar").set(false)
+                settle()
+                T.falsy(line(ns).string:IsShown())
+            end)
+
+            it("hides the line while the game's setting has the bar that didn't fit", function()
+                local ns = openAsDruid()
+                fillUp(ns)
+                Stubs.state().cvars.GamepadStanceBarOverride = "4"
+                Stubs.Fire("GAMEPAD_STANCE_BAR_OVERRIDE_CHANGED", 1, 4)
+                settle()
+                T.falsy(line(ns).string:IsShown())
+            end)
+
+            it("still shows the line after a reload, before the stance comes up again", function()
+                local ns = openAsDruid()
+                fillUp(ns)
+                Stubs.SetStance(0)
+                local saved = QoLDB.followingBars
+                local again = Stubs.LoadAddon()
+                Stubs.NewGamepadBar()
+                Stubs.InstallSettings()
+                Stubs.SetControllerUI(true)
+                Stubs.state().units.player.class = "DRUID"
+                Stubs.Login(nil, nil, nil, nil, saved)
+                settle()
+                again.SettingsPanel:Open("controller")
+                T.truthy(line(again).string:IsShown())
+            end)
+
+            it("hides the line once a bar that didn't fit gets its slots", function()
+                local first = settingsStart()
+                local saved = { [first.PlayerKey()] = { bars = { left = true }, full = { ["3-left"] = true } } }
+                local ns = Stubs.LoadAddon()
+                Stubs.NewGamepadBar()
+                Stubs.InstallSettings()
+                Stubs.SetControllerUI(true)
+                Stubs.Login(nil, nil, nil, nil, saved)
+                settle()
+                ns.SettingsPanel:Open("controller")
+                T.truthy(line(ns).string:IsShown())
+                Stubs.SetStance(BEAR)
+                settle()
+                T.falsy(line(ns).string:IsShown())
+            end)
+
+            it("has the line in German", function()
+                local ns = Stubs.LoadAddon({ locale = "deDE" })
+                Stubs.NewGamepadBar()
+                Stubs.InstallSettings()
+                Stubs.SetControllerUI(true)
+                Stubs.Login()
+                settle()
+                T.truthy(line(ns).text:find("Haltung"))
+            end)
         end)
 
         it("isn't there off Forever", function()

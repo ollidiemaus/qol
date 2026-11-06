@@ -156,6 +156,9 @@ end
 
 -- Shows the rows' values, and greys out what can't apply.
 function Page:Refresh()
+    for _, text in ipairs(self.texts) do
+        if text.shown then text.string:SetShown(text.shown()) end
+    end
     local normal = fontColor(NORMAL_FONT_COLOR, 1, 0.82, 0)
     local grey = fontColor(GRAY_FONT_COLOR, 0.5, 0.5, 0.5)
     local white = fontColor(HIGHLIGHT_FONT_COLOR, 1, 1, 1)
@@ -794,7 +797,8 @@ end
 
 -- A few lines that say what the options below are for, wrapped to the column. The text is
 -- measured at the column's width (the window's page less the margins) to know the row's height.
-function Page:Text(column, text)
+-- options.shown: a function; while it's false the row stays, empty.
+function Page:Text(column, text, options)
     local width = ns.SettingsWindow.PAGE_WIDTH - 2 * MARGIN
     if column ~= "wide" then width = (width - GUTTER) / 2 end
     local paragraph = self.frame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
@@ -804,7 +808,8 @@ function Page:Text(column, text)
     sectionGap(self, column)
     local row = newRow(self, column, TEXT_TOP + paragraph:GetStringHeight())
     paragraph:SetPoint("TOPLEFT", row, "TOPLEFT", LABEL_X, -TEXT_TOP)
-    self.texts[#self.texts + 1] = { column = column, text = text, string = paragraph }
+    self.texts[#self.texts + 1] = { column = column, text = text, string = paragraph,
+        shown = options and options.shown }
 end
 
 -- A line of small text below the key bindings: hint while nothing happens, else what they report.

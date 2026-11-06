@@ -77,10 +77,9 @@ rebuilds no window for them.
 Decided 2026-11-06; storage and the button change are in
 [ADR 0003](../adr/0003-following-bars-in-spare-controller-slots.md). Terms are in `GLOSSARY.md`.
 Built so far, in `Features/FollowingBars.lua`: all four bars following a stance, Top with its D-pad
-half only, in and out of combat and across page flips, with the slots from the spare range. Still
-design, each with its ticket: running out of slots (95, for now a stance that doesn't fit stays normal
-and the page says nothing) and the live switch of interfaces (96, for now the ticks apply from the
-next login).
+half only, in and out of combat and across page flips, with the slots from the spare range and the
+stance bars the class doesn't use. Still design, with its ticket: the live switch of interfaces (96,
+for now the ticks apply from the next login).
 
 How it's built:
 
@@ -98,17 +97,18 @@ How it's built:
   game's bar nothing happens to the game's buttons. A button that moved goes back to its normal slot,
   which is worked out once with the game's own
   `GetGamepadStorageSlotIndexFromPageAndPageUnitSlotID`, for page 1.
-- There's no record of the page: a button on neither its normal slot nor a spare one is on another
+- There's no record of the page: a button on neither its normal slot nor one of ours is on another
   page, and the snippet leaves it alone. That's checked per button because the editor's page unit
   flips apart from the bar. So a stance or tick change on page 2 or 3 changes nothing there, and page
-  1 is put right by the flip back. "A spare one" means 305 and up, in `apply`; ticket 95, which adds
-  the stance bars a class doesn't use, has to widen that check.
+  1 is put right by the flip back. "One of ours" is checked against the pools (`isours`), not as
+  "265 and up": the bar the game's setting names sits on a stance bar the class uses, and `apply` must
+  leave it there.
 - A `SecureHandlerWrapScript` on each button's `OnAttributeChanged` (both page units) catches the
   flip back, as below. Wrapped from the same out-of-combat setup as the rest, so a character who never
   ticks a bar gets no wraps.
 - The stance is the offset as the game gives it, and it only names a group of slots of ours. So no
-  offset is assumed to be a certain form, and nothing needs the game's own stance slots yet; ticket
-  95 will, to find the groups a class doesn't use.
+  offset is assumed to be a certain form when handing out; only the list of free stance bars is
+  per class.
 
 What the player gets:
 
@@ -136,8 +136,37 @@ Slots: 181-264 are the pages and 265-304 the five stance bars (bear, offset 3, i
 spare, plus the groups of stance bars the class doesn't use. A bar's Top half needs 4 slots, any other
 bar 8. Each stance and bar gets its slots the first time they're needed and keeps them. When there's
 no room the stances learned first keep their bars, the others stay normal, and the page says so.
-With two sizes that can bend: if 4 slots are left, a Left that doesn't fit stays normal and a later
-stance's Top still takes them. Ticket 95 has to decide that case.
+
+Running out, as built:
+
+- The pools fill in order, spare first, and each is its own run: a bar never spans two. A bar takes
+  the first pool with room, so a Left that doesn't fit in the last 4 of one pool can go in the next,
+  and a later Top can still use those 4. That's decided: first come, per bar, no all-or-nothing for a
+  stance. A stance can end up with some of its bars following, which beats leaving slots unused.
+- "Learned first" is really "came up first": the game doesn't say which offset a form has before
+  it's used, so slots are handed out on first entering the stance. A form learned later gets its slots
+  that way too, with no change to the settings.
+- The free stance bars: warrior 4 and 5, druid 5 (`FREE_STANCE_GROUPS`). Only those two classes
+  can run out: 56 spare slots are two stances of all four bars, so no other class is listed, and a
+  class that's not listed can't lose a stance bar to a stance we didn't know of. The class's whole
+  list counts, learned or not: a level 10 druid's Prowl group stays out.
+- `SpellShapeshiftForm.BonusActionBar` on Forever: cat 1, bear 3, warrior stances 1 to 3, stealth 1.
+  Prowl isn't in there (the client adds it to cat's offset), and Moonkin says 0, so 4 is from memory
+  and stays reserved until it's measured: reserving it costs 8 slots, handing it out could cost a
+  spell. What uses offset 5 at all isn't known. If a possess bar does, the game's stance bar would show
+  a druid's or warrior's following slots while it's up, and `apply` would take the bar the game's
+  setting names back to normal, as that slot counts as ours; check in game. The game's
+  `GetFirstGamepadActionBarStorageSlotIndexForActiveStance` can't replace the list: it only knows the
+  stance you're in, and a form not learned yet has to stay out too.
+- A bar refused is marked in the header (`full-<stance>-<bar>`), and the hook keeps it in the saved
+  data, so the line survives a reload. `IsOutOfSpace` only counts marks of bars that are ticked and not the
+  game's, so unticking a bar that didn't fit hides the line. Slots are never given back, so a bar
+  only gets slots after a mark if a later version frees a stance bar; handing them out clears it.
+- The line is a `Page:Text` with `shown`: its row is kept empty while it's hidden, as the page's
+  layout is fixed. A bar is refused inside a stance change, so the page registers
+  `FollowingBars.onSpaceChanged` to refresh while it's open, on the next frame so that it's out of the
+  secure snippet's stack. That's the one exception to features not calling the UI: no option
+  changes, so `Options:Watch` has nothing to see.
 
 Mechanism: a secure handler calls `SetID` on the game's buttons (`HANDLE:SetID`, works in combat) and
 sets an attribute so `OnAttributeChanged` runs `UpdateAction`. Two sets of buttons change, because

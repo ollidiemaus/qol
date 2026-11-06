@@ -26,7 +26,7 @@ Everything QoL saves is in `QoLDB`, account-wide: `options` (only values that di
 default), `rings`, `characters` (the mail bookmarks' class icons), `clickCast` (each character's
 click casting bindings by character key, `ns.PlayerKey()`; a character without any starts with
 Left: Target and Right: Menu, so it needs no migration), `followingBars` (each character's ticked
-controller bars and the slots handed out, by the same key; missing until first used, so it needs no
+controller bars, the slots handed out and the bars that didn't fit, by the same key; missing until first used, so it needs no
 migration), `probe` (the last `/qol probe`
 report, which nothing reads; missing until it first runs, so it needs no migration), and
 `version`, the layout's version (`Core/SavedData.lua`, now 1). On `ADDON_LOADED`, before anything
