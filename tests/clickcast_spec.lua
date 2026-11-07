@@ -323,6 +323,35 @@ describe("click casting frames", function()
             T.eq(click(friend, "LeftButton"), "spell:2061 on nameplate2")
         end)
 
+        it("builds a plate again only when its side changed, however often it gets a unit", function()
+            start({ bind("BUTTON2", spell(RENEW)) })
+            local enemy, friend = plates()
+            local reads = 0
+            local getAttribute = friend.GetAttribute
+            friend.GetAttribute = function(frame, name)
+                if name ~= "unit" then reads = reads + 1 end
+                return getAttribute(frame, name)
+            end
+            Stubs.SetPlateUnit(friend, "nameplate2")
+            Stubs.RunTimers()
+            T.eq(reads, 0, "the same side: nothing built")
+            T.eq(click(friend, "RightButton"), "spell:139 on nameplate2")
+            Stubs.state().attackable = { nameplate1 = true, nameplate2 = true }
+            Stubs.SetPlateUnit(friend, "nameplate2")
+            Stubs.RunTimers()
+            T.eq(friend.attributes.type2, nil, "left to the game")
+            T.eq(click(friend, "RightButton"), "menu on nameplate2")
+            T.eq(click(enemy, "RightButton"), "menu on nameplate1")
+        end)
+
+        it("gives a plate that joined in combat its bindings", function()
+            start({ bind("BUTTON2", spell(RENEW)) })
+            Stubs.SetCombat(true)
+            local plate = Stubs.NewPooledNamePlate(1)
+            Stubs.RunTimers()
+            T.eq(click(plate, "RightButton"), "spell:139 on nameplate1")
+        end)
+
         it("counts a side the game keeps secret as an enemy", function()
             start({ bind("BUTTON2", spell(RENEW)) })
             local enemy = plates()
@@ -562,6 +591,16 @@ describe("click casting frames", function()
 end)
 
 describe("click casting bindings", function()
+    it("hears what changes its bindings and the plates only while it's on", function()
+        local ns = start(nil, { clickCast = false })
+        local events = { "NAME_PLATE_UNIT_ADDED", "UNIT_FACTION", "SPELLS_CHANGED" }
+        for _, event in ipairs(events) do T.eq(Stubs.Listens(event), false, event .. " while off") end
+        set(ns, "clickCast", true)
+        for _, event in ipairs(events) do T.eq(Stubs.Listens(event), true, event .. " while on") end
+        set(ns, "clickCast", false)
+        for _, event in ipairs(events) do T.eq(Stubs.Listens(event), false, event .. " turned off") end
+    end)
+
     it("uses a binding only while the character has its action", function()
         start({ bind("SHIFT-BUTTON1", spell(SMITE)) })
         T.eq(click(party(1), "LeftButton", "SHIFT"), nil)
@@ -648,6 +687,16 @@ describe("click casting page", function()
         SlashCmdList.QOL("click")
         return ns
     end
+
+    it("hears what the character has only while the page shows", function()
+        start(nil, {})
+        T.eq(Stubs.Listens("SPELLS_CHANGED"), false, "not shown")
+        SlashCmdList.QOL("click")
+        T.eq(Stubs.Listens("SPELLS_CHANGED"), true, "shown")
+        SlashCmdList.QOL("click")
+        page():RunScript("OnHide") -- the game runs it when the window closes
+        T.eq(Stubs.Listens("SPELLS_CHANGED"), false, "closed")
+    end)
 
     it("is the settings' Click casting page, right after Ring, which /qol click opens and closes", function()
         local ns = open(nil, {})
@@ -763,12 +812,16 @@ describe("click casting page", function()
             end)
             local data = Stubs.state().spells[RENEW_6]
             T.truthy(data.requested, "asked for")
+            T.eq(Stubs.Listens("SPELL_DATA_LOAD_RESULT"), true, "for the answer")
             T.eq(page().rows[1]:GetAlpha(), 0.5, "not yet")
             data.unloaded = nil
             Stubs.Fire("SPELL_DATA_LOAD_RESULT", RENEW_6, true)
             Stubs.RunTimers()
             T.eq(page().rows[1]:GetAlpha(), 1)
             T.eq(page().rows[1].icon.texture, RENEW_ICON[RENEW_2])
+            SlashCmdList.QOL("click")
+            page():RunScript("OnHide") -- the game runs it when the window closes
+            T.eq(Stubs.Listens("SPELL_DATA_LOAD_RESULT"), false, "nothing out, and the page closed")
             T.eq(click(party(1), "LeftButton", "SHIFT"), "spell:Renew on party1")
         end)
 

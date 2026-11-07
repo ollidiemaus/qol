@@ -42,6 +42,7 @@ local FIRST_STANCE_SLOT, STANCE_GROUP_SIZE = 265, 8
 -- with at most two stances 56 slots are enough, so no other class needs a stance bar's slots, and a
 -- class that isn't here can't lose one to a stance nobody knew it had. A druid's 4 is Moonkin.
 local FREE_STANCE_GROUPS = { WARRIOR = { 4, 5 }, DRUID = { 5 } }
+local CLASS_WAIT_SECONDS = 5
 local STANCE_DRIVER = "[bonusbar:1] 1; [bonusbar:2] 2; [bonusbar:3] 3; [bonusbar:4] 4; [bonusbar:5] 5; 0"
 
 -- The first of the slots a bar shows on page 1 in the stance now, nil if it stays on its normal ones.
@@ -182,9 +183,8 @@ function FollowingBars.IsOutOfSpace()
 end
 
 -- Where following bars can go for this character's class, in the order they fill.
-local function pools()
+local function pools(class)
     local list = { { first = FIRST_SPARE_SLOT, last = LAST_SPARE_SLOT } }
-    local _, class = UnitClass("player")
     for _, stance in ipairs(FREE_STANCE_GROUPS[class] or {}) do
         local first = FIRST_STANCE_SLOT + (stance - 1) * STANCE_GROUP_SIZE
         list[#list + 1] = { first = first, last = first + STANCE_GROUP_SIZE - 1 }
@@ -227,10 +227,10 @@ local function barButton(pageUnit, name, index)
     return pageUnit.actionBars[name .. "Bar"].actionButtons[index]
 end
 
-local function create()
+local function create(class)
     header = CreateFrame("Frame", "QoLFollowingBars", UIParent, "SecureHandlerStateTemplate")
     header:SetAttribute("barcount", #BARS)
-    local list = pools()
+    local list = pools(class)
     for _, pool in ipairs(list) do pool.free = pool.first end
     for key, first in pairs(saved().slots) do
         local pool, size = savedGroup(list, key, first)
@@ -277,6 +277,21 @@ local function anyTicked(data)
     return false
 end
 
+local schedule
+
+-- The class can be secret in a restricted state (a reload in a dungeon). The header waits for it:
+-- without it the stance groups aren't pools, and bars saved in them would get other slots.
+local waitingForClass = false
+
+local function waitForClass()
+    if waitingForClass then return end
+    waitingForClass = true
+    C_Timer.After(CLASS_WAIT_SECONDS, function()
+        waitingForClass = false
+        schedule()
+    end)
+end
+
 -- Out of combat and away from the game's controller windows. With keyboard and mouse no bar follows,
 -- so the snippets put the buttons back and leave them alone from there on.
 local function update()
@@ -285,7 +300,12 @@ local function update()
     local data = saved()
     if not header then
         if not anyTicked(data) then return end
-        create()
+        local _, class = UnitClass("player")
+        if not ns.IsUsable(class) then
+            waitForClass()
+            return
+        end
+        create(class)
     end
     local byGame = ns.GamepadStanceBar(1)
     for _, name in ipairs(BARS) do
@@ -300,7 +320,7 @@ local function update()
     spaceChanged()
 end
 
-local function schedule()
+function schedule()
     ns.LaterOutsideWindows("FollowingBars", update)
 end
 

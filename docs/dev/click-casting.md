@@ -71,8 +71,10 @@ makes one). A binding with any other action, or not shaped like one, stays saved
   to tell friend from foe. Instead an enemy plate has no QoL attributes at all (`leftToGame`, a plate
   told by its mixin's `SetNamePlateFrame`), so it has the game's own values. A pooled plate changes
   unit and side in combat, so `NAME_PLATE_UNIT_ADDED` and `UNIT_FACTION` on a nameplate unit run
-  `updatePlates` through `ns.Later(..., true)`, in combat too: the template isn't protected. A plate
-  that answers `IsProtected` otherwise, or with a secret, waits for the end of combat.
+  `updatePlates` through `ns.Later(..., true)`, in combat too: the template isn't protected. Plates
+  come and go all through a pull, and only the side differs per plate between two updates, so only a
+  plate whose `leftToGame` changed (`leftLast`) is built again. A plate that answers `IsProtected`
+  otherwise, or with a secret, waits for the end of combat.
 - Enemy on the target, target of target, focus and focus target frames (`EITHER_SIDE`, same option):
   their units change in combat and they're protected, but they are real secure unit buttons, so `*harmbutton<n>` does work: `offOnEnemies` sends Left and Right to
   `qolenemy1` and 2, with the frame's own `*type1` and `*type2`, and any other button to `qolenemy`,
@@ -111,10 +113,12 @@ makes one). A binding with any other action, or not shaped like one, stays saved
   `ClickCast.Same` makes the ranks of a spell one action for the bound check, quick bind's replaced
   list and clash marks; rings hold fixed ranks, so `Entries.Same` stays. A saved rank whose subtext
   isn't loaded (the one a respec took away, likely) counts as having no rank until it is, so
-  `hasRank` asks for it and `SPELL_DATA_LOAD_RESULT` updates the bindings and the page.
+  `hasRank` asks for it and `SPELL_DATA_LOAD_RESULT`, heard while an answer is out, updates the
+  bindings and the page.
 - The header, the buttons and the frames change on the option, the bindings, and, while it's on,
   what the character has (`RingEntries.KNOWN_EVENTS`), `GROUP_ROSTER_UPDATE`, a raid-style frame
-  set up and the arena UI loading. In combat everything stays as it was when it started.
+  set up and the arena UI loading. Those events and the plates' are heard only while it's on, set in
+  `update`, and the page's only while it shows. In combat everything stays as it was when it started.
 - The page (`Features/ClickCastEditor.lua`) is built like the rings' editor, on `RingPicker.NewPage`
   and `RingPicker.Create` (Spells, Items and Macros, rows taking every mouse button, the wheel
   handed to the page in quick bind). A combination is waited for by a full-screen frame of ours at

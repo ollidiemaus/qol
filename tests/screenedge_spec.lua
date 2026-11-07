@@ -148,6 +148,12 @@ describe("frames past the screen edge", function()
         T.same(unitFrame.laidOutUnder, UNIT_FRAME_PAST)
     end)
 
+    it("clamps again when the player changes specialization, and only then", function()
+        start({ pastScreenEdge = true })
+        T.eq(Stubs.Listens("PLAYER_SPECIALIZATION_CHANGED", "player"), true)
+        T.eq(Stubs.Listens("PLAYER_SPECIALIZATION_CHANGED", "party1"), false)
+    end)
+
     it("skips a frame whose place is secret", function()
         Stubs.LoadAddon()
         local bar = Stubs.NewEditModeFrame(100, 20, 400, 40, 4)

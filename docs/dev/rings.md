@@ -47,7 +47,9 @@ the cursor and how to read it off the cursor. A character's ring is the entries 
   works out the aimed slot with the same sums (`Ring.SlotAt`, cursor from `GetCursorPosition()` over
   the effective scale against `GetCenter()`), lights its wedge and puts the entry's name in the
   middle. If another ring's key goes down while one is open, `qol-open` changes and the art lays
-  itself out again.
+  itself out again. The art's OnShow and OnHide turn the cooldown and usability events on and off
+  (`Ring.REFRESH_EVENTS`), and `Ring:Update` turns `RingEntries.KNOWN_EVENTS` on and off with the
+  option; the editor hears both only while its page shows.
 - Values that may be secret in 12.x (a spell's usability, charges and cooldown, an item's count)
   are tested only through `ns.IsUsable`; cooldowns go to the widget as the game gives them
   (`C_Spell.GetSpellCooldownDuration` into `SetCooldownFromDurationObject`, `C_Item.GetItemCooldown`

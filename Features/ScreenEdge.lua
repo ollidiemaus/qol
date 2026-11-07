@@ -164,7 +164,6 @@ end
 local WAKE_EVENTS = {
     "PLAYER_ENTERING_WORLD",
     "EDIT_MODE_LAYOUTS_UPDATED", -- Edit Mode layouts loaded or switched
-    "PLAYER_SPECIALIZATION_CHANGED", -- Edit Mode applies the new specialization's layout
     "DISPLAY_SIZE_CHANGED",
     "UI_SCALE_CHANGED",
 }
@@ -177,6 +176,9 @@ function ScreenEdge:Init()
     for _, event in ipairs(WAKE_EVENTS) do
         ns.Events:On(event, schedule)
     end
+    -- Edit Mode applies the new specialization's layout. Anyone's changing fires this, so only the
+    -- player's is heard.
+    ns.Events:NewUnitListener("player"):On("PLAYER_SPECIALIZATION_CHANGED", schedule)
     if EventRegistry and EventRegistry.RegisterCallback then
         EventRegistry:RegisterCallback("EditMode.Enter", function()
             editModeOpen = true

@@ -74,7 +74,10 @@ Forever beta. So:
 - Compare or compute with game values only after `ns.IsUsable(value)` (nil and secret values fail).
 - Register events through `ns.Events:On`; it skips events the client doesn't know.
   `ns.Events:Off(event, handler)` takes a handler away again and unregisters the event once none is
-  left, for a feature that listens only while its option is on (Faster auto loot).
+  left, for a feature that listens only while its option is on (Faster auto loot). For several events
+  with one handler, `ns.Events:NewGroup(events, handler)` does the same: `group:SetOn(on)` turns them
+  all on or off and does nothing if they already are. Events a feature doesn't need while it's off or
+  hidden go in one (make it once, at Init or when the frame is built).
 - Events about units (`UNIT_*`, first argument a unit) go through a unit listener, never through
   `ns.Events:On`: `ns.Events:NewUnitListener(unit1[, unit2])` registers with `RegisterUnitEvent`
   on a frame of its own, so the game drops every other unit's events before QoL wakes (in a raid
@@ -83,7 +86,9 @@ Forever beta. So:
   never freed.
   `listener:On(event, handler)` skips an unknown event like `ns.Events:On` (one handler per event,
   a second `On` replaces it; handlers get `(event, ...)`), and `listener:Off(event)` unregisters it,
-  for an event that only matters while something shows.
+  for an event that only matters while something shows. The one exception is click casting's
+  `UNIT_FACTION`, for any of 40 nameplate units: it stays on `ns.Events:On`, only while click casting
+  is on, and the handler checks the unit.
 - The few calls into Blizzard code are listed here, each with why it's safe: the world map's
   `AddDataProvider` (the map's own extension point; it calls each provider in a secure call of its
   own) and `SetMapID` (only from a click on one of our own pins, like a click on a zone). Click

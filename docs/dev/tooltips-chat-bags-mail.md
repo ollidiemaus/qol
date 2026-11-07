@@ -83,7 +83,9 @@ methods (`GetAttribute("bagid")`, as Blizzard keeps it to avoid taint, and `GetI
 buttons are plain `ItemButton`s, not protected, so this runs in combat too. Blizzard lays the bag
 out again when it opens, when its size changes and when the interface changes; the OnShow and
 OnSizeChanged hooks, `BAG_CONTAINER_UPDATE`, `BAG_UPDATE_DELAYED` and the interface change wake the
-feature up, and it sets a button only when its anchor differs (works in game, confirmed 2026-10-11). The C_Container setting for the sort
+feature up, and it sets a button only when its anchor differs (works in game, confirmed 2026-10-11).
+All of these do nothing, and the two events aren't heard, while it's off with no button of ours left
+to put back (`isActive`). The C_Container setting for the sort
 direction (`SetSortBagsRightToLeft`, Blizzard's old "Reverse Clean Up Bags") is no way around this:
 Forever's client keeps it (it reads back after a relog), but its sort ignores it (2026-10-11).
 

@@ -105,12 +105,25 @@ function CombinedBagLayout:Apply()
     self.flipped = flip
 end
 
+-- On, or off with the bag still laid out by us: then there is something to put back.
+local function isActive()
+    return Options:Get(KEY) == true or CombinedBagLayout.flipped == true
+end
+
+-- The bag's events, heard while it's active; made at Init.
+local bagEvents
+
 local function apply()
     CombinedBagLayout:Apply()
+    bagEvents:SetOn(isActive())
 end
 
 local function schedule()
     ns.Later("combinedBagLayout", apply, true)
+end
+
+local function wake()
+    if isActive() then schedule() end
 end
 
 -- Blizzard lays the bag out when it opens (OnShow), when its size changes (a bag swapped, a
@@ -118,12 +131,12 @@ end
 -- one that changed nothing sets nothing.
 function CombinedBagLayout:Init()
     Options:Watch({ KEY }, schedule)
-    ns.OnControllerUIChange(schedule)
-    ns.Events:On("BAG_CONTAINER_UPDATE", schedule)
-    ns.Events:On("BAG_UPDATE_DELAYED", schedule)
+    ns.OnControllerUIChange(wake)
+    bagEvents = ns.Events:NewGroup({ "BAG_CONTAINER_UPDATE", "BAG_UPDATE_DELAYED" }, schedule)
+    bagEvents:SetOn(isActive())
     local bag = ContainerFrameCombinedBags
     if bag and bag.HookScript then
-        bag:HookScript("OnShow", schedule)
-        bag:HookScript("OnSizeChanged", schedule)
+        bag:HookScript("OnShow", wake)
+        bag:HookScript("OnSizeChanged", wake)
     end
 end

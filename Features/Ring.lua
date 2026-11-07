@@ -390,13 +390,20 @@ local function stickIndex()
     return 2
 end
 
+-- Heard while the ring is on and while it shows; made at Init.
+local knownEvents, refreshEvents
+
 local function create()
     header = CreateFrame("Frame", "QoLRing", UIParent, "SecureHandlerBaseTemplate")
     header:SetSize(HEADER, HEADER)
     header:SetFrameStrata("DIALOG")
     header:Hide()
     art = Ring.NewArt(header, "Frame")
-    art:SetScript("OnShow", onOpen)
+    art:SetScript("OnShow", function(frame)
+        refreshEvents:SetOn(true)
+        onOpen(frame)
+    end)
+    art:SetScript("OnHide", function() refreshEvents:SetOn(false) end)
     art:SetScript("OnUpdate", track)
     catcher = newCatcher()
     opener = CreateFrame("Button", OPENER, UIParent, "SecureActionButtonTemplate")
@@ -446,6 +453,7 @@ end
 
 function Ring:Update()
     local on = isOn()
+    knownEvents:SetOn(on)
     if on and not header then create() end
     shown = {}
     if header then
@@ -494,7 +502,7 @@ local function refresh()
 end
 
 local function scheduleRefresh()
-    if art and art:IsVisible() then ns.Later("ringArt", refresh, true) end
+    ns.Later("ringArt", refresh, true)
 end
 
 -- What changes an entry's look: the action buttons' events, and item cooldowns.
@@ -505,14 +513,8 @@ end
 
 function Ring:Init()
     clean()
+    knownEvents = ns.Events:NewGroup(Entries.KNOWN_EVENTS, schedule)
+    refreshEvents = ns.Events:NewGroup(Ring.REFRESH_EVENTS, scheduleRefresh)
     Options:Watch({ KEY }, schedule)
-    for _, event in ipairs(Entries.KNOWN_EVENTS) do
-        ns.Events:On(event, function()
-            if isOn() then schedule() end
-        end)
-    end
-    for _, event in ipairs(Ring.REFRESH_EVENTS) do
-        ns.Events:On(event, scheduleRefresh)
-    end
     if isOn() then schedule() end
 end

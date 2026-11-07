@@ -40,6 +40,13 @@ local INSET = 8
 local CONFIRM_SECONDS = 3
 
 local editor, listener, picker
+-- What the editor hears while it shows; made in Create.
+local knownEvents, refreshEvents
+
+local function setListening(on)
+    knownEvents:SetOn(on)
+    refreshEvents:SetOn(on)
+end
 -- The ring shown, by its place in the list; the box waiting for a key ("mouse" or "stick").
 local current = 1
 local waiting
@@ -459,6 +466,7 @@ function Editor:Create(parent, top, width, height)
     editor:SetScript("OnHide", function()
         stopWaiting()
         picker:Hide()
+        setListening(false)
     end)
 
     -- Nothing changes in combat (InCombatLockdown is still false while it starts), and afterwards
@@ -472,7 +480,7 @@ function Editor:Create(parent, top, width, height)
     ns.Events:On("PLAYER_REGEN_ENABLED", function()
         if editor:IsVisible() then self:Refresh() end
     end)
-    -- Made once: the events ask for them many times a second while the editor shows.
+    -- The events ask for these many times a second while the editor shows.
     local function renderShown()
         if editor:IsVisible() then render() end
     end
@@ -482,21 +490,18 @@ function Editor:Create(parent, top, width, height)
     local function later(key, fn)
         if editor:IsVisible() and not InCombatLockdown() then ns.Later(key, fn) end
     end
-    for _, event in ipairs(Entries.KNOWN_EVENTS) do
-        ns.Events:On(event, function()
-            later("ringEditor", renderShown)
-            later("ringEditorList", fillShown)
-        end)
-    end
-    for _, event in ipairs(Ring.REFRESH_EVENTS) do
-        ns.Events:On(event, function() later("ringEditor", renderShown) end)
-    end
+    knownEvents = ns.Events:NewGroup(Entries.KNOWN_EVENTS, function()
+        later("ringEditor", renderShown)
+        later("ringEditorList", fillShown)
+    end)
+    refreshEvents = ns.Events:NewGroup(Ring.REFRESH_EVENTS, function() later("ringEditor", renderShown) end)
 end
 
 -- Shows the rings and what this character has as they are now: the settings window does it when it
 -- shows the page, and when the switch changes.
 function Editor:Refresh()
     if not editor then return end
+    setListening(editor:IsVisible())
     render()
     picker:Fill()
     lock(InCombatLockdown())

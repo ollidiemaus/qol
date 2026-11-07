@@ -93,3 +93,53 @@ describe("unit listeners", function()
         T.eq(Stubs.Listens("UNIT_FLAGS", "player"), false)
     end)
 end)
+
+describe("event groups", function()
+    local function group(ns, ...)
+        local heard = {}
+        return ns.Events:NewGroup({ ... }, function(event) heard[#heard + 1] = event end), heard
+    end
+
+    it("hear nothing until turned on, and nothing after being turned off", function()
+        local ns = Stubs.LoadAddon()
+        Stubs.Login()
+        local events, heard = group(ns, "TEST_EVENT", "OTHER_TEST_EVENT")
+        T.eq(Stubs.Listens("TEST_EVENT"), false)
+        events:SetOn(true)
+        Stubs.Fire("OTHER_TEST_EVENT")
+        T.same(heard, { "OTHER_TEST_EVENT" })
+        events:SetOn(false)
+        Stubs.Fire("TEST_EVENT")
+        T.same(heard, { "OTHER_TEST_EVENT" })
+        T.eq(Stubs.Listens("TEST_EVENT"), false)
+    end)
+
+    it("register once when turned on twice, and go by any true or false value", function()
+        local ns = Stubs.LoadAddon()
+        Stubs.Login()
+        local events, heard = group(ns, "TEST_EVENT")
+        events:SetOn(1)
+        events:SetOn(true)
+        Stubs.Fire("TEST_EVENT")
+        T.same(heard, { "TEST_EVENT" })
+        events:SetOn(nil)
+        events:SetOn(false)
+        Stubs.Fire("TEST_EVENT")
+        T.same(heard, { "TEST_EVENT" })
+    end)
+end)
+
+describe("a default install", function()
+    it("hears none of the busy events: nothing that wants them is on", function()
+        Stubs.LoadAddon()
+        Stubs.Login()
+        Stubs.RunTimers()
+        for _, event in ipairs({
+            "ACTIONBAR_UPDATE_COOLDOWN", "ACTIONBAR_UPDATE_USABLE", "SPELL_UPDATE_COOLDOWN",
+            "SPELL_UPDATE_USABLE", "BAG_UPDATE_DELAYED", "BAG_UPDATE_COOLDOWN", "PLAYER_EQUIPMENT_CHANGED",
+            "SPELLS_CHANGED", "NAME_PLATE_UNIT_ADDED", "UNIT_FACTION", "SPELL_DATA_LOAD_RESULT",
+        }) do
+            T.eq(Stubs.Listens(event), false, event)
+        end
+    end)
+end)
