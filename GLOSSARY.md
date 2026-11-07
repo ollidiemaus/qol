@@ -112,7 +112,8 @@ _Avoid_: quickbind mode, binding mode, Quick Keybind (that's the game's mode for
 
 **Unit frame**:
 A frame that shows a unit and can be clicked: the game's player, target, focus, pet, party, raid,
-boss and arena frames, or another addon's that joins click casting. Nameplates aren't.
+boss and arena frames, or another addon's that joins click casting. Nameplates aren't. All of it
+counts: a binding works over its portrait, name and bars alike.
 _Avoid_: raid frame (that's one kind), portrait
 
 **Clash**:

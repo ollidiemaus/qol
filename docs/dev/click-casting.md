@@ -42,14 +42,23 @@ makes one). A binding with any other action, or not shaped like one, stays saved
   doesn't. The parts of a frame that take the mouse and are protected get the same wraps: Forever's
   health and mana bars (`TextStatusBar`, `enableMouseMotion`) and their containers, with
   `SecureFrameParentPropagationTemplate`, take the mouse from the frame, and the game leaves the
-  frame before it enters the bar, so without them the keys went off over the bars. The snippet walks
+  frame before it enters the bar, so without them the keys went off over the bars. The wraps turn
+  clicks on for such a part, and the bar then caught every click before the frame. Seen in game:
+  `IsMouseClickEnabled` is false on the bars with click casting off at login and true with it on, and
+  `SetMouseClickEnabled(false)` brings the clicks back. `SecureHandlerWrapScript` uses a plain
+  `SetScript`, while the bars' own `OnEnter` and `OnLeave` have `autoEnableInput="false"`. So
+  `wrapPart` reads the part's click state first and puts it back after the wraps, out of combat like
+  them. It puts back the part's own state rather than turning clicks off, as a party frame's bars
+  take clicks and pass them on (`OnMouseUp`, `Click`). A frame's own wraps stay as they were: a
+  nameplate's clicks work, and nothing was seen wrong there. The snippet walks
   up from the part with `GetParent` to the frame with `qol-clickcast`, and `hovered` is the part, so
   leaving the frame for its bar keeps the keys. Only protected parts: in combat a handle's
   `GetParent` reaches a protected parent only, so the walk works there too. A part can have the
   secret `ObjectSecurity` aspect (seen on the health bar: `IsProtected` is secret, and so is what
   `SecureHandlerWrapScript` tests on our taint; on a party frame's part `IsMouseMotionEnabled` was
-  secret too), so it isn't wrapped then: `wrap` tries that frame's
-  parts again at the next update, and until then the keys go off over that bar. The tests' handles are
+  secret too, and a secret `IsMouseClickEnabled` counts the same), so it isn't wrapped then: `wrap`
+  tries that frame's parts again at the next update, and until then the keys go off over that bar.
+  The tests' handles are
   one per frame, as the game's are, so they compare. The wraps stay
   once made (unwrapping could take
   off another addon's wrap made later); with click casting off, `qol-clickcast` is gone and they do

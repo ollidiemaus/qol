@@ -66,6 +66,15 @@ local function click(frame, mouseButton, ...)
     return usedSince(before)
 end
 
+-- What a click did with the mouse over a part of a frame; the game's hit test finds who gets it.
+local function clickOver(part, mouseButton)
+    local before = #Stubs.state().usedActions
+    Stubs.PointAt(part)
+    Stubs.ClickOver(part, mouseButton)
+    Stubs.PointAway(part)
+    return usedSince(before)
+end
+
 -- What pressing the key (a combination) did with the mouse over the frame.
 local function press(frame, combination)
     local before = #Stubs.state().usedActions
@@ -201,6 +210,33 @@ describe("click casting keys", function()
         T.eq(hoverBinding("F"), nil, "the frame hid under the mouse")
     end)
 
+    it("takes every mouse button over a frame's health bar, which only follows the mouse", function()
+        start({ bind("BUTTON1", spell(RENEW)), bind("BUTTON2", spell(RENEW)), bind("BUTTON3", spell(RENEW)) })
+        local bar = PlayerFrame.HealthBarsContainer.HealthBar
+        T.eq(clickOver(bar, "LeftButton"), "spell:139 on player")
+        T.eq(clickOver(bar, "RightButton"), "spell:139 on player")
+        T.eq(clickOver(bar, "MiddleButton"), "spell:139 on player")
+        T.eq(clickOver(party(2).HealthBarsContainer.HealthBar, "LeftButton"), "spell:139 on party2")
+    end)
+
+    it("leaves the game's clicks over a health bar once turned off", function()
+        local ns = start({ bind("SHIFT-BUTTON1", spell(RENEW)) })
+        set(ns, "clickCast", false)
+        T.eq(clickOver(PlayerFrame.HealthBarsContainer.HealthBar, "LeftButton"), "target on player")
+    end)
+
+    it("leaves a part that takes clicks itself its clicks", function()
+        local bar
+        start({ bind("BUTTON1", spell(RENEW)) }, nil, function()
+            -- A party frame's bars: OnMouseUp hands the click to the frame.
+            bar = party(1).HealthBarsContainer.HealthBar
+            bar:SetMouseClickEnabled(true)
+            bar:SetScript("OnMouseUp", function(_, mouseButton) Stubs.ClickUnitFrame(party(1), mouseButton) end)
+        end)
+        T.eq(bar:IsMouseClickEnabled(), true)
+        T.eq(clickOver(bar, "LeftButton"), "spell:139 on party1")
+    end)
+
     it("leaves a part whose security is secret for a later update, and goes on with the others", function()
         local bar
         start({ bind("F", spell(RENEW)) }, nil, function()
@@ -227,6 +263,20 @@ describe("click casting keys", function()
         Stubs.Fire("GROUP_ROSTER_UPDATE")
         Stubs.RunTimers()
         T.eq(press(bar, "F"), "spell:139 on player")
+    end)
+
+    it("leaves a part that keeps secret whether it takes clicks for a later update too", function()
+        local bar
+        start({ bind("BUTTON1", spell(RENEW)), bind("F", spell(RENEW)) }, nil, function()
+            bar = PlayerFrame.HealthBarsContainer.HealthBar
+            bar.secretClicks = true
+        end)
+        T.eq(bar.wraps, nil, "the bar waits")
+        T.eq(press(party(2).HealthBarsContainer.HealthBar, "F"), "spell:139 on party2", "the others have theirs")
+        bar.secretClicks = nil
+        Stubs.Fire("GROUP_ROSTER_UPDATE")
+        Stubs.RunTimers()
+        T.eq(clickOver(bar, "LeftButton"), "spell:139 on player")
     end)
 
     it("uses Target and Menu on other clicks on the unit of the frame whose bar the mouse is over", function()

@@ -514,6 +514,21 @@ local function wrapScripts(frame)
     SecureHandlerWrapScript(frame, "OnHide", header, LEAVE)
 end
 
+-- Wrapping sets a script with SetScript, which turns clicks on, on a part that only follows the
+-- mouse too: it then catches them before the frame does (seen on Forever's health and mana bars).
+-- So a part gets back the click state it had: a party frame's bars take clicks themselves. With no
+-- answer to put back (a secret one) it waits for a later update, as in wrapParts.
+local function wrapPart(part, top)
+    if wrapped[part] then return end
+    local clicks = part:IsMouseClickEnabled()
+    if not ns.IsUsable(clicks) then
+        unwrappedParts[top] = true
+        return
+    end
+    wrapScripts(part)
+    if not clicks then part:SetMouseClickEnabled(false) end
+end
+
 -- The parts of a frame that take the mouse and are protected, as Forever's health and mana bars
 -- (TextStatusBar, with SecureFrameParentPropagationTemplate on them and the frames between): the
 -- mouse going onto one leaves the frame. Their snippets find the frame through their parents,
@@ -533,7 +548,7 @@ local function wrapParts(frame, top)
                 if not ns.IsUsable(protected) or not ns.IsUsable(forbidden) then
                     unwrappedParts[top] = true
                 elseif protected and not forbidden then
-                    wrapScripts(child)
+                    wrapPart(child, top)
                 end
             end
             wrapParts(child, top)
