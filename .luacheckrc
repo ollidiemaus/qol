@@ -35,7 +35,7 @@ read_globals = {
     "ColorPickerFrame",
     "SETTINGS_DEFAULTS", "RESET", "NORMAL_FONT_COLOR", "GRAY_FONT_COLOR", "HIGHLIGHT_FONT_COLOR", "PlaySound", "SOUNDKIT",
     "GridLayoutUtil", "AnchorUtil", "TooltipDataProcessor",
-    "MicroMenuContainer", "ContainerFrameCombinedBags",
+    "MicroMenuContainer", "NUM_TOTAL_BAG_FRAMES",
     "BagsBar", "QuickJoinToastButton", "MinimapCluster", "Minimap", "MinimapZoneText", "MinimapCompassTexture",
     "MinimapCompassTextureUnderlay", "HybridMinimap", "TimeManagerClockButton",
     "TimeManagerClockTicker", "GameTimeFrame", "AddonCompartmentFrame", "ToggleCalendar", "MiniMapTracking", "MinimapBorder", "WorldMapFrame", "MapCanvasDataProviderMixin", "CreateFromMixins",

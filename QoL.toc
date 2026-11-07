@@ -44,7 +44,7 @@ Features\HideFrames.lua
 Features\BuffTooltips.lua
 Features\CombatLog.lua
 Features\ChatClassColors.lua
-Features\CombinedBagLayout.lua
+Features\SortOnOpen.lua
 Features\MailBookmarks.lua
 Features\ClassHealthBars.lua
 Features\DruidManaBar.lua

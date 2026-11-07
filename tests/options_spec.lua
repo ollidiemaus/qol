@@ -77,9 +77,8 @@ describe("Init", function()
 
     it("keeps a saved option QoL no longer has, and adds nothing for it", function()
         Stubs.LoadAddon()
-        Stubs.Login({ showCombinedBagSort = true })
-        Stubs.FillCombinedBag({ 16 })
-        ContainerFrameCombinedBags:Show()
+        Stubs.Login({ showCombinedBagSort = true, combinedBagTopLeft = true })
+        ToggleAllBags()
         Stubs.RunTimers()
         for _, region in ipairs(Stubs.state().regions) do
             if region:GetParent() == ContainerFrameCombinedBags then
@@ -87,6 +86,8 @@ describe("Init", function()
             end
         end
         T.eq(QoLDB.options.showCombinedBagSort, true)
+        T.eq(QoLDB.options.combinedBagTopLeft, true)
+        T.same(Stubs.state().errors, {})
     end)
 
     it("lets Set replace a value whose type doesn't match the default", function()

@@ -21,7 +21,7 @@ describe("the stubbed Classic Era client", function()
         T.truthy(pcall(CreateFrame, "Button", nil, UIParent, "UIPanelButtonTemplate"))
     end)
 
-    it("lacks tooltip data, the spell book's skill lines, toys, the addon compartment, combined bags, the controller, "
+    it("lacks tooltip data, the spell book's skill lines, toys, the addon compartment, combined bags, C_Container's sort, the controller, "
         .. "the player frame's art, the minimap's coordinates, guild banks, the calendar", function()
         Stubs.Reset({ client = "classicEra" })
         T.eq(select(4, GetBuildInfo()), 11509)
@@ -32,6 +32,7 @@ describe("the stubbed Classic Era client", function()
         T.eq(PlayerHasToy, nil)
         T.eq(AddonCompartmentFrame, nil)
         T.eq(ContainerFrameCombinedBags, nil)
+        T.eq(C_Container.SortBags, nil)
         T.eq(C_InputInterfaceStyle, nil)
         T.eq(GamepadMode, nil)
         T.eq(BuffFrameTooltip, nil)
@@ -138,10 +139,10 @@ describe("QoL on Classic Era", function()
         for _, page in pairs(ns.SettingsPanel.pages) do
             for _, c in ipairs(page.controls) do keys[c.key or c.command or "?"] = true end
         end
-        -- Combined bags, the second mana bar of Forever's and retail's player frame, the addon
+        -- The bag sort, the second mana bar of Forever's and retail's player frame, the addon
         -- compartment, the player coordinates, guild banks, the controller's buff tooltips and back
         -- buttons.
-        for _, key in ipairs({ "combinedBagTopLeft", "druidManaBar", "minimapCompartment",
+        for _, key in ipairs({ "sortOnOpen", "druidManaBar", "minimapCompartment",
             "hideMinimapCoords", "minimapCoordsClassColor", "minimapCoordsOffsetX", "minimapCompartmentOffsetY",
             "guildRepair", "hideBuffTooltips",
             "controllerBackButtons", "hideMinimapCalendar" }) do
@@ -154,7 +155,7 @@ describe("QoL on Classic Era", function()
         local headers = {}
         for _, header in ipairs(ns.SettingsPanel.pages.interface.headers) do headers[header.text] = true end
         for _, header in ipairs(ns.SettingsPanel.pages.minimap.headers) do headers[header.text] = true end
-        T.falsy(headers[ns.L.SECTION_COMBINED_BAGS], "the Combined bags section")
+        T.falsy(headers[ns.L.SECTION_BAGS], "the Bags section")
         T.falsy(headers[ns.L.SECTION_MINIMAP_COORDS], "the Coordinates section")
         T.truthy(headers[ns.L.SECTION_PLAYER_FRAME], "the Player frame section keeps its other row")
         T.same(Stubs.state().errors, {})

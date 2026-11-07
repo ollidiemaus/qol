@@ -92,6 +92,13 @@ doesn't auto loot, it changes nothing, and anything that can't be taken (full ba
 in the loot window.
 _Avoid_: fast loot, instant loot
 
+### Bags
+
+**Sort on open**:
+The game's own bag sort, run for the player each time they open their bags themselves. Bags the game opens
+on its own (at a vendor, for a spell that targets an item) and bags opened in combat aren't sorted.
+_Avoid_: auto sort, clean up
+
 ### Click casting
 
 **Click casting**:

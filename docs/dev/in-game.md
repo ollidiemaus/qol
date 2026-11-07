@@ -26,6 +26,10 @@ Things only the real client can confirm:
   micro menu), and the micro menu still shows on the vehicle bar.
 - Hide portrait hit text: no numbers or Dodge/Parry over the player's and the pet's portrait in
   combat, also in a vehicle; unticked, they come back at once, and no "tainted by" error shows up.
+- Sort on open, with keyboard and mouse and in the controller interface: real items move into place
+  when you open the bags yourself (key binding, bag bar, controller button, radial menu; separate
+  bags too), a quick close and reopen gives no error, and opening the bags stays quiet. A vendor, a
+  mailbox and a spell that targets an item don't sort, and the next open of your own does.
 - Junk selling and repairs (including guild repairs) at a merchant. Right after login a grey item
   the client hasn't loaded yet makes junk selling wait for `GET_ITEM_INFO_RECEIVED` (at most a
   second, `Merchant:SellJunk`); it then sells everything at once with the right count and value.

@@ -24,7 +24,7 @@ local DEFAULTS = {
 
     hideMicroMenu = false,
     hideBagsBar = false,
-    combinedBagTopLeft = false,
+    sortOnOpen = false,
 
     hideChatSocial = false,
     hideChatButtons = false,

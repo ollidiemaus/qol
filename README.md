@@ -52,9 +52,11 @@ the price of one, as its buttons may not say how many items a slot holds.
 - **Hide the system bar:** the micro menu (character, spellbook, ..., game menu). Your key
   bindings still open everything, and in a vehicle the buttons still show on the vehicle bar.
 - **Hide the bag bar:** the backpack and bag slots. Bag key bindings keep working.
-- **Start combined bags at the top left:** the combined bag shows the backpack's first slot in the
-  top left corner and your last bag at the bottom, so sorting puts the hearthstone top left instead
-  of bottom right. With keyboard and mouse only; the controller interface already does this.
+- **Sort on open:** the game's own sort runs each time you open your bags yourself, with keyboard
+  and mouse or in the controller interface, with combined or separate bags. It undoes anything you
+  arranged by hand, so it's off until you turn it on. It doesn't run in combat, and doesn't catch up
+  afterwards, or when the game opens your bags: at a vendor, the bank or a mailbox, in a trade, or
+  for a spell that targets an item. The keyring and bank bags don't sort either.
 - **Frames past the screen edge:** in Edit Mode, frames can go a little past the edge of the screen
   (30 points, more for a frame you made bigger), so their art can sit right on it. Turn off Snap to
   Elements for the last bit: it lines a frame's box up with the edge. Where you put a frame is saved
@@ -432,7 +434,7 @@ controller interface the button opens the window once you close the game's optio
 The pages:
 
 - **Automation:** junk selling, repairs, quests, faster auto loot.
-- **Interface:** hiding the system and bag bars, the combined bags, mana in bear and cat form, portrait hit
+- **Interface:** hiding the system and bag bars, sorting the bags, mana in bear and cat form, portrait hit
   text, frames past the screen edge, tooltips, health bars in class color.
 - **Chat:** the chat buttons, the combat log, names in class color, `/rl`.
 - **Mail:** the bookmarks' names.
@@ -441,7 +443,7 @@ The pages:
 - **Advanced settings:** the game's hidden graphics, draw distance and camera settings, last in the
   list.
 
-On Classic Era the pages leave out what it doesn't have: the combined bags, mana in bear and cat
+On Classic Era the pages leave out what it doesn't have: Sort on open, mana in bear and cat
 form, guild bank repairs, the addon compartment's place, the calendar button and the player
 coordinates. Junk selling and repairs with your own gold work as everywhere.
 
