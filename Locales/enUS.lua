@@ -79,11 +79,10 @@ L.HIDE_MICRO_MENU_TIP = "Hides the system bar (micro menu) with the character, s
 L.HIDE_BAGS_BAR = "Bag bar"
 L.HIDE_BAGS_BAR_TIP = "Hides the backpack and bag slot buttons. Your bag key bindings still work."
 
-L.SECTION_COMBINED_BAGS = "Combined bags"
-L.COMBINED_BAG_TOP_LEFT = "Start at the top left"
-L.COMBINED_BAG_TOP_LEFT_TIP = "Shows the backpack's first slot in the top left corner of the combined bag and your "
-    .. "last bag at the bottom, so sorting puts the hearthstone top left. With keyboard and mouse only: the "
-    .. "controller interface already does this."
+L.SECTION_BAGS = "Bags"
+L.SORT_ON_OPEN = "Sort on open"
+L.SORT_ON_OPEN_TIP = "Runs the game's sort each time you open your bags yourself, which undoes anything you arranged "
+    .. "by hand. Not in combat, and not when the game opens them, at a vendor for one."
 
 L.SECTION_PLAYER_FRAME = "Player frame"
 L.DRUID_MANA_BAR = "Mana in bear and cat form"

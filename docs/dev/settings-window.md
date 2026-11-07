@@ -54,7 +54,8 @@ settings are open, and closing our window is a plain `Hide` of a frame of ours.
 - On Classic Era the pages offer only what changes something there. Each check asks the client for
   the thing the option works on, not which client it is: a row whose frame or system is missing is
   left out, and a section whose rows all are with it.
-  - Combined bags (`ContainerFrameCombinedBags`): Classic Era has only the separate bags.
+  - Sort on open (`C_Container.SortBags`): Classic Era's client doesn't have it, and the Bags section
+    goes with its one row.
   - Mana in bear and cat form (`PlayerFrame.PlayerFrameContainer`): Classic Era's player frame is the
     old one, without the art container the bar is drawn into; QoL doesn't draw a bar of its own
     there. The Player frame section keeps the portrait hit text.
@@ -102,7 +103,7 @@ settings are open, and closing our window is a plain `Hide` of a frame of ours.
   for them.
 
 The options are grouped by part of the game: Automation (merchant, quests and loot), Interface
-(the bars to hide, the combined bags, tooltips, health bars), Chat (the chat window, `/rl`), Mail
+(the bars to hide, the bags, tooltips, health bars), Chat (the chat window, `/rl`), Mail
 (the bookmarks' names), Action Bars, Minimap, World map (only where `MapPins.IsAvailable()`), Viewport, Ring, Click casting, Controller (only
 on Forever) and Advanced settings ([`advanced-settings.md`](advanced-settings.md)). Every page is built by `UI/SettingsPage.lua`: two columns of rows, or rows across the
 page (`"wide"`, the Viewport page, as its sliders need the room, and the World map page, with two),

@@ -79,11 +79,11 @@ L.HIDE_BAGS_BAR = "Taschenleiste"
 L.HIDE_BAGS_BAR_TIP =
 "Blendet den Rucksack und die Taschenplätze aus. Deine Taschen-Tastenbelegungen funktionieren weiterhin."
 
-L.SECTION_COMBINED_BAGS = "Kombinierte Taschen"
-L.COMBINED_BAG_TOP_LEFT = "Oben links beginnen"
-L.COMBINED_BAG_TOP_LEFT_TIP = "Zeigt den ersten Platz des Rucksacks oben links in der kombinierten Tasche und deine "
-    .. "letzte Tasche unten, sodass das Sortieren den Ruhestein oben links ablegt. Nur mit Tastatur und Maus: Die "
-    .. "Controller-Oberfläche macht das schon."
+L.SECTION_BAGS = "Taschen"
+L.SORT_ON_OPEN = "Beim Öffnen sortieren"
+L.SORT_ON_OPEN_TIP = "Sortiert deine Taschen mit der Sortierung des Spiels, sobald du sie selbst öffnest. Das macht "
+    .. "alles rückgängig, was du von Hand angeordnet hast. Nicht im Kampf und nicht, wenn das Spiel sie öffnet, etwa "
+    .. "bei einem Händler."
 
 L.SECTION_PLAYER_FRAME = "Spielerfenster"
 L.DRUID_MANA_BAR = "Mana in Bären- und Katzengestalt"

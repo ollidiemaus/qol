@@ -69,25 +69,46 @@ switches auto loot through `C_AutoLoot.SetUseAutoLootToggle`, and the event's fl
 event can come more than once for the same loot, so loot is taken at most once in 0.3 s (Leatrix's
 throttle). While the option is off, nothing listens to `LOOT_READY` (`ns.Events:Off`).
 
-The combined bag from the top left: with keyboard and mouse, Blizzard lays the combined bag's item
-buttons out from the bottom right of its money frame, leftwards and upwards
-(`ContainerFrameMixin:GetAnchorLayout`, `BottomRightToTopLeft`), in the order bag by bag from the
-backpack, slot by slot, locked extra slots last (`UpdateItemLayout`, `SortItemsByExtendedState`). So
-the backpack's first slot, where a sort puts the hearthstone, is the bottom right corner. The
-controller interface lays it out from the top left (`ContainerFrameCombinedBagsMixin:GetAnchorLayout`).
-The option gives the keyboard and mouse bag the same corner by moving each button to the cell as
-far from the top left as Blizzard's is from the bottom right, still anchored to the money frame, so
-the frame's size and everything else on it stay Blizzard's. It reads the bag and slot with widget
-methods (`GetAttribute("bagid")`, as Blizzard keeps it to avoid taint, and `GetID()`), reads the
-`Items` and `isExtended` fields, and only calls `ClearAllPoints` and `SetPoint` on the buttons. The
-buttons are plain `ItemButton`s, not protected, so this runs in combat too. Blizzard lays the bag
-out again when it opens, when its size changes and when the interface changes; the OnShow and
-OnSizeChanged hooks, `BAG_CONTAINER_UPDATE`, `BAG_UPDATE_DELAYED` and the interface change wake the
-feature up, and it sets a button only when its anchor differs (works in game, confirmed 2026-10-11).
-All of these do nothing, and the two events aren't heard, while it's off with no button of ours left
-to put back (`isActive`). The C_Container setting for the sort
-direction (`SetSortBagsRightToLeft`, Blizzard's old "Reverse Clean Up Bags") is no way around this:
-Forever's client keeps it (it reads back after a relog), but its sort ignores it (2026-10-11).
+Sort on open runs `C_Container.SortBags()`, the call behind Blizzard's sort button, when the player
+opens their bags themselves. Nothing of Blizzard's is written or moved, and it stays taint-safe this way:
+
+- It hears of an open from Blizzard's `ContainerFrame.OpenBag` EventRegistry callback, which
+  `ContainerFrame_OnShow` triggers for every bag frame. The combined bag gets there too
+  (`ContainerFrameCombinedBagsMixin:OnShow` calls `ContainerFrameTokenWatcherMixin.OnShow`, which calls it),
+  so one callback covers the combined bag in both interfaces and separate bags, and no script of a
+  frame is hooked. The frame's `GetID()` (a widget method) says which bag: from the backpack to
+  `NUM_TOTAL_BAG_FRAMES` count, so the keyring (-1) and the bank bags don't. The combined bag has the
+  backpack's ID (`OpenBag_Combined`).
+- The game's own opens go through two globals: `OpenAllBags` for its windows and, in Forever's
+  controller interface only, for a spell that targets an item (`CURRENT_SPELL_CAST_CHANGED`, which
+  `ContainerFrameCombinedBagsMixin:InitializeGamepad` registers; the game doesn't open the bags for
+  one otherwise), and `OpenAllBagsMatchingContext` for retail's enchants and its item upgrade, keystone and soulbind windows
+  (`ItemButtonUtil.OpenAndFilterBags`; on Forever `ShouldOpenBagsForEnchantSelection` is false). The
+  player's key bindings, bag bar, controller button and radial menu use `ToggleAllBags`, `ToggleBackpack`
+  and `ToggleBag`, which reach the local `OpenAllBagsInternal` and `OpenBag` and pass through neither.
+  So a `hooksecurefunc` on each of the two marks an open as the game's, without a list of windows that
+  differs per client. These are hooks on global functions, not on a frame's methods: they run after
+  the function, set a flag of ours and schedule a run. The run is scheduled there too because
+  `OpenAllBags` shows nothing with a bag already open, and the flag has to go all the same, or the
+  player's next open wouldn't sort.
+- Every open schedules one `ns.Later` run on a frame of ours, so several separate bags opening at
+  once give one sort, and the hooks, in the same call stack as the open, have run by then. The run
+  clears the flag and stops if it was set, the option is off or the player is in combat. It's the form of
+  `ns.Later` that also runs in combat: the plain one would catch up when combat ends, which this
+  feature rules out, and `ns.LaterOutsideWindows` wouldn't sort until the bag closed, as the bag is a
+  window that has the controller. `C_Container.SortBags` works outside a click or key press in both
+  interfaces (in game, 2026-11-07). Blizzard's button plays a sound and its controller menu entry doesn't; this
+  plays none. There is no wait between sorts and no check whether the bags changed; add a short
+  wait only if a quick reopen turns out to give an error.
+
+Known gaps, both rare, which stay as they are unless they turn out to matter:
+
+- In the controller interface the professions window can open the backpack to point at a reagent
+  (`OpenBagTo`, `OpenBackpack`), which passes through neither global, so a sort runs there and can
+  move the item it points at.
+- `ContainerFrame.OpenBag` comes with every show, not only an open. Swapping a bag with the combined
+  bag open reopens it (`ContainerFrameSettingsManager:CheckReopenBags`, `OpenBag`), and showing the
+  interface again with the bags open (Alt+Z) should show it too, so those sort as well.
 
 The mail bookmarks are side tabs of ours on `SendMailFrame` (Blizzard shows it only on the Send Mail
 tab, so the tabs come and go with it), made from `LargeSideTabButtonTemplate`, the template of

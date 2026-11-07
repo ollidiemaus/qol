@@ -45,17 +45,17 @@ local function buildAutomation(page)
     page:Checkbox("right", "fasterAutoLoot", L.FASTER_AUTO_LOOT, L.FASTER_AUTO_LOOT_TIP)
 end
 
--- Interface page: the bars to hide, the combined bags and the player frame on the left, tooltips and
+-- Interface page: the bars to hide, the bags and the player frame on the left, tooltips and
 -- health bars on the right.
 local function buildInterface(page)
     page:Header("left", L.SECTION_HIDE)
     page:Checkbox("left", "hideMicroMenu", L.HIDE_MICRO_MENU, L.HIDE_MICRO_MENU_TIP)
     page:Checkbox("left", "hideBagsBar", L.HIDE_BAGS_BAR, L.HIDE_BAGS_BAR_TIP)
 
-    -- Classic Era has neither the combined bag nor the player frame the druid mana bar is drawn on.
-    if ns.CombinedBagLayout.IsAvailable() then
-        page:Header("left", L.SECTION_COMBINED_BAGS)
-        page:Checkbox("left", "combinedBagTopLeft", L.COMBINED_BAG_TOP_LEFT, L.COMBINED_BAG_TOP_LEFT_TIP)
+    -- Classic Era has neither C_Container's sort nor the player frame the druid mana bar is drawn on.
+    if ns.SortOnOpen.IsAvailable() then
+        page:Header("left", L.SECTION_BAGS)
+        page:Checkbox("left", "sortOnOpen", L.SORT_ON_OPEN, L.SORT_ON_OPEN_TIP)
     end
 
     page:Header("left", L.SECTION_PLAYER_FRAME)

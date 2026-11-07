@@ -822,7 +822,7 @@ end
 
 -- Takes out what Classic Era (1.15.9) lacks: the tooltip data processor (its tooltips run scripts
 -- instead, Stubs.ShowClassicTooltip), the spell book's skill
--- lines, toys, the addon compartment, combined bags, Forever's controller interface, the player
+-- lines, toys, the addon compartment, combined bags, C_Container's sort, Forever's controller interface, the player
 -- frame's art container (Classic Era's frame is the old one, without a second mana bar), the
 -- minimap's player coordinates and guild banks. Its UI still names the guild bank calls in dead
 -- code; they are gone here, so a call to one fails the spec.
@@ -864,6 +864,7 @@ local function makeClassicEra(G)
     G.C_ToyBox, G.PlayerHasToy = nil, nil
     G.AddonCompartmentFrame = nil
     G.ContainerFrameCombinedBags = nil
+    G.C_Container.SortBags = nil
     G.C_InputInterfaceStyle, G.GamepadMode, G.BuffFrameTooltip = nil, nil, nil
     -- false, not nil: a stub frame answers any other capitalized field with a no-op method. The
     -- player frame's raw table, as the addon may not write the frame.
@@ -1159,6 +1160,7 @@ local function install()
         TooltipDataLineType = { SellPrice = 11 },
         InputDeviceInterfaceType = { Mkb = 0, Gamepad = 1 },
         PowerType = { Mana = 0, Rage = 1, Focus = 2, Energy = 3 },
+        BagIndex = { Backpack = 0 },
     }
     G.TooltipDataProcessor = {
         AddTooltipPostCall = function(tooltipType, fn)
@@ -1176,6 +1178,7 @@ local function install()
         GetContainerNumSlots = function(bag) return state.bags[bag] and state.bags[bag].size or 0 end,
         GetContainerItemInfo = function(bag, slot) return state.bags[bag] and state.bags[bag][slot] end,
         UseContainerItem = function(bag, slot) table.insert(state.used, bag .. ":" .. slot) end,
+        SortBags = function() state.sorts = state.sorts + 1 end,
     }
     G.C_Item = {
         RequestLoadItemDataByID = function(itemID) table.insert(state.itemRequests, itemID) end,
@@ -1217,17 +1220,69 @@ local function install()
     G.EditModeManagerFrame = newRegion("Frame", G.UIParent)
     G.EditModeManagerFrame:Hide()
     G.EditModeManagerFrame.registeredSystemFrames = {}
-    -- The combined bag starts closed and empty (Stubs.FillCombinedBag). Each script's hooks run in
-    -- turn from hooks[script].
-    G.ContainerFrameCombinedBags = newRegion("Frame", G.UIParent)
-    G.ContainerFrameCombinedBags:Hide()
-    G.ContainerFrameCombinedBags.hooks = {}
-    function G.ContainerFrameCombinedBags:HookScript(script, fn)
-        local before = self.hooks[script]
-        self.hooks[script] = before and function(...) before(...) fn(...) end or fn
+    --- The bags, opened as Blizzard's ContainerFrame.lua opens them. The player's ToggleAllBags and ToggleBag
+    -- use its local functions; the game's windows and spells call the global OpenAllBags, or
+    -- OpenAllBagsMatchingContext for the bags holding an item that fits. Every bag frame tells EventRegistry
+    -- it opened from its OnShow, the combined bag too. Stubs.SetSeparateBags turns the combined bag off;
+    -- the keyring (-1) and the bank bags (6 and up) always have a frame of their own. state.sorts counts
+    -- C_Container.SortBags.
+    local function newBagFrame()
+        local frame = newRegion("Frame", G.UIParent)
+        frame:Hide()
+        function frame:GetID() return self.bagID end
+        frame.scripts.OnShow = function(self) Stubs.TriggerRegistry("ContainerFrame.OpenBag", self) end
+        return frame
     end
-    G.ContainerFrameCombinedBags.MoneyFrame = newRegion("Frame", G.ContainerFrameCombinedBags)
-    G.ContainerFrameCombinedBags.Items = {}
+    local function bagFrame(bagID)
+        if state.combinedBags and bagID >= 0 and bagID <= 4 then return G.ContainerFrameCombinedBags end
+        state.bagFrames[bagID] = state.bagFrames[bagID] or newBagFrame()
+        return state.bagFrames[bagID]
+    end
+    -- ContainerFrame_GenerateFrame sets the frame's ID before it shows it; the combined bag's is the backpack's.
+    local function openBag(bagID)
+        local frame = bagFrame(bagID)
+        if not frame:IsShown() then
+            frame.bagID = frame == G.ContainerFrameCombinedBags and 0 or bagID
+            frame:Show()
+        end
+    end
+    local function openAll()
+        for bagID = 0, state.combinedBags and 0 or 4 do openBag(bagID) end
+    end
+    -- Hides every bag open; returns how many were.
+    local function closeAll()
+        local closed = 0
+        local function close(frame)
+            if frame:IsShown() then
+                frame:Hide()
+                closed = closed + 1
+            end
+        end
+        close(G.ContainerFrameCombinedBags)
+        for _, frame in pairs(state.bagFrames) do close(frame) end
+        return closed
+    end
+    local function anyBagOpen()
+        if G.ContainerFrameCombinedBags:IsShown() then return true end
+        for _, frame in pairs(state.bagFrames) do
+            if frame:IsShown() then return true end
+        end
+        return false
+    end
+    G.NUM_TOTAL_BAG_FRAMES = 5
+    G.ContainerFrameCombinedBags = newBagFrame()
+    G.ToggleAllBags = function()
+        if closeAll() < (state.combinedBags and 1 or 5) then openAll() end
+    end
+    G.ToggleBag = function(bagID)
+        local frame = bagFrame(bagID)
+        if frame:IsShown() then frame:Hide() else openBag(bagID) end
+    end
+    -- Does nothing with a bag open already.
+    G.OpenAllBags = function()
+        if not anyBagOpen() then openAll() end
+    end
+    G.OpenAllBagsMatchingContext = function() openBag(0) end
     -- The mail frame, closed, with its Send Mail tab (hidden while the Inbox tab shows) and that tab's
     -- To and Subject boxes.
     G.MailFrame = newRegion("Frame", G.UIParent)
@@ -1959,6 +2014,7 @@ function Stubs.Reset(options)
         screenWidth = 2560, screenHeight = 1440,
         framerate = 59.7, latencyHome = 45, latencyWorld = 38,
         bags = {}, prices = {}, unloadedItems = {}, itemRequests = {}, used = {}, soldAll = 0, sellAllEnabled = true,
+        sorts = 0, combinedBags = true, bagFrames = {},
         canRepair = false, repairCost = 0, repairs = {}, money = 0,
         inGuild = false, guildCanRepair = false, guildLimit = 0, guildMoney = 0,
         lootSlots = 0, looted = {},
@@ -2901,51 +2957,9 @@ function Stubs.SetBags(items)
     end
 end
 
--- Fills the combined bag the way Blizzard makes its item buttons: sizes[1] is the backpack's size,
--- sizes[2] the first bag's and so on, and Items runs from the last bag's last slot to the
--- backpack's first. extended lists "bag:slot" of locked extra slots. Lays them out as Blizzard does.
-function Stubs.FillCombinedBag(sizes, extended)
-    local bag = _G.ContainerFrameCombinedBags
-    bag.Items = {}
-    for bagID = #sizes - 1, 0, -1 do
-        for slot = sizes[bagID + 1], 1, -1 do
-            local button = newRegion("Button", bag)
-            button.attributes, button.slot = { bagid = bagID }, slot
-            function button:GetAttribute(name) return self.attributes[name] end
-            function button:GetID() return self.slot end
-            button.isExtended = extended and extended[bagID .. ":" .. slot] or nil
-            button:SetSize(37, 37)
-            bag.Items[#bag.Items + 1] = button
-        end
-    end
-    Stubs.LayoutCombinedBag()
-end
-
--- Blizzard's layout of the combined bag with keyboard and mouse (ContainerFrameMixin:UpdateItemLayout):
--- by bag and slot, locked extra slots last, 10 to a row from the bottom right of the money frame
--- leftwards and upwards, 5 apart.
-function Stubs.LayoutCombinedBag()
-    local bag = _G.ContainerFrameCombinedBags
-    local sorted = {}
-    for _, button in ipairs(bag.Items) do sorted[#sorted + 1] = button end
-    table.sort(sorted, function(a, b)
-        if (a.isExtended or false) ~= (b.isExtended or false) then return not a.isExtended end
-        if a.attributes.bagid ~= b.attributes.bagid then return a.attributes.bagid < b.attributes.bagid end
-        return a.slot < b.slot
-    end)
-    for index, button in ipairs(sorted) do
-        local cell = index - 1
-        button:ClearAllPoints()
-        button:SetPoint("BOTTOMRIGHT", bag.MoneyFrame, "TOPRIGHT", -(cell % 10) * 42, 4 + math.floor(cell / 10) * 42)
-    end
-end
-
--- The combined bag's item button for a bag and slot.
-function Stubs.CombinedBagButton(bagID, slot)
-    for _, button in ipairs(_G.ContainerFrameCombinedBags.Items) do
-        if button.attributes.bagid == bagID and button.slot == slot then return button end
-    end
-    return nil
+-- The game's "Combine bags" setting turned off, or on again.
+function Stubs.SetSeparateBags(separate)
+    state.combinedBags = not separate
 end
 
 -- Blizzard's EditModeSystemMixin:UpdateClampOffsets: the frame's clamp insets go from its edges to

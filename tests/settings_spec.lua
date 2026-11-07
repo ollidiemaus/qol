@@ -227,7 +227,7 @@ describe("settings pages", function()
         local ns = start()
         T.same(headers(pages(ns).automation, "left"), { "Merchant" })
         T.same(headers(pages(ns).automation, "right"), { "Quests", "Loot" })
-        T.same(headers(pages(ns).interface, "left"), { "Hide", "Combined bags", "Player frame", "Edit Mode" })
+        T.same(headers(pages(ns).interface, "left"), { "Hide", "Bags", "Player frame", "Edit Mode" })
         T.same(headers(pages(ns).interface, "right"), { "Tooltips", "Health bars in class color" })
         T.same(headers(pages(ns).chat, "left"), { "Chat window" })
         T.same(headers(pages(ns).chat, "right"), { "Chat commands" })
@@ -237,15 +237,17 @@ describe("settings pages", function()
         T.same(headers(minimap, "right"), { "Coordinates", "Zone text", "FPS and ping" })
     end)
 
-    it("offers only the top left start in the Combined bags section", function()
+    it("offers only Sort on open in the Bags section", function()
         local ns = start()
         local left = {}
         for _, c in ipairs(pages(ns).interface.controls) do
             if c.column == "left" then left[#left + 1] = c.key end
         end
         -- Between the Hide section's last row and the Player frame section's first.
-        T.same({ left[2], left[3], left[4] }, { "hideBagsBar", "combinedBagTopLeft", "druidManaBar" })
+        T.same({ left[2], left[3], left[4] }, { "hideBagsBar", "sortOnOpen", "druidManaBar" })
+        T.eq(control(ns, "sortOnOpen").text:GetText(), "Sort on open")
         T.eq(control(ns, "showCombinedBagSort"), nil)
+        T.eq(control(ns, "combinedBagTopLeft"), nil)
     end)
 
     it("says what the mail bookmarks are above them, wrapped across the page", function()
