@@ -681,6 +681,23 @@ describe("following bars", function()
             holds(bar, "left", SPARE)
         end)
 
+        it("waits for a secret class, and then keeps the group saved in a stance group", function()
+            local ns = start(nil, as("DRUID"))
+            fillStances(ns, CAT, OFFSET_2, BEAR)
+            Stubs.SetStance(0)
+            local slots = QoLDB.followingBars[ns.PlayerKey()].slots
+            local _, bar = start(QoLDB.followingBars, function(state)
+                state.units.player.class = Stubs.SECRET
+                state.bonusBarOffset = BEAR
+            end)
+            holds(bar, "right", NORMAL.right)
+            T.same(QoLDB.followingBars[ns.PlayerKey()].slots, slots)
+            Stubs.state().units.player.class = "DRUID"
+            settle()
+            settle()
+            holds(bar, "right", FIFTH_GROUP)
+        end)
+
         it("gives a stance that's first entered later its slots, settings untouched", function()
             local ns, bar = start(nil, as("DRUID"))
             fillStances(ns, BEAR)

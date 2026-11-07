@@ -326,6 +326,24 @@ describe("ring", function()
         T.eq(attribute("*spell-1s3"), UNKNOWN)
     end)
 
+    it("hears what the character has while it's on, and the cooldowns while it shows", function()
+        local ns = start({ ringOf({ spell(FIREBALL) }, "F") }, nil, function(state)
+            state.spells[FIREBALL] = { texture = 135812, consumable = true, count = "3" }
+        end)
+        T.eq(Stubs.Listens("SPELLS_CHANGED"), true, "on")
+        T.eq(Stubs.Listens("SPELL_UPDATE_COOLDOWN"), false, "closed")
+        Stubs.PressOverride("F", true)
+        T.eq(Stubs.Listens("SPELL_UPDATE_COOLDOWN"), true, "open")
+        Stubs.state().spells[FIREBALL].count = "2"
+        Stubs.Fire("SPELL_UPDATE_COOLDOWN")
+        Stubs.NextFrame()
+        T.eq(ringArt().slots[1].count:GetText(), "2")
+        Stubs.PressOverride("F", false)
+        T.eq(Stubs.Listens("SPELL_UPDATE_COOLDOWN"), false, "closed again")
+        set(ns, "ring", false)
+        T.eq(Stubs.Listens("SPELLS_CHANGED"), false, "off")
+    end)
+
     it("follows what the character can use: spells learned, items used up", function()
         start({ ringOf({ item(HEARTHSTONE), spell(FIREBALL), spell(UNKNOWN) }, "F") })
         T.eq(attribute("*item-1s1"), "item:6948")
@@ -395,6 +413,16 @@ describe("ring", function()
             return list
         end
         local function note() return QoLRingEditor.note:GetText() end
+
+        it("hears the cooldowns only while its page shows", function()
+            start()
+            T.eq(Stubs.Listens("SPELL_UPDATE_COOLDOWN"), false, "not shown")
+            SlashCmdList.QOL("ring")
+            T.eq(Stubs.Listens("SPELL_UPDATE_COOLDOWN"), true, "shown")
+            SlashCmdList.QOL("ring")
+            QoLRingEditor:RunScript("OnHide") -- the game runs it when the window closes
+            T.eq(Stubs.Listens("SPELL_UPDATE_COOLDOWN"), false, "closed")
+        end)
 
         it("is the settings' Ring page, which /qol ring opens and closes, and makes a first ring to fill", function()
             local ns = start()

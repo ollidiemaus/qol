@@ -276,6 +276,9 @@ local bindings = ns.Buttons.NewOverrides()
 -- Updates
 ---------------------------------------------------------------------------------------------------
 
+-- The cooldown and usability events, heard while the buttons show; made at Init.
+local refreshEvents
+
 function BackButtons:Update()
     local on = isOn()
     if on and not holder then create() end
@@ -290,6 +293,7 @@ function BackButtons:Update()
         end
         if holder:IsShown() ~= on then holder:SetShown(on) end
     end
+    refreshEvents:SetOn(on)
     bindings:Set(on and BackButtons.Overrides() or {})
     self:Refresh()
 end
@@ -308,20 +312,18 @@ local function refresh()
 end
 
 local function scheduleRefresh()
-    if holder and holder:IsShown() then ns.Later("backButtonsArt", refresh, true) end
+    ns.Later("backButtonsArt", refresh, true)
 end
 
 function BackButtons:Init()
     if not GamepadMainActionBarFrame then return end
+    refreshEvents = ns.Events:NewGroup(ns.Buttons.REFRESH_EVENTS, scheduleRefresh)
     Options:Watch({ KEY, BAR_KEY }, schedule)
     -- The player changed a binding, or another addon its overrides (setting ours fires this too;
     -- Update then finds nothing to change).
     ns.Events:On("UPDATE_BINDINGS", function()
         if isOn() or bindings:Any() then schedule() end
     end)
-    for _, event in ipairs(ns.Buttons.REFRESH_EVENTS) do
-        ns.Events:On(event, scheduleRefresh)
-    end
     ns.OnControllerUIChange(function()
         if isOn() or holder then schedule() end
     end)

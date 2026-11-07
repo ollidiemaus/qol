@@ -25,7 +25,7 @@ and the cooldown swipe) and updated in combat (`ns.Later(..., true)`): icon, usa
 (`GetActionDisplayCount`, maybe secret, only passed to `SetText`), cooldown
 (`C_ActionBar.GetActionCooldownDuration` into `SetCooldownFromDurationObject` on our own Cooldown)
 and the selected rim. Cooldown and usability events ask for this many times a second in combat, so
-the icon, tint, count and a cleared or `SetCooldown` cooldown go through `ns.Buttons`' setters
+they are heard only while the buttons show (`Update` turns them on and off), and the icon, tint, count and a cleared or `SetCooldown` cooldown go through `ns.Buttons`' setters
 (`SetIcon`, `SetUsable`, `SetCount`, `ClearCooldown`, `SetCooldown`), which skip a value the region
 shows already; the rings' slots use them too, and every change to those regions goes through them.
 A secret value, and a duration object (new on each call), is always set. Dragging calls `PickupAction`/`PlaceAction` only out of combat, and with
@@ -161,7 +161,10 @@ Running out, as built:
 - The free stance bars: warrior 4 and 5, druid 5 (`FREE_STANCE_GROUPS`). Only those two classes
   can run out: 56 spare slots are two stances of all four bars, so no other class is listed, and a
   class that's not listed can't lose a stance bar to a stance we didn't know of. The class's whole
-  list counts, learned or not: a level 10 druid's Moonkin group stays out.
+  list counts, learned or not: a level 10 druid's Moonkin group stays out. `UnitClass` can be secret
+  in a restricted state (a reload in a dungeon). The header then waits for it, every 5 seconds: built
+  without the class, its pools would leave out the stance groups, and a bar saved in one would get
+  other slots.
 - `SpellShapeshiftForm.BonusActionBar` on Forever: cat 1, bear 3, warrior stances 1 to 3, stealth 1.
   Prowl isn't in there and isn't a stance of its own on Forever (seen in game 2026-11-07): a druid in
   Prowl keeps Cat's following bars. That's accepted, so group 2 goes unused; it stays out of

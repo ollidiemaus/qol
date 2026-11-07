@@ -66,14 +66,17 @@ function ClickCast.List()
     return list
 end
 
--- The spells asked for by hasRank: the saved rank of a respec can be one that isn't loaded.
+-- The spells asked for by hasRank: the saved rank of a respec can be one that isn't loaded. The game
+-- answers with SPELL_DATA_LOAD_RESULT, heard only while one is out.
 local requested = {}
+local onSpellData
 
 -- Whether the spell has a rank: a digit in the line under its name, whatever the locale. "Racial"
 -- is no rank. One that isn't loaded has none until it is (SPELL_DATA_LOAD_RESULT).
 local function hasRank(id)
     if not C_Spell.GetSpellSubtext then return false end
     if C_Spell.IsSpellDataCached and not C_Spell.IsSpellDataCached(id) and not requested[id] then
+        if next(requested) == nil then ns.Events:On("SPELL_DATA_LOAD_RESULT", onSpellData) end
         requested[id] = true
         C_Spell.RequestLoadSpellData(id)
     end
@@ -446,8 +449,14 @@ local function offOnEnemies(frame, wanted)
     end
 end
 
+-- What leftToGame last said of each frame that got its attributes. Between two update()s it's all
+-- that differs for a plate, so a plate with the same answer keeps the attributes it has.
+local leftLast = {}
+
 local function attributesOf(frame, clicks, delegated)
-    if leftToGame(frame) then return {} end
+    local left = leftToGame(frame)
+    leftLast[frame] = left
+    if left then return {} end
     local wanted = clickAttributes(frame, clicks, delegated)
     if EITHER_SIDE[frame:GetName()] and Options:Get(ENEMIES) ~= true then offOnEnemies(frame, wanted) end
     return wanted
@@ -608,6 +617,9 @@ end
 -- Updating
 ---------------------------------------------------------------------------------------------------
 
+-- What only matters while click casting is on; made at Init.
+local watched, plateEvents
+
 local function update()
     if not ready then
         SecureHandlerSetFrameRef(header, "keys", keysButton)
@@ -632,13 +644,15 @@ local function update()
     end
     for frame in pairs(leaving) do
         apply(frame, {})
-        frames[frame], leaving[frame] = nil, nil
+        frames[frame], leaving[frame], leftLast[frame] = nil, nil, nil
     end
     for frame in pairs(frames) do
         if on then wrap(frame) end
         apply(frame, on and attributesOf(frame, clicks, delegated) or {})
     end
     plateClicks, plateDelegated = on and clicks or nil, delegated
+    watched:SetOn(on)
+    plateEvents:SetOn(on)
     apply(clicksButton, delegate)
     apply(keysButton, keyAttributes(keys))
     local wanted = { ["qol-keys"] = #keys }
@@ -658,12 +672,21 @@ local function changed()
     if Options:Get(KEY) == true then schedule() end
 end
 
+function onSpellData(_, id)
+    if not requested[id] then return end
+    requested[id] = nil
+    if next(requested) == nil then ns.Events:Off("SPELL_DATA_LOAD_RESULT", onSpellData) end
+    changed()
+end
+
 -- A plate gets another unit, or its unit another side, in combat too, so this runs then as well: a
--- plate isn't a protected frame. Should one be, it waits for the end of combat.
+-- plate isn't a protected frame. Should one be, it waits for the end of combat. Plates come and go
+-- all through a pull, and most keep their side, so only one that changed sides is built again.
 local function updatePlates()
     if not plateClicks then return end
     for frame in pairs(frames) do
-        if frame.SetNamePlateFrame and frame:GetAttribute("unit") then
+        if frame.SetNamePlateFrame and frame:GetAttribute("unit")
+            and leftToGame(frame) ~= leftLast[frame] then
             local protected = frame:IsProtected()
             if InCombatLockdown() and not (ns.IsUsable(protected) and not protected) then
                 changed()
@@ -688,6 +711,10 @@ end
 
 function ClickCast:Init()
     create()
+    local events = { "GROUP_ROSTER_UPDATE" }
+    for _, event in ipairs(Entries.KNOWN_EVENTS) do events[#events + 1] = event end
+    watched = ns.Events:NewGroup(events, changed)
+    plateEvents = ns.Events:NewGroup({ "NAME_PLATE_UNIT_ADDED", "UNIT_FACTION" }, plateChanged)
     started = true
     if CompactUnitFrame_SetUpFrame then
         hooksecurefunc("CompactUnitFrame_SetUpFrame", function(frame)
@@ -697,16 +724,6 @@ function ClickCast:Init()
     end
     schedule()
     Options:Watch({ KEY, ENEMIES }, schedule)
-    for _, event in ipairs(Entries.KNOWN_EVENTS) do ns.Events:On(event, changed) end
-    ns.Events:On("SPELL_DATA_LOAD_RESULT", function(_, id)
-        if requested[id] then
-            requested[id] = nil
-            changed()
-        end
-    end)
-    ns.Events:On("GROUP_ROSTER_UPDATE", changed)
-    ns.Events:On("NAME_PLATE_UNIT_ADDED", plateChanged)
-    ns.Events:On("UNIT_FACTION", plateChanged)
     ns.Events:On("ADDON_LOADED", function(_, name)
         if name == "Blizzard_ArenaUI" or name == "Blizzard_Deprecated_ArenaUI" then changed() end
     end)

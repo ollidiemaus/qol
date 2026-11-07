@@ -87,3 +87,21 @@ function UnitListener:Off(event)
     self.handlers[event] = nil
     self.frame:UnregisterEvent(event)
 end
+
+-- Events a feature hears only while it uses them, all with one handler: SetOn turns them on and
+-- off, and does nothing when they already are. events isn't copied.
+local EventGroup = {}
+EventGroup.__index = EventGroup
+
+function Events:NewGroup(events, handler)
+    return setmetatable({ events = events, handler = handler, on = false }, EventGroup)
+end
+
+function EventGroup:SetOn(on)
+    on = on and true or false
+    if on == self.on then return end
+    self.on = on
+    for _, event in ipairs(self.events) do
+        if on then Events:On(event, self.handler) else Events:Off(event, self.handler) end
+    end
+end

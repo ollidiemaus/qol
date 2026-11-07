@@ -55,6 +55,8 @@ local KEY_NAMES = {
 }
 
 local editor, listener, quickListener, picker
+-- What the editor hears while it shows; made in Create.
+local shownEvents
 -- The bindings' page shown; the box waiting for a combination ({ index } of a binding, or
 -- { action } of one not added yet); whether quick bind is on.
 local page = 1
@@ -540,6 +542,7 @@ function Editor:Create(parent, top, width, height)
         stopWaiting()
         endQuick()
         picker:Hide()
+        shownEvents:SetOn(false)
     end)
 
     -- Nothing changes in combat (InCombatLockdown is still false while it starts), and afterwards
@@ -554,7 +557,7 @@ function Editor:Create(parent, top, width, height)
     ns.Events:On("PLAYER_REGEN_ENABLED", function()
         if editor:IsVisible() then self:Refresh() end
     end)
-    -- Made once: the events ask for them many times a second while the editor shows.
+    -- The events ask for these many times a second while the editor shows.
     local function shownNow()
         if not editor:IsVisible() then return end
         render()
@@ -563,15 +566,17 @@ function Editor:Create(parent, top, width, height)
     local function changed()
         if editor:IsVisible() and not InCombatLockdown() then ns.Later("clickCastEditor", shownNow) end
     end
-    for _, event in ipairs(Entries.KNOWN_EVENTS) do ns.Events:On(event, changed) end
     -- A saved rank's data, which ClickCast asked for, says whether the binding works.
-    ns.Events:On("SPELL_DATA_LOAD_RESULT", changed)
+    local events = { "SPELL_DATA_LOAD_RESULT" }
+    for _, event in ipairs(Entries.KNOWN_EVENTS) do events[#events + 1] = event end
+    shownEvents = ns.Events:NewGroup(events, changed)
 end
 
 -- Shows the bindings and what this character has as they are now: the settings window does it
 -- when it shows the page, and when the switch changes (off stops a box waiting and quick bind).
 function Editor:Refresh()
     if not editor then return end
+    shownEvents:SetOn(editor:IsVisible())
     if not on() then
         stopWaiting()
         endQuick()

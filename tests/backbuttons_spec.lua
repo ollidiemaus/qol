@@ -249,6 +249,13 @@ describe("controller back buttons", function()
             T.eq(QoLBackButton4.icon.texture, 136048)
         end)
 
+        it("hears the cooldowns only while the buttons show", function()
+            local ns = start(on())
+            T.eq(Stubs.Listens("SPELL_UPDATE_COOLDOWN"), true, "on")
+            set(ns, "controllerBackButtons", false)
+            T.eq(Stubs.Listens("SPELL_UPDATE_COOLDOWN"), false, "off")
+        end)
+
         it("sets only what changed on a refresh", function()
             start(on(), function(state)
                 state.actions[177] = { texture = 136048, count = "3" }
