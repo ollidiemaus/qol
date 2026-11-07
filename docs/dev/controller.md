@@ -161,9 +161,11 @@ Running out, as built:
 - The free stance bars: warrior 4 and 5, druid 5 (`FREE_STANCE_GROUPS`). Only those two classes
   can run out: 56 spare slots are two stances of all four bars, so no other class is listed, and a
   class that's not listed can't lose a stance bar to a stance we didn't know of. The class's whole
-  list counts, learned or not: a level 10 druid's Prowl group stays out.
+  list counts, learned or not: a level 10 druid's Moonkin group stays out.
 - `SpellShapeshiftForm.BonusActionBar` on Forever: cat 1, bear 3, warrior stances 1 to 3, stealth 1.
-  Prowl isn't in there (the client adds it to cat's offset), and Moonkin says 0, so 4 is from memory
+  Prowl isn't in there and isn't a stance of its own on Forever (seen in game 2026-11-07): a druid in
+  Prowl keeps Cat's following bars. That's accepted, so group 2 goes unused; it stays out of
+  `FREE_STANCE_GROUPS` as nothing needs it. Moonkin says 0, so 4 is from memory
   and stays reserved until it's measured: reserving it costs 8 slots, handing it out could cost a
   spell. What uses offset 5 at all isn't known. If a possess bar does, the game's stance bar would show
   a druid's or warrior's following slots while it's up, and `apply` would take the bar the game's

@@ -123,7 +123,7 @@ Things only the real client can confirm:
   The last ones keep normal bars and Options > Controller says so; unticking the bar that didn't fit
   hides the line. Put a spell on a following bar in slots 297-304 with the game's editor, `/reload`:
   it's kept. With the game's setting on a bar, that bar still shows the stance's spells. Measure Moonkin's
-  and Prowl's `GetBonusBarOffset()`, and see whether a possess or vehicle gives offset 5. In each stance
+  `GetBonusBarOffset()`, and see whether a possess or vehicle gives offset 5. In each stance
   check `C_GamepadUI.GetFirstGamepadActionBarStorageSlotIndexForActiveStance()` is 265 + 8 × (offset - 1):
   the free stance bars rest on that, and only bear (281) and cat (265) are known.
 - Following bars (Options > Controller, a druid or warrior): tick Left, enter a stance and fill the bar

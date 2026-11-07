@@ -578,7 +578,7 @@ describe("following bars", function()
     end)
 
     describe("out of spare slots", function()
-        local PROWL, MOONKIN = 2, 4
+        local OFFSET_2, MOONKIN = 2, 4
         local FIFTH_GROUP = 297
         local ALL = { "left", "right", "bottom" }
 
@@ -594,7 +594,7 @@ describe("following bars", function()
 
         it("goes on in the stance groups a druid doesn't use, and then stays normal", function()
             local ns, bar = start(nil, as("DRUID"))
-            fillStances(ns, CAT, PROWL, BEAR)
+            fillStances(ns, CAT, OFFSET_2, BEAR)
             holds(bar, "left", 353)
             holds(bar, "right", FIFTH_GROUP)
             holds(bar, "bottom", NORMAL.bottom)
@@ -630,7 +630,7 @@ describe("following bars", function()
 
         it("moves a bar in a stance group back on leaving the stance, and on flipping back", function()
             local ns, bar = start(nil, as("DRUID"))
-            fillStances(ns, CAT, PROWL, BEAR)
+            fillStances(ns, CAT, OFFSET_2, BEAR)
             Stubs.SetStance(0)
             holds(bar, "right", NORMAL.right)
             Stubs.SetStance(BEAR)
@@ -658,7 +658,7 @@ describe("following bars", function()
 
         it("keeps a group in a stance group after a reload, and the next stays free of it", function()
             local ns = start(nil, as("DRUID"))
-            fillStances(ns, CAT, PROWL, BEAR)
+            fillStances(ns, CAT, OFFSET_2, BEAR)
             Stubs.SetStance(0)
             local _, bar = start(QoLDB.followingBars, function(state)
                 state.units.player.class = "DRUID"
@@ -690,7 +690,7 @@ describe("following bars", function()
 
         it("keeps every slot handed out when the ticks change", function()
             local ns, bar = start(nil, as("DRUID"))
-            fillStances(ns, CAT, PROWL, BEAR)
+            fillStances(ns, CAT, OFFSET_2, BEAR)
             tick(ns, "left", false)
             tick(ns, "bottom", false)
             tick(ns, "top")
