@@ -341,7 +341,7 @@ Right bar, and both on is the Bottom bar, also when you press them together.
 - The triggers are two switches: from Bottom, a press of LT leaves the Right bar on.
 - It works in combat. **Back to Top after combat** is on by default, since a bar on takes
   A and with it jumping and interacting. Untick it to keep the bar on.
-- While a bar is on, a marker (the game's focus background) shows behind it, so you can see what your
+- While a bar is on, a warm glow, the marker, shows behind it, so you can see what your
   buttons do. It shows during a hold as well.
 - Only the eight buttons of the bar change: LB, RB, the sticks, the back buttons and the rings stay
   as they are, and holding LB or RB for targeting works with a bar on.

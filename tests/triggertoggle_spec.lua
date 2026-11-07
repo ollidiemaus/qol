@@ -51,13 +51,13 @@ local function lastSlot()
     return used[#used]
 end
 
--- The bar the marker shows on: the game's focus background behind it, on its anchor.
+-- The bar the marker shows on: the game's trigger glow behind it, on its anchor.
 local function marked(bar)
     local anchors = { left = bar.PageUnit.LeftCenteredAnchor, right = bar.PageUnit.RightCenteredAnchor,
         bottom = bar.PageUnit.BottomCenteredAnchor }
     local found
     for _, region in ipairs(Stubs.state().regions) do
-        if region.atlas == "gamepad-actionbar-focus-bg-section" and region:IsVisible() then
+        if region.atlas == "gamepad-actionbar-fx-trigger-behind" and region:IsVisible() then
             local _, anchor = region:GetPoint()
             for name, frame in pairs(anchors) do
                 if frame == anchor then

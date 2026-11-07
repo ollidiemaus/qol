@@ -250,8 +250,10 @@ What the player gets:
   button, which already has the slot.
 - The bar on stays on while a game window has the controller and comes back after it, with the marker
   hidden. A switch to the keyboard interface turns it off and clears it.
-- The marker is the game's focus background on a frame of ours, shown behind the bar on and during a
-  hold. The icons aren't redrawn.
+- The marker is the game's trigger glow (`gamepad-actionbar-fx-trigger-behind`, added on) on a frame
+  of ours, shown behind the bar on and during a hold. The bar's own focus art
+  (`gamepad-actionbar-focus-bg-section`) was tried first: it's pure black, so it can't be tinted and
+  barely shows. The icons aren't redrawn.
 - The compact layout isn't covered: the game shows only Top there, so the bar on would need its
   icons drawn over it. The tooltip says so.
 - No handling of Easy Controller's toggle: nobody runs both.

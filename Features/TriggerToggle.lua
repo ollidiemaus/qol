@@ -36,10 +36,11 @@ local POSSESS_DRIVER = "[possessbar][overridebar][vehicleui] on; off"
 local TRIGGER_PREFIX = "QoLTriggerToggle"
 local RELAY_PREFIX = TRIGGER_PREFIX .. "Relay"
 
--- The marker, as the game's bar draws its BackgroundFocus (ActionBarTemplates.xml). Below the bars,
--- which are on levels 4 and 5 of the LOW strata (ActionBar.lua).
-local MARKER_ATLAS = "gamepad-actionbar-focus-bg-section"
-local MARKER_WIDTH, MARKER_HEIGHT, MARKER_ALPHA = 512, 160, 0.375
+-- The marker: the glow the game draws behind a trigger's icon, spread out behind the bar. The game's
+-- own bar focus (BackgroundFocus) is black, so it only dims what's behind it and can't be seen on a
+-- dark scene. Below the bars, which are on levels 4 and 5 of the LOW strata (ActionBar.lua).
+local MARKER_ATLAS = "gamepad-actionbar-fx-trigger-behind"
+local MARKER_WIDTH, MARKER_HEIGHT, MARKER_ALPHA = 512, 160, 0.7
 local MARKER_LEVEL = 3
 
 -- The bar in use, held or switched on, into the keys' bindings. Both triggers pressed together mean Bottom
@@ -259,6 +260,7 @@ local function createMarker(pageUnit)
         texture:SetPoint("CENTER", anchors[name], "CENTER")
         texture:SetSize(MARKER_WIDTH, MARKER_HEIGHT)
         texture:SetAtlas(MARKER_ATLAS)
+        texture:SetBlendMode("ADD")
         texture:SetAlpha(MARKER_ALPHA)
         texture:Hide()
         marker[name] = texture

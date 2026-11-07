@@ -159,7 +159,7 @@ The controller bar the trigger toggle has switched on, which Top goes back to be
 _Avoid_: active bar (that's the bar the game highlights, which stays Top), toggled bar
 
 **Marker**:
-The game's focus background on a frame of ours, behind the bar on and during a hold of a trigger, because the game's own highlight stays on Top.
+The game's trigger glow on a frame of ours, behind the bar on and during a hold of a trigger, because the game's own highlight stays on Top.
 _Avoid_: highlight (that's the game's)
 
 ### Player frame
