@@ -267,9 +267,9 @@ local function buildClickCast(page)
     end
 end
 
--- Controller page: the back buttons and the bar whose slots they use next to the buff tooltips and
--- the bars that follow the stance, then the back buttons' keys across the page (as in Key Bindings > AddOns), each named by its slot
--- on that bar.
+-- Controller page: the back buttons with the bar whose slots they use and the trigger toggle, next to
+-- the buff tooltips and the bars that follow the stance, then the back buttons' keys across the page
+-- (as in Key Bindings > AddOns), each named by its slot on that bar.
 local function buildController(page)
     local BackButtons = ns.BackButtons
     local enabled = is("controllerBackButtons")
@@ -281,6 +281,10 @@ local function buildController(page)
     end
     page:Dropdown("left", "controllerBackButtonsBar", L.BACK_BUTTONS_BAR, bars, L.BACK_BUTTONS_BAR_TIP,
         { indent = true, enabled = enabled })
+    page:Header("left", L.SECTION_TRIGGER_TOGGLE)
+    page:Checkbox("left", "controllerTriggerToggle", L.TRIGGER_TOGGLE, L.TRIGGER_TOGGLE_TIP)
+    page:Checkbox("left", "controllerTriggerToggleTopAfterCombat", L.TRIGGER_TOGGLE_TOP, L.TRIGGER_TOGGLE_TOP_TIP,
+        { indent = true, enabled = is("controllerTriggerToggle") })
     page:Header("right", L.SECTION_BUFFS)
     page:Checkbox("right", "hideBuffTooltips", L.HIDE_BUFF_TOOLTIPS, L.HIDE_BUFF_TOOLTIPS_TIP)
     page:Header("right", L.SECTION_FOLLOWING_BARS)

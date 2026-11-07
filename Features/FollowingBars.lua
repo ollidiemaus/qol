@@ -43,9 +43,6 @@ local FIRST_STANCE_SLOT, STANCE_GROUP_SIZE = 265, 8
 -- class that isn't here can't lose one to a stance nobody knew it had. A druid's 4 is Moonkin.
 local FREE_STANCE_GROUPS = { WARRIOR = { 4, 5 }, DRUID = { 5 } }
 local STANCE_DRIVER = "[bonusbar:1] 1; [bonusbar:2] 2; [bonusbar:3] 3; [bonusbar:4] 4; [bonusbar:5] 5; 0"
-local STANCE_BAR_CVAR = "GamepadStanceBarOverride"
--- Its Enum.GamepadStanceBarOverride value for each bar. Top has none: the setting can't name it on page 1.
-local GAME_BAR_SETTINGS = { left = "Page1LeftBar", right = "Page1RightBar", bottom = "Page1BottomBar" }
 
 -- The first of the slots a bar shows on page 1 in the stance now, nil if it stays on its normal ones.
 -- A bar takes the first pool with room for it; one that fits nowhere is marked "full-".
@@ -164,17 +161,8 @@ local function saved()
     return data
 end
 
--- The bar the game's Stance bar setting names on page 1, if any.
-local function gameBar()
-    local value = tonumber(C_CVar.GetCVar(STANCE_BAR_CVAR))
-    for name, setting in pairs(GAME_BAR_SETTINGS) do
-        if value == Enum.GamepadStanceBarOverride[setting] then return name end
-    end
-    return nil
-end
-
 function FollowingBars.IsGameBar(name)
-    return gameBar() == name
+    return ns.GamepadStanceBar(1) == name
 end
 
 function FollowingBars.IsTicked(name)
@@ -185,7 +173,7 @@ end
 -- for that to be known.
 function FollowingBars.IsOutOfSpace()
     local data = saved()
-    local byGame = gameBar()
+    local byGame = ns.GamepadStanceBar(1)
     for key in pairs(data.full) do
         local name = key:match("%a+$")
         if data.bars[name] == true and name ~= byGame then return true end
@@ -299,7 +287,7 @@ local function update()
         if not anyTicked(data) then return end
         create()
     end
-    local byGame = gameBar()
+    local byGame = ns.GamepadStanceBar(1)
     for _, name in ipairs(BARS) do
         local following = controller and data.bars[name] == true and name ~= byGame
         header:SetAttribute("following-" .. name, following or nil)

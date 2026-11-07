@@ -58,6 +58,26 @@ function ns.ControllerWindowOpen()
     return type(frame) == "table" and type(frame.IsShown) == "function" and frame:IsShown() == true
 end
 
+-- The bar on a page (1 to 3) that a setting of the game gives to its stance or possess bar, if any.
+-- The Enums name each as Page1LeftBar and so on. Top isn't asked for: nobody here needs it.
+local OVERRIDE_BARS = { left = "Left", right = "Right", bottom = "Bottom" }
+
+local function overriddenBar(cvar, values, page)
+    local value = tonumber(C_CVar.GetCVar(cvar))
+    for name, part in pairs(OVERRIDE_BARS) do
+        if value == values["Page" .. page .. part .. "Bar"] then return name end
+    end
+    return nil
+end
+
+function ns.GamepadStanceBar(page)
+    return overriddenBar("GamepadStanceBarOverride", Enum.GamepadStanceBarOverride, page)
+end
+
+function ns.GamepadPossessBar(page)
+    return overriddenBar("GamepadPossessBarOverride", Enum.GamepadPossessBarOverride, page)
+end
+
 function ns.FormatMoney(copper)
     if GetMoneyString then
         return GetMoneyString(copper, true)

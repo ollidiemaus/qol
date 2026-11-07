@@ -107,6 +107,8 @@ local DEFAULTS = {
 
     controllerBackButtons = false,
     controllerBackButtonsBar = 8, -- Action Bar 6, 7 or 8, whose buttons 9 to 12 the back buttons use
+    controllerTriggerToggle = false,
+    controllerTriggerToggleTopAfterCombat = true,
     hideBuffTooltips = false,
 }
 -- Action bar flips ("flipVertical_MainActionBar" and so on) default to false and are added by

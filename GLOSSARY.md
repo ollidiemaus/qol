@@ -150,6 +150,18 @@ _Avoid_: form (that's one kind of stance), bonus bar
 A controller bar that shows its own actions while the character is in a stance.
 _Avoid_: overridden bar (the game uses that for its own stance and possess bars), stance bar (that's the game's single bar)
 
+**Trigger toggle**:
+Pressing a trigger alone to switch its controller bar on until it's pressed again, so it doesn't have to be held. Holding a trigger and pressing a button still works as before.
+_Avoid_: sticky triggers, trigger lock
+
+**Bar on**:
+The controller bar the trigger toggle has switched on, which Top goes back to being when it's switched off.
+_Avoid_: active bar (that's the bar the game highlights, which stays Top), toggled bar
+
+**Marker**:
+The game's focus background on a frame of ours, behind the bar on and during a hold of a trigger, because the game's own highlight stays on Top.
+_Avoid_: highlight (that's the game's)
+
 ### Player frame
 
 **Status text**:

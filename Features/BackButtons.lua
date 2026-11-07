@@ -234,6 +234,7 @@ local function create()
         button:SetScript("OnDragStart", onDragStart)
         button:SetScript("OnReceiveDrag", onReceiveDrag)
         buttons[index] = button
+        ns.Buttons.AddBackButton(button)
     end
 end
 

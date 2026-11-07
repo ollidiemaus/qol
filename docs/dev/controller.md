@@ -219,3 +219,86 @@ follows; the editor writes to and clears the new slot; flips to pages 2 and 3 an
 leave all 8 buttons right and block nothing. Not run in game: a spell on the normal slot with an
 empty following slot, and any stance but bear. Cat is offset 1, slot 265.
 Easy Controller gets no special handling; test with it on and fix what shows up.
+
+## Trigger toggle
+
+`Features/TriggerToggle.lua`. Terms are in `GLOSSARY.md`. Easy Controller has the same feature
+(`Toggle.lua`, MIT), which is the model for the secure part.
+
+The game shows and uses a trigger's bar only while the key bound to `GAMEPADLEFTMOD` or
+`GAMEPADRIGHTMOD` is down (`GamepadMode.IsBindingDown`, read by `ActionBarModKeyDownStateCheck`), and
+an addon can't keep a key down. So with the option on the triggers get override bindings to secure
+buttons of ours, which keep the state on a secure header and bind the eight keys of the bar on to the
+game's buttons of that bar. It works in combat. The game never sees the triggers then, so its active
+bar stays Top, and it may not light a bar during a real hold either. Its highlight can't be used:
+`SetActiveActionBar` writes to a Blizzard frame, and the next check resets it.
+
+What the player gets:
+
+- One press of a trigger alone switches its bar on, another switches it off. A trigger held with a
+  button works as before. The triggers are two switches: LT and RT on is Bottom, also when pressed
+  together, and from Bottom LT leaves Right.
+- Held and let go with nothing pressed counts as a press. No clock turned up in the source for secure
+  snippets, so "short press only" looks out. The same goes for a press of a key that isn't ours (LB, a stick);
+  our back buttons can report that they were used.
+- A second checkbox, on by default, goes back to Top when combat ends. A bar on takes A and with it
+  jumping and interacting, which is why that's the default.
+- Only the eight bar keys switch. LB, RB, the sticks, back buttons and rings stay as they are.
+- A possess or vehicle bar switches the bar on off, in combat too, and it stays off.
+- Page and stance: the bar on follows the page, and where the game's stance bar has taken a bar the
+  press goes to the stance bar's button. Following bars need nothing, as the press is on the game's
+  button, which already has the slot.
+- The bar on stays on while a game window has the controller and comes back after it, with the marker
+  hidden. A switch to the keyboard interface turns it off and clears it.
+- The marker is the game's focus background on a frame of ours, shown behind the bar on and during a
+  hold. The icons aren't redrawn.
+- The compact layout isn't covered: the game shows only Top there, so the bar on would need its
+  icons drawn over it. The tooltip says so.
+- No handling of Easy Controller's toggle: nobody runs both.
+
+Why it's taint-safe: nothing of the game's is written or hooked. The state and the bindings are on
+frames of ours, in secure snippets, which is why it works in combat. The game's buttons are only read
+and clicked, through frame refs made out of combat, from a secure macro, the way a key bound to them
+presses them. The marker is a frame of ours parented to `PageUnit`. Our trigger overrides are set and
+taken away through `ns.LaterOutsideWindows`; in combat only the secure header changes bindings.
+
+How it's built:
+
+- The header `QoLTriggerToggle` holds the state in attributes (`on-LT`, `held-LT`, `used-LT`, the
+  same for RT, `both`, `bar`); `QoLTriggerToggleLT` and `RT` are the buttons the triggers' overrides click. The header's
+  own bindings are the eight keys, in all the modifier forms the game can send, and `ClearBindings`
+  drops them when no bar is on.
+- The keys are fixed (`BAR_KEYS`, in the order of `GAMEPADACTIONBUTTON1-8`), not read from the
+  bindings, so a player who rebound the bar's keys gets the default keys while a bar is on.
+- Each key goes to a relay (`QoLTriggerToggleRelay1-8`), which picks the game's button on the press
+  and runs a macro `/click <button> LeftButton true`. A `type=click` wouldn't do: `SECURE_ACTIONS.click`
+  clicks without "down", and the game's buttons act on key down. A macro in the slot doesn't run from
+  a macro, so a slot holding one (`GetActionInfo`) gets `type=action` instead. The relays only take
+  the press, as Easy Controller's do, so press-and-hold spells don't get a release.
+- Targeting and the shortcuts bar: no need to see LB or RB in secure code, since the game shows those
+  bars at once on the press (`ActivateOverrideBar`), and only over Top. A relay on Top reads their
+  `IsVisible`. While a trigger is really held the bar wins, as in the game.
+- The stance bar is decided at the press too: `IsVisible` of the game's stance bar (visible only when
+  it's active and on the page that overrides) and the bar of the game's Stance bar setting, on
+  whichever page it names, which `ns.GamepadStanceBar(page)` reads and the header gets as `stancebar`.
+  The possess bar has a setting of its own and is handled the same way, for a hold under it.
+- `SecureHandlerWrapScript` on each back button marks the press as used. The back buttons are made
+  at their own moment, so `ns.Buttons.WatchBackButtons` hands them over, now and as they're made, and
+  neither feature names the other.
+- A possess, vehicle or override bar is a state driver on the header. It runs `ALL_OFF`, which also
+  clears the keys, in combat too, and sets `possess`, which makes a trigger going down count as used,
+  so that no press under that bar switches anything on. A hold works as before.
+- A window that takes the controller can eat a trigger's press or release, and a hold would then
+  never end. So every `update`, which runs once the windows have closed, clears the held state
+  (`LET_GO`), and `TRIGGER` ignores the release of a press it never saw. The game fires
+  `Gamepad.RefreshFrameFocus` as a window takes or gives back the controller, which hides or brings
+  back the marker a frame later and schedules that `update`.
+- A trigger that a window doesn't bind still toggles behind it: the window's priority overrides only
+  win for the keys they set.
+
+To check in game (not answerable from the source or the stubs):
+
+- With a bar on and LB or RB held, the targeting bars get the keys.
+- A plain override beats the game's bar bindings. A window's priority overrides have to win over
+  ours, also in combat when ours can't be removed, which rules out priority if a plain one works.
+- Whether a real hold still lights the game's bar.

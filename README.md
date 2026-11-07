@@ -332,6 +332,26 @@ stances and stealth all count. Prowl isn't a stance of its own on Forever: it ke
 - With keyboard and mouse nothing follows. Turning the controller interface off or on switches the
   bars without a reload, after combat, and turning it on also waits for the game's options to close.
 
+**Trigger toggle:** tick **Press a trigger to keep its bar on** and one press of a trigger keeps its
+bar on, so you needn't hold it. Press it again to go back to the Top bar. LT is the Left bar, RT the
+Right bar, and both on is the Bottom bar, also when you press them together.
+
+- A trigger held while you press a button or a back button works as it always did, and doesn't
+  change what's on. Held and let go with nothing pressed counts as a press, however long you held it.
+- The triggers are two switches: from Bottom, a press of LT leaves the Right bar on.
+- It works in combat. **Back to Top after combat** is on by default, since a bar on takes
+  A and with it jumping and interacting. Untick it to keep the bar on.
+- While a bar is on, a marker (the game's focus background) shows behind it, so you can see what your
+  buttons do. It shows during a hold as well.
+- Only the eight buttons of the bar change: LB, RB, the sticks, the back buttons and the rings stay
+  as they are, and holding LB or RB for targeting works with a bar on.
+- A possess, vehicle or override bar turns the bar off, in combat too, and it stays off: a press
+  while one is up turns nothing on. The game's
+  windows keep their keys while a bar is on; it's still on when you close them. Switching to
+  keyboard and mouse turns it off.
+- The bar on follows the page and the stance, and following bars work as usual.
+- The compact layout isn't covered: it only shows the Top bar.
+
 **Buff tooltips:** the controller interface shows the tooltip of every buff or debuff you gain or
 refresh for a few seconds. **Hide new buff tooltips** keeps those away; a buff you select or point
 at still shows its tooltip.

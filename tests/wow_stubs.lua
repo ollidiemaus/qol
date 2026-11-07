@@ -1365,7 +1365,10 @@ local function install()
     -- modifiers }. Modifiers are bits here (Shift 1, Ctrl 2, Alt 4), named by GetStringFromModifiers.
     G.Enum.ClickBindingType = { None = 0, Spell = 1, Macro = 2, Interaction = 3, PetAction = 4 }
     G.Enum.GamepadStanceBarOverride = { None = 1, Page1LeftBar = 2, Page1RightBar = 3, Page1BottomBar = 4,
-        Page2TopBar = 5 }
+        Page2TopBar = 5, Page2LeftBar = 6, Page2RightBar = 7, Page2BottomBar = 8, Page3TopBar = 9,
+        Page3LeftBar = 10, Page3RightBar = 11, Page3BottomBar = 12 }
+    G.Enum.GamepadPossessBarOverride = { SpecialPageTopBar = 1, Page1LeftBar = 2, Page1RightBar = 3,
+        Page1BottomBar = 4, Page2TopBar = 5, Page2LeftBar = 6, Page2RightBar = 7, Page2BottomBar = 8 }
     G.Enum.ClickBindingInteraction = { Target = 1, OpenContextMenu = 2 }
     G.C_ClickBindings = {
         GetProfileInfo = function()
@@ -1888,10 +1891,12 @@ local ADDON_GLOBALS = {
     "TimeManagerClockTicker", "QoLNoAction", "ColorPickerFrame", "SettingsPanel", "GameMenuFrame",
     "GamepadMainActionBarFrame", "BINDING_HEADER_QOL",
     "QoLRing", "QoLRingButton", "QoLRingEditor", "QoLSettings",
+    "QoLTriggerToggle", "QoLTriggerToggleLT", "QoLTriggerToggleRT",
     "QoLClickCast", "QoLClickCastKeys", "QoLClickCastClicks", "QoLClickCastEditor", "ClickCastFrames", "ClickCastHeader",
     "Grid2Frame",
 }
 for index = 1, 5 do ADDON_GLOBALS[#ADDON_GLOBALS + 1] = "ArenaEnemyMatchFrame" .. index end
+for index = 1, 8 do ADDON_GLOBALS[#ADDON_GLOBALS + 1] = "QoLTriggerToggleRelay" .. index end
 for index = 1, 4 do
     ADDON_GLOBALS[#ADDON_GLOBALS + 1] = "QoLBackButton" .. index
     ADDON_GLOBALS[#ADDON_GLOBALS + 1] = "BINDING_NAME_CLICK QoLBackButton" .. index .. ":LeftButton"
@@ -1939,7 +1944,7 @@ function Stubs.Reset(options)
         unknownEvents = options.unknownEvents or {},
         combat = false,
         -- GetBonusBarOffset: 0 outside a stance. Stubs.SetStance moves it and the state drivers.
-        bonusBarOffset = 0, stateDrivers = {},
+        bonusBarOffset = 0, stateDrivers = {}, macroConditions = {},
         interfaceStyle = 0,
         screenWidth = 2560, screenHeight = 1440,
         framerate = 59.7, latencyHome = 45, latencyWorld = 38,
@@ -1962,7 +1967,8 @@ function Stubs.Reset(options)
         -- The hidden settings with their ranges, measured in Forever's client (ground clutter fade
         -- and Always sharpen have none) and, for Draw distance, in retail's (farclip and the horizon
         -- have none), and their raid copies. The game sliders are added below.
-        cvars = { GamepadStanceBarOverride = "1", chatClassColorOverride = "2", groundEffectDist = "70", groundEffectFade = "70",
+        cvars = { GamepadStanceBarOverride = "1", GamepadPossessBarOverride = "1",
+            chatClassColorOverride = "2", groundEffectDist = "70", groundEffectFade = "70",
             groundEffectDensity = "16", weatherDensity = "2", ResampleAlwaysSharpen = "0",
             farclip = "6000", horizonStart = "1400", horizonClip = "6000", lodObjectFadeScale = "90",
             lodObjectCullSize = "20", lodObjectCullDist = "30",
@@ -2000,6 +2006,7 @@ function Stubs.Reset(options)
         clickBindings = { { type = 3, actionID = 1, button = "LeftButton", modifiers = 0 },
             { type = 3, actionID = 2, button = "RightButton", modifiers = 0 } },
         overrides = {}, priorityOverrides = {}, overrideCalls = 0, gamepadBindings = {}, bindingSaves = {},
+        barClicks = {},
         actions = {}, modifiedClicks = {}, placed = {}, settingValues = {},
         spells = {}, items = {}, toys = {}, mounts = {}, macros = {}, flyouts = {}, equipped = {},
         -- The cursor in UI units, the controller's sticks (nil: no controller) and the actions
@@ -2205,9 +2212,10 @@ end
 -- One of the game's secure bar buttons. Following bars may change it only from secure code, so
 -- its own SetID and SetAttribute fail; an attribute updates its action, as
 -- ActionBarActionButtonMixin:OnAttributeChanged does.
-local function newBarButton(group, slotID)
+local function newBarButton(group, slotID, buttonName)
     local button = newRegion("CheckButton", group)
     button.protected, button.attributes, button.pageUnitSlotID = true, {}, slotID
+    button.name = buttonName
     button.wraps = {}
     local id = _G.GamepadActionBarBindingUtil.GetGamepadStorageSlotIndexFromPageAndPageUnitSlotID(1, slotID) or 0
     button.action = id
@@ -2225,18 +2233,51 @@ end
 -- A page unit's four pageable bars, as PageUnit.lua numbers them: topBar's slots are 1 to 8, of
 -- which 5 to 8 are the reserved face buttons, and so on.
 local BAR_ORDER = { "topBar", "leftBar", "rightBar", "bottomBar" }
-local function newPageUnit(parent)
+-- The bars that take a place over those, hidden until the game shows them: the possess and stance
+-- bars over the bar their settings name, the other three over Top (LB or RB held).
+local OVERRIDE_BARS = { "possessBar", "stanceBar", "friendlyTargetingBar", "hostileTargetingBar", "shortcutsBar" }
+local function newPageUnit(parent, prefix)
     local unit = _G.CreateFrame("Frame", nil, parent)
     unit.actionBars = {}
-    for barIndex, key in ipairs(BAR_ORDER) do
+    unit.page = 1
+    local function newBar(key, slotOf)
         local actionBar = _G.CreateFrame("Frame", nil, unit)
         actionBar.actionButtons = {}
         for index = 1, 8 do
-            actionBar.actionButtons[index] = newBarButton(actionBar, (barIndex - 1) * 8 + index)
+            actionBar.actionButtons[index] = newBarButton(actionBar, slotOf(index), prefix .. key .. "Button" .. index)
         end
         unit.actionBars[key] = actionBar
+        return actionBar
+    end
+    for barIndex, key in ipairs(BAR_ORDER) do
+        newBar(key, function(index) return (barIndex - 1) * 8 + index end)
+    end
+    for _, key in ipairs(OVERRIDE_BARS) do
+        newBar(key, function() return 0 end):Hide()
     end
     return unit
+end
+
+-- As the game's stance bar: it shows while the character is in a stance on the page the game's
+-- Stance bar setting names, with the stance's slots (265 on, eight a stance).
+local function refreshStanceBar()
+    local frame = _G.GamepadMainActionBarFrame
+    if not frame then return end
+    local unit = frame.PageUnit
+    local setting = tonumber(state.cvars.GamepadStanceBarOverride)
+    local offset = state.bonusBarOffset
+    local page
+    for name, value in pairs(_G.Enum.GamepadStanceBarOverride) do
+        if value == setting then page = tonumber(name:match("^Page(%d)")) end
+    end
+    local active = offset > 0 and unit.page == page
+    local stanceBar = unit.actionBars.stanceBar
+    stanceBar:SetShown(active)
+    if active then
+        for index, button in ipairs(stanceBar.actionButtons) do
+            button:SetSecureID(265 + (offset - 1) * 8 + index - 1)
+        end
+    end
 end
 
 -- The player flips a page unit (the bar's or the editor's) to page 1, 2 or 3: as
@@ -2244,6 +2285,8 @@ end
 -- that page, whatever it held, and updates. frame is GamepadMainActionBarFrame or the editor.
 function Stubs.FlipPage(frame, page)
     local slotOnPage = _G.GamepadActionBarBindingUtil.GetGamepadStorageSlotIndexFromPageAndPageUnitSlotID
+    frame.PageUnit.page = page
+    refreshStanceBar()
     for _, key in ipairs(BAR_ORDER) do
         for _, button in ipairs(frame.PageUnit.actionBars[key].actionButtons) do
             button:SetSecureID(slotOnPage(page, button.pageUnitSlotID) or 0)
@@ -2256,13 +2299,14 @@ end
 -- buttons (left) and of the face buttons (right). Call between LoadAddon and Login.
 function Stubs.NewGamepadBar()
     local bar = _G.CreateFrame("Frame", "GamepadMainActionBarFrame", _G.UIParent)
-    bar.PageUnit = newPageUnit(bar)
+    bar.PageUnit = newPageUnit(bar, "GamepadMain")
     bar.PageUnit.LeftCenteredAnchor = _G.CreateFrame("Frame", nil, bar.PageUnit)
     bar.PageUnit.RightCenteredAnchor = _G.CreateFrame("Frame", nil, bar.PageUnit)
+    bar.PageUnit.BottomCenteredAnchor = _G.CreateFrame("Frame", nil, bar.PageUnit)
     -- The game's editor is a window with a page unit of its own.
     local editor = _G.CreateFrame("Frame", "GamepadActionBarEditFrame", _G.UIParent)
     editor:Hide()
-    editor.PageUnit = newPageUnit(editor)
+    editor.PageUnit = newPageUnit(editor, "GamepadEdit")
     return bar
 end
 
@@ -2366,6 +2410,7 @@ local function frameHandle(region)
     function methods:Show() setShownSecurely(region, true) end
     function methods:Hide() setShownSecurely(region, false) end
     function methods:IsShown() return region.shown end
+    function methods:IsVisible() return region:IsVisible() end
     function methods:GetWidth() return region.width end
     function methods:ClearAllPoints() region.points, region.center = {}, nil end
     -- Points are kept as the frame's middle, for GetCenter and GetMousePosition.
@@ -2407,6 +2452,11 @@ function runBody(header, frame, signature, body, ...)
         owner = frameHandle(header), math = math, string = string, tostring = tostring, tonumber = tonumber,
         strmatch = string.match, GetGamePadState = function() return state.gamepad end,
         HasAction = function(slot) return state.actions[slot] ~= nil end,
+        -- A slot's kind of action: a macro has macro = true.
+        GetActionInfo = function(slot)
+            local action = state.actions[slot]
+            return action and (action.macro and "macro" or "spell") or nil
+        end,
         SecureCmdOptionParse = function(text)
             local unit = text:match("^%[@([^,]+),harm%]")
             return state.attackable and state.attackable[unit] and "1" or nil
@@ -2423,12 +2473,21 @@ end
 
 function Stubs.Handle(region) return frameHandle(region) end
 
--- What a state driver's conditions give now: only [bonusbar:N] and a default, in the game's order.
+-- What a state driver's conditions give now, in the game's order: [bonusbar:N], or a word from
+-- state.macroConditions (Stubs.SetMacroCondition), several in a row meaning any of them, and a default.
+local function conditionHolds(condition)
+    local number = condition:match("^bonusbar:(%d)$")
+    if number then return tonumber(number) == state.bonusBarOffset end
+    return state.macroConditions[condition] == true
+end
+
 local function driverValue(conditions)
     for clause in conditions:gmatch("[^;]+") do
-        local number, value = clause:match("%[bonusbar:(%d)%]%s*(%S+)")
-        if not number then return _G.strtrim(clause) end
-        if tonumber(number) == state.bonusBarOffset then return value end
+        local value = clause:match("%]%s*(%S+)%s*$")
+        if not value then return _G.strtrim(clause) end
+        for condition in clause:gmatch("%[([^%]]+)%]") do
+            if conditionHolds(condition) then return value end
+        end
     end
     return nil
 end
@@ -2450,7 +2509,19 @@ Stubs.RunStateDriver = runDriver
 -- The game enters or leaves a stance: 0 for none, otherwise the bonus bar offset.
 function Stubs.SetStance(offset)
     state.bonusBarOffset = offset
+    refreshStanceBar()
     for _, driver in ipairs(state.stateDrivers) do runDriver(driver) end
+end
+
+-- A macro condition comes true or stops being so ("possessbar", "vehicleui"...), in combat too.
+function Stubs.SetMacroCondition(condition, holds)
+    state.macroConditions[condition] = holds
+    for _, driver in ipairs(state.stateDrivers) do runDriver(driver) end
+end
+
+-- The game shows or hides one of OVERRIDE_BARS ("friendlyTargetingBar"...): LB or RB is held, say.
+function Stubs.ShowGameBar(key, shown)
+    _G.GamepadMainActionBarFrame.PageUnit.actionBars[key]:SetShown(shown)
 end
 
 -- A snippet run on a frame's handle (SecureHandlerExecute), as a secure header's own code runs.
@@ -2490,7 +2561,18 @@ local function useAction(button, mouseButton)
     local actionType = modifiedAttribute(button, "type", suffix)
     local unit = modifiedAttribute(button, "unit", suffix)
     local on = unit and (" on " .. unit) or ""
-    if actionType == "action" then
+    local clicked = actionType == "macro" and modifiedAttribute(button, "macrotext", suffix)
+    clicked = clicked and clicked:match("^/click (%S+) LeftButton true$")
+    if clicked then
+        -- A game button pressed from a macro, as its own binding presses it (a button that's only
+        -- released does nothing, as it acts going down).
+        for _, region in ipairs(state.regions) do
+            if region.name == clicked then
+                state.barClicks[#state.barClicks + 1] = region
+                used(region:GetID())
+            end
+        end
+    elseif actionType == "action" then
         used(modifiedAttribute(button, "action", suffix))
     elseif actionType == "click" then
         local delegate = modifiedAttribute(button, "clickbutton", suffix)

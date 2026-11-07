@@ -111,6 +111,20 @@ local function same(a, b)
     return true
 end
 
+-- The back buttons, for whoever has to see them pressed, so that no feature needs another. fn gets
+-- each one, now and as it's made. Out of combat, like making them.
+local backButtons, backButtonWatchers = {}, {}
+
+function Buttons.AddBackButton(button)
+    backButtons[#backButtons + 1] = button
+    for _, fn in ipairs(backButtonWatchers) do fn(button) end
+end
+
+function Buttons.WatchBackButtons(fn)
+    for _, button in ipairs(backButtons) do fn(button) end
+    backButtonWatchers[#backButtonWatchers + 1] = fn
+end
+
 -- Override bindings on a frame of their own. Set takes { [key] = button name } and changes the
 -- bindings only when that differs from the ones in place (not in combat). A name may end in
 -- ":mouse button" for a click with another button than LeftButton (the rings' keys). With an
