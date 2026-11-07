@@ -166,6 +166,13 @@ local function newRegion(kind, parent, template)
         if self.secretMouse then return Stubs.SECRET end
         return (self.mouseMotion or self.mouseEnabled) == true
     end
+    -- EnableMouse takes the clicks too, unless SetMouseClickEnabled says otherwise. secretClicks: a
+    -- part whose answer is secret, as secretMouse.
+    function region:IsMouseClickEnabled()
+        if self.secretClicks then return Stubs.SECRET end
+        if self.mouseClickEnabled ~= nil then return self.mouseClickEnabled end
+        return self.mouseEnabled == true
+    end
     function region:EnableMouseWheel(enabled) self.mouseWheel = enabled end
     -- Whether the mouse is over it (Stubs.Hover), or over a region in it.
     function region:IsMouseOver()
@@ -1623,6 +1630,9 @@ local function install()
         if frame.secretSecurity then error("attempt to perform boolean test on a secret boolean value") end
         frame.wraps = frame.wraps or {}
         frame.wraps[script] = { header = header, pre = preBody, post = postBody }
+        -- The game sets the wrapper with SetScript, which turns clicks on, on a frame that only
+        -- followed the mouse too (seen on Forever's health and mana bars).
+        if script == "OnEnter" or script == "OnLeave" then frame.mouseClickEnabled = true end
     end
     -- A frame reference is the frame's handle.
     G.SecureHandlerSetFrameRef = function(frame, label, ref)
@@ -2624,6 +2634,17 @@ function Stubs.ClickUnitFrame(frame, mouseButton)
     local actionType = modifiedAttribute(frame, "type", SUFFIXES[mouseButton] or ("-" .. mouseButton))
     if (actionType == "target" or MENUS[actionType]) and kind == types.None then return end
     useAction(frame, mouseButton)
+end
+
+-- A click with the mouse over a region, on the frame the game's hit test finds: the first one up
+-- from there that takes clicks. A unit button acts on it; any other frame runs its OnMouseUp, if it
+-- has one, and the click ends there.
+function Stubs.ClickOver(region, mouseButton)
+    region = state.rawFrames[region] or region
+    while region and not region:IsMouseClickEnabled() do region = region:GetParent() end
+    if not region then return end
+    if region.clicks then return Stubs.ClickUnitFrame(region, mouseButton) end
+    region:RunScript("OnMouseUp", mouseButton)
 end
 
 -- The mouse moving onto a frame or off it: its wrapped OnEnter or OnLeave snippet runs.

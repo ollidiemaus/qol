@@ -206,6 +206,9 @@ Things only the real client can confirm:
     party and raid, boss and arena frames: a spell, an item (a bandage), a macro with
     `[@mouseover]`, Target and Menu on other combinations, a plain click with nothing bound. Retail
     12.x still lets an addon set the raid-style frames' click attributes out of combat.
+  - Left, Right and Middle over the health and mana bars of the player, target, focus, pet and party
+    frames do what they do over the portrait, and keys and the bars' status text on hover still
+    work. Click casting turned off without a reload: Left over a bar targets, Right opens the menu.
   - A key over a frame, its portrait and its health and mana bars (moving between them, in combat
     too), acts on press, does its Key Bindings action away from frames, and a ring's
     key opens the ring away from frames (the priority override wins over the ring's). A frame

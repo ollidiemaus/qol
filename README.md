@@ -245,8 +245,9 @@ can heal a party member while you keep your target, and a key can heal whoever y
   frames have them. They are bindings like the others: move them to another combination (Alt-Left
   for Target, say) or remove them, and a plain left click is free for a spell (or does nothing). A
   removed one stays on the page as **Not Bound**: click its box to bind it again.
-- **Keys and the wheel** work while the mouse is anywhere over a unit frame, its health and mana
-  bars too. Everywhere else a key does what Key Bindings gives it, and a ring's key opens its ring.
+- **Clicks, keys and the wheel** work while the mouse is anywhere over a unit frame, its health and
+  mana bars too. Everywhere else a key does what Key Bindings gives it, and a ring's key opens its
+  ring.
   Escape, Shift, Ctrl or Alt on their own, Cmd on the Mac, and the keys you move, turn and jump with
   can't be bound.
 - **Like the game:** a click acts when you let go of the button, a key when you press it. A spell
