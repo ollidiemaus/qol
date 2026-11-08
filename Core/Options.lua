@@ -41,7 +41,7 @@ local DEFAULTS = {
 
     squareMinimap = false,
     squareMinimapBorder = "bronze", -- "bronze" or "black"
-    minimapZoneText = "default", -- "default", "above" or "below"
+    minimapZoneText = "default", -- a minimap position (MinimapLayout.PositionsFor)
     minimapZoneTextClassColor = false,
     hideMinimapZoneTextFrame = false, -- the zone text's frame at its default spot
     minimapZoneTextSize = 0, -- a font size, 0 for the game's own

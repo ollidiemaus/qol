@@ -29,11 +29,12 @@ Left: Target and Right: Menu, so it needs no migration), `followingBars` (each c
 controller bars, the slots handed out and the bars that didn't fit, by the same key; missing until first used, so it needs no
 migration), `probe` (the last `/qol probe`
 report, which nothing reads; missing until it first runs, so it needs no migration), and
-`version`, the layout's version (`Core/SavedData.lua`, now 1). On `ADDON_LOADED`, before anything
+`version`, the layout's version (`Core/SavedData.lua`, now 2). On `ADDON_LOADED`, before anything
 reads the file, `SavedData:Migrate` runs `MIGRATIONS[n]` for every version from the saved one up
-to `VERSION`, one at a time, and writes each version once its migration is done. There are none
-yet: a file without a version is the layout from before versions, which version 1 kept, so 0 to 1
-only writes the number.
+to `VERSION`, one at a time, and writes each version once its migration is done. A file without a
+version is the layout from before versions, which version 1 kept, so 0 to 1 only writes the
+number. Version 2 renamed the zone text's position `above`/`below` to the minimap elements' shared
+`top`/`bottom`.
 A change to the layout raises `VERSION` and adds the migration that turns the old layout into the
 new one. A migration that fails (an error) stops there: the error goes to the game's error handler,
 the version stays at the last one that worked, and QoL loads as usual. So a migration works out

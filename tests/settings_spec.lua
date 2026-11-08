@@ -420,14 +420,28 @@ describe("settings pages", function()
         local c, page = control(ns, "minimapZoneText")
         show(page)
         T.eq(c.kind, "dropdown")
-        T.same(values(c), { "default", "above", "below" })
+        T.same(values(c), { "default", "top", "bottom", "insideTop", "insideBottom", "hidden" })
         T.eq(c.widget.text, "Default")
-        radio(c, "Below the minimap").select()
-        T.eq(ns.Options:Get("minimapZoneText"), "below")
-        T.eq(c.widget.text, "Below the minimap")
+        radio(c, "Below, center").select()
+        T.eq(ns.Options:Get("minimapZoneText"), "bottom")
+        T.eq(c.widget.text, "Below, center")
+        radio(c, "Inside, top center").select()
+        T.eq(ns.Options:Get("minimapZoneText"), "insideTop")
         c.widget:OpenMenu()
         T.eq(c.widget.menusOpened, 1, "a click opens the game's menu")
-        T.eq(ns.Options:Get("minimapZoneText"), "below")
+        T.eq(ns.Options:Get("minimapZoneText"), "insideTop")
+    end)
+
+    it("greys out the zone text's color and font size while it is hidden", function()
+        local ns = start()
+        local _, page = control(ns, "minimapZoneText")
+        show(page)
+        local keys = { "minimapZoneTextClassColor", "minimapZoneTextSize" }
+        for _, key in ipairs(keys) do T.truthy(control(ns, key).widget:IsEnabled(), key) end
+        ns.Options:Set("minimapZoneText", "hidden")
+        for _, key in ipairs(keys) do T.falsy(control(ns, key).widget:IsEnabled(), key) end
+        ns.Options:Set("minimapZoneText", "insideBottom")
+        for _, key in ipairs(keys) do T.truthy(control(ns, key).widget:IsEnabled(), key) end
     end)
 
     it("steps a dropdown to its next choice in the controller interface, without the game's menu", function()
@@ -636,6 +650,7 @@ describe("settings pages", function()
         local ns = start()
         for _, case in ipairs({
             { "minimapClock", "minimapClock", "hidden", "default" },
+            { "minimapZoneText", "minimapZoneText", "hidden", "insideTop" },
             { "minimapPerformance", "minimapPerformance", "top", "hidden", true },
             { "minimapCompartment", "minimapCompartment", "hidden", "default" },
             { "minimapTracking", "minimapTracking", "hidden", "default" },
@@ -711,8 +726,12 @@ describe("settings pages", function()
         T.eq(frame.kind, "checkbox")
         T.truthy(frame.indent)
         T.truthy(frame.widget:IsEnabled())
-        ns.Options:Set("minimapZoneText", "above")
-        T.falsy(frame.widget:IsEnabled())
+        for _, value in ipairs({ "top", "insideTop", "hidden" }) do
+            ns.Options:Set("minimapZoneText", value)
+            T.falsy(frame.widget:IsEnabled(), value)
+        end
+        ns.Options:Set("minimapZoneText", "default")
+        T.truthy(frame.widget:IsEnabled())
     end)
 
     it("offers font sizes for the zone text, the clock and FPS and ping, the game's own first", function()

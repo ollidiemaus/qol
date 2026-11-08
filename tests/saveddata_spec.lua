@@ -3,17 +3,17 @@ local Stubs = require("wow_stubs")
 local describe, it = T.describe, T.it
 
 describe("version", function()
-    it("gives a saved file without a version version 1, its data unchanged", function()
+    it("brings a saved file without a version up to date, its data unchanged", function()
         Stubs.LoadAddon()
         Stubs.Login({ hideBagsBar = true })
-        T.eq(QoLDB.version, 1)
+        T.eq(QoLDB.version, 2)
         T.eq(QoLDB.options.hideBagsBar, true)
     end)
 
-    it("gives a new saved file version 1", function()
+    it("gives a new saved file the current version", function()
         Stubs.LoadAddon()
         Stubs.Login()
-        T.eq(QoLDB.version, 1)
+        T.eq(QoLDB.version, 2)
     end)
 
     it("leaves a file from a newer QoL at its version", function()
@@ -49,5 +49,44 @@ describe("version", function()
         T.eq(QoLDB.two, true)
         T.eq(#Stubs.state().errors, 1)
         T.eq(ns.Options:Get("hideBagsBar"), true)
+    end)
+end)
+
+describe("version 2", function()
+    local function migrated(value)
+        local ns = Stubs.LoadAddon()
+        _G.QoLDB = { version = 1, options = { minimapZoneText = value } }
+        Stubs.Fire("ADDON_LOADED", "QoL")
+        T.eq(QoLDB.version, 2)
+        return ns.Options:Get("minimapZoneText")
+    end
+
+    it("turns the zone text's above into the shared top", function()
+        T.eq(migrated("above"), "top")
+    end)
+
+    it("turns the zone text's below into the shared bottom", function()
+        T.eq(migrated("below"), "bottom")
+    end)
+
+    it("leaves any other zone text position alone", function()
+        T.eq(migrated("insideTop"), "insideTop")
+        T.eq(migrated("sideways"), "sideways")
+    end)
+
+    it("leaves a file without a zone text position without one", function()
+        local ns = Stubs.LoadAddon()
+        _G.QoLDB = { version = 1, options = { hideBagsBar = true } }
+        Stubs.Fire("ADDON_LOADED", "QoL")
+        T.eq(QoLDB.version, 2)
+        T.eq(QoLDB.options.minimapZoneText, nil)
+        T.eq(ns.Options:Get("minimapZoneText"), "default")
+    end)
+
+    it("migrates a file from before versions too", function()
+        Stubs.LoadAddon()
+        Stubs.Login({ minimapZoneText = "below" })
+        T.eq(QoLDB.version, 2)
+        T.eq(QoLDB.options.minimapZoneText, "bottom")
     end)
 end)

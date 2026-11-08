@@ -29,7 +29,19 @@ or below a frame of ours around what is drawn of the minimap (the square and its
 round frame with its north triangle). The tracking button and the day and night icon can also go
 inside the map, anchored to its center: on a round map along the diagonal, clear of the round frame
 (which covers about 7% of the radius). Inside the map they're raised above its frame level (the
-cluster's buttons sit below the map) and get their level back when they leave. Positions are worked
+cluster's buttons sit below the map) and get their level back when they leave. The zone text takes
+the same position values but only the middle ones (`centerOnly`: a long name has no room at the
+sides of a row or in a corner); saved data version 2 renamed its old `above`/`below` to
+`top`/`bottom`. Inside the map it gets a width as in a row: on a square map the map's width less
+the inside gap at both sides; on a round map the circle's width (inside the part the round frame
+covers) at the spot's outer edge. At the very top of Forever's round map (198 across) that is only
+about 54 units, too narrow for most names, so where it is less than 60% of the map's width
+(`ROUND_ZONE_WIDTH`) the spot moves in until the circle is that wide, about 20 units below the
+round frame; the other elements of the spot move with it. Hidden sends the button to the hidden
+holder: on Forever the clock, the calendar, the mail indicator and the instance difficulty are
+children of `MinimapCluster`, only anchored to the button (`GameTimeFrameTemplate.xml`,
+`MinimapIndicatorFrameTemplate.xml`, `Blizzard_TimeManager.xml`), so they keep showing. The header
+bar goes whenever the zone text isn't at its default spot. Positions are worked
 out in screen units, since Edit Mode scales the minimap but not its header. Forever's skin sets the
 day and night icon's center again whenever the minimap's scale is set; `Minimap.OnScaleUpdated` lays
 it out again after that. The clock's text (`TimeManagerClockTicker`) and the coordinates'

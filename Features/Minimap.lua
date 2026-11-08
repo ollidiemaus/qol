@@ -8,12 +8,13 @@ local Options = ns.Options
 --     GetMinimapShape() then answers "SQUARE", the convention other addons read to place their
 --     minimap buttons.
 --   * Positions: the zone text, the clock, the addon compartment, the tracking button and Forever's
---     day and night icon can each move to a row above or below the minimap (left, center or right),
---     or be hidden; the tracking button and the day and night icon can also go inside the map, in
---     a corner or at the middle of the top or bottom edge. The calendar button can be hidden.
---     Things that share a spot sit side by side, the zone text gets the room left in the middle,
---     and the coordinates move under a row below. The zone text leaves the header bar, which then
---     goes to the hidden holder; at its default spot the header bar can go too.
+--     day and night icon can each move to a row above or below the minimap (left, center or right;
+--     the zone text only the center), or be hidden; the zone text, the tracking button and the day
+--     and night icon can also go inside the map, in a corner (not the zone text) or at the middle of
+--     the top or bottom edge. The calendar button can be hidden. Things that share a spot sit side
+--     by side, the zone text gets the room left in the middle, and the coordinates move under a row
+--     below. Away from its default spot the zone text leaves the header bar, which then goes to the
+--     hidden holder; at its default spot the header bar can go too.
 --   * Class colors for the zone text, the clock and the coordinates. The game colors the zone name
 --     by its PvP status each time the zone changes; the class color is put back right after.
 --   * Font sizes for the zone text, the clock and the FPS and ping. Their frames grow with a larger
@@ -52,8 +53,6 @@ local SLOTS = {
     insideBottom = { row = "bottom", side = "center", inside = true },
     insideBottomRight = { row = "bottom", side = "right", inside = true },
 }
--- The zone text only goes to the middle of a row: "above" or "below".
-local ZONE_SLOTS = { above = "top", below = "bottom" }
 
 -- A frame the cluster holds, or nil where this client has none (Classic Era's cluster lacks them).
 local function clusterFrame(key)
@@ -84,7 +83,8 @@ MinimapLayout.ELEMENTS = {
             local tracking = clusterFrame("Tracking")
             return tracking and { tracking.Button, tracking.Background } or nil
         end },
-    { key = ZONE_TEXT, isZoneText = true,
+    -- A long name has no room at the sides of a row or in a corner: only the middle spots.
+    { key = ZONE_TEXT, isZoneText = true, inside = true, centerOnly = true,
         frame = function() return MinimapCluster and MinimapCluster.ZoneTextButton end,
         parts = function() return { MinimapZoneText } end },
     { key = "minimapClock", frame = function() return TimeManagerClockButton end },
@@ -98,6 +98,12 @@ MinimapLayout.ELEMENTS = {
     { key = "minimapDayNight", inside = true, frame = dayNightFrame },
 }
 
+-- Whether an element can take a spot: inside the map only one marked inside, and only the middle
+-- spots for one marked centerOnly.
+local function fits(element, slot)
+    return (element.inside or not slot.inside) and not (element.centerOnly and slot.side ~= "center")
+end
+
 local function elementFor(key)
     for _, element in ipairs(MinimapLayout.ELEMENTS) do
         if element.key == key then return element end
@@ -109,11 +115,15 @@ end
 function MinimapLayout.PositionsFor(key)
     local element = elementFor(key)
     local list = {}
+    local function add(value)
+        if element and SLOTS[value] and not fits(element, SLOTS[value]) then return end
+        list[#list + 1] = value
+    end
     for _, value in ipairs(MinimapLayout.POSITIONS) do
         if value == "hidden" and element and element.inside then
-            for _, inside in ipairs(MinimapLayout.INSIDE_POSITIONS) do list[#list + 1] = inside end
+            for _, inside in ipairs(MinimapLayout.INSIDE_POSITIONS) do add(inside) end
         end
-        if not (value == "default" and element and element.own) then list[#list + 1] = value end
+        if not (value == "default" and element and element.own) then add(value) end
     end
     return list
 end
@@ -145,6 +155,9 @@ local MIN_ZONE_WIDTH = 40
 local ROUND_COVER = 0.07
 local INSIDE_GAP = 4
 local INSIDE_LEVELS = 5
+-- On a round map the zone text inside moves in from the edge until the circle is this share of
+-- the map's width across (docs/dev/minimap.md).
+local ROUND_ZONE_WIDTH = 0.6
 
 function MinimapLayout.RoundMask()
     if C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo(ROUND_MASK_ATLAS) then
@@ -395,13 +408,9 @@ end
 -- it has a row.
 local function positionOf(element)
     local value = Options:Get(element.key)
-    if element.isZoneText then
-        local row = ZONE_SLOTS[value]
-        return row and { row = row, side = "center" } or "default"
-    end
     if value == "hidden" then return "hidden" end
     local slot = SLOTS[value]
-    if slot and (element.inside or not slot.inside) then return slot end
+    if slot and fits(element, slot) then return slot end
     return element.own and "hidden" or "default"
 end
 
@@ -458,6 +467,28 @@ local function sumWidths(list, skipZoneText)
     return count > 0 and total + SPACING * (count - 1) or 0
 end
 
+-- Gives the zone text among the items of a middle spot the room the others leave of free (screen
+-- units), its name centered; the game cuts off a name still too long with "...".
+local function fitZoneText(items, free)
+    local others = sumWidths(items, true)
+    for _, item in ipairs(items) do
+        if item.element.isZoneText then
+            item.width = math.max(MIN_ZONE_WIDTH, free - (others > 0 and others + SPACING or 0))
+            local width = item.width / item.frame:GetEffectiveScale()
+            item.frame:SetWidth(width)
+            MinimapZoneText:SetWidth(width)
+            MinimapZoneText:SetJustifyH("CENTER")
+        end
+    end
+end
+
+local function hasZoneText(items)
+    for _, item in ipairs(items) do
+        if item.element.isZoneText then return true end
+    end
+    return false
+end
+
 -- Puts a row's elements in place; returns the row's height (screen units), 0 for an empty row.
 local function layoutRow(row, which, anchor, edgeWidth)
     if #row.left + #row.center + #row.right == 0 then return 0 end
@@ -470,17 +501,7 @@ local function layoutRow(row, which, anchor, edgeWidth)
 
     -- The zone text gets the middle that the left and right groups leave free.
     local sides = math.max(sumWidths(row.left), sumWidths(row.right))
-    local free = edgeWidth - (sides > 0 and 2 * (sides + SPACING) or 0)
-    local others = sumWidths(row.center, true)
-    for _, item in ipairs(row.center) do
-        if item.element.isZoneText then
-            item.width = math.max(MIN_ZONE_WIDTH, free - (others > 0 and others + SPACING or 0))
-            local width = item.width / item.frame:GetEffectiveScale()
-            item.frame:SetWidth(width)
-            MinimapZoneText:SetWidth(width)
-            MinimapZoneText:SetJustifyH("CENTER")
-        end
-    end
+    fitZoneText(row.center, edgeWidth - (sides > 0 and 2 * (sides + SPACING) or 0))
 
     local point = which == "top" and "TOP" or "BOTTOM"
     local y = which == "top" and ROW_GAP + height / 2 or -(ROW_GAP + height / 2)
@@ -521,7 +542,23 @@ local function layoutInside(row, which)
                 height = math.max(height, screen(item.frame, item.frame:GetHeight()))
             end
             if side == "center" then
-                local y = up * ((round and radius or halfHeight) - INSIDE_GAP - height / 2)
+                -- How far from the center the spot's outer edge is.
+                local outer = (round and radius or halfHeight) - INSIDE_GAP
+                if hasZoneText(items) then
+                    local free = 2 * (halfWidth - INSIDE_GAP)
+                    if round then
+                        -- The circle's width at the outer edge, and further in where that is too
+                        -- narrow for a name (at Forever's top edge only about 54 across).
+                        free = 2 * math.sqrt(math.max(0, radius * radius - outer * outer))
+                        local least = ROUND_ZONE_WIDTH * 2 * halfWidth
+                        if free < least then
+                            free = least
+                            outer = math.sqrt(math.max(0, radius * radius - (least / 2) ^ 2))
+                        end
+                    end
+                    fitZoneText(items, free)
+                end
+                local y = up * (outer - height / 2)
                 local cursor = -sumWidths(items) / 2
                 for _, item in ipairs(items) do
                     place(item, cursor + widthOf(item) / 2, y)
@@ -565,6 +602,7 @@ function MinimapLayout:ApplyPositions()
         if frame then
             local position = positionOf(element)
             setHidden(position == "hidden", frame)
+            if element.isZoneText then zoneTextMoved = position ~= "default" end
             -- The offset at the game's own place; anywhere else what it moved goes back.
             local dx, dy = 0, 0
             if position == "default" then dx, dy = offsetOf(element.key) end
@@ -577,7 +615,6 @@ function MinimapLayout:ApplyPositions()
                 if element.align then element.align(frame, position.side) end
                 local side = (position.inside and inside or rows)[position.row][position.side]
                 side[#side + 1] = { element = element, frame = frame }
-                zoneTextMoved = zoneTextMoved or element.isZoneText == true
             elseif parts then
                 putBack(frame, element.isZoneText and putBackZoneText or nil)
             else
@@ -585,8 +622,8 @@ function MinimapLayout:ApplyPositions()
             end
         end
     end
-    -- The header bar without its zone name has nothing left to frame, and at the default spot the
-    -- player may want the bare name.
+    -- The header bar without its zone name (moved or hidden) has nothing left to frame, and at the
+    -- default spot the player may want the bare name.
     setHidden(zoneTextMoved or Options:Get(ZONE_TEXT_FRAME), zoneTextFrame(cluster))
 
     local anchor, edgeWidth = edge()

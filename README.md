@@ -86,7 +86,11 @@ the price of one, as its buttons may not say how many items a slot holds.
 - **Square minimap,** framed in the bronze of Forever's round minimap or with a thin black line.
   Addons that put buttons around the minimap and ask for its shape place them along the square.
 - **Zone text above or below the minimap,** centered on the map's edge instead of in the bar at the
-  top. Or keep it where the game puts it and tick **Hide zone text frame** for the bare zone name.
+  top, or **inside the map,** in the middle of its top or bottom edge, drawn over the map. On a
+  square map it gets the map's width; on a round one it sits a little further in, where the circle
+  is wide enough for a name. A name still too long ends in "…". It can also be **hidden**; on
+  Forever the clock, the calendar and the mail icon stay. Or keep it where the game puts it and tick
+  **Hide zone text frame** for the bare zone name.
 - **Zone text, clock and coordinates in class color.** The zone text normally shows the color for
   friendly, hostile or contested territory.
 - **Font size of the zone text, the clock and FPS and ping,** from 9 to 24 or the game's own. With a
@@ -95,7 +99,8 @@ the price of one, as its buttons may not say how many items a slot holds.
   time of day icon on Classic Era): each can move to a row above or below the minimap (left,
   center or right), or be hidden. The tracking button and the day and night icon can also sit
   inside the map: in a corner, or in the middle of its top or bottom edge. Things in the same spot
-  sit side by side; with something below the minimap, the coordinates move under it. On Classic
+  sit side by side, the zone text taking the room the others leave; with something below the
+  minimap, the coordinates move under it. On Classic
   Era the tracking button shows only while you track something, as the game has it.
 - **FPS and ping** in a row above or below the minimap (left, center or right), like the clock,
   updated every second, also in class color and at another font size. The ping is the higher of

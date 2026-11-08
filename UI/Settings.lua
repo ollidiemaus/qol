@@ -168,17 +168,17 @@ local function buildMinimap(page)
     offsetRow(page, "left", "minimapClock", L.MINIMAP_OFFSET_TIP, { enabled = clockShown })
 
     page:Header("right", L.SECTION_MINIMAP_ZONE_TEXT)
-    page:Dropdown("right", "minimapZoneText", L.MINIMAP_POSITION, {
-        { value = "default", label = L.POSITION_DEFAULT },
-        { value = "above", label = L.ZONE_TEXT_ABOVE },
-        { value = "below", label = L.ZONE_TEXT_BELOW },
-    }, L.MINIMAP_ZONE_TEXT_TIP)
+    page:Dropdown("right", "minimapZoneText", L.MINIMAP_POSITION, positions("minimapZoneText"),
+        L.MINIMAP_ZONE_TEXT_TIP)
     page:Checkbox("right", "hideMinimapZoneTextFrame", L.HIDE_MINIMAP_ZONE_TEXT_FRAME,
         L.HIDE_MINIMAP_ZONE_TEXT_FRAME_TIP,
         { indent = true, enabled = function() return Options:Get("minimapZoneText") == "default" end })
-    page:Checkbox("right", "minimapZoneTextClassColor", L.MINIMAP_CLASS_COLOR, L.MINIMAP_ZONE_TEXT_CLASS_COLOR_TIP)
-    page:Dropdown("right", "minimapZoneTextSize", L.FONT_SIZE, fontSizes(), L.MINIMAP_ZONE_TEXT_SIZE_TIP)
-    offsetRow(page, "right", "minimapZoneText", L.MINIMAP_ZONE_TEXT_OFFSET_TIP)
+    local zoneTextShown = shown("minimapZoneText")
+    page:Checkbox("right", "minimapZoneTextClassColor", L.MINIMAP_CLASS_COLOR, L.MINIMAP_ZONE_TEXT_CLASS_COLOR_TIP,
+        { enabled = zoneTextShown })
+    page:Dropdown("right", "minimapZoneTextSize", L.FONT_SIZE, fontSizes(), L.MINIMAP_ZONE_TEXT_SIZE_TIP,
+        { enabled = zoneTextShown })
+    offsetRow(page, "right", "minimapZoneText", L.MINIMAP_ZONE_TEXT_OFFSET_TIP, { enabled = zoneTextShown })
     page:Align()
 
     page:Header("left", L.SECTION_MINIMAP_BUTTONS)
