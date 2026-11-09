@@ -23,13 +23,29 @@ retail.
 _Avoid_: Classic (alone, as it also means the later classic clients such as TBC Anniversary and
 Mists), Vanilla, 1.15
 
+### Settings window
+
+**Page**:
+One entry in the settings window's list, with its settings shown beside the list when picked, such as
+Minimap or Chat.
+_Avoid_: category, tab, section
+
+**Group**:
+A header in the settings window's list over a few related pages, such as Maps over Minimap and World
+map. A group shows only while it has a page the client can use.
+_Avoid_: category, section
+
+**Section**:
+A header inside a page over a few of its settings, such as Clock or Shape on the Minimap page.
+_Avoid_: group, category
+
 ### Hidden settings
 
 **Hidden setting**:
 One of the game's own settings that the game's options don't show, or show with only part of the
 range it takes, so otherwise it's reached only through `/console`. The game keeps its value, not QoL.
-QoL's Advanced settings page is where they are changed.
-_Avoid_: CVar (in player text), console command, advanced setting (that's the page, not one setting)
+QoL's Graphics & Camera page is where they are changed.
+_Avoid_: CVar (in player text), console command, advanced setting (the page's old name)
 
 **Raid copy**:
 The game's second copy of a hidden setting, used in raids and battlegrounds while the game's Raid and
@@ -41,7 +57,7 @@ The value the game itself gives a hidden setting when nobody has changed it.
 _Avoid_: default (alone, as QoL's options have defaults of their own), original value
 
 **Draw distance**:
-How far away the game draws the world and the objects in it. The Advanced settings page has a
+How far away the game draws the world and the objects in it. The Graphics & Camera page has a
 section of that name for the hidden settings that change it.
 _Avoid_: view distance (that's the game's own slider, which sets some of them), far clip
 
@@ -54,7 +70,8 @@ _Avoid_: proxy, index CVar, Graphics Quality (that's the preset that moves all o
 
 **Minimap element**:
 Something around or on the minimap that the player can place on its own: the zone text, the clock, FPS
-and ping, the addon compartment, the tracking button, the day and night icon, or the coordinates.
+and ping, the addon compartment, the tracking button, the day and night icon, the calendar button, or
+the coordinates. Each can be hidden through its Position.
 _Avoid_: minimap feature, minimap widget
 
 **Spot**:
