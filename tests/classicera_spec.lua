@@ -127,10 +127,16 @@ describe("QoL on Classic Era", function()
         T.same(Stubs.state().errors, {})
     end)
 
-    it("lists only the pages that change something on Classic Era", function()
+    it("lists only the pages that change something on Classic Era, under all five groups", function()
         local ns = start()
-        T.same(ns.SettingsPanel.window.order, { "automation", "interface", "chat", "mail", "actionBars",
-            "minimap", "worldMap", "viewport", "ring", "clickCast", "advanced" })
+        local window = ns.SettingsPanel.window
+        T.same(window.order, { "automation", "chat", "mail", "interface", "unitFrames",
+            "actionBars", "viewport", "minimap", "worldMap", "ring", "clickCast", "advanced" })
+        local groups = {}
+        for _, entry in ipairs(window.entries) do
+            if entry.group then groups[#groups + 1] = entry.label:GetText() end
+        end
+        T.same(groups, { "General", "Display", "Maps", "Input", "System" })
     end)
 
     it("leaves out the options Classic Era has nothing for", function()
@@ -140,12 +146,12 @@ describe("QoL on Classic Era", function()
             for _, c in ipairs(page.controls) do keys[c.key or c.command or "?"] = true end
         end
         -- The bag sort, the second mana bar of Forever's and retail's player frame, the addon
-        -- compartment, the player coordinates, guild banks, the controller's buff tooltips and back
-        -- buttons.
+        -- compartment, the player coordinates, the calendar button, guild banks, the controller's buff
+        -- tooltips and back buttons.
         for _, key in ipairs({ "sortOnOpen", "druidManaBar", "minimapCompartment",
-            "hideMinimapCoords", "minimapCoordsClassColor", "minimapCoordsOffsetX", "minimapCompartmentOffsetY",
-            "guildRepair", "hideBuffTooltips",
-            "controllerBackButtons", "hideMinimapCalendar" }) do
+            "minimapCoords", "minimapCoordsClassColor", "minimapCoordsSize", "minimapCoordsOffsetX",
+            "minimapCompartmentOffsetY", "minimapCalendar", "guildRepair", "hideBuffTooltips",
+            "controllerBackButtons" }) do
             T.falsy(keys[key], key)
         end
         T.truthy(keys.sellJunk)
@@ -153,10 +159,9 @@ describe("QoL on Classic Era", function()
         T.truthy(keys.minimapDayNight, "its time of day icon")
         T.truthy(keys.minimapTracking)
         local headers = {}
-        for _, header in ipairs(ns.SettingsPanel.pages.interface.headers) do headers[header.text] = true end
-        for _, header in ipairs(ns.SettingsPanel.pages.minimap.headers) do headers[header.text] = true end
+        for _, header in ipairs(ns.SettingsPanel.pages.automation.headers) do headers[header.text] = true end
+        for _, header in ipairs(ns.SettingsPanel.pages.unitFrames.headers) do headers[header.text] = true end
         T.falsy(headers[ns.L.SECTION_BAGS], "the Bags section")
-        T.falsy(headers[ns.L.SECTION_MINIMAP_COORDS], "the Coordinates section")
         T.truthy(headers[ns.L.SECTION_PLAYER_FRAME], "the Player frame section keeps its other row")
         T.same(Stubs.state().errors, {})
     end)

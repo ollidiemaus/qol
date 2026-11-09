@@ -8,8 +8,8 @@ Notes for working on the addon. What it does for players is in the [README](../R
 |---|---|
 | `Core/` | Namespace and printing (`Init`), the event frame and unit listeners (`Events`), saved options with defaults and change watchers (`Options`), the saved data's version and migrations, and the character key `name-realm` (`SavedData`), deferred changes (`Later`), the hidden holder for hidden frames (`Hider`), what the back buttons and the rings share (`Buttons`: an action slot's look, override bindings), our windows' frame (`Window`: the settings), `/qol` (`Slash`) and startup (`Lifecycle`) |
 | `Data/` | Static game data: `MapPins` (dungeon entrances, docks, portals; how it was made is at the top of the file) |
-| `Features/` | One file per feature: `Merchant`, `Quests`, `FasterAutoLoot`, `Tooltips`, `HideFrames` (also the chat buttons), `BuffTooltips` (the controller interface's tooltips for new buffs), `CombatLog`, `ChatClassColors`, `SortOnOpen`, `MailBookmarks` (tabs on the Send Mail tab), `ClassHealthBars`, `DruidManaBar` (mana in bear and cat form), `ScreenEdge` (Edit Mode frames past the screen edge), `Minimap` (shape, positions, class colors and font sizes around the minimap, and the FPS and ping text), `MapPins`, `Viewport`, `ActionBars`, `ButtonBorders`, `BarPaging`, `RankUpgrades` (spells on the bars follow a learned rank, Forever only), `BackButtons` (the controller back buttons, Forever only), `FollowingBars` (controller bars that change with the stance, Forever only), `TriggerToggle` (a trigger pressed keeps its controller bar on, Forever only), `RingEntries` (what can go on a ring or a click casting binding, and what a character has of it), `Ring`, `RingPicker` (the editors' list and spell book page, the Ring and Click casting pages'), `RingEditor` (the settings' Ring page, `/qol ring`), `ClickCast` (bindings on unit frames), `ClickCastEditor` (the settings' Click casting page, `/qol click`), `ReloadCommand`, `HiddenSettings` (the hidden settings on the Advanced settings page) and `HiddenSettingsProbe` (`/qol probe`) |
-| `UI/` | `SettingsPage.lua`, a settings page (two columns, or rows across the page, and key binding rows); `SettingsWindow.lua`, the window that `/qol` opens, with the list of pages; `InfoPage.lua`, the information page under Options > AddOns, with a button that opens the window; `Settings.lua`, the pages built with them, in the list's order |
+| `Features/` | One file per feature: `Merchant`, `Quests`, `FasterAutoLoot`, `Tooltips`, `HideFrames` (also the chat buttons), `BuffTooltips` (the controller interface's tooltips for new buffs), `CombatLog`, `ChatClassColors`, `SortOnOpen`, `MailBookmarks` (tabs on the Send Mail tab), `ClassHealthBars`, `DruidManaBar` (mana in bear and cat form), `ScreenEdge` (Edit Mode frames past the screen edge), `Minimap` (shape, positions, class colors and font sizes around the minimap, and the FPS and ping text), `MapPins`, `Viewport`, `ActionBars`, `ButtonBorders`, `BarPaging`, `RankUpgrades` (spells on the bars follow a learned rank, Forever only), `BackButtons` (the controller back buttons, Forever only), `FollowingBars` (controller bars that change with the stance, Forever only), `TriggerToggle` (a trigger pressed keeps its controller bar on, Forever only), `RingEntries` (what can go on a ring or a click casting binding, and what a character has of it), `Ring`, `RingPicker` (the editors' list and spell book page, the Ring and Click casting pages'), `RingEditor` (the settings' Ring page, `/qol ring`), `ClickCast` (bindings on unit frames), `ClickCastEditor` (the settings' Click casting page, `/qol click`), `ReloadCommand`, `HiddenSettings` (the hidden settings on the Graphics & Camera page) and `HiddenSettingsProbe` (`/qol probe`) |
+| `UI/` | `SettingsPage.lua`, a settings page (two columns, or rows across the page, tables, and key binding rows); `SettingsWindow.lua`, the window that `/qol` opens, with the list of pages in groups; `InfoPage.lua`, the information page under Options > AddOns, with a button that opens the window; `Settings.lua`, the pages built with them, in the list's order |
 | `Locales/` | English strings, German overrides |
 | `Media/` | `Icon.tga`, the addon list icon (the TOC's `IconTexture`, 128×128, 32-bit), and `Icon.svg`, its source (not packaged); `Zeppelin.tga`, `Tram.tga`, `MinimapSquareBorder.tga` and the rings' `Ring.tga`, `RingSpoke.tga`, `RingLit1.tga` to `RingLit12.tga` and `RingSlot.tga` (how they were made: [`dev/minimap.md`](dev/minimap.md), [`dev/rings.md`](dev/rings.md)); `AutoPotion.tga`, `AutoSetup.tga` and `Wayscribe.tga`, copies of the other addons' icons for the information page |
 | `tests/` | Specs run in plain Lua against `tests/wow_stubs.lua` |
@@ -29,12 +29,13 @@ Left: Target and Right: Menu, so it needs no migration), `followingBars` (each c
 controller bars, the slots handed out and the bars that didn't fit, by the same key; missing until first used, so it needs no
 migration), `probe` (the last `/qol probe`
 report, which nothing reads; missing until it first runs, so it needs no migration), and
-`version`, the layout's version (`Core/SavedData.lua`, now 2). On `ADDON_LOADED`, before anything
+`version`, the layout's version (`Core/SavedData.lua`, now 3). On `ADDON_LOADED`, before anything
 reads the file, `SavedData:Migrate` runs `MIGRATIONS[n]` for every version from the saved one up
 to `VERSION`, one at a time, and writes each version once its migration is done. A file without a
 version is the layout from before versions, which version 1 kept, so 0 to 1 only writes the
 number. Version 2 renamed the zone text's position `above`/`below` to the minimap elements' shared
-`top`/`bottom`.
+`top`/`bottom`. Version 3 turned `hideMinimapCoords` and `hideMinimapCalendar` into the coordinates'
+and the calendar button's Position (`hidden` where they were ticked) and dropped the old keys.
 A change to the layout raises `VERSION` and adds the migration that turns the old layout into the
 new one. A migration that fails (an error) stops there: the error goes to the game's error handler,
 the version stays at the last one that worked, and QoL loads as usual. So a migration works out
@@ -174,7 +175,7 @@ Each file holds the design notes of one part of the addon. Read the one for the 
 - [`dev/rings.md`](dev/rings.md): the rings: secure choice, saved data, the Ring page and its editor, the textures
 - [`dev/click-casting.md`](dev/click-casting.md): click casting: its engine, the unit frames it wraps, the Click casting page
 - [`dev/settings-window.md`](dev/settings-window.md): the settings window, page groups and layout, `UI/SettingsPage.lua` rows, the freezes from when the pages were in the game's settings
-- [`dev/advanced-settings.md`](dev/advanced-settings.md): the Advanced settings page and the hidden settings (CVars) it changes
+- [`dev/advanced-settings.md`](dev/advanced-settings.md): the Graphics & Camera page and the hidden settings (CVars) it changes
 - [`dev/map-pins.md`](dev/map-pins.md): the world map pins
 - [`dev/in-game.md`](dev/in-game.md): the in-game checklist, the hidden settings probe, cutscenes with the viewport
 

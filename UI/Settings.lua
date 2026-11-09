@@ -3,14 +3,15 @@ local L = ns.L
 local Options = ns.Options
 
 -- Quality of Life's settings: a window of our own (UI/SettingsWindow.lua), which /qol opens, with a
--- page for each part of the game: Automation, Interface, Chat, Mail, Action Bars, Minimap, World map
--- (on Forever's maps), Viewport, Ring, on Forever (which has the controller action bar) Controller,
--- and Advanced settings, the game's hidden settings.
+-- page for each part of the game, in groups: General (Automation, Chat, Mail), Display (Interface,
+-- Unit Frames, Action Bars, Viewport), Maps (Minimap, World map on Forever's maps), Input (Ring, Click
+-- casting, Controller on Forever, which has the controller action bar) and System (Graphics &
+-- Camera, the game's hidden settings).
 -- Under Options > AddOns there's only the information page (UI/InfoPage.lua), with a button that
 -- opens the window. The game's settings have nothing of ours to change: on Forever, with the
 -- controller interface on, the game stopped responding now and then when they closed after a
 -- change (see docs/dev/settings-window.md). The pages read and write ns.Options, and the features react
--- through Options:Watch; the Advanced settings page reads and writes the game's own values through
+-- through Options:Watch; the Graphics & Camera page reads and writes the game's own values through
 -- ns.HiddenSettings.
 local SettingsPanel = {}
 ns.SettingsPanel = SettingsPanel
@@ -22,11 +23,7 @@ local function is(key)
     return function() return Options:Get(key) == true end
 end
 
-local function isNot(key)
-    return function() return Options:Get(key) ~= true end
-end
-
--- Automation page: what's done for you at merchants, quest givers and loot.
+-- Automation page: what's done for you at merchants, with your bags, at quest givers and with loot.
 local function buildAutomation(page)
     page:Header("left", L.SECTION_MERCHANT)
     page:Checkbox("left", "sellJunk", L.SELL_JUNK, L.SELL_JUNK_TIP)
@@ -37,6 +34,12 @@ local function buildAutomation(page)
             { indent = true, enabled = is("autoRepair") })
     end
 
+    -- Classic Era has no C_Container sort.
+    if ns.SortOnOpen.IsAvailable() then
+        page:Header("left", L.SECTION_BAGS)
+        page:Checkbox("left", "sortOnOpen", L.SORT_ON_OPEN, L.SORT_ON_OPEN_TIP)
+    end
+
     page:Header("right", L.SECTION_QUESTS)
     page:Checkbox("right", "questAccept", L.QUEST_ACCEPT, L.QUEST_ACCEPT_TIP)
     page:Checkbox("right", "questTurnIn", L.QUEST_TURN_IN, L.QUEST_TURN_IN_TIP)
@@ -45,24 +48,11 @@ local function buildAutomation(page)
     page:Checkbox("right", "fasterAutoLoot", L.FASTER_AUTO_LOOT, L.FASTER_AUTO_LOOT_TIP)
 end
 
--- Interface page: the bars to hide, the bags and the player frame on the left, tooltips and
--- health bars on the right.
+-- Interface page: the bars to hide and Edit Mode on the left, tooltips on the right.
 local function buildInterface(page)
     page:Header("left", L.SECTION_HIDE)
     page:Checkbox("left", "hideMicroMenu", L.HIDE_MICRO_MENU, L.HIDE_MICRO_MENU_TIP)
     page:Checkbox("left", "hideBagsBar", L.HIDE_BAGS_BAR, L.HIDE_BAGS_BAR_TIP)
-
-    -- Classic Era has neither C_Container's sort nor the player frame the druid mana bar is drawn on.
-    if ns.SortOnOpen.IsAvailable() then
-        page:Header("left", L.SECTION_BAGS)
-        page:Checkbox("left", "sortOnOpen", L.SORT_ON_OPEN, L.SORT_ON_OPEN_TIP)
-    end
-
-    page:Header("left", L.SECTION_PLAYER_FRAME)
-    if ns.DruidManaBar.IsAvailable() then
-        page:Checkbox("left", "druidManaBar", L.DRUID_MANA_BAR, L.DRUID_MANA_BAR_TIP)
-    end
-    page:Checkbox("left", "hidePortraitHitText", L.HIDE_PORTRAIT_HIT_TEXT, L.HIDE_PORTRAIT_HIT_TEXT_TIP)
 
     page:Header("left", L.SECTION_EDIT_MODE)
     page:Checkbox("left", "pastScreenEdge", L.PAST_SCREEN_EDGE, L.PAST_SCREEN_EDGE_TIP)
@@ -70,6 +60,16 @@ local function buildInterface(page)
     page:Header("right", L.SECTION_TOOLTIPS)
     page:Checkbox("right", "tooltipIDs", L.TOOLTIP_IDS, L.TOOLTIP_IDS_TIP)
     page:Checkbox("right", "tooltipSellPrice", L.TOOLTIP_SELL_PRICE, L.TOOLTIP_SELL_PRICE_TIP)
+end
+
+-- Unit Frames page: the player frame on the left, the health bars in class color on the right.
+local function buildUnitFrames(page)
+    page:Header("left", L.SECTION_PLAYER_FRAME)
+    -- Classic Era's player frame has no art for the druid mana bar.
+    if ns.DruidManaBar.IsAvailable() then
+        page:Checkbox("left", "druidManaBar", L.DRUID_MANA_BAR, L.DRUID_MANA_BAR_TIP)
+    end
+    page:Checkbox("left", "hidePortraitHitText", L.HIDE_PORTRAIT_HIT_TEXT, L.HIDE_PORTRAIT_HIT_TEXT_TIP)
 
     page:Header("right", L.SECTION_UNIT_FRAMES)
     page:Checkbox("right", "classColorPlayer", L.CLASS_COLOR_PLAYER, L.CLASS_COLOR_TIP)
@@ -124,23 +124,21 @@ local function fontSizes()
     return choices
 end
 
--- An element's offset row.
-local function offsetRow(page, column, key, tooltip, options)
-    local Layout = ns.MinimapLayout
-    local x, y = Layout.OffsetKeys(key)
-    options = options or {}
-    options.firstCaption, options.secondCaption = L.MINIMAP_OFFSET_X, L.MINIMAP_OFFSET_Y
-    page:NumberPair(column, x, y, L.MINIMAP_OFFSET, -Layout.MAX_OFFSET, Layout.MAX_OFFSET, tooltip, options)
-end
-
--- Whether a minimap element isn't hidden, for the rows that only apply while it shows.
+-- Whether a minimap element isn't hidden, for what only applies while it shows.
 local function shown(key)
     return function() return Options:Get(key) ~= "hidden" end
 end
 
--- Minimap page: three pairs of sections side by side, so their headers line up, each pair about as
--- high on both sides. Any other pairing takes more of the page's height (docs/dev/minimap.md).
+-- The minimap table's columns: the elements' names, then these.
+local POSITION, FONT_SIZE, CLASS_COLOR, OFFSET_X, OFFSET_Y = 2, 3, 4, 5, 6
+
+-- Minimap page: the Shape section, then a table across the page with a line for each element around
+-- the minimap: where it goes and, while it isn't hidden, a text's font size and class color and how
+-- far it's shifted from its spot. An element's extra setting is on an indented line below it, there
+-- only while it applies. Classic Era has no coordinates, addon compartment or calendar button, retail
+-- no day and night icon.
 local function buildMinimap(page)
+    local Layout = ns.MinimapLayout
     page:Header("left", L.SECTION_MINIMAP_SHAPE)
     page:Checkbox("left", "squareMinimap", L.SQUARE_MINIMAP, L.SQUARE_MINIMAP_TIP)
     page:Dropdown("left", "squareMinimapBorder", L.SQUARE_MINIMAP_BORDER, {
@@ -148,84 +146,89 @@ local function buildMinimap(page)
         { value = "black", label = L.BORDER_BLACK },
     }, L.SQUARE_MINIMAP_BORDER_TIP, { indent = true, enabled = is("squareMinimap") })
 
-    -- Classic Era shows no coordinates under the minimap.
-    if ns.MinimapLayout.HasCoords() then
-        page:Header("right", L.SECTION_MINIMAP_COORDS)
-        page:Checkbox("right", "minimapCoordsClassColor", L.MINIMAP_CLASS_COLOR, L.MINIMAP_COORDS_CLASS_COLOR_TIP,
-            { enabled = isNot("hideMinimapCoords") })
-        page:Checkbox("right", "hideMinimapCoords", L.HIDE_MINIMAP_COORDS, L.HIDE_MINIMAP_COORDS_TIP)
-        offsetRow(page, "right", "minimapCoords", L.MINIMAP_COORDS_OFFSET_TIP, { enabled = isNot("hideMinimapCoords") })
-    end
-    page:Align()
-
-    page:Header("left", L.SECTION_MINIMAP_CLOCK)
-    page:Dropdown("left", "minimapClock", L.MINIMAP_POSITION, positions("minimapClock"), L.MINIMAP_POSITION_TIP)
-    local clockShown = shown("minimapClock")
-    page:Checkbox("left", "minimapClockClassColor", L.MINIMAP_CLASS_COLOR, L.MINIMAP_CLOCK_CLASS_COLOR_TIP,
-        { enabled = clockShown })
-    page:Dropdown("left", "minimapClockSize", L.FONT_SIZE, fontSizes(), L.MINIMAP_CLOCK_SIZE_TIP,
-        { enabled = clockShown })
-    offsetRow(page, "left", "minimapClock", L.MINIMAP_OFFSET_TIP, { enabled = clockShown })
-
-    page:Header("right", L.SECTION_MINIMAP_ZONE_TEXT)
-    page:Dropdown("right", "minimapZoneText", L.MINIMAP_POSITION, positions("minimapZoneText"),
-        L.MINIMAP_ZONE_TEXT_TIP)
-    page:Checkbox("right", "hideMinimapZoneTextFrame", L.HIDE_MINIMAP_ZONE_TEXT_FRAME,
-        L.HIDE_MINIMAP_ZONE_TEXT_FRAME_TIP,
-        { indent = true, enabled = function() return Options:Get("minimapZoneText") == "default" end })
-    local zoneTextShown = shown("minimapZoneText")
-    page:Checkbox("right", "minimapZoneTextClassColor", L.MINIMAP_CLASS_COLOR, L.MINIMAP_ZONE_TEXT_CLASS_COLOR_TIP,
-        { enabled = zoneTextShown })
-    page:Dropdown("right", "minimapZoneTextSize", L.FONT_SIZE, fontSizes(), L.MINIMAP_ZONE_TEXT_SIZE_TIP,
-        { enabled = zoneTextShown })
-    offsetRow(page, "right", "minimapZoneText", L.MINIMAP_ZONE_TEXT_OFFSET_TIP, { enabled = zoneTextShown })
-    page:Align()
-
-    page:Header("left", L.SECTION_MINIMAP_BUTTONS)
-    local function buttonRows(key, label, tooltip)
-        page:Dropdown("left", key, label, positions(key), tooltip)
-        offsetRow(page, "left", key, L.MINIMAP_OFFSET_TIP, { indent = true, enabled = shown(key) })
-    end
-    -- Classic Era has no addon compartment.
-    if ns.MinimapLayout.HasCompartment() then
-        buttonRows("minimapCompartment", L.MINIMAP_COMPARTMENT, L.MINIMAP_POSITION_TIP)
-    end
-    buttonRows("minimapTracking", L.MINIMAP_TRACKING, L.MINIMAP_INSIDE_POSITION_TIP)
-    -- Forever's day and night icon, or Classic Era's time of day icon; retail has neither.
-    if ns.MinimapLayout.HasDayNight() then
-        buttonRows("minimapDayNight", L.MINIMAP_DAY_NIGHT, L.MINIMAP_INSIDE_POSITION_TIP)
-    end
-    if ns.MinimapLayout.HasCalendar() then
-        page:Checkbox("left", "hideMinimapCalendar", L.HIDE_MINIMAP_CALENDAR, L.HIDE_MINIMAP_CALENDAR_TIP)
+    local elements = page:Table({
+        { caption = L.MINIMAP_ELEMENT },
+        { caption = L.MINIMAP_POSITION, width = 150 },
+        { caption = L.FONT_SIZE, width = 84 },
+        { caption = L.CLASS_COLOR, width = 76 },
+        { caption = L.MINIMAP_OFFSET_X, width = ns.SettingsPage.NUMBER_FIELD_WIDTH },
+        { caption = L.MINIMAP_OFFSET_Y, width = ns.SettingsPage.NUMBER_FIELD_WIDTH },
+    })
+    -- tips: position, and for a text size and color, and offset for an element that can be shifted.
+    local function element(key, label, tips)
+        local isShown = shown(key)
+        local cells = { [POSITION] = { kind = "dropdown", key = key, choices = positions(key), tooltip = tips.position } }
+        if tips.size then
+            cells[FONT_SIZE] = { kind = "dropdown", key = key .. "Size", choices = fontSizes(), tooltip = tips.size,
+                shown = isShown }
+            cells[CLASS_COLOR] = { kind = "checkbox", key = key .. "ClassColor", tooltip = tips.color, shown = isShown }
+        end
+        if tips.offset then
+            local x, y = Layout.OffsetKeys(key)
+            cells[OFFSET_X] = { kind = "number", key = x, min = -Layout.MAX_OFFSET, max = Layout.MAX_OFFSET,
+                tooltip = tips.offset, shown = isShown }
+            cells[OFFSET_Y] = { kind = "number", key = y, min = -Layout.MAX_OFFSET, max = Layout.MAX_OFFSET,
+                tooltip = tips.offset, shown = isShown }
+        end
+        elements:Line(label, tips.position, cells)
     end
 
-    page:Header("right", L.SECTION_MINIMAP_PERFORMANCE)
-    page:Dropdown("right", "minimapPerformance", L.MINIMAP_POSITION, positions("minimapPerformance"),
-        L.MINIMAP_PERFORMANCE_TIP)
-    local performanceShown = shown("minimapPerformance")
-    page:Dropdown("right", "minimapPerformanceShow", L.MINIMAP_PERFORMANCE_SHOW, {
-        { value = "both", label = L.PERFORMANCE_SHOW_BOTH },
-        { value = "fps", label = L.PERFORMANCE_SHOW_FPS },
-        { value = "ping", label = L.PERFORMANCE_SHOW_PING },
-    }, L.MINIMAP_PERFORMANCE_SHOW_TIP, { enabled = performanceShown })
-    page:Checkbox("right", "minimapPerformanceClassColor", L.MINIMAP_CLASS_COLOR, L.MINIMAP_PERFORMANCE_CLASS_COLOR_TIP,
-        { enabled = performanceShown })
-    page:Dropdown("right", "minimapPerformanceSize", L.FONT_SIZE, fontSizes(), L.MINIMAP_PERFORMANCE_SIZE_TIP,
-        { enabled = performanceShown })
-    offsetRow(page, "right", "minimapPerformance", L.MINIMAP_OFFSET_TIP, { enabled = performanceShown })
+    element("minimapZoneText", L.MINIMAP_ZONE_TEXT, { position = L.MINIMAP_ZONE_TEXT_TIP,
+        size = L.MINIMAP_ZONE_TEXT_SIZE_TIP, color = L.MINIMAP_ZONE_TEXT_CLASS_COLOR_TIP,
+        offset = L.MINIMAP_ZONE_TEXT_OFFSET_TIP })
+    elements:Line(L.HIDE_MINIMAP_ZONE_TEXT_FRAME, L.HIDE_MINIMAP_ZONE_TEXT_FRAME_TIP, {
+        [POSITION] = { kind = "checkbox", key = "hideMinimapZoneTextFrame", tooltip = L.HIDE_MINIMAP_ZONE_TEXT_FRAME_TIP },
+    }, { indent = true, shown = function() return Options:Get("minimapZoneText") == "default" end })
+    element("minimapClock", L.MINIMAP_CLOCK, { position = L.MINIMAP_POSITION_TIP, size = L.MINIMAP_CLOCK_SIZE_TIP,
+        color = L.MINIMAP_CLOCK_CLASS_COLOR_TIP, offset = L.MINIMAP_OFFSET_TIP })
+    if Layout.HasCoords() then
+        element("minimapCoords", L.MINIMAP_COORDS, { position = L.MINIMAP_COORDS_TIP, size = L.MINIMAP_COORDS_SIZE_TIP,
+            color = L.MINIMAP_COORDS_CLASS_COLOR_TIP, offset = L.MINIMAP_COORDS_OFFSET_TIP })
+    end
+    element("minimapPerformance", L.MINIMAP_PERFORMANCE, { position = L.MINIMAP_PERFORMANCE_TIP,
+        size = L.MINIMAP_PERFORMANCE_SIZE_TIP, color = L.MINIMAP_PERFORMANCE_CLASS_COLOR_TIP,
+        offset = L.MINIMAP_OFFSET_TIP })
+    elements:Line(L.MINIMAP_PERFORMANCE_SHOW, L.MINIMAP_PERFORMANCE_SHOW_TIP, {
+        [POSITION] = { kind = "dropdown", key = "minimapPerformanceShow", tooltip = L.MINIMAP_PERFORMANCE_SHOW_TIP,
+            choices = {
+                { value = "both", label = L.PERFORMANCE_SHOW_BOTH },
+                { value = "fps", label = L.PERFORMANCE_SHOW_FPS },
+                { value = "ping", label = L.PERFORMANCE_SHOW_PING },
+            } },
+    }, { indent = true, shown = shown("minimapPerformance") })
+    if Layout.HasCompartment() then
+        element("minimapCompartment", L.MINIMAP_COMPARTMENT, { position = L.MINIMAP_POSITION_TIP,
+            offset = L.MINIMAP_OFFSET_TIP })
+    end
+    element("minimapTracking", L.MINIMAP_TRACKING, { position = L.MINIMAP_INSIDE_POSITION_TIP,
+        offset = L.MINIMAP_OFFSET_TIP })
+    -- Forever's day and night icon, or Classic Era's time of day icon.
+    if Layout.HasDayNight() then
+        element("minimapDayNight", L.MINIMAP_DAY_NIGHT, { position = L.MINIMAP_INSIDE_POSITION_TIP,
+            offset = L.MINIMAP_OFFSET_TIP })
+    end
+    if Layout.HasCalendar() then
+        element("minimapCalendar", L.MINIMAP_CALENDAR, { position = L.MINIMAP_CALENDAR_TIP })
+    end
 end
 
--- Action bar page: the two flips side by side for each bar, then the paging keys and the buttons'
--- look, and on clients with spell ranks the rank upgrades.
+-- Action bar page: a table with both flips for each bar, then the paging keys and the buttons' look
+-- side by side, and on clients with spell ranks the rank upgrades.
 local function buildActionBars(page)
     local ActionBars = ns.ActionBars
-    page:Header("left", L.SECTION_FLIP_VERTICAL, L.FLIP_VERTICAL_TIP)
-    page:Header("right", L.SECTION_FLIP_HORIZONTAL, L.FLIP_HORIZONTAL_TIP)
+    local VERTICAL, HORIZONTAL = 2, 3 -- the table's columns after the bars' names
+    local flips = page:Table({
+        { caption = L.FLIP_BAR, width = 200 },
+        { caption = L.FLIP_VERTICAL, width = 100, tooltip = L.FLIP_VERTICAL_TIP },
+        { caption = L.FLIP_HORIZONTAL, width = 100, tooltip = L.FLIP_HORIZONTAL_TIP },
+    }, L.SECTION_FLIP)
     for _, bar in ipairs(ActionBars.BARS) do
-        page:Checkbox("left", ActionBars.VerticalKey(bar.frame), bar.label(), L.FLIP_VERTICAL_TIP)
-        page:Checkbox("right", ActionBars.HorizontalKey(bar.frame), bar.label(), L.FLIP_HORIZONTAL_TIP)
+        flips:Line(bar.label(), nil, {
+            [VERTICAL] = { kind = "checkbox", key = ActionBars.VerticalKey(bar.frame), tooltip = L.FLIP_VERTICAL_TIP },
+            [HORIZONTAL] = { kind = "checkbox", key = ActionBars.HorizontalKey(bar.frame),
+                tooltip = L.FLIP_HORIZONTAL_TIP },
+        })
     end
-    page:Align()
     page:Header("left", L.SECTION_BAR_PAGING)
     page:Checkbox("left", "disableBarPaging", L.DISABLE_BAR_PAGING, L.DISABLE_BAR_PAGING_TIP)
     page:Header("right", L.SECTION_BUTTONS)
@@ -403,7 +406,7 @@ local function gameSliderResetText(setting, known)
     return text .. " " .. L.ALSO_RESETS:format(list)
 end
 
--- Advanced settings page: what the game's hidden settings are, then a section of rows across the
+-- Graphics & Camera page: what the game's hidden settings are, then a section of rows across the
 -- page for each part of the game (Features/HiddenSettings.lua), those this client knows.
 local function buildAdvanced(page)
     page:Text("wide", L.ADVANCED_INTRO)
@@ -459,37 +462,55 @@ local function buildAdvanced(page)
     ns.Events:On("PLAYER_REGEN_ENABLED", function() combatChanged(false) end)
 end
 
--- The window's pages, in the order of its list. available: whether the page has anything to change
--- on this client; defaults: false for a page without a Defaults button.
-local PAGES = {
-    { key = "automation", title = L.CATEGORY_AUTOMATION, build = buildAutomation },
-    { key = "interface", title = L.CATEGORY_INTERFACE, build = buildInterface },
-    { key = "chat", title = L.CATEGORY_CHAT, build = buildChat },
-    { key = "mail", title = L.CATEGORY_MAIL, build = buildMail },
-    { key = "actionBars", title = L.CATEGORY_ACTION_BARS, build = buildActionBars },
-    { key = "minimap", title = L.CATEGORY_MINIMAP, build = buildMinimap },
-    -- Only where there are pins to show: they are on Forever's maps.
-    { key = "worldMap", title = L.CATEGORY_WORLD_MAP, build = buildWorldMap,
-        available = function() return ns.MapPins.IsAvailable() end },
-    { key = "viewport", title = L.CATEGORY_VIEWPORT, build = buildViewport },
-    -- Its only option is the switch: no Defaults button, as resetting it would turn the rings off.
-    { key = "ring", title = L.CATEGORY_RING, build = buildRing, defaults = false },
-    -- Likewise: resetting its switch would turn click casting off.
-    { key = "clickCast", title = L.CATEGORY_CLICK_CAST, build = buildClickCast, defaults = false },
-    -- Only Forever has the controller action bar; on retail there's nothing for it to change.
-    { key = "controller", title = L.CATEGORY_CONTROLLER, build = buildController,
-        available = function() return GamepadMainActionBarFrame ~= nil end },
-    -- Only where the client knows a hidden setting. Its Defaults button puts them back to the game's
-    -- defaults.
-    { key = "advanced", title = L.CATEGORY_ADVANCED, build = buildAdvanced,
-        available = function() return #ns.HiddenSettings.Known() > 0 end },
+-- The window's list: its groups and their pages, in order. Page keys are what /qol and the other
+-- pages open a page by, wherever its group is. A page's available: whether it has anything to change
+-- on this client; defaults: false for a page without a Defaults button. A group none of whose pages
+-- the client has is left out.
+local GROUPS = {
+    { title = L.GROUP_GENERAL, pages = {
+        { key = "automation", title = L.CATEGORY_AUTOMATION, build = buildAutomation },
+        { key = "chat", title = L.CATEGORY_CHAT, build = buildChat },
+        { key = "mail", title = L.CATEGORY_MAIL, build = buildMail },
+    } },
+    { title = L.GROUP_DISPLAY, pages = {
+        { key = "interface", title = L.CATEGORY_INTERFACE, build = buildInterface },
+        { key = "unitFrames", title = L.CATEGORY_UNIT_FRAMES, build = buildUnitFrames },
+        { key = "actionBars", title = L.CATEGORY_ACTION_BARS, build = buildActionBars },
+        { key = "viewport", title = L.CATEGORY_VIEWPORT, build = buildViewport },
+    } },
+    { title = L.GROUP_MAPS, pages = {
+        { key = "minimap", title = L.CATEGORY_MINIMAP, build = buildMinimap },
+        -- Only where there are pins to show: they are on Forever's maps.
+        { key = "worldMap", title = L.CATEGORY_WORLD_MAP, build = buildWorldMap,
+            available = function() return ns.MapPins.IsAvailable() end },
+    } },
+    { title = L.GROUP_INPUT, pages = {
+        -- Its only option is the switch: no Defaults button, as resetting it would turn the rings off.
+        { key = "ring", title = L.CATEGORY_RING, build = buildRing, defaults = false },
+        -- Likewise: resetting its switch would turn click casting off.
+        { key = "clickCast", title = L.CATEGORY_CLICK_CAST, build = buildClickCast, defaults = false },
+        -- Only Forever has the controller action bar; on retail there's nothing for it to change.
+        { key = "controller", title = L.CATEGORY_CONTROLLER, build = buildController,
+            available = function() return GamepadMainActionBarFrame ~= nil end },
+    } },
+    { title = L.GROUP_SYSTEM, pages = {
+        -- Only where the client knows a hidden setting. Its Defaults button puts them back to the
+        -- game's defaults.
+        { key = "advanced", title = L.CATEGORY_ADVANCED, build = buildAdvanced,
+            available = function() return #ns.HiddenSettings.Known() > 0 end },
+    } },
 }
 
 function SettingsPanel:Init()
     self.window = ns.SettingsWindow.New()
     self.pages = {}
-    for _, info in ipairs(PAGES) do
-        if not info.available or info.available() then
+    for _, group in ipairs(GROUPS) do
+        local available = {}
+        for _, info in ipairs(group.pages) do
+            if not info.available or info.available() then available[#available + 1] = info end
+        end
+        if #available > 0 then self.window:AddGroup(group.title) end
+        for _, info in ipairs(available) do
             local page = ns.SettingsPage.New(info.title, { defaults = info.defaults })
             info.build(page)
             self.window:Add(info.key, info.title, page)

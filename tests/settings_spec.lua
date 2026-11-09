@@ -73,13 +73,24 @@ local function show(page)
     error("not a page of the window")
 end
 
--- The pages' names in the window's list, in its order.
+-- The window's list as it reads from the top: a group's header as "[name]", a page by its name.
 local function listed(ns)
     local window = ns.SettingsPanel.window
     local names = {}
-    for _, key in ipairs(window.order) do names[#names + 1] = window.buttons[key].label:GetText() end
+    for _, entry in ipairs(window.entries) do
+        if entry.group then
+            names[#names + 1] = "[" .. entry.label:GetText() .. "]"
+        else
+            names[#names + 1] = window.buttons[entry.key].label:GetText()
+        end
+    end
     return names
 end
+
+-- The list on a client without Forever's controller action bar.
+local LISTED = { "[General]", "Automation", "Chat", "Mail", "[Display]", "Interface", "Unit Frames", "Action Bars",
+    "Viewport", "[Maps]", "Minimap", "World map", "[Input]", "Ring", "Click casting", "[System]",
+    "Graphics & Camera" }
 
 local function radio(c, text)
     c.widget:GenerateMenu()
@@ -87,6 +98,37 @@ local function radio(c, text)
         if entry.text == text then return entry end
     end
     error("no menu entry " .. text)
+end
+
+-- A table of a page as it reads: its captions, then each line shown, by its name (after two spaces for
+-- a line that belongs to the one above it, indented) and what each column has: a control's kind, or
+-- "-" for nothing.
+local function tableRows(page, index)
+    local settingsTable = page.tables[index or 1]
+    local captions = {}
+    for _, caption in ipairs(settingsTable.captions) do captions[#captions + 1] = caption:GetText() end
+    local rows = { table.concat(captions, " | ") }
+    for _, line in ipairs(settingsTable.lines) do
+        if line.frame:IsShown() then
+            local name = line.label:GetText()
+            if line.label:PointFor("LEFT")[4] > 7 then name = "  " .. name end
+            local row = { name }
+            for column = 2, #settingsTable.captions do
+                local c = line.cells[column]
+                row[#row + 1] = c and c.row:IsShown() and c.kind or "-"
+            end
+            rows[#rows + 1] = table.concat(row, " | ")
+        end
+    end
+    return rows
+end
+
+-- The top of a table's line, by its name.
+local function lineTop(page, name)
+    for _, line in ipairs(page.tables[1].lines) do
+        if line.label:GetText() == name then return -line.frame:PointFor("TOPLEFT")[5] end
+    end
+    error("no line " .. name)
 end
 
 describe("settings pages", function()
@@ -99,8 +141,7 @@ describe("settings pages", function()
         T.eq(QoLSettings, window.frame)
         T.eq(QoLSettings.template, "PortraitFrameFlatTemplate")
         T.eq(QoLSettings.titleText, "Quality of Life")
-        T.same(listed(ns), { "Automation", "Interface", "Chat", "Mail", "Action Bars", "Minimap", "World map",
-            "Viewport", "Ring", "Click casting", "Advanced settings" })
+        T.same(listed(ns), LISTED)
         for key, page in pairs(pages(ns)) do
             T.eq(page.frame:GetParent(), window.container, key)
         end
@@ -116,6 +157,67 @@ describe("settings pages", function()
         end
         T.truthy(atlases.Options_InnerFrame, "the inner frame")
         T.truthy(atlases.Options_CategoryHeader_1, "the list's header")
+    end)
+
+    it("heads each group with the game's category header, its pages below it, in the game's list spacing", function()
+        local ns = start()
+        local window = ns.SettingsPanel.window
+        local arts, last = {}, nil
+        for _, entry in ipairs(window.entries) do
+            local top
+            if entry.group then
+                top = -entry.header:PointFor("TOPLEFT")[5]
+                arts[#arts + 1] = entry.header:GetAtlas()
+                T.eq(entry.label:GetFontObject(), "GameFontHighlightMedium")
+                -- The game's list leaves a spacer of 18 between groups.
+                if last then T.eq(top, last + 2 + 18, entry.label:GetText() .. " after a spacer") end
+                last = top + 30
+            else
+                top = -window.buttons[entry.key]:PointFor("TOPLEFT")[5]
+                T.eq(top, last + 2, entry.key .. " right below")
+                last = top + 20
+            end
+        end
+        -- The game's list takes its three header arts in turn.
+        T.same(arts, { "Options_CategoryHeader_1", "Options_CategoryHeader_2", "Options_CategoryHeader_3",
+            "Options_CategoryHeader_1", "Options_CategoryHeader_2" })
+        T.truthy(last <= window.PAGE_HEIGHT, "the list fits the window: " .. last)
+    end)
+
+    it("groups the pages in German too", function()
+        local ns = Stubs.LoadAddon({ locale = "deDE" })
+        Stubs.InstallSettings()
+        Stubs.Login()
+        T.same(listed(ns), { "[Allgemein]", "Automatisierung", "Chat", "Post", "[Darstellung]", "Oberfläche",
+            "Einheitenfenster", "Aktionsleisten", "Viewport", "[Karten]", "Minimap", "Weltkarte", "[Eingabe]", "Ring",
+            "Klickzauber", "[System]", "Grafik & Kamera" })
+    end)
+
+    it("lists on retail only the groups it has pages for, Maps with only the Minimap", function()
+        local ns = Stubs.LoadAddon({ client = "retail" })
+        Stubs.InstallSettings()
+        Stubs.state().maps = {}
+        Stubs.Login()
+        T.same(listed(ns), { "[General]", "Automation", "Chat", "Mail", "[Display]", "Interface", "Unit Frames",
+            "Action Bars", "Viewport", "[Maps]", "Minimap", "[Input]", "Ring", "Click casting", "[System]",
+            "Graphics & Camera" })
+    end)
+
+    it("leaves out a group none of whose pages the client has", function()
+        local ns = Stubs.LoadAddon()
+        Stubs.InstallSettings()
+        for _, setting in ipairs(ns.HiddenSettings.SETTINGS) do Stubs.state().cvars[setting.cvar] = nil end
+        Stubs.Login()
+        local names = listed(ns)
+        T.eq(names[#names], "Click casting", "no System group without a hidden setting")
+        T.eq(pages(ns).advanced, nil)
+    end)
+
+    it("opens a page by its old key, wherever its group put it", function()
+        local ns = start()
+        ns.SettingsPanel:Open("advanced")
+        T.truthy(pages(ns).advanced.frame:IsShown())
+        T.eq(pages(ns).advanced.title, "Graphics & Camera")
     end)
 
     it("shows one page at a time, the first when it opens, its button lit in the list", function()
@@ -185,8 +287,9 @@ describe("settings pages", function()
     it("adds a Controller page on Forever, for the controller action bar", function()
         local ns = start(nil, true)
         local names = listed(ns)
-        T.eq(#names, 12)
-        T.eq(names[11], "Controller")
+        T.eq(#names, #LISTED + 1)
+        T.same({ names[14], names[15], names[16], names[17] }, { "Ring", "Click casting", "Controller", "[System]" },
+            "under Input")
         T.same(headers(pages(ns).controller, "left"), { "Back buttons", "Triggers" })
         T.same(headers(pages(ns).controller, "right"), { "Buffs", "Bars that follow the stance" })
         T.same(headers(pages(ns).controller, "wide"), { "Keys" })
@@ -225,26 +328,38 @@ describe("settings pages", function()
 
     it("puts each page's sections in two columns", function()
         local ns = start()
-        T.same(headers(pages(ns).automation, "left"), { "Merchant" })
+        T.same(headers(pages(ns).automation, "left"), { "Merchant", "Bags" })
         T.same(headers(pages(ns).automation, "right"), { "Quests", "Loot" })
-        T.same(headers(pages(ns).interface, "left"), { "Hide", "Bags", "Player frame", "Edit Mode" })
-        T.same(headers(pages(ns).interface, "right"), { "Tooltips", "Health bars in class color" })
+        T.same(headers(pages(ns).interface, "left"), { "Hide", "Edit Mode" })
+        T.same(headers(pages(ns).interface, "right"), { "Tooltips" })
+        T.same(headers(pages(ns).unitFrames, "left"), { "Player frame" })
+        T.same(headers(pages(ns).unitFrames, "right"), { "Health bars in class color" })
         T.same(headers(pages(ns).chat, "left"), { "Chat window" })
         T.same(headers(pages(ns).chat, "right"), { "Chat commands" })
         T.same(headers(pages(ns).mail, "left"), { "Bookmarks" })
-        local minimap = pages(ns).minimap
-        T.same(headers(minimap, "left"), { "Shape", "Clock", "Buttons" })
-        T.same(headers(minimap, "right"), { "Coordinates", "Zone text", "FPS and ping" })
+    end)
+
+    it("puts each option of the old Interface page on the page now named for it", function()
+        local ns = start()
+        for key, page in pairs({ hideMicroMenu = "interface", hideBagsBar = "interface", pastScreenEdge = "interface",
+            tooltipIDs = "interface", tooltipSellPrice = "interface", druidManaBar = "unitFrames",
+            hidePortraitHitText = "unitFrames", classColorPlayer = "unitFrames", classColorTarget = "unitFrames",
+            classColorTargetOfTarget = "unitFrames", classColorFocus = "unitFrames",
+            classColorFocusTarget = "unitFrames", sortOnOpen = "automation" }) do
+            local _, on = control(ns, key)
+            T.eq(on, pages(ns)[page], key .. " on " .. page)
+        end
+        T.eq(pages(ns).unitFrames.title, "Unit Frames")
     end)
 
     it("offers only Sort on open in the Bags section", function()
         local ns = start()
         local left = {}
-        for _, c in ipairs(pages(ns).interface.controls) do
+        for _, c in ipairs(pages(ns).automation.controls) do
             if c.column == "left" then left[#left + 1] = c.key end
         end
-        -- Between the Hide section's last row and the Player frame section's first.
-        T.same({ left[2], left[3], left[4] }, { "hideBagsBar", "sortOnOpen", "druidManaBar" })
+        -- Below the Merchant section.
+        T.eq(left[#left], "sortOnOpen")
         T.eq(control(ns, "sortOnOpen").text:GetText(), "Sort on open")
         T.eq(control(ns, "showCombinedBagSort"), nil)
         T.eq(control(ns, "combinedBagTopLeft"), nil)
@@ -406,15 +521,18 @@ describe("settings pages", function()
         T.eq(guild.text.textColor[1], 1)
     end)
 
-    it("writes every name in the same font, also the indented ones", function()
+    it("writes every name in the same font, also the indented ones and a table's lines", function()
         local ns = start()
         for _, page in pairs(pages(ns)) do
             for _, c in ipairs(page.controls) do
-                T.eq(c.text.font, "GameFontNormal", c.key)
+                -- A table's cells have their line's name.
+                if c.text then T.eq(c.text.font, "GameFontNormal", c.key) end
+            end
+            for _, settingsTable in ipairs(page.tables) do
+                for _, line in ipairs(settingsTable.lines) do T.eq(line.label.font, "GameFontNormal", line.label:GetText()) end
             end
         end
     end)
-
     it("offers the zone text positions in a dropdown", function()
         local ns = start()
         local c, page = control(ns, "minimapZoneText")
@@ -432,18 +550,18 @@ describe("settings pages", function()
         T.eq(ns.Options:Get("minimapZoneText"), "insideTop")
     end)
 
-    it("greys out the zone text's color and font size while it is hidden", function()
+    it("hides the zone text's font size, class color and offsets while it is hidden", function()
         local ns = start()
         local _, page = control(ns, "minimapZoneText")
         show(page)
-        local keys = { "minimapZoneTextClassColor", "minimapZoneTextSize" }
-        for _, key in ipairs(keys) do T.truthy(control(ns, key).widget:IsEnabled(), key) end
+        local keys = { "minimapZoneTextSize", "minimapZoneTextClassColor", "minimapZoneTextOffsetX",
+            "minimapZoneTextOffsetY" }
+        for _, key in ipairs(keys) do T.truthy(control(ns, key).widget:IsVisible(), key) end
         ns.Options:Set("minimapZoneText", "hidden")
-        for _, key in ipairs(keys) do T.falsy(control(ns, key).widget:IsEnabled(), key) end
+        for _, key in ipairs(keys) do T.falsy(control(ns, key).widget:IsVisible(), key) end
         ns.Options:Set("minimapZoneText", "insideBottom")
-        for _, key in ipairs(keys) do T.truthy(control(ns, key).widget:IsEnabled(), key) end
+        for _, key in ipairs(keys) do T.truthy(control(ns, key).widget:IsVisible(), key) end
     end)
-
     it("steps a dropdown to its next choice in the controller interface, without the game's menu", function()
         local ns = start(nil, true)
         Stubs.SetControllerUI(true)
@@ -568,30 +686,91 @@ describe("settings pages", function()
         T.eq(control(ns, "minimapClock").choices[2].label, "Above, left")
     end)
 
-    it("offers FPS and ping a spot in a row or hidden, and greys out their color and size while hidden", function()
+    it("lays the minimap's elements out in a table across the page, below the Shape section", function()
         local ns = start()
-        local position = control(ns, "minimapPerformance")
-        T.same(values(position), { "topLeft", "top", "topRight", "bottomLeft", "bottom", "bottomRight", "hidden" })
-        T.eq(position.column, "right")
-        local color, page = control(ns, "minimapPerformanceClassColor")
-        local size = control(ns, "minimapPerformanceSize")
+        local page = pages(ns).minimap
         show(page)
-        T.falsy(color.widget:IsEnabled())
-        T.falsy(size.widget:IsEnabled())
-        radio(position, "Below, right").select()
-        T.eq(ns.Options:Get("minimapPerformance"), "bottomRight")
-        T.truthy(color.widget:IsEnabled())
-        T.truthy(size.widget:IsEnabled())
+        T.same(headers(page, "left"), { "Shape" })
+        T.same(headers(page, "right"), {})
+        T.same(tableRows(page), {
+            "Element | Position | Font size | Class color | Offset X | Y",
+            "Zone text | dropdown | dropdown | checkbox | number | number",
+            "  Hide its frame | checkbox | - | - | - | -",
+            "Clock | dropdown | dropdown | checkbox | number | number",
+            "Coordinates | dropdown | dropdown | checkbox | number | number",
+            "FPS and ping | dropdown | - | - | - | -",
+            "Addon compartment | dropdown | - | - | number | number",
+            "Tracking button | dropdown | - | - | number | number",
+            "Day and night icon | dropdown | - | - | number | number",
+            "Calendar button | dropdown | - | - | - | -",
+        })
+        local border = -control(ns, "squareMinimapBorder").row:PointFor("TOPLEFT")[5]
+        T.eq(-page.tables[1].frame:PointFor("TOPLEFT")[5], border + 26 + 16, "a section's gap below the border")
     end)
 
+    it("shows only a hidden element's name and Position, and an extra line only while it applies", function()
+        local ns = start()
+        local page = pages(ns).minimap
+        show(page)
+        local compartment = lineTop(page, "Addon compartment")
+        ns.Options:Set("minimapPerformance", "bottomRight")
+        local rows = tableRows(page)
+        T.eq(rows[6], "FPS and ping | dropdown | dropdown | checkbox | number | number")
+        T.eq(rows[7], "  Show | dropdown | - | - | - | -")
+        T.eq(lineTop(page, "Show"), lineTop(page, "FPS and ping") + 26, "right below")
+        T.eq(lineTop(page, "Addon compartment"), compartment + 26, "one line further down")
+        ns.Options:Set("minimapZoneText", "top")
+        T.eq(tableRows(page)[3], "Clock | dropdown | dropdown | checkbox | number | number",
+            "the zone text's frame only at the game's spot")
+        T.eq(lineTop(page, "Addon compartment"), compartment)
+        ns.Options:Set("minimapClock", "hidden")
+        ns.Options:Set("minimapCoords", "hidden")
+        rows = tableRows(page)
+        T.same({ rows[3], rows[4] }, { "Clock | dropdown | - | - | - | -", "Coordinates | dropdown | - | - | - | -" })
+    end)
+
+    it("offers the coordinates and the calendar button the game's spot or Hidden", function()
+        local ns = start()
+        for _, key in ipairs({ "minimapCoords", "minimapCalendar" }) do
+            local c, page = control(ns, key)
+            show(page)
+            T.eq(c.kind, "dropdown")
+            T.same(values(c), { "default", "hidden" })
+            T.eq(c.widget.text, "Default")
+            radio(c, "Hidden").select()
+            T.eq(ns.Options:Get(key), "hidden")
+        end
+    end)
+
+    it("names a table's cell by its line and column when pointed at, and a line by what it sets", function()
+        local ns = start()
+        local c, page = control(ns, "minimapClockClassColor")
+        show(page)
+        c.widget:RunScript("OnEnter")
+        T.eq(GameTooltip.lines[1].text, "Clock: Class color")
+        T.eq(GameTooltip.lines[2].text, ns.L.MINIMAP_CLOCK_CLASS_COLOR_TIP)
+        for _, line in ipairs(page.tables[1].lines) do
+            if line.label:GetText() == "Clock" then line.frame:RunScript("OnEnter") end
+        end
+        T.eq(GameTooltip.lines[1].text, "Clock")
+        T.eq(GameTooltip.lines[2].text, ns.L.MINIMAP_POSITION_TIP)
+    end)
+
+    it("offers FPS and ping a spot in a row or hidden", function()
+        local ns = start()
+        local position, page = control(ns, "minimapPerformance")
+        show(page)
+        T.same(values(position), { "topLeft", "top", "topRight", "bottomLeft", "bottom", "bottomRight", "hidden" })
+        radio(position, "Below, right").select()
+        T.eq(ns.Options:Get("minimapPerformance"), "bottomRight")
+    end)
     it("steps a minimap offset with its arrows and shows it in its box", function()
         local ns = start()
         local x, page = control(ns, "minimapClockOffsetX")
         local y = control(ns, "minimapClockOffsetY")
         show(page)
         T.eq(x.kind, "number")
-        T.eq(x.row, y.row)
-        T.eq(x.column, "left")
+        T.eq(y.kind, "number")
         T.eq(x.box:GetText(), "0")
         x.widget.Forward:Click()
         x.widget.Forward:Click()
@@ -646,37 +825,45 @@ describe("settings pages", function()
         T.eq(y.box.previousEditBox, x.box)
     end)
 
-    it("greys out an offset while its element is hidden", function()
+    it("skips the boxes of a hidden element with Tab, both ways", function()
+        local ns = start()
+        local coords, page = control(ns, "minimapCoordsOffsetY")
+        local compartment = control(ns, "minimapCompartmentOffsetX")
+        show(page)
+        coords.box:SetFocus()
+        coords.box:RunScript("OnTabPressed")
+        T.truthy(compartment.box:HasFocus(), "past FPS and ping's, hidden")
+        Stubs.state().shift = true
+        compartment.box:RunScript("OnTabPressed")
+        Stubs.state().shift = false
+        T.truthy(coords.box:HasFocus(), "and back")
+    end)
+    it("hides an element's offsets while it is hidden", function()
         local ns = start()
         for _, case in ipairs({
-            { "minimapClock", "minimapClock", "hidden", "default" },
-            { "minimapZoneText", "minimapZoneText", "hidden", "insideTop" },
-            { "minimapPerformance", "minimapPerformance", "top", "hidden", true },
-            { "minimapCompartment", "minimapCompartment", "hidden", "default" },
-            { "minimapTracking", "minimapTracking", "hidden", "default" },
-            { "minimapDayNight", "minimapDayNight", "hidden", "default" },
+            { "minimapClock", "default" },
+            { "minimapZoneText", "insideTop" },
+            { "minimapPerformance", "top" },
+            { "minimapCompartment", "default" },
+            { "minimapTracking", "default" },
+            { "minimapDayNight", "default" },
+            { "minimapCoords", "default" },
         }) do
-            local x, page = control(ns, case[1] .. "OffsetX")
-            local y = control(ns, case[1] .. "OffsetY")
+            local key = case[1]
+            local x, page = control(ns, key .. "OffsetX")
+            local y = control(ns, key .. "OffsetY")
             show(page)
-            ns.Options:Set(case[2], case[5] and case[3] or case[4])
-            T.truthy(x.box.enabled, case[1] .. " shown")
-            T.truthy(y.widget.Forward:IsEnabled(), case[1] .. " shown")
-            ns.Options:Set(case[2], case[5] and case[4] or case[3])
-            T.falsy(x.box.enabled, case[1] .. " hidden")
-            T.falsy(y.box.enabled, case[1] .. " hidden")
-            T.falsy(x.widget.Back:IsEnabled(), case[1] .. " hidden")
-            T.falsy(y.widget.Forward:IsEnabled(), case[1] .. " hidden")
-            T.same(x.box.textColor, { 0.5, 0.5, 0.5 })
+            ns.Options:Set(key, case[2])
+            T.truthy(x.box:IsVisible(), key .. " shown")
+            T.truthy(y.widget.Forward:IsVisible(), key .. " shown")
+            ns.Options:Set(key, "hidden")
+            T.falsy(x.box:IsVisible(), key .. " hidden")
+            T.falsy(y.widget.Forward:IsVisible(), key .. " hidden")
         end
-        local coordsX, page = control(ns, "minimapCoordsOffsetX")
-        show(page)
-        ns.Options:Set("hideMinimapCoords", true)
-        T.falsy(coordsX.box.enabled)
     end)
-
-    it("resets the offsets and the Show choice with the page's Defaults", function()
-        local ns = start({ minimapClockOffsetX = 5, minimapCoordsOffsetY = -5, minimapPerformanceShow = "ping" })
+    it("resets the offsets, the Show choice and the Positions with the page's Defaults", function()
+        local ns = start({ minimapClockOffsetX = 5, minimapCoordsOffsetY = -5, minimapPerformanceShow = "ping",
+            minimapCoords = "hidden", minimapCalendar = "hidden", minimapCoordsSize = 14 })
         local x, page = control(ns, "minimapClockOffsetX")
         show(page)
         T.eq(x.box:GetText(), "5")
@@ -684,31 +871,23 @@ describe("settings pages", function()
         T.eq(ns.Options:Get("minimapClockOffsetX"), 0)
         T.eq(ns.Options:Get("minimapCoordsOffsetY"), 0)
         T.eq(ns.Options:Get("minimapPerformanceShow"), "both")
+        T.eq(ns.Options:Get("minimapCoords"), "default")
+        T.eq(ns.Options:Get("minimapCalendar"), "default")
+        T.eq(ns.Options:Get("minimapCoordsSize"), 0)
         T.eq(x.box:GetText(), "0")
     end)
-
-    it("offers what FPS and ping show, greyed out while hidden", function()
+    it("offers what FPS and ping show, on a line of its own while they're shown", function()
         local ns = start()
         local c, page = control(ns, "minimapPerformanceShow")
         show(page)
         T.same(values(c), { "both", "fps", "ping" })
         T.eq(c.choices[1].label, "FPS and ping")
-        T.falsy(c.widget:IsEnabled())
+        T.falsy(c.widget:IsVisible())
         ns.Options:Set("minimapPerformance", "top")
-        T.truthy(c.widget:IsEnabled())
+        T.truthy(c.widget:IsVisible())
         radio(c, "Ping").select()
         T.eq(ns.Options:Get("minimapPerformanceShow"), "ping")
     end)
-
-    it("pairs the minimap's sections so the page fits with every header level", function()
-        local ns = start(nil, true)
-        T.eq(pages(ns).minimap:Height(), 584)
-        local function top(key) return control(ns, key).row:PointFor("TOPLEFT")[5] end
-        T.eq(top("squareMinimap"), top("minimapCoordsClassColor"))
-        T.eq(top("minimapClock"), top("minimapZoneText"))
-        T.eq(top("minimapCompartment"), top("minimapPerformance"))
-    end)
-
     it("greys out the border choice while the minimap is round", function()
         local ns = start()
         local border, page = control(ns, "squareMinimapBorder")
@@ -724,19 +903,19 @@ describe("settings pages", function()
         local frame, page = control(ns, "hideMinimapZoneTextFrame")
         show(page)
         T.eq(frame.kind, "checkbox")
-        T.truthy(frame.indent)
-        T.truthy(frame.widget:IsEnabled())
+        T.truthy(frame.widget:IsVisible())
         for _, value in ipairs({ "top", "insideTop", "hidden" }) do
             ns.Options:Set("minimapZoneText", value)
-            T.falsy(frame.widget:IsEnabled(), value)
+            T.falsy(frame.widget:IsVisible(), value)
         end
         ns.Options:Set("minimapZoneText", "default")
-        T.truthy(frame.widget:IsEnabled())
+        T.truthy(frame.widget:IsVisible())
+        frame.widget:Click()
+        T.eq(ns.Options:Get("hideMinimapZoneTextFrame"), true)
     end)
-
-    it("offers font sizes for the zone text, the clock and FPS and ping, the game's own first", function()
+    it("offers font sizes for the zone text, the clock, the coordinates and FPS and ping, the game's own first", function()
         local ns = start()
-        for _, key in ipairs({ "minimapZoneTextSize", "minimapClockSize", "minimapPerformanceSize" }) do
+        for _, key in ipairs({ "minimapZoneTextSize", "minimapClockSize", "minimapCoordsSize", "minimapPerformanceSize" }) do
             local c = control(ns, key)
             T.eq(c.kind, "dropdown")
             T.eq(c.choices[1].value, 0)
@@ -744,28 +923,11 @@ describe("settings pages", function()
             T.eq(c.choices[2].label, "9")
             T.same(values(c), ns.MinimapLayout.FONT_SIZES)
         end
-        local c = control(ns, "minimapClockSize")
-        T.eq(c.column, "left")
+        local c, page = control(ns, "minimapClockSize")
+        show(page)
         radio(c, "16").select()
         T.eq(ns.Options:Get("minimapClockSize"), 16)
     end)
-
-    it("greys out the class colors and size of a hidden clock, and the color of hidden coordinates", function()
-        local ns = start()
-        local clock, page = control(ns, "minimapClockClassColor")
-        local clockSize = control(ns, "minimapClockSize")
-        local coords = control(ns, "minimapCoordsClassColor")
-        show(page)
-        T.truthy(clock.widget:IsEnabled())
-        T.truthy(clockSize.widget:IsEnabled())
-        T.truthy(coords.widget:IsEnabled())
-        ns.Options:Set("minimapClock", "hidden")
-        ns.Options:Set("hideMinimapCoords", true)
-        T.falsy(clock.widget:IsEnabled())
-        T.falsy(clockSize.widget:IsEnabled())
-        T.falsy(coords.widget:IsEnabled())
-    end)
-
     it("offers the day and night icon only where the game has one", function()
         local ns = Stubs.LoadAddon()
         Stubs.InstallSettings()
@@ -794,28 +956,40 @@ describe("settings pages", function()
         end
     end)
 
-    it("lists every bar in both columns of the action bar page, side by side, then paging and buttons", function()
+    it("lists every bar in a table on the action bar page, then paging and buttons side by side", function()
         local ns = start()
         local page = pages(ns).actionBars
-        T.same(headers(page, "left"), { "Reverse vertical growth", "Paging", "Spell ranks" })
-        T.same(headers(page, "right"), { "Reverse horizontal growth", "Buttons" })
+        show(page)
+        T.same(headers(page, "wide"), { "Reverse growth" })
+        T.same(headers(page, "left"), { "Paging", "Spell ranks" })
+        T.same(headers(page, "right"), { "Buttons" })
+        local expected = { "Bar | Vertical | Horizontal" }
         for _, bar in ipairs(ns.ActionBars.BARS) do
-            local vertical = control(ns, ns.ActionBars.VerticalKey(bar.frame))
-            local horizontal = control(ns, ns.ActionBars.HorizontalKey(bar.frame))
-            T.eq(vertical.column, "left")
-            T.eq(horizontal.column, "right")
-            T.eq(vertical.row:PointFor("TOPLEFT")[5], horizontal.row:PointFor("TOPLEFT")[5], bar.frame .. " side by side")
+            expected[#expected + 1] = bar.label() .. " | checkbox | checkbox"
         end
-        T.eq(control(ns, "disableBarPaging").column, "left")
-        T.eq(control(ns, "hideButtonBorders").column, "right")
+        T.eq(#expected, 11, "ten bars")
+        T.same(tableRows(page), expected)
+        local key = ns.ActionBars.HorizontalKey("MultiBarRight")
+        control(ns, key).widget:Click()
+        T.eq(ns.Options:Get(key), true)
         T.eq(control(ns, "disableBarPaging").row:PointFor("TOPLEFT")[5],
             control(ns, "hideButtonBorders").row:PointFor("TOPLEFT")[5], "paging and buttons side by side")
     end)
 
+    it("says what each flip does when its column's caption is pointed at", function()
+        local ns = start()
+        local captions = pages(ns).actionBars.tables[1].captions
+        captions[2]:GetParent():RunScript("OnEnter")
+        T.eq(GameTooltip.lines[1].text, "Vertical")
+        T.eq(GameTooltip.lines[2].text, ns.L.FLIP_VERTICAL_TIP)
+        captions[3]:GetParent():RunScript("OnEnter")
+        T.eq(GameTooltip.lines[1].text, "Horizontal")
+        T.eq(GameTooltip.lines[2].text, ns.L.FLIP_HORIZONTAL_TIP)
+    end)
     it("has the spell ranks section on the action bar page on Forever, its button upgrading all spells", function()
         local ns = start()
         local page = pages(ns).actionBars
-        T.same(headers(page, "left"), { "Reverse vertical growth", "Paging", "Spell ranks" })
+        T.same(headers(page, "left"), { "Paging", "Spell ranks" })
         T.eq(control(ns, "upgradeSpellRanks").column, "left")
         local button
         for _, c in ipairs(page.controls) do
@@ -838,9 +1012,50 @@ describe("settings pages", function()
             Stubs.InstallSettings()
             Stubs.Login()
             T.eq(control(ns, "upgradeSpellRanks"), nil)
-            T.same(headers(pages(ns).actionBars, "left"), { "Reverse vertical growth", "Paging" })
+            T.same(headers(pages(ns).actionBars, "left"), { "Paging" })
         end)
     end
+
+    it("names the trigger and spell rank rows in German short enough for one line, the rest in their tooltips", function()
+        local ns = Stubs.LoadAddon({ locale = "deDE" })
+        Stubs.NewGamepadBar()
+        Stubs.InstallSettings()
+        Stubs.Login()
+        local toggle = control(ns, "controllerTriggerToggle")
+        T.eq(toggle.text:GetText(), "Leiste per Trigger halten")
+        T.truthy(toggle.tooltip:find("du musst ihn also nicht halten", 1, true))
+        local top = control(ns, "controllerTriggerToggleTopAfterCombat")
+        T.eq(top.text:GetText(), "Nach Kampf: obere Leiste")
+        T.truthy(top.tooltip:find("zurück zur oberen Leiste", 1, true))
+        local button
+        for _, c in ipairs(pages(ns).actionBars.controls) do
+            if c.kind == "button" then button = c end
+        end
+        T.eq(button.text:GetText(), "Ränge auf den Leisten")
+        T.eq(button.widget:GetText(), "Jetzt aufwerten")
+        -- The button is as wide as its name needs, which leaves the row's name the rest.
+        T.truthy(button.widget:GetWidth() < 160, "narrower than the English button: " .. button.widget:GetWidth())
+        T.truthy(button.widget:GetWidth() >= button.widget:GetTextWidth() + 40, "room around its name")
+    end)
+
+    it("names each Ring and Click casting tab in full, in German too", function()
+        Stubs.LoadAddon({ locale = "deDE" })
+        Stubs.InstallSettings()
+        Stubs.Login()
+        SlashCmdList.QOL("ring")
+        SlashCmdList.QOL("click")
+        local names = {}
+        for _, editor in ipairs({ QoLRingEditor, QoLClickCastEditor }) do
+            for _, tab in ipairs(editor.list.tabs) do
+                local name = tab.Text:GetText()
+                names[name] = true
+                -- Held to the width the game measures, a name came out cut off ("Reittie…").
+                T.eq(tab.Text:GetWidth(), 0, name .. " takes the width it needs")
+                T.truthy(tab:GetWidth() >= tab.Text:GetStringWidth() + 10, name .. " fits its tab")
+            end
+        end
+        T.truthy(names.Reittiere and names.Makros, "the mounts and macros tabs")
+    end)
 
     it("puts the ring on a page of its own: the switch in the title bar, and the rings' editor below it", function()
         local ns = start()

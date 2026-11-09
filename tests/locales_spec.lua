@@ -8,8 +8,8 @@ local SAME = {
     SECTION_QUESTS = true, CATEGORY_CHAT = true, CATEGORY_MINIMAP = true, MINIMAP_POSITION = true, BORDER_BRONZE = true,
     MAP_DUNGEON = true, MAP_ZEPPELIN = true, MAP_PORTAL = true, MAP_PLACE_IN_ZONE = true, CATEGORY_CONTROLLER = true,
     CATEGORY_RING = true, CLICK_CAST_ALT = true, SECTION_BUFFS = true, INFO_VERSION = true, VENDOR_STACK = true,
-    MINIMAP_PERFORMANCE_PING = true, MINIMAP_OFFSET_X = true, MINIMAP_OFFSET_Y = true, PERFORMANCE_SHOW_FPS = true,
-    PERFORMANCE_SHOW_PING = true,
+    MINIMAP_PERFORMANCE_PING = true, MINIMAP_OFFSET_Y = true, PERFORMANCE_SHOW_FPS = true,
+    PERFORMANCE_SHOW_PING = true, GROUP_SYSTEM = true, MINIMAP_ELEMENT = true, FLIP_HORIZONTAL = true,
 }
 
 -- Strings in English only: the probe's developer output, and the Draw distance section for now.

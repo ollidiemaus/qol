@@ -3,8 +3,8 @@ local L = ns.L
 
 -- The settings window (/qol, or the button on our information page under Options > AddOns): a
 -- window of our own (ns.NewWindow, with the flat background of the game's settings) laid out like
--- the game's settings, with the list of pages on the left and the page shown on the right. The art
--- is the game's own (Options_InnerFrame, the list's header and highlights), which Forever draws in
+-- the game's settings, with the list of pages, in groups, on the left and the page shown on the
+-- right. The art is the game's own (Options_InnerFrame, the list's headers and highlights), which Forever draws in
 -- bronze like the window's frame. The pages are UI/SettingsPage.lua's, and get the room the game's
 -- settings give a page. Being outside the game's settings, nothing of ours runs inside them: on
 -- Forever, with the controller interface on, the game froze now and then when they closed after a
@@ -26,11 +26,14 @@ local PAGE_HEIGHT = 601
 -- A page's room, for a page that lays itself out (the rings' editor).
 Window.PAGE_WIDTH = WIDTH - LIST_X - LIST_WIDTH - PAGE_GAP - PAGE_RIGHT
 Window.PAGE_HEIGHT = PAGE_HEIGHT
--- The list as the game's draws it (Blizzard_CategoryList): a header, then a button per page.
+-- The list as the game's draws it (Blizzard_CategoryList): a header for each group, a button for
+-- each of its pages below it, and a spacer between groups.
 local HEADER_HEIGHT = 30
 local HEADER_LABEL_X = 20
+local HEADER_ARTS = 3  -- Options_CategoryHeader_1 to _3, taken in turn
 local BUTTON_WIDTH, BUTTON_HEIGHT = 175, 20
 local BUTTON_GAP = 2
+local GROUP_GAP = 18
 local LABEL_X = 36
 
 -- A list button as the game's list shows it: white on the selected page's highlight, else gold,
@@ -60,23 +63,18 @@ end
 
 function Window.New()
     local frame = ns.NewWindow("QoLSettings", L.ADDON_TITLE, WIDTH, HEIGHT, template())
-    local window = setmetatable({ frame = frame, pages = {}, buttons = {}, order = {} }, Window)
+    -- entries: the list from the top, a { group = true, header, label } for a group's header and a
+    -- { key } for a page's button; bottom: where the list ends so far.
+    local window = setmetatable({ frame = frame, pages = {}, buttons = {}, order = {}, entries = {}, groups = 0 },
+        Window)
 
     local inner = frame:CreateTexture(nil, "OVERLAY", nil, 2)
     inner:SetAtlas("Options_InnerFrame", true)
     inner:SetPoint("TOPLEFT", INNER_X, INNER_Y)
 
-    -- The header's art reaches down behind the first buttons, so it's the list's own: its buttons,
-    -- child frames, draw over it.
     local list = CreateFrame("Frame", nil, frame)
     list:SetPoint("TOPLEFT", LIST_X, LIST_Y)
     list:SetSize(LIST_WIDTH, PAGE_HEIGHT)
-    local header = list:CreateTexture(nil, "BACKGROUND")
-    header:SetAtlas("Options_CategoryHeader_1", true)
-    header:SetPoint("TOPLEFT")
-    local title = list:CreateFontString(nil, "ARTWORK", "GameFontHighlightMedium")
-    title:SetPoint("LEFT", list, "TOPLEFT", HEADER_LABEL_X, -HEADER_HEIGHT / 2 - 1)
-    title:SetText(L.SETTINGS)
     window.list = list
 
     local container = CreateFrame("Frame", nil, frame)
@@ -89,13 +87,30 @@ function Window.New()
     return window
 end
 
+-- A group's header at the end of the list: the pages added after it are the group's. A header's
+-- art reaches down behind the buttons below it, so it's the list's own: the buttons, child frames,
+-- draw over it, and each header over the one before, where its art fades out.
+function Window:AddGroup(title)
+    local y = self.bottom and self.bottom + BUTTON_GAP + GROUP_GAP or 0
+    local header = self.list:CreateTexture(nil, "BACKGROUND", nil, self.groups)
+    header:SetAtlas(("Options_CategoryHeader_%d"):format(self.groups % HEADER_ARTS + 1), true)
+    header:SetPoint("TOPLEFT", self.list, "TOPLEFT", 0, -y)
+    local label = self.list:CreateFontString(nil, "ARTWORK", "GameFontHighlightMedium")
+    label:SetPoint("LEFT", self.list, "TOPLEFT", HEADER_LABEL_X, -y - HEADER_HEIGHT / 2 - 1)
+    label:SetText(title)
+    self.groups = self.groups + 1
+    self.entries[#self.entries + 1] = { group = true, header = header, label = label }
+    self.bottom = y + HEADER_HEIGHT
+end
+
 -- A page (a SettingsPage) and its button at the end of the list. The first page added is the one
 -- shown first.
 function Window:Add(key, title, page)
     local button = CreateFrame("Button", nil, self.list)
     button:SetSize(BUTTON_WIDTH, BUTTON_HEIGHT)
-    local y = HEADER_HEIGHT + BUTTON_GAP + #self.order * (BUTTON_HEIGHT + BUTTON_GAP)
+    local y = (self.bottom or 0) + BUTTON_GAP
     button:SetPoint("TOPLEFT", self.list, "TOPLEFT", 0, -y)
+    self.bottom = y + BUTTON_HEIGHT
     button.highlight = button:CreateTexture(nil, "BACKGROUND")
     button.highlight:SetPoint("CENTER")
     button.highlight:Hide()
@@ -122,6 +137,7 @@ function Window:Add(key, title, page)
     page.frame:SetAllPoints(self.container)
     page.frame:Hide()
     self.order[#self.order + 1] = key
+    self.entries[#self.entries + 1] = { key = key }
     self.pages[key], self.buttons[key] = page, button
     self.selected = self.selected or key
 end

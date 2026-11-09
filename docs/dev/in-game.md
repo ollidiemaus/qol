@@ -233,7 +233,7 @@ Things only the real client can confirm:
 
 ## The hidden settings probe
 
-`/qol probe` (`Features/HiddenSettingsProbe.lua`) measures what the Advanced settings page needs to
+`/qol probe` (`Features/HiddenSettingsProbe.lua`) measures what the Graphics & Camera page needs to
 know about the client it runs in, so Forever's client and every patch can be measured with one
 command instead of `/run` lines pasted into chat. It's in the release package but not in
 `/qol help` or the README.

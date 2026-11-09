@@ -8,10 +8,6 @@ local function start(savedOptions, client)
     return ns
 end
 
-local function coords()
-    return MinimapCluster.MinimapContainer.PlayerCoords
-end
-
 local function isUnder(region, frame)
     local node = region:GetParent()
     while node and node ~= frame do node = node:GetParent() end
@@ -28,7 +24,6 @@ describe("hiding frames", function()
         T.eq(MicroMenuContainer:GetParent(), UIParent)
         T.eq(BagsBar:GetParent(), UIParent)
         T.eq(QuickJoinToastButton:GetParent(), UIParent)
-        T.eq(coords():GetParent(), MinimapCluster.MinimapContainer)
         T.eq(ChatFrameMenuButton:GetParent(), ChatFrame1ButtonFrame)
         T.eq(TextToSpeechButtonFrame:GetParent(), UIParent)
         playerHitText():Show()
@@ -38,10 +33,9 @@ describe("hiding frames", function()
     end)
 
     it("hides the chosen frames at login, even if the game shows them again", function()
-        start({ hideMicroMenu = true, hideChatSocial = true, hideMinimapCoords = true })
+        start({ hideMicroMenu = true, hideChatSocial = true })
         T.falsy(MicroMenuContainer:IsVisible())
         T.falsy(QuickJoinToastButton:IsVisible())
-        T.falsy(coords():IsVisible())
         T.truthy(BagsBar:IsVisible())
         -- Switching from controller to keyboard calls Show() on these.
         QuickJoinToastButton:Show()
@@ -61,11 +55,11 @@ describe("hiding frames", function()
     end)
 
     it("puts a frame back where it was when turned off", function()
-        local ns = start({ hideMinimapCoords = true })
-        ns.Options:Set("hideMinimapCoords", false)
+        local ns = start({ hideBagsBar = true })
+        ns.Options:Set("hideBagsBar", false)
         Stubs.RunTimers()
-        T.eq(coords():GetParent(), MinimapCluster.MinimapContainer)
-        T.truthy(coords():IsVisible())
+        T.eq(BagsBar:GetParent(), UIParent)
+        T.truthy(BagsBar:IsVisible())
     end)
 
     it("brings the portrait hit text back when turned off", function()
@@ -165,10 +159,11 @@ describe("hiding frames", function()
 
     it("copes with a client that lacks a frame", function()
         local ns = Stubs.LoadAddon()
-        _G.MinimapCluster = { MinimapContainer = {} } -- retail: no coordinates under the minimap
-        Stubs.Login({ hideMinimapCoords = true })
+        _G.MicroMenuContainer = nil -- a client without the system bar's container
+        Stubs.Login({ hideMicroMenu = true })
         ns.Options:Set("hideBagsBar", true)
         Stubs.RunTimers()
         T.falsy(BagsBar:IsVisible())
+        T.same(Stubs.state().errors, {})
     end)
 end)

@@ -352,11 +352,19 @@ local function playTabSound()
     if PlaySound and SOUNDKIT then PlaySound(SOUNDKIT.IG_CHARACTER_INFO_TAB) end
 end
 
+-- The room a tab of the game's tab system leaves around its name, as its UpdateTabWidth does.
+local TAB_TEXT_ROOM = 10
+
 -- A tab of the game's tab system (TabSystemTopButtonTemplate, as the spell book's). A strip of
--- ours stands in for the tab system (newTabs): a tab calls its parent's SetTab when clicked.
+-- ours stands in for the tab system (newTabs): a tab calls its parent's SetTab when clicked. The
+-- tab holds its name to the width it measured, and in German some names came out a little wider and
+-- were cut off ("Reittie…", "Makr…"); let free, the name takes the width it needs, and the tab is
+-- wide enough for it.
 local function newSystemTab(_, strip, index, kind)
     local tab = CreateFrame("Button", nil, strip, "TabSystemTopButtonTemplate")
     tab:Init(index, LABELS[kind])
+    tab.Text:SetWidth(0)
+    tab:SetWidth(math.max(tab:GetWidth(), tab.Text:GetStringWidth() + TAB_TEXT_ROOM))
     return tab
 end
 

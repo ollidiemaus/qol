@@ -2,22 +2,19 @@ local _, ns = ...
 local Options = ns.Options
 
 -- Hides pieces of the default UI the player doesn't want: the system bar (micro menu), the bag
--- bar, the coordinates under the minimap, the social button above the chat and the other buttons
--- next to the chat, and the hit text over the player's and the pet's portrait.
+-- bar, the social button above the chat and the other buttons next to the chat, and the hit text
+-- over the player's and the pet's portrait. The minimap's coordinates are hidden through their
+-- Position, by Features/Minimap.lua.
 local HideFrames = {}
 ns.HideFrames = HideFrames
 
 -- Option key -> the frames it hides. Looked up when needed, since not every client has every frame
--- (Classic Era has no minimap coordinates, for example).
+-- (Classic Era has no Quick Join button, for example).
 HideFrames.TARGETS = {
     -- The container, not MicroMenu itself: in vehicles and pet battles the game moves MicroMenu
     -- onto the vehicle bar, where it should still show.
     hideMicroMenu = function() return MicroMenuContainer end,
     hideBagsBar = function() return BagsBar end,
-    hideMinimapCoords = function()
-        local container = MinimapCluster and MinimapCluster.MinimapContainer
-        return container and container.PlayerCoords
-    end,
     -- Quick Join's toast button, or on Classic Era (no Quick Join) the Friends button by the chat.
     hideChatSocial = function() return QuickJoinToastButton or FriendsMicroButton end,
     -- The chat menu, the channel button, the voice buttons (only shown in a voice channel) and the

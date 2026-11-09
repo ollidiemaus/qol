@@ -48,8 +48,9 @@ local DEFAULTS = {
     -- Each element's offset: a small shift from its spot, in screen units, across and up.
     minimapZoneTextOffsetX = 0,
     minimapZoneTextOffsetY = 0,
+    minimapCoords = "default", -- the coordinates: "default" (the game's spot) or "hidden"
     minimapCoordsClassColor = false,
-    hideMinimapCoords = false,
+    minimapCoordsSize = 0,
     minimapCoordsOffsetX = 0,
     minimapCoordsOffsetY = 0,
     -- Where the minimap's buttons go: "default", "hidden", or "topLeft", "top", "topRight",
@@ -75,7 +76,7 @@ local DEFAULTS = {
     minimapDayNight = "default",
     minimapDayNightOffsetX = 0,
     minimapDayNightOffsetY = 0,
-    hideMinimapCalendar = false,
+    minimapCalendar = "default", -- the calendar button: "default" (the game's spot) or "hidden"
 
     mapDungeons = false,
     mapTravel = false,

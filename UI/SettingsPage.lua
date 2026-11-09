@@ -6,11 +6,13 @@ local Options = ns.Options
 -- fits without scrolling, or in rows across the whole page ("wide", for sliders). It looks like the
 -- game's own settings pages: the title with a Defaults button, section headers, and each option as
 -- its name with a checkbox, a dropdown, a slider, a color swatch or a text box, from the game's own
--- templates, two number boxes with arrows, a key binding's two keys, as in the game's Key Bindings, or a
--- button that opens something. A few lines of text can say what a page's options are for. Every name uses the same
+-- templates, a key binding's two keys, as in the game's Key Bindings, or a button that opens
+-- something. A few lines of text can say what a page's options are for. Every name uses the same
 -- font; an option that belongs to another one sits indented below it and is greyed out while it
 -- can't apply. A page that is one thing of its own below its title (the rings' editor) can have its
--- switch in the title bar instead of the Defaults button ("title").
+-- switch in the title bar instead of the Defaults button ("title"). A table across the page sets the
+-- same few things for each of a list of things (the minimap's elements, the action bars): a line
+-- each, a column for each thing it sets, with checkboxes, dropdowns and number boxes with arrows.
 --
 -- A row with a value (all but a key binding and a button) gets, sets and resets it with functions
 -- of its own, so the page and its Defaults button needn't know where the value is kept. An option's
@@ -38,11 +40,12 @@ local BOX_ART_LEFT = 5       -- InputBoxTemplate's left edge art reaches this fa
 local WIDE_CONTROL_X = -80   -- in a wide row the control starts there from the middle, as on the game's list
 local TITLE_ROW_Y, TITLE_ROW_RIGHT, TITLE_ROW_WIDTH = 14, 28, 300 -- an option in the title bar
 local STEP_WIDTH = 14       -- an arrow of a number field, around the game's slider arrow
-local CAPTION_WIDTH = 12    -- the letter before a number field
-local FIELD_WIDTH = CAPTION_WIDTH + 2 * STEP_WIDTH + BOX_ART_LEFT + NUMBER_WIDTH
-local FIELD_GAP = 10        -- between the two number fields of a row
+local FIELD_WIDTH = 2 * STEP_WIDTH + BOX_ART_LEFT + NUMBER_WIDTH
+local CELL_GAP = 10         -- between a table's columns
 local KEY_WIDTH, KEY_HEIGHT = 160, 22 -- a key binding's buttons, as in the game's Key Bindings
 local BUTTON_WIDTH, BUTTON_HEIGHT = 160, 22
+local BUTTON_MIN_WIDTH = 96  -- a row's button with a short text, as wide as Defaults
+local BUTTON_TEXT_ROOM = 40  -- around a row's button text, for the button art's ends
 local RESET_WIDTH = 96   -- a row's Reset button, at the end of a wide row (as wide as Defaults)
 local TEXT_WIDTH, TEXT_HEIGHT = 160, 20
 local TEXT_TOP = 12      -- above a paragraph, between it and the title's divider
@@ -51,6 +54,8 @@ local CONFIRM_SECONDS = 3
 Page.MAX_HEIGHT = 600
 -- Where the rows start, below the title and its divider.
 Page.TOP = TOP
+-- A number field's width, for a table's column of them.
+Page.NUMBER_FIELD_WIDTH = FIELD_WIDTH
 
 -- Key binding rows: the frame of ours that takes the keyboard while a button waits for a key, and
 -- { control, slot } of that button.
@@ -87,7 +92,7 @@ function Page.New(title, options)
     local frame = CreateFrame("Frame")
     frame:Hide()
     local page = setmetatable({ title = title, frame = frame, controls = {}, headers = {}, texts = {}, keys = {},
-        y = { left = TOP, right = TOP } }, Page)
+        tables = {}, y = { left = TOP, right = TOP } }, Page)
 
     local titleText = frame:CreateFontString(nil, "ARTWORK", "GameFontHighlightHuge")
     titleText:SetPoint("TOPLEFT", frame, "TOPLEFT", 7, -22)
@@ -154,7 +159,7 @@ function Page:SetDefaults()
     self:Refresh()
 end
 
--- Shows the rows' values, and greys out what can't apply.
+-- Shows the rows' values, greys out what can't apply and hides a table's cells and lines that don't.
 function Page:Refresh()
     for _, text in ipairs(self.texts) do
         if text.shown then text.string:SetShown(text.shown()) end
@@ -165,8 +170,12 @@ function Page:Refresh()
     for _, control in ipairs(self.controls) do
         local enabled = control.enabled == nil or control.enabled() == true
         local color = enabled and normal or grey
-        control.text:SetText(control.name())
-        control.text:SetTextColor(color[1], color[2], color[3])
+        if control.shown then control.row:SetShown(control.shown()) end
+        -- A table's cell has its line's name.
+        if control.text then
+            control.text:SetText(control.name())
+            control.text:SetTextColor(color[1], color[2], color[3])
+        end
         control.widget:SetEnabled(enabled)
         if control.kind == "checkbox" then
             control.widget:SetChecked(control.get() == true)
@@ -193,6 +202,7 @@ function Page:Refresh()
             if not control.box:HasFocus() then control.box:SetText(control.boxCurrent()) end
         end
     end
+    for _, settingsTable in ipairs(self.tables) do settingsTable:Layout() end
 end
 
 -- How far down the columns reach.
@@ -279,6 +289,26 @@ local function optionBacking(key)
     }
 end
 
+-- The light over a row, or a table's line, while the mouse is on it.
+local function newHighlight(frame)
+    local highlight = frame:CreateTexture(nil, "BACKGROUND")
+    highlight:SetAllPoints(frame)
+    highlight:SetColorTexture(1, 1, 1, 0.1)
+    highlight:Hide()
+    return highlight
+end
+
+-- An option's name at the start of a row or a table's line (indented for one that depends on the
+-- one above): one line that never wraps, as what doesn't fit goes in the tooltip.
+local function newName(frame, indent, text)
+    local name = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    name:SetPoint("LEFT", frame, "LEFT", LABEL_X + (indent and INDENT or 0), 0)
+    name:SetJustifyH("LEFT")
+    name:SetWordWrap(false)
+    name:SetText(text)
+    return name
+end
+
 -- A row with an option's name, a hover highlight and its tooltip. label: the name, or a function
 -- giving it (asked again on each refresh). options: indent (below the option it belongs to), enabled
 -- (a function; the control is greyed out while it returns false), title (the tooltip's, instead of
@@ -292,21 +322,15 @@ end
 local function optionRow(page, column, kind, key, label, tooltip, options)
     options = options or {}
     local row = newRow(page, column, ROW_HEIGHT)
-    local highlight = row:CreateTexture(nil, "BACKGROUND")
-    highlight:SetAllPoints(row)
-    highlight:SetColorTexture(1, 1, 1, 0.1)
-    highlight:Hide()
+    local highlight = newHighlight(row)
 
     local function name()
         if type(label) == "function" then return label() end
         return label
     end
-    local text = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    text:SetPoint("LEFT", row, "LEFT", LABEL_X + (options.indent and INDENT or 0), 0)
+    local text = newName(row, options.indent, name())
     -- In the title bar the name goes next to its control.
-    text:SetJustifyH(column == "title" and "RIGHT" or "LEFT")
-    text:SetWordWrap(false)
-    text:SetText(name())
+    if column == "title" then text:SetJustifyH("RIGHT") end
 
     local backing = key
     if type(key) == "string" then
@@ -383,8 +407,9 @@ end
 
 -- A row's input box, which commit(text) reads when it loses the keyboard (Enter, Tab, a click
 -- elsewhere); then, and on Escape, it shows current() again, what the row now has. A refresh leaves it
--- alone while it has the keyboard. Tab and Shift+Tab go on to the page's next and previous box (the
--- template's EditBox_OnTabPressed reads nextEditBox and previousEditBox).
+-- alone while it has the keyboard. Tab and Shift+Tab go on to the page's next and previous box that
+-- shows (a table hides some), along nextEditBox and previousEditBox, the links the template's own
+-- EditBox_OnTabPressed follows.
 local function newTextBox(page, control, width, commit, current)
     local box = CreateFrame("EditBox", nil, control.row, "InputBoxTemplate")
     box:SetSize(width, TEXT_HEIGHT)
@@ -401,6 +426,12 @@ local function newTextBox(page, control, width, commit, current)
     end)
     box:SetScript("OnEnter", control.enter)
     box:SetScript("OnLeave", control.leave)
+    box:SetScript("OnTabPressed", function()
+        local link = IsShiftKeyDown() and "previousEditBox" or "nextEditBox"
+        local other = box[link]
+        while other and not other:IsVisible() do other = other[link] end
+        if other then other:SetFocus() end
+    end)
     if page.lastTextBox then
         page.lastTextBox.nextEditBox, box.previousEditBox = box, page.lastTextBox
     end
@@ -409,8 +440,8 @@ local function newTextBox(page, control, width, commit, current)
     return box
 end
 
-function Page:Checkbox(column, key, label, tooltip, options)
-    local control = optionRow(self, column, "checkbox", key, label, tooltip, options)
+-- A checkbox for control, in its row: a click on the row toggles it too, as on the game's pages.
+local function newCheckbox(control)
     local checkbox = CreateFrame("CheckButton", nil, control.row, "SettingsCheckboxTemplate")
     checkbox:SetScript("OnClick", function(button)
         local checked = button:GetChecked() and true or false
@@ -419,11 +450,15 @@ function Page:Checkbox(column, key, label, tooltip, options)
     end)
     checkbox:SetScript("OnEnter", control.enter)
     checkbox:SetScript("OnLeave", control.leave)
-    -- A click on the name toggles it too, as on the game's pages.
     control.row:SetScript("OnMouseUp", function()
         if checkbox:IsEnabled() then checkbox:Click() end
     end)
-    place(control, checkbox)
+    return checkbox
+end
+
+function Page:Checkbox(column, key, label, tooltip, options)
+    local control = optionRow(self, column, "checkbox", key, label, tooltip, options)
+    place(control, newCheckbox(control))
     return control
 end
 
@@ -443,8 +478,7 @@ end
 -- footer, binding groups, suspending the focus of the window that has the controller), and the
 -- game stopped responding when its settings closed after one was opened from our page, back when
 -- the pages were in them (see docs/dev/settings-window.md).
-function Page:Dropdown(column, key, label, choices, tooltip, options)
-    local control = optionRow(self, column, "dropdown", key, label, tooltip, options)
+local function newDropdown(control, choices)
     control.choices = choices
     local dropdown = CreateFrame("DropdownButton", nil, control.row, "WowStyle2DropdownTemplate")
     dropdown:SetWidth(DROPDOWN_WIDTH)
@@ -463,7 +497,12 @@ function Page:Dropdown(column, key, label, choices, tooltip, options)
     end
     dropdown:HookScript("OnEnter", control.enter)
     dropdown:HookScript("OnLeave", control.leave)
-    place(control, dropdown)
+    return dropdown
+end
+
+function Page:Dropdown(column, key, label, choices, tooltip, options)
+    local control = optionRow(self, column, "dropdown", key, label, tooltip, options)
+    place(control, newDropdown(control, choices))
     return control
 end
 
@@ -514,15 +553,12 @@ end
 -- An option's number in a box with an arrow on either side, one step of 1 per click, on a field that
 -- takes the row's greying through its own SetEnabled. A typed number goes to the nearest whole one,
 -- anything else puts back the value; either way it stays from minValue to maxValue.
-local function numberField(page, control, caption, minValue, maxValue)
+local function numberField(page, control, minValue, maxValue)
     local function setClamped(value)
         control.set(math.max(minValue, math.min(maxValue, value)))
     end
     local field = CreateFrame("Frame", nil, control.row)
     field:SetSize(FIELD_WIDTH, ROW_HEIGHT)
-    local letter = field:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    letter:SetPoint("LEFT", field, "LEFT")
-    letter:SetText(caption)
 
     local function arrow(atlas, delta)
         local button = CreateFrame("Button", nil, field)
@@ -539,7 +575,7 @@ local function numberField(page, control, caption, minValue, maxValue)
     field.Back = arrow("Minimal_SliderBar_Button_Left", -1)
     field.Forward = arrow("Minimal_SliderBar_Button_Right", 1)
     field.Forward:SetPoint("RIGHT", field, "RIGHT")
-    field.Back:SetPoint("LEFT", field, "LEFT", CAPTION_WIDTH, 0)
+    field.Back:SetPoint("LEFT", field, "LEFT")
 
     local box = newTextBox(page, control, NUMBER_WIDTH, function(text)
         local number = tonumber(strtrim(text))
@@ -549,31 +585,12 @@ local function numberField(page, control, caption, minValue, maxValue)
     box:SetPoint("RIGHT", field.Forward, "LEFT")
 
     function field:SetEnabled(enabled)
-        local color = enabled and fontColor(NORMAL_FONT_COLOR, 1, 0.82, 0) or fontColor(GRAY_FONT_COLOR, 0.5, 0.5, 0.5)
-        letter:SetTextColor(color[1], color[2], color[3])
         for _, button in ipairs({ self.Back, self.Forward }) do
             button:SetEnabled(enabled)
             button.art:SetAlpha(enabled and 1 or 0.5)
         end
     end
     return field
-end
-
--- Two numbers from minValue to maxValue in one column's row (a slider each wouldn't fit), one option
--- each, after the captions options.firstCaption and options.secondCaption: two controls on one row, so
--- Tab, greying, the watch and Defaults see them like any other. The second shares the first's name and row.
-function Page:NumberPair(column, keyX, keyY, label, minValue, maxValue, tooltip, options)
-    local x = optionRow(self, column, "number", keyX, label, tooltip, options)
-    local backing = optionBacking(keyY)
-    local y = { kind = "number", key = keyY, name = x.name, title = x.title, tooltip = tooltip, column = column,
-        row = x.row, text = x.text, indent = x.indent, enabled = x.enabled, page = self, enter = x.enter,
-        leave = x.leave, get = backing.get, set = backing.set, reset = backing.reset }
-    self.keys[keyY] = true
-    self.controls[#self.controls + 1] = y
-    place(x, numberField(self, x, options.firstCaption, minValue, maxValue), FIELD_WIDTH + FIELD_GAP)
-    y.widget = numberField(self, y, options.secondCaption, minValue, maxValue)
-    y.widget:SetPoint("RIGHT", y.row, "RIGHT")
-    return x, y
 end
 
 -- "AARRGGBB", the format the game's color swatches save, to r, g, b from 0 to 1.
@@ -613,6 +630,144 @@ function Page:Color(column, key, label, tooltip, options)
     end)
     place(control, swatch)
     return control
+end
+
+------------------------------------------------------------------------------------------------
+-- Tables
+--
+-- A table across the page is a section of its own: its title, if it has one, a line of captions over
+-- its columns, then a line for each thing it sets, with that thing's name in the first column and in
+-- each of the others a control or nothing. A cell can show only while it applies (an element's font
+-- size while the element isn't hidden), and so can a whole line: an extra line, indented below the
+-- line it belongs to, with a control of its own. Lines that don't show leave no gap: the lines below
+-- move up, each time the page refreshes. The table keeps the room of all its lines, so that what's
+-- below it on the page stays put. Every name fits its column on one line: what more there is to say
+-- goes in the tooltip, the name's for its line and a caption's for its column.
+
+local Table = {}
+Table.__index = Table
+
+-- columns: { caption = text, width = number, tooltip = text } for each column from the left; the
+-- first one is the names', which takes the room the others leave unless it has a width.
+function Page:Table(columns, title)
+    if title then self:Header("wide", title) else sectionGap(self, "wide") end
+    local frame = newRow(self, "wide", ROW_HEIGHT)
+    local settingsTable = setmetatable({ page = self, frame = frame, top = self:Height() - ROW_HEIGHT, columns = {},
+        captions = {}, lines = {} }, Table)
+    local others = 0
+    for index = 2, #columns do others = others + CELL_GAP + columns[index].width end
+    local x = 0
+    for index, info in ipairs(columns) do
+        local width = info.width or (ns.SettingsWindow.PAGE_WIDTH - 2 * MARGIN - others)
+        settingsTable.columns[index] = { x = x, width = width, caption = info.caption }
+        -- The names' caption starts where the names do.
+        local inset = index == 1 and LABEL_X or 0
+        local holder = CreateFrame("Frame", nil, frame)
+        holder:SetPoint("TOPLEFT", frame, "TOPLEFT", x + inset, 0)
+        holder:SetSize(width - inset, ROW_HEIGHT)
+        local caption = holder:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        caption:SetPoint("BOTTOMLEFT", holder, "BOTTOMLEFT", 0, 4)
+        caption:SetPoint("RIGHT", holder, "RIGHT")
+        caption:SetJustifyH("LEFT")
+        caption:SetWordWrap(false)
+        caption:SetText(info.caption)
+        if info.tooltip then
+            holder:EnableMouse(true)
+            holder:SetScript("OnEnter", function() showTooltip(holder, info.caption, info.tooltip) end)
+            holder:SetScript("OnLeave", hideTooltip)
+        end
+        settingsTable.captions[index] = caption
+        x = x + width + CELL_GAP
+    end
+    self.tables[#self.tables + 1] = settingsTable
+    return settingsTable
+end
+
+-- A control in a line's cell, for an option like a row's, named after the line and the column.
+local function newCell(settingsTable, line, column, cell)
+    local page, info = settingsTable.page, settingsTable.columns[column]
+    local frame = CreateFrame("Frame", nil, line.frame)
+    frame:SetPoint("TOPLEFT", line.frame, "TOPLEFT", info.x, 0)
+    frame:SetSize(info.width, ROW_HEIGHT)
+    local backing = optionBacking(cell.key)
+    page.keys[cell.key] = true
+    local control = { kind = cell.kind, key = cell.key, name = line.name, tooltip = cell.tooltip, column = "wide",
+        row = frame, shown = cell.shown, page = page, get = backing.get, set = backing.set, reset = backing.reset }
+    function control.title() return ("%s: %s"):format(line.name(), info.caption) end
+    function control.enter()
+        line.highlight:Show()
+        showTooltip(frame, control.title(), cell.tooltip)
+    end
+    function control.leave()
+        line.highlight:Hide()
+        hideTooltip()
+    end
+    frame:EnableMouse(true)
+    frame:SetScript("OnEnter", control.enter)
+    frame:SetScript("OnLeave", control.leave)
+    local widget
+    if cell.kind == "checkbox" then
+        widget = newCheckbox(control)
+    elseif cell.kind == "dropdown" then
+        widget = newDropdown(control, cell.choices)
+        widget:SetWidth(info.width)
+    else
+        widget = numberField(page, control, cell.min, cell.max)
+    end
+    widget:SetPoint("LEFT", frame, "LEFT")
+    control.widget = widget
+    page.controls[#page.controls + 1] = control
+    return control
+end
+
+-- A line: its name, the name's tooltip, and cells: { [column] = cell } (the names' column is 1), a
+-- cell being { kind = "checkbox", "dropdown" or "number", key = the option, tooltip, choices (a
+-- dropdown's, as Page:Dropdown takes them), min and max (a number's), shown (a function: the cell is
+-- hidden while it returns false) }. options: indent (an extra line, below the one it belongs to),
+-- shown (a function: the line is left out while it returns false).
+function Table:Line(label, tooltip, cells, options)
+    options = options or {}
+    local frame = CreateFrame("Frame", nil, self.frame)
+    frame:SetHeight(ROW_HEIGHT)
+    local highlight = newHighlight(frame)
+    local names = self.columns[1]
+    local text = newName(frame, options.indent, label)
+    text:SetPoint("RIGHT", frame, "LEFT", names.x + names.width, 0)
+    frame:EnableMouse(true)
+    frame:SetScript("OnEnter", function()
+        highlight:Show()
+        showTooltip(frame, label, tooltip)
+    end)
+    frame:SetScript("OnLeave", function()
+        highlight:Hide()
+        hideTooltip()
+    end)
+    local line = { frame = frame, label = text, highlight = highlight, cells = {}, shown = options.shown }
+    function line.name() return label end
+    for column = 2, #self.columns do
+        if cells[column] then line.cells[column] = newCell(self, line, column, cells[column]) end
+    end
+    self.lines[#self.lines + 1] = line
+    local bottom = self.top + ROW_HEIGHT * (#self.lines + 1)
+    self.frame:SetHeight(bottom - self.top)
+    self.page.y.left, self.page.y.right = bottom, bottom
+    self:Layout()
+    return line
+end
+
+-- Stacks the lines that show below the captions.
+function Table:Layout()
+    local y = ROW_HEIGHT
+    for _, line in ipairs(self.lines) do
+        local shown = line.shown == nil or line.shown() == true
+        line.frame:SetShown(shown)
+        if shown then
+            line.frame:ClearAllPoints()
+            line.frame:SetPoint("TOPLEFT", self.frame, "TOPLEFT", 0, -y)
+            line.frame:SetPoint("TOPRIGHT", self.frame, "TOPRIGHT", 0, -y)
+            y = y + ROW_HEIGHT
+        end
+    end
 end
 
 ------------------------------------------------------------------------------------------------
@@ -786,8 +941,10 @@ end
 function Page:Button(column, label, text, tooltip, onClick, options)
     local control = optionRow(self, column, "button", nil, label, tooltip, options)
     local button = CreateFrame("Button", nil, control.row, "UIPanelButtonTemplate")
-    button:SetSize(BUTTON_WIDTH, BUTTON_HEIGHT)
     button:SetText(text)
+    -- As wide as its text needs, up to a dropdown's width, so a short text leaves the row's name room.
+    button:SetSize(math.min(BUTTON_WIDTH, math.max(BUTTON_MIN_WIDTH, button:GetTextWidth() + BUTTON_TEXT_ROOM)),
+        BUTTON_HEIGHT)
     button:SetScript("OnClick", onClick)
     button:SetScript("OnEnter", control.enter)
     button:SetScript("OnLeave", control.leave)
