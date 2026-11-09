@@ -234,3 +234,21 @@ _Avoid_: equivalent, raid buff, greater buff
 A temporary effect put on a weapon rather than on the character: a poison, a shaman's weapon spell
 such as Rockbiter, a sharpening stone or an oil. The game doesn't count it as a buff.
 _Avoid_: weapon enchant (alone, as that also means the permanent one), imbue, temporary enchant
+
+### Group frames
+
+**Group frame**:
+One of the game's raid-style frames for a player in the party or raid: a raid frame, or a party frame
+set to raid style. The classic party frames, pet frames and arena frames aren't.
+_Avoid_: raid frame (a party frame can be one too), compact frame, unit frame (that's any clickable frame)
+
+**Tracked buff**:
+A buff the player chose to show as an icon on group frames, either while the member has it (a heal
+over time) or while the member lacks it (a buff still to cast). QoL draws the icon; the game's own
+buff icons on the frame are a separate thing.
+_Avoid_: indicator, aura, reminder (that's the character's own missing buff, in the reminder row)
+
+**Raid manager**:
+The game's tab at the screen's edge that slides out with the group's controls: ready check, world
+markers, group filters, convert to raid. It appears while in a group.
+_Avoid_: raid frame manager, group manager, side panel
