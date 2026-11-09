@@ -643,7 +643,7 @@ local function newCooldownItem(row, info)
         holder = newRegion("Frame", item)
         holder:SetPoint("LEFT", item, "LEFT", 0, 0)
         holder:SetSize(info.size, info.size)
-        item.Icon = holder
+        item.Icon = readOnly(holder, "Cooldown Manager bar icon")
         item.Bar = newRegion("StatusBar", item)
     end
     holder.Icon = newRegion("Texture", holder)
@@ -677,7 +677,8 @@ end
 -- Blizzard_CooldownViewer loaded: the four rows as globals, each with `count` icons (default 3)
 -- from its pool. RefreshLayout is the game's: it takes every icon back and hands out as many as the
 -- row shows now, old ones first, new ones as the template builds them. The addon can't write on a
--- row or an icon.
+-- row or an icon (state.rawFrames has the frames under them). state.cooldownRows[name]: the row's
+-- count and its icons, handed out (active) and pooled (inactive).
 function Stubs.NewCooldownManager(count)
     state.cooldownRows = {}
     for _, info in ipairs(COOLDOWN_ROWS) do

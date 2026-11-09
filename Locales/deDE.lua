@@ -268,14 +268,6 @@ L.HIDE_BUTTON_BORDERS = "Knopfränder ausblenden"
 L.HIDE_BUTTON_BORDERS_TIP = "Nimmt den Knöpfen aller Aktionsleisten, der Haltungsleiste und der Begleiterleiste den "
     .. "Rahmen, so dass die Symbole eckig sind. Knöpfe unter der Maus, gedrückte und aktive Knöpfe leuchten eckig auf, "
     .. "wie klassische Knöpfe. Die Zauberanimation auf den Knöpfen entfällt."
--- Settings: Cooldown Manager page
-L.CATEGORY_COOLDOWN_MANAGER = "Abklingzeitmanager"
-L.SECTION_LOOK = "Aussehen"
-L.HIDE_COOLDOWN_BORDERS = "Symbolränder ausblenden"
-L.HIDE_COOLDOWN_BORDERS_TIP = "Nimmt den Symbolen des Abklingzeitmanagers des Spiels den Rand, in allen vier Reihen: "
-    .. "Essenzielle Abklingzeiten, Strategische Abklingzeiten, Verfolgte Stärkungseffekte und Verfolgte Leisten. "
-    .. "Alles andere an einem Symbol bleibt, wie es ist."
-
 L.SECTION_RANK_UPGRADES = "Zauberränge"
 L.UPGRADE_SPELL_RANKS = "Beim Erlernen eines Rangs aufwerten"
 L.UPGRADE_SPELL_RANKS_TIP = "Lernst du einen neuen Rang eines Zaubers, bekommen die Plätze der Aktionsleisten mit deinem "
@@ -289,6 +281,14 @@ L.UPGRADE_ALL_SPELLS_TIP = "Setzt jeden Zauber auf deinen Aktionsleisten einmali
 L.ACTION_BAR = "Aktionsleiste %d"
 L.STANCE_BAR = "Haltungsleiste"
 L.PET_BAR = "Begleiterleiste"
+
+-- Settings: Cooldown Manager page
+L.CATEGORY_COOLDOWN_MANAGER = "Abklingzeitmanager"
+L.SECTION_LOOK = "Aussehen"
+L.HIDE_COOLDOWN_BORDERS = "Symbolränder ausblenden"
+L.HIDE_COOLDOWN_BORDERS_TIP = "Nimmt den Symbolen des Abklingzeitmanagers des Spiels den Rand, in allen vier Reihen: "
+    .. "Essenzielle Abklingzeiten, Strategische Abklingzeiten, Verfolgte Stärkungseffekte und Verfolgte Leisten. "
+    .. "Alles andere an einem Symbol bleibt, wie es ist."
 
 -- Settings: ring page
 L.CATEGORY_RING = "Ring"

@@ -248,7 +248,7 @@ local function buildCooldownManager(page)
     page:Checkbox("left", "hideCooldownManagerBorders", L.HIDE_COOLDOWN_BORDERS, L.HIDE_COOLDOWN_BORDERS_TIP)
 end
 
--- Ring page (also /qol ring):the switch in the title bar, and below it, on a page of the spell
+-- Ring page (also /qol ring): the switch in the title bar, and below it, on a page of the spell
 -- book, the rings' editor (Features/RingEditor.lua), which follows the page when it's shown.
 local function buildRing(page)
     page:Checkbox("title", "ring", L.RING, L.RING_TIP)

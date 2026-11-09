@@ -67,6 +67,7 @@ local function snapshot(icon)
             walk(child)
         end
     end
+    add(icon)
     walk(icon)
     return shot
 end
@@ -149,6 +150,24 @@ describe("cooldown manager", function()
 
         Stubs.NewCooldownManager()
         Stubs.Fire("ADDON_LOADED", "Blizzard_CooldownViewer")
+        Stubs.RunTimers()
+        T.same(borderAlphas(), all(12, 0))
+    end)
+
+    it("does no harm while the game's Cooldown Manager is switched off, and hides the borders once it's on", function()
+        local ns = Stubs.LoadAddon()
+        Stubs.NewCooldownManager(0)
+        for _, name in ipairs(ROWS) do Stubs.state().rawFrames[_G[name]]:Hide() end
+        Stubs.Login({ hideCooldownManagerBorders = true })
+        ns.Options:Set("hideCooldownManagerBorders", false)
+        ns.Options:Set("hideCooldownManagerBorders", true)
+        Stubs.RunTimers()
+        T.same(borderAlphas(), {})
+
+        for _, name in ipairs(ROWS) do
+            Stubs.state().rawFrames[_G[name]]:Show()
+            Stubs.RebuildCooldownRow(name, 3)
+        end
         Stubs.RunTimers()
         T.same(borderAlphas(), all(12, 0))
     end)

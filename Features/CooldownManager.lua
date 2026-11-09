@@ -21,6 +21,7 @@ local BORDER_ATLAS = "ui-hud-cooldownmanager-iconoverlay"
 -- The game's rows, by global name.
 local ROWS = { "EssentialCooldownViewer", "UtilityCooldownViewer", "BuffIconCooldownViewer", "BuffBarCooldownViewer" }
 
+-- Retail has the same rows; the feature is Forever's for now, so the project decides, not the rows.
 local function isForever()
     return WOW_PROJECT_ID ~= nil and WOW_PROJECT_ID == WOW_PROJECT_CAMELOT
 end
@@ -73,9 +74,18 @@ local function hide(item)
     end
 end
 
-local schedule
+local function apply()
+    CooldownManager:Apply()
+end
 
-local function rebuilt()
+-- A texture's alpha may change in combat, and icons come up there too.
+local function schedule()
+    ns.Later("cooldownManagerBorders", apply, true)
+end
+
+-- Also the rows' hook, which runs inside the game's rebuild and stays for the session: it touches
+-- no frame, and asks for nothing while the option is off.
+local function scheduleIfOn()
     if Options:Get(KEY) then schedule() end
 end
 
@@ -92,7 +102,7 @@ function CooldownManager:Apply()
         if row then
             if not hooked[name] and type(row.RefreshLayout) == "function" then
                 hooked[name] = true
-                hooksecurefunc(row, "RefreshLayout", rebuilt)
+                hooksecurefunc(row, "RefreshLayout", scheduleIfOn)
             end
             local pool = row.itemFramePool
             if pool and pool.EnumerateActive then
@@ -102,21 +112,12 @@ function CooldownManager:Apply()
     end
 end
 
-local function apply()
-    CooldownManager:Apply()
-end
-
--- A texture's alpha may change in combat, and icons come up there too.
-function schedule()
-    ns.Later("cooldownManagerBorders", apply, true)
-end
-
 function CooldownManager:Init()
     if not isForever() then return end
     Options:Watch({ KEY }, schedule)
     -- Should the game load its Cooldown Manager after us.
     ns.Events:On("ADDON_LOADED", function(_, name)
-        if name == ADDON then rebuilt() end
+        if name == ADDON then scheduleIfOn() end
     end)
-    rebuilt()
+    scheduleIfOn()
 end

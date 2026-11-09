@@ -41,8 +41,12 @@ runs from the game's settings, Edit Mode, auras and the row's `OnShow`). So each
 `RefreshLayout` gets a `hooksecurefunc`, the one hook QoL has on a method of a Blizzard frame: the
 hook is the game's own secure wrapper (the field stays secure, unlike a written one), it runs after
 the rebuild, and all it does is ask `ns.Later` for a pass over `itemFramePool:EnumerateActive()` (a
-read of the pool) from our own frame's OnUpdate. The rows get no hook until the player turns the
-option on; turning it off restores every border in our table, also on icons a row isn't showing.
+read of the pool) from our own frame's OnUpdate. The hook's body does run inside the game's call
+stack (a rebuild from `UNIT_AURA`, say), so it touches no game frame: it reads our option and calls
+`ns.Later`, nothing else. The rows get no hook until the player turns the option on; a hook can't
+be taken off, so it stays for the session and asks for nothing while the option is off. Turning
+the option off restores every border in our table, also on icons a row isn't showing. Retail has
+the same rows, but the page and the feature are Forever's for now, so `WOW_PROJECT_ID` gates them.
 If the game loads `Blizzard_CooldownViewer` after QoL (`ADDON_LOADED`), the rows are picked up then.
 
 Rank upgrades (`Features/RankUpgrades.lua`, the terms are in the glossary) touch no Blizzard frame:

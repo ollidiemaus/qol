@@ -264,13 +264,6 @@ L.HIDE_BUTTON_BORDERS = "Hide button borders"
 L.HIDE_BUTTON_BORDERS_TIP = "Takes the frame off the buttons of every action bar, the stance bar and the pet bar, so "
     .. "the icons are square. Buttons you point at, press or that are active light up as squares, like classic "
     .. "buttons. The casting animation on the buttons is left out."
--- Settings: Cooldown Manager page. The game's own name for it, and for its rows in the tooltip.
-L.CATEGORY_COOLDOWN_MANAGER = "Cooldown Manager"
-L.SECTION_LOOK = "Look"
-L.HIDE_COOLDOWN_BORDERS = "Hide icon borders"
-L.HIDE_COOLDOWN_BORDERS_TIP = "Takes the border off the icons of the game's Cooldown Manager, in all four rows: "
-    .. "Essential Cooldowns, Utilities, Tracked Buffs and Tracked Bars. Everything else on an icon stays as it is."
-
 L.SECTION_RANK_UPGRADES = "Spell ranks"
 L.UPGRADE_SPELL_RANKS = "Upgrade when learning a rank"
 L.UPGRADE_SPELL_RANKS_TIP = "When you learn a new rank of a spell, the action bar slots holding your previous highest "
@@ -284,6 +277,13 @@ L.UPGRADE_ALL_SPELLS_TIP = "Moves every spell on your action bars to the highest
 L.ACTION_BAR = "Action Bar %d"
 L.STANCE_BAR = "Stance Bar"
 L.PET_BAR = "Pet Bar"
+
+-- Settings: Cooldown Manager page. The game's own name for it, and for its rows in the tooltip.
+L.CATEGORY_COOLDOWN_MANAGER = "Cooldown Manager"
+L.SECTION_LOOK = "Look"
+L.HIDE_COOLDOWN_BORDERS = "Hide icon borders"
+L.HIDE_COOLDOWN_BORDERS_TIP = "Takes the border off the icons of the game's Cooldown Manager, in all four rows: "
+    .. "Essential Cooldowns, Utilities, Tracked Buffs and Tracked Bars. Everything else on an icon stays as it is."
 
 -- Settings: ring page
 L.CATEGORY_RING = "Ring"
