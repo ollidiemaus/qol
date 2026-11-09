@@ -17,7 +17,7 @@ local function page(ns)
     return ns.SettingsPanel.pages.advanced
 end
 
--- The window open on the Advanced settings page.
+-- The window open on the Graphics & Camera page.
 local function show(ns)
     ns.SettingsPanel:Open()
     ns.SettingsPanel.window:Select("advanced")
@@ -53,11 +53,11 @@ local function copy(value)
 end
 
 describe("advanced settings page", function()
-    it("is called Advanced settings and is last in the window's list", function()
+    it("is called Graphics & Camera and is last in the window's list", function()
         local ns = start()
         local names = listed(ns)
-        T.eq(names[#names], "Advanced settings")
-        T.eq(page(ns).title, "Advanced settings")
+        T.eq(names[#names], "Graphics & Camera")
+        T.eq(page(ns).title, "Graphics & Camera")
     end)
 
     it("says what these settings are above them, then puts each section's rows across the page", function()
@@ -829,7 +829,7 @@ describe("advanced settings page", function()
             end
         end)
         T.eq(page(ns), nil)
-        for _, name in ipairs(listed(ns)) do T.truthy(name ~= "Advanced settings", "no Advanced settings page") end
+        for _, name in ipairs(listed(ns)) do T.truthy(name ~= "Graphics & Camera", "no Graphics & Camera page") end
     end)
 
     it("writes no setting at login and saves nothing for them", function()

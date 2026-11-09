@@ -11,14 +11,15 @@ local Options = ns.Options
 --     day and night icon can each move to a row above or below the minimap (left, center or right;
 --     the zone text only the center), or be hidden; the zone text, the tracking button and the day
 --     and night icon can also go inside the map, in a corner (not the zone text) or at the middle of
---     the top or bottom edge. The calendar button can be hidden. Things that share a spot sit side
---     by side, the zone text gets the room left in the middle, and the coordinates move under a row
---     below. Away from its default spot the zone text leaves the header bar, which then goes to the
---     hidden holder; at its default spot the header bar can go too.
+--     the top or bottom edge. The calendar button and the coordinates stay at the game's spot or are
+--     hidden. Things that share a spot sit side by side, the zone text gets the room left in the
+--     middle, and the coordinates move under a row below. Away from its default spot the zone text
+--     leaves the header bar, which then goes to the hidden holder; at its default spot the header
+--     bar can go too.
 --   * Class colors for the zone text, the clock and the coordinates. The game colors the zone name
 --     by its PvP status each time the zone changes; the class color is put back right after.
---   * Font sizes for the zone text, the clock and the FPS and ping. Their frames grow with a larger
---     font, so the rows around the minimap make room for them.
+--   * Font sizes for the zone text, the clock, the coordinates and the FPS and ping. Their frames
+--     grow with a larger font, so the rows around the minimap make room for them.
 --   * FPS and ping: a text of ours with the frame rate, the ping or both, placed in the rows like
 --     the clock, also in class color and at another font size.
 --   * Offsets: each of these can shift a little from its spot, the coordinates too.
@@ -30,11 +31,12 @@ ns.MinimapLayout = MinimapLayout
 local SQUARE, BORDER = "squareMinimap", "squareMinimapBorder"
 local ZONE_TEXT, CLASS_COLOR = "minimapZoneText", "minimapZoneTextClassColor"
 local CLOCK_COLOR, COORDS_COLOR = "minimapClockClassColor", "minimapCoordsClassColor"
-local CALENDAR, ZONE_TEXT_FRAME = "hideMinimapCalendar", "hideMinimapZoneTextFrame"
+local CALENDAR, ZONE_TEXT_FRAME = "minimapCalendar", "hideMinimapZoneTextFrame"
 local ZONE_TEXT_SIZE, CLOCK_SIZE = "minimapZoneTextSize", "minimapClockSize"
 local PERFORMANCE, PERFORMANCE_COLOR = "minimapPerformance", "minimapPerformanceClassColor"
 local PERFORMANCE_SIZE, PERFORMANCE_SHOW = "minimapPerformanceSize", "minimapPerformanceShow"
-local COORDS = "minimapCoords" -- what the coordinates' offset options start with
+-- The coordinates' Position, which their offset and size options start with too.
+local COORDS, COORDS_SIZE = "minimapCoords", "minimapCoordsSize"
 
 -- The choices for a moving element, in the order the settings list them (PositionsFor). "default"
 -- leaves it where the game puts it.
@@ -58,6 +60,19 @@ local SLOTS = {
 local function clusterFrame(key)
     local frame = MinimapCluster and MinimapCluster[key]
     return type(frame) == "table" and frame or nil
+end
+
+-- The player's coordinates under the minimap, or nil where this client has none (Classic Era,
+-- retail).
+local function coordsFrame()
+    local container = clusterFrame("MinimapContainer")
+    local coords = container and container.PlayerCoords
+    return type(coords) == "table" and coords or nil
+end
+
+local function coordsText()
+    local coords = coordsFrame()
+    return coords and coords.CoordText
 end
 
 -- Classic Era has no calendar: its GameTimeFrame is the time of day icon on the round border,
@@ -111,8 +126,12 @@ local function elementFor(key)
     return nil
 end
 
+-- The elements that stay at the game's spot unless hidden: the coordinates and the calendar button.
+local AT_GAME_SPOT = { [COORDS] = true, [CALENDAR] = true }
+
 -- The positions an element can take, in the order the settings list them.
 function MinimapLayout.PositionsFor(key)
+    if AT_GAME_SPOT[key] then return { "default", "hidden" } end
     local element = elementFor(key)
     local list = {}
     local function add(value)
@@ -633,9 +652,9 @@ function MinimapLayout:ApplyPositions()
     layoutInside(inside.top, "top")
     layoutInside(inside.bottom, "bottom")
 
-    local container = cluster.MinimapContainer
-    local coords = container and container.PlayerCoords
+    local coords = coordsFrame()
     if coords then
+        setHidden(Options:Get(COORDS) == "hidden", coords)
         local scale = coords:GetEffectiveScale()
         local dx, dy = offsetOf(COORDS)
         if below > 0 then
@@ -647,7 +666,7 @@ function MinimapLayout:ApplyPositions()
         end
     end
 
-    if hasCalendar() then setHidden(Options:Get(CALENDAR), GameTimeFrame) end
+    if hasCalendar() then setHidden(Options:Get(CALENDAR) == "hidden", GameTimeFrame) end
     notePlaced()
 end
 
@@ -669,6 +688,8 @@ MinimapLayout.SIZED = {
     { key = CLOCK_SIZE, frameWidth = true,
         text = function() return TimeManagerClockTicker end,
         frame = function() return TimeManagerClockButton end },
+    -- The text fills its frame (setAllPoints), so it grows with it.
+    { key = COORDS_SIZE, frameWidth = true, text = coordsText, frame = coordsFrame },
     { key = PERFORMANCE_SIZE, frameWidth = true,
         text = function()
             local frame = MinimapLayout:Performance()
@@ -815,12 +836,6 @@ end
 ------------------------------------------------------------------------------------------------
 -- Class colors
 
-local function coordsText()
-    local container = MinimapCluster and MinimapCluster.MinimapContainer
-    local coords = container and container.PlayerCoords
-    return coords and coords.CoordText
-end
-
 -- The texts that can show in class color, with the option for each.
 MinimapLayout.COLORED = {
     { key = CLASS_COLOR, text = function() return MinimapZoneText end },
@@ -877,8 +892,7 @@ end
 
 -- Whether this client shows the player's coordinates under the minimap (Classic Era doesn't).
 function MinimapLayout.HasCoords()
-    local container = MinimapCluster and MinimapCluster.MinimapContainer
-    return container ~= nil and type(container.PlayerCoords) == "table"
+    return coordsFrame() ~= nil
 end
 
 -- Whether this client has a day and night icon: Forever's, or Classic Era's time of day icon.
@@ -891,8 +905,8 @@ function MinimapLayout.HasCalendar()
     return hasCalendar()
 end
 
-local LAYOUT_KEYS = { SQUARE, BORDER, CALENDAR, ZONE_TEXT_FRAME, ZONE_TEXT_SIZE, CLOCK_SIZE, PERFORMANCE_SIZE,
-    PERFORMANCE_SHOW }
+local LAYOUT_KEYS = { SQUARE, BORDER, CALENDAR, COORDS, ZONE_TEXT_FRAME, ZONE_TEXT_SIZE, CLOCK_SIZE, COORDS_SIZE,
+    PERFORMANCE_SIZE, PERFORMANCE_SHOW }
 local function addOffsetKeys(key)
     local x, y = MinimapLayout.OffsetKeys(key)
     LAYOUT_KEYS[#LAYOUT_KEYS + 1] = x

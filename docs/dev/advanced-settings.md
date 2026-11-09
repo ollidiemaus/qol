@@ -1,9 +1,9 @@
-# Advanced settings
+# Graphics & Camera
 
 Part of the [developer notes](../DEVELOPMENT.md); their rules for touching Blizzard frames apply here.
 
-The Advanced settings page (last in the list) changes the game's **hidden settings**
-(`Features/HiddenSettings.lua`, see `GLOSSARY.md`): CVars the game's options don't show, or show
+The Graphics & Camera page (last in the list, the System group; its page key is still `advanced`)
+changes the game's **hidden settings** (`Features/HiddenSettings.lua`, see `GLOSSARY.md`): CVars the game's options don't show, or show
 with only part of their range. The module holds them as one table in the page's order (CVar, label
 and tooltip, kind, range, step, section, game slider) and owns reading, setting and reading back
 through `C_CVar`, falling back to the global functions, where a CVar the client doesn't know reads

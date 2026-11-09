@@ -61,7 +61,7 @@ settings are open, and closing our window is a plain `Hide` of a frame of ours.
     there. The Player frame section keeps the portrait hit text.
   - The calendar button (`ToggleCalendar`): Classic Era has no calendar; its `GameTimeFrame` is the
     time of day icon, which the day and night row moves instead (see the minimap notes).
-  - The addon compartment's place (`AddonCompartmentFrame`) and the Coordinates section
+  - The addon compartment's place (`AddonCompartmentFrame`) and the coordinates' line
     (`MinimapCluster.MinimapContainer.PlayerCoords`): Classic Era's minimap has neither.
   - Guild bank repair (`GuildBankFrame_LoadUI`, which Blizzard_GuildBankUI's bootstrap defines at
     startup on Forever and retail): Classic Era has no guild banks; its merchant frame names
@@ -72,10 +72,14 @@ settings are open, and closing our window is a plain `Hide` of a frame of ours.
     (with `GamepadMainActionBarFrame`) lists.
 - The list is drawn as the game's (`Blizzard_CategoryList`) but with frames of ours, not its
   templates: `SettingsCategoryListButtonMixin` reads its scroll box's element data and a file local
-  of the game's settings. A header (`Options_CategoryHeader_1`, drawn on the list itself so the
-  buttons go over its art, "Settings" in `GameFontHighlightMedium` at 20), then a button per page,
-  175×20, 2 apart, its name at 36: gold (`GameFontNormal`), white on `Options_List_Active` when
-  selected, `Options_List_Hover` under the mouse. A click selects with the game's sound.
+  of the game's settings. The pages come in groups (`GROUPS` in `UI/Settings.lua`), which don't
+  collapse, as the game's don't: a header per group (30 high, drawn on the list itself so the buttons
+  go over its art, its title in `GameFontHighlightMedium` at 20), its art going through the game's
+  three (`Options_CategoryHeader_1` to `_3`, one after the other, each on a sublevel of its own so a
+  later one goes over an earlier one's tail), then a button per page, 175×20, 2 apart, its name at
+  36: gold (`GameFontNormal`), white on `Options_List_Active` when selected, `Options_List_Hover`
+  under the mouse; 18 between a group's last button and the next header. A group none of whose pages
+  the client offers gets no header. A click selects with the game's sound.
 - One page is shown at a time; the window refreshes it when it shows it (a selection, or the window
   opening on the page it was on), and a page follows `Options:Watch` while visible.
 - Escape closes the window, other keys go on to the game (`ns.NewWindow`): not through
@@ -102,10 +106,17 @@ settings are open, and closing our window is a plain `Hide` of a frame of ours.
   window of the game has the controller, so SmartNavigation's `CreateFrame` hook rebuilds no window
   for them.
 
-The options are grouped by part of the game: Automation (merchant, quests and loot), Interface
-(the bars to hide, the bags, tooltips, health bars), Chat (the chat window, `/rl`), Mail
-(the bookmarks' names), Action Bars, Minimap, World map (only where `MapPins.IsAvailable()`), Viewport, Ring, Click casting, Controller (only
-on Forever) and Advanced settings ([`advanced-settings.md`](advanced-settings.md)). Every page is built by `UI/SettingsPage.lua`: two columns of rows, or rows across the
+The options are grouped by part of the game, in five groups:
+- General: Automation (merchant, quests, loot and the bags), Chat (the chat window, `/rl`), Mail
+  (the bookmarks' names).
+- Display: Interface (the frames to hide, Edit Mode, tooltips), Unit Frames (the player frame, the
+  class-colored health bars), Action Bars, Viewport.
+- Maps: Minimap, World map (only where `MapPins.IsAvailable()`).
+- Input: Ring, Click casting, Controller (only on Forever).
+- System: Graphics & Camera ([`advanced-settings.md`](advanced-settings.md); its page key is still
+  `advanced`).
+
+Every page is built by `UI/SettingsPage.lua`: two columns of rows, or rows across the
 page (`"wide"`, the Viewport page, as its sliders need the room, and the World map page, with two),
 or an option in the title bar instead of the Defaults button (`"title"`, the Ring page's switch,
 with the rings' editor below it, and the Click casting page's, with the bindings' editor), each an option's name with a control from the game's own
@@ -117,9 +128,8 @@ templates (`SettingsCheckboxTemplate`, `WowStyle2DropdownTemplate`,
 keyboard (Enter, Tab, a click elsewhere), and then, and on Escape, the box shows what the row has
 again; Tab goes on to the page's next box through the template's own `nextEditBox` and
 `previousEditBox`. A refresh leaves a box alone while it has the keyboard, and greys a disabled
-box's text, which the game doesn't. A text row trims what's typed. A `NumberPair` row (the minimap's
-offsets, as a column can't hold two sliders) is two controls on one row, each a box between two plain
-buttons with the slider's arrow atlases: Buttons and EditBoxes, so the controller cursor stops on them. A slider's box (the Advanced
+box's text, which the game doesn't, and Tab skips a box that's hidden (a table's). A text row
+trims what's typed. A slider's box (the Graphics & Camera
 page's, in place of the slider's value text) takes a number, set through the slider so it goes
 where a dragged value does: rounded to the row's `step`, out of range to the nearest end, and
 anything else, or a number that rounds to the value, sets nothing. It shows as many decimals as the
@@ -132,7 +142,31 @@ the font string gets the column's width from `SettingsWindow.PAGE_WIDTH`, so its
 (`GetStringHeight`) is known while the page is built, before the window lays it out.
 A section that follows another one in its column gets 16 more above its header, so a page reads
 as groups rather than one long list, and sections side by side start at the same height where the
-columns' rows would leave their headers out of line (`Page:Align`: the Minimap page goes in pairs).
+columns' rows would leave their headers out of line (`Page:Align`: the Action Bars page's Spell
+ranks below Paging and Buttons).
+
+Where several things share the same options, a page has a table instead of a section for each
+(`Page:Table`, across the page): the Minimap page's elements (`Element | Position | Font size |
+Class color | Offset X | Y`) and the Action Bars page's bars (`Bar | Vertical | Horizontal`). A
+table has a header if given a title, then a line of captions (`GameFontHighlightSmall`, with a
+tooltip where the caption needs one), then a line per thing (`Table:Line`): its name in the first
+column, which gets what the others leave, and a cell per column, a checkbox, a dropdown as wide as
+its column or a number field (a box between two plain buttons with the slider's arrow atlases:
+Buttons and EditBoxes, so the controller cursor stops on them). Each cell is a control of the page
+like a row's, with its own tooltip (titled "line: caption") and reset, so Refresh and Defaults treat
+it as one; the mouse over a cell or the name lights the whole line. A cell or a line can have a
+`shown` check, which Refresh applies: a cell that doesn't apply is hidden (the offsets and font size
+of a hidden element), and an extra line (indented, in the names' column) is there only while it
+applies (Hide its frame while the zone text is at its default spot, Show while FPS and ping is
+shown). The table keeps room for all its lines, so the page doesn't move, and stacks those shown.
+
+Names are one line and fit their room in English and German: a name never wraps (`SetWordWrap`
+false), and what doesn't fit in a short name goes in its tooltip, whose title is always the full
+name. So a name is written for the column it sits in (in German "Leiste per Trigger halten" rather
+than a sentence) and its tooltip says the rest. The tests measure at 5 per character and can't see
+the game's font, so a new or changed German name gets a look in game. A row's button (Spell ranks'
+Upgrade) is as wide as its text needs plus 40, at least 96 and at most a dropdown's 160, so a
+short text leaves the name more room.
 All names use one font: the game's list draws dependent options smaller. A page resets with its own
 Defaults button, which asks with a second click: the game's confirmation dialog would spread taint.
 The game's "all settings" reset doesn't reach our pages any more, and they don't show up in the

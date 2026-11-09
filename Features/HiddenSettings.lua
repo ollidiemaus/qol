@@ -4,7 +4,7 @@ local L = ns.L
 -- The game's hidden settings: settings its options don't show, or show with only part of the range
 -- the game takes, otherwise reached only through /console. The game keeps their values (CVars), and
 -- they are the only truth: QoL saves nothing for them and writes none at login, only when the player
--- changes one on the Advanced settings page (UI/Settings.lua), which reads them through here. The
+-- changes one on the Graphics & Camera page (UI/Settings.lua), which reads them through here. The
 -- raid copies (RAIDgroundEffectDist and the rest) are the game's, for its Raid and Battleground
 -- graphics, and stay alone.
 local HiddenSettings = {}

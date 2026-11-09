@@ -205,6 +205,8 @@ local function newRegion(kind, parent, template)
     function region:GetText() return self.text end
     -- 5 units a character, whatever the font.
     function region:GetStringWidth() return #(self.text or "") * 5 end
+    -- A button's text, measured the same way.
+    function region:GetTextWidth() return self:GetStringWidth() end
     -- Wrapped at the width SetWidth gave it, a line as high as the font.
     function region:GetStringHeight()
         local lines = 1
@@ -998,10 +1000,18 @@ local function install()
             function frame:SetTitle(title) self.titleText = title end
         end
         -- A tab of the game's tab system (TabSystemButtonMixin): Init names it, a selected tab is
-        -- disabled, and a click calls SetTab on its parent, the tab system.
+        -- disabled, and a click calls SetTab on its parent, the tab system. Init sizes it as
+        -- UpdateTabWidth does: the text held to the width it measures, the tab its sides and 20, or
+        -- 10 wider than a longer text.
         if template == "TabSystemTopButtonTemplate" then
             function frame:Init(tabID, text)
-                self.tabID, self.text, self.width = tabID, text, 92
+                self.tabID, self.text = tabID, text
+                self.Text = newRegion("FontString", self)
+                self.Text:SetFontObject("GameFontNormalSmall")
+                self.Text:SetText(text)
+                local textWidth = self.Text:GetStringWidth()
+                self.Text:SetWidth(textWidth)
+                self:SetWidth(math.max(92, textWidth + 10))
                 self:SetTabSelected(false)
             end
             function frame:SetTabSelected(selected)
@@ -1330,9 +1340,12 @@ local function install()
     local backdrop = newRegion("Frame", G.Minimap)
     G.MinimapCompassTexture = newRegion("Texture", backdrop)
     G.MinimapCompassTextureUnderlay = newRegion("Texture", backdrop)
+    -- 90×10, its text filling it in GameFontHighlightSmall (Blizzard_Minimap's Minimap.xml).
     minimapContainer.PlayerCoords = newRegion("Frame", minimapContainer)
+    minimapContainer.PlayerCoords:SetSize(90, 10)
     minimapContainer.PlayerCoords:SetPoint("BOTTOM", G.Minimap, "BOTTOM", 0, -18)
     minimapContainer.PlayerCoords.CoordText = newRegion("FontString", minimapContainer.PlayerCoords)
+    minimapContainer.PlayerCoords.CoordText:SetFontObject("GameFontHighlightSmall")
     -- The buttons around it: tracking left of the header bar, clock and calendar on its right, the
     -- addon compartment under the calendar, and Forever's day and night icon on the round frame.
     cluster.Tracking = newRegion("Frame", cluster)
@@ -2029,6 +2042,7 @@ function Stubs.Reset(options)
         atlases = { ["ui-hud-minimap-frame-generic-mask"] = { width = 215, height = 226 },
             CircleMask = { width = 64, height = 64 }, flightmasterferry = { width = 32, height = 32 } },
         fonts = { GameFontNormal = { "Fonts\\FRIZQT__.TTF", 12, "" },
+            GameFontHighlightSmall = { "Fonts\\FRIZQT__.TTF", 10, "" },
             WhiteNormalNumberFont = { "Fonts\\ARIALN.TTF", 10, "OUTLINE" } },
         -- The hidden settings with their ranges, measured in Forever's client (ground clutter fade
         -- and Always sharpen have none) and, for Draw distance, in retail's (farclip and the horizon

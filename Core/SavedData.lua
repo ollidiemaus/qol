@@ -2,7 +2,7 @@ local _, ns = ...
 
 -- QoLDB's layout version and the migrations up to it. How they run is in docs/DEVELOPMENT.md,
 -- "Saved data".
-local SavedData = { VERSION = 2, MIGRATIONS = {} }
+local SavedData = { VERSION = 3, MIGRATIONS = {} }
 ns.SavedData = SavedData
 
 -- 2: the zone text takes the minimap elements' shared positions, so its own "above" and "below"
@@ -12,6 +12,16 @@ SavedData.MIGRATIONS[2] = function(db)
     if type(options) ~= "table" then return end
     local renamed = ({ above = "top", below = "bottom" })[options.minimapZoneText]
     if renamed then options.minimapZoneText = renamed end
+end
+
+-- 3: the coordinates and the calendar button are hidden through a Position like the other minimap
+-- elements, so their checkboxes become that Position's "hidden".
+SavedData.MIGRATIONS[3] = function(db)
+    local options = db.options
+    if type(options) ~= "table" then return end
+    if options.hideMinimapCoords == true then options.minimapCoords = "hidden" end
+    if options.hideMinimapCalendar == true then options.minimapCalendar = "hidden" end
+    options.hideMinimapCoords, options.hideMinimapCalendar = nil, nil
 end
 
 function SavedData:Migrate(db)

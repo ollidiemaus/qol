@@ -122,7 +122,11 @@ the cursor and how to read it off the cursor. A character's ring is the entries 
   the game's `TabSystemTopButtonTemplate` standing on the parchment's top edge (the tab system they
   call, their parent, is a strip of ours with `SetTab`, `GetTabWidthConstraints` and
   `PlayTabSelectSound`; five tabs are 92 units each at least, so they end at the list's right edge
-  instead of starting at its left one), a `SearchBoxTemplate` (case-insensitive substring of the
+  instead of starting at its left one, and wider where a name needs it, as German "Reittiere" and
+  "Makros" do: the tab system's `UpdateTabWidth` sizes a tab to its text's `GetWidth()` and then
+  sets the text to exactly that width, which on Forever cut those names short ("Reittie…",
+  "Makr…"), so after `Init` a tab's text gets no width of its own (`SetWidth(0)`, as wide as it
+  needs) and the tab at least its text's `GetStringWidth()` plus 10), a `SearchBoxTemplate` (case-insensitive substring of the
   name), and 2×9 rows filled down the first column, then the second, a page at a time, with the
   spell book's page buttons and the mouse wheel. Paging instead of a scroll box: the controller's
   cursor gets to every row and the page buttons, and it's how the spell book does it. A row is the

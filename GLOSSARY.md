@@ -36,8 +36,13 @@ map. A group shows only while it has a page the client can use.
 _Avoid_: category, section
 
 **Section**:
-A header inside a page over a few of its settings, such as Clock or Shape on the Minimap page.
+A header inside a page over a few of its settings, such as Shape on the Minimap page.
 _Avoid_: group, category
+
+**Table**:
+Settings on a page laid out with a line per thing and a column per setting they share, such as the
+Minimap page's elements (Position, Font size, Class color, Offset) or the Action Bars page's bars.
+_Avoid_: grid, list
 
 ### Hidden settings
 

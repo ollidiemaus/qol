@@ -90,11 +90,12 @@ the price of one, as its buttons may not say how many items a slot holds.
   square map it gets the map's width; on a round one it sits a little further in, where the circle
   is wide enough for a name. A name still too long ends in "…". It can also be **hidden**; on
   Forever the clock, the calendar and the mail icon stay. Or keep it where the game puts it and tick
-  **Hide zone text frame** for the bare zone name.
+  **Hide its frame** for the bare zone name.
 - **Zone text, clock and coordinates in class color.** The zone text normally shows the color for
   friendly, hostile or contested territory.
-- **Font size of the zone text, the clock and FPS and ping,** from 9 to 24 or the game's own. With a
-  larger font the clock's button grows with it, and the rows above and below the minimap make room.
+- **Font size of the zone text, the clock, the coordinates and FPS and ping,** from 9 to 24 or the
+  game's own. With a larger font the clock's button grows with it, and the rows above and below the
+  minimap make room.
 - **Clock, addon compartment, tracking button and the day and night icon** (Forever's, or the
   time of day icon on Classic Era): each can move to a row above or below the minimap (left,
   center or right), or be hidden. The tracking button and the day and night icon can also sit
@@ -112,8 +113,14 @@ the price of one, as its buttons may not say how many items a slot holds.
   place, in a row and inside the map, stays when you change the Position, and moves only that
   element. At its default spot the zone text moves just its name, so the clock and the buttons
   next to it stay put. The calendar button has no offset.
-- **Hide the calendar button.**
-- **Hide the coordinates under the minimap.**
+- **Hide the calendar button or the coordinates** under the minimap: their Position is the game's
+  spot or Hidden.
+
+On the Minimap page the Shape section comes first, then a table with a line for each element:
+its Position, Font size, Class color and Offset X and Y, where it has them. Hidden is a Position;
+an element set to Hidden shows no other options. Hide its frame (under the zone text) and Show
+(under FPS and ping) are lines of their own, there only while they apply. Defaults puts every
+element back where the game has it.
 
 ### World map
 
@@ -158,7 +165,8 @@ The margins stay when you hide the interface with Alt+Z.
 
 ### Action Bars
 
-Reverse the direction buttons fill a bar, separately for every bar and both directions:
+Reverse the direction buttons fill a bar, separately for every bar and both directions (a table on
+the Action Bars page, a line per bar with a Vertical and a Horizontal checkbox):
 
 - **Vertical:** on a bar with several rows, the first row moves from the bottom to the top (or the
   other way round).
@@ -364,7 +372,7 @@ Right bar, and both on is the Bottom bar, also when you press them together.
 refresh for a few seconds. **Hide new buff tooltips** keeps those away; a buff you select or point
 at still shows its tooltip.
 
-### Advanced settings
+### Graphics & Camera
 
 Settings the game has but its options don't show, so far only reached by typing `/console`
 commands, each on a row of its own with a description when you point at it. The **Graphics** section
@@ -437,23 +445,27 @@ the X closes it. It also opens in combat; Escape then goes to the game, so close
 author's other addons (with links to copy) and an **Open settings (/qol)** button. In Forever's
 controller interface the button opens the window once you close the game's options.
 
-The pages:
+The pages, in five groups:
 
-- **Automation:** junk selling, repairs, quests, faster auto loot.
-- **Interface:** hiding the system and bag bars, sorting the bags, mana in bear and cat form, portrait hit
-  text, frames past the screen edge, tooltips, health bars in class color.
-- **Chat:** the chat buttons, the combat log, names in class color, `/rl`.
-- **Mail:** the bookmarks' names.
-- **Action Bars**, **Minimap**, **World map** (on Forever and Classic Era), **Viewport**, **Ring**, **Click casting**
-  and **Controller** (on Forever).
-- **Advanced settings:** the game's hidden graphics, draw distance and camera settings, last in the
-  list.
+- **General**
+  - **Automation:** junk selling, repairs, quests, faster auto loot, sorting the bags.
+  - **Chat:** the chat buttons, the combat log, names in class color, `/rl`.
+  - **Mail:** the bookmarks' names.
+- **Display**
+  - **Interface:** hiding the system and bag bars, frames past the screen edge, tooltips.
+  - **Unit Frames:** mana in bear and cat form, portrait hit text, health bars in class color.
+  - **Action Bars** and **Viewport**.
+- **Maps:** **Minimap** and **World map** (on Forever and Classic Era).
+- **Input:** **Ring**, **Click casting** and **Controller** (on Forever).
+- **System**
+  - **Graphics & Camera:** the game's hidden graphics, draw distance and camera settings.
 
 On Classic Era the pages leave out what it doesn't have: Sort on open, mana in bear and cat
 form, guild bank repairs, the addon compartment's place, the calendar button and the player
 coordinates. Junk selling and repairs with your own gold work as everywhere.
 
-Every page fits without scrolling, most in two columns. With a controller, the
+Every page fits without scrolling, most in two columns, and every option's name fits on one line,
+in English and German; point at it for the whole story. With a controller, the
 arrows next to a viewport margin move it one pixel per press. In Forever's controller interface a
 dropdown doesn't open its list: each press (or click) switches it to the next choice, as the game
 froze when its options closed after one of these lists had been opened there. Changes apply right

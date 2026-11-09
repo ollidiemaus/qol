@@ -41,7 +41,10 @@ round frame; the other elements of the spot move with it. Hidden sends the butto
 holder: on Forever the clock, the calendar, the mail indicator and the instance difficulty are
 children of `MinimapCluster`, only anchored to the button (`GameTimeFrameTemplate.xml`,
 `MinimapIndicatorFrameTemplate.xml`, `Blizzard_TimeManager.xml`), so they keep showing. The header
-bar goes whenever the zone text isn't at its default spot. Positions are worked
+bar goes whenever the zone text isn't at its default spot. The coordinates and the calendar button
+have only two positions, Default and Hidden (`AT_GAME_SPOT`): they don't move into the rows, but are hidden
+the same way as the others, so the settings have one place to hide each element. Saved data version
+3 turned their old Hide checkboxes (`hideMinimapCoords`, `hideMinimapCalendar`) into Hidden. Positions are worked
 out in screen units, since Edit Mode scales the minimap but not its header. Forever's skin sets the
 day and night icon's center again whenever the minimap's scale is set; `Minimap.OnScaleUpdated` lays
 it out again after that. The clock's text (`TimeManagerClockTicker`) and the coordinates'
@@ -54,7 +57,8 @@ the one a text already has, so that alone left the larger font until a `/reload`
 2026-10-12; the stubs' `SetFontObject` does the same). A larger font makes the clock's button
 wider and higher and the zone text's button and font string higher (`MinimapZoneText` has a height
 of 12 and shows nothing of a line that doesn't fit), by the ratio to the game's size; a smaller one
-leaves them as they are. The sizes are set before the positions, which go by the buttons' sizes.
+leaves them as they are. The coordinates' text fills its frame, so their frame grows the same way.
+The sizes are set before the positions, which go by the buttons' sizes.
 
 Classic Era (1.15) has the same minimap with other names (`Blizzard_Minimap/Classic/Minimap.xml`),
 so a few frames have a Classic Era path. Each asks the client for the frame, not which client it is:
@@ -67,8 +71,8 @@ so a few frames have a Classic Era path. Each asks the client for the frame, not
 - There is no calendar (no `ToggleCalendar`, which Forever's calendar bootstrap defines at startup):
   `GameTimeFrame` is the time of day icon on the round border (`GameTime_NoCalendar.xml`), not the
   calendar button. So without `ToggleCalendar` the day and night option moves `GameTimeFrame` (where
-  the cluster has no `DielFrame`), and the calendar option and its row are left out, or it would
-  hide the icon.
+  the cluster has no `DielFrame`), and the calendar's line is left out of the settings, or its
+  Hidden would hide the icon.
 - The map is 140 across, not 198. The rows' distances from the round frame (`EDGES.round`) and the
   inside spots' cover of the round frame (`ROUND_COVER`) keep Forever's numbers until they're checked
   in game.
@@ -97,7 +101,8 @@ when it gets a row and has its size before it's first placed.
 An offset is a shift of one element in screen units (`x / GetEffectiveScale()`), so a scaled minimap
 doesn't change it. The rows and the spots inside the map work out places and widths without it and add
 it only in `placeItem`: neighbors and the coordinates under a row don't move. The coordinates have no
-element entry and no Position; their offset goes on the row's anchor or on the game's.
+element entry (their Position is only Default or Hidden); their offset goes on the row's anchor or on
+the game's.
 
 At the game's own place the game's saved anchors are shifted (`shift`, through `ns.Later` like all the
 layout). With an offset of 0 a frame we don't hold isn't touched at all, and the offset keys count
@@ -125,9 +130,14 @@ for the exit. `originals` holds the game's anchors and `placed` what
 the last layout left: anchors that aren't `placed` are the game's new ones (`followGame`) and become
 the originals, also with the offset back at 0 or for a frame in a row.
 
-## The page's fit
+## The page
 
-With the offset rows the sections go in pairs by height, so every header stays level within the
-page's 600: Shape | Coordinates, Clock | Zone text, Buttons | FPS and ping, 584 on Forever. The old
-order and Shape | Clock, Buttons | FPS and ping, Zone text | Coordinates would both take 610 with
-level headers, as each leaves a short section beside a much taller one.
+The page has the Shape section (square, border) and below it a table of the elements, one line each:
+`Element | Position | Font size | Class color | Offset X | Y` (see the settings window notes for
+tables). A line has the cells its element has: the compartment, the tracking button and the day and
+night icon no font size or class color, the calendar button only a Position. Hidden is set only
+through Position, and a hidden element's other cells hide with it (there's nothing to size, color
+or shift). Two extra lines, indented below their element, are there only while they apply: the zone
+text's Hide its frame while it's at its default spot, and FPS and ping's Show while it isn't
+hidden. The table keeps room for every line, so the page doesn't move when one comes or goes; on
+Forever it is the page's tallest state that has to fit the 600.
