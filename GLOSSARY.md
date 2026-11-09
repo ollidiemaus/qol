@@ -201,3 +201,36 @@ _Avoid_: label, bar text
 **Druid mana bar**:
 The third bar on the player frame that shows a druid's mana while bear or cat form uses rage or energy.
 _Avoid_: druid-only mana bar, alternate power bar (that's Blizzard's own third bar)
+
+### Cooldown Manager
+
+**Cooldown Manager**:
+The game's own rows of icons and bars for the character's cooldowns and tracked buffs, set up in the
+game's Edit Mode. Which spells it shows is the game's call; QoL changes only its look.
+_Avoid_: cooldown viewer, CDM, cooldown bar
+
+**Reminder**:
+An icon shown while the character lacks a buff, gone once they have it. A buff of that name counts at
+any rank and from any caster, and so does its group version. A reminder for a spell shows only on a
+character that knows the spell.
+_Avoid_: missing buff, tracker, custom spell, alert
+
+**Preset**:
+A reminder QoL comes with, such as Well Fed, as opposed to one the player adds. It can be switched off
+but not removed, and it shows on every character.
+_Avoid_: default reminder, built-in
+
+**Reminder row**:
+The row of QoL's own that the reminders show in, placed by the player. It isn't part of the Cooldown
+Manager.
+_Avoid_: reminder bar, tracker bar
+
+**Group version**:
+The buff that puts another buff on the whole group at once, such as Gift of the Wild for Mark of the
+Wild. Having it counts as having the buff.
+_Avoid_: equivalent, raid buff, greater buff
+
+**Weapon buff**:
+A temporary effect put on a weapon rather than on the character: a poison, a shaman's weapon spell
+such as Rockbiter, a sharpening stone or an oil. The game doesn't count it as a buff.
+_Avoid_: weapon enchant (alone, as that also means the permanent one), imbue, temporary enchant
