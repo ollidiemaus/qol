@@ -242,7 +242,13 @@ local function buildActionBars(page)
     end
 end
 
--- Ring page (also /qol ring): the switch in the title bar, and below it, on a page of the spell
+-- Cooldown Manager page (Forever): how the game's Cooldown Manager looks.
+local function buildCooldownManager(page)
+    page:Header("left", L.SECTION_LOOK)
+    page:Checkbox("left", "hideCooldownManagerBorders", L.HIDE_COOLDOWN_BORDERS, L.HIDE_COOLDOWN_BORDERS_TIP)
+end
+
+-- Ring page (also /qol ring):the switch in the title bar, and below it, on a page of the spell
 -- book, the rings' editor (Features/RingEditor.lua), which follows the page when it's shown.
 local function buildRing(page)
     page:Checkbox("title", "ring", L.RING, L.RING_TIP)
@@ -476,6 +482,9 @@ local GROUPS = {
         { key = "interface", title = L.CATEGORY_INTERFACE, build = buildInterface },
         { key = "unitFrames", title = L.CATEGORY_UNIT_FRAMES, build = buildUnitFrames },
         { key = "actionBars", title = L.CATEGORY_ACTION_BARS, build = buildActionBars },
+        -- Only on Forever, where the game has its Cooldown Manager's rows.
+        { key = "cooldownManager", title = L.CATEGORY_COOLDOWN_MANAGER, build = buildCooldownManager,
+            available = function() return ns.CooldownManager.IsAvailable() end },
         { key = "viewport", title = L.CATEGORY_VIEWPORT, build = buildViewport },
     } },
     { title = L.GROUP_MAPS, pages = {

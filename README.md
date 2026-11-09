@@ -190,6 +190,19 @@ without the dark edge some of them have, use an icon pack.
 With Forever's controller interface on, the game shows its own action bars instead of these, so
 the options above wait until you switch back to keyboard and mouse. The rings work in both.
 
+### Cooldown Manager
+
+On WoW Forever, a page for the game's own Cooldown Manager (the rows of cooldowns and tracked buffs
+you set up in Edit Mode).
+
+**Hide icon borders:** the icons of all four rows (Essential Cooldowns, Utilities, Tracked Buffs
+and Tracked Bars) lose their border, so they match action buttons without borders. Everything else
+on an icon stays: its rounded shape, the cooldown swipe, stack counts, the colored border of a
+debuff and the out-of-range tint. Off by default; untick it and the borders are back at once.
+
+A tracked buff whose icon shows all the time isn't QoL's doing: that is the game's own Edit Mode
+setting "Hide When Inactive" on the buff row being off.
+
 **Upgrade when learning a rank** (WoW Forever, off by default): when you learn a new rank of a spell,
 the slots holding your previous highest rank get the new one, on every bar, page and form and on the
 controller bars. Lower ranks stay where they are, so a spell you downrank on purpose isn't touched;
@@ -454,7 +467,7 @@ The pages, in five groups:
 - **Display**
   - **Interface:** hiding the system and bag bars, frames past the screen edge, tooltips.
   - **Unit Frames:** mana in bear and cat form, portrait hit text, health bars in class color.
-  - **Action Bars** and **Viewport**.
+  - **Action Bars**, **Cooldown Manager** (on Forever) and **Viewport**.
 - **Maps:** **Minimap** and **World map** (on Forever and Classic Era).
 - **Input:** **Ring**, **Click casting** and **Controller** (on Forever).
 - **System**

@@ -12,7 +12,7 @@ local SPECS = {
     "options", "saveddata", "api", "events", "later", "merchant", "quests", "fasterautoloot", "tooltips", "hideframes", "bufftooltips",
     "combatlog", "chatclasscolors", "sortonopen", "mailbookmarks", "classhealthbars",
     "druidmanabar", "screenedge", "minimap",
-    "mappins", "viewport", "actionbars", "buttonborders", "barpaging", "rankupgrades", "backbuttons", "followingbars",
+    "mappins", "viewport", "actionbars", "buttonborders", "cooldownmanager", "barpaging", "rankupgrades", "backbuttons", "followingbars",
     "triggertoggle", "ring", "clickcast",
     "reloadcommand",
     "settings", "classicera", "advancedsettings", "probe", "locales",

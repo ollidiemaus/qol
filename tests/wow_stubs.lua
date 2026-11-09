@@ -48,6 +48,14 @@ local function newRegion(kind, parent, template)
         end
         return unpack(children)
     end
+    -- Its textures, masks and font strings (not the frames in it).
+    function region:GetRegions()
+        local frame, regions = state.rawFrames[self] or self, {}
+        for _, other in ipairs(state.regions) do
+            if other.parent == frame and REGION_KINDS[other.kind] then regions[#regions + 1] = other end
+        end
+        return unpack(regions)
+    end
     local function checkShow(self)
         if state.combat and self.protected then
             error("ADDON_ACTION_BLOCKED: Show or Hide on a protected frame in combat")
@@ -603,6 +611,111 @@ local function newPlayerFrame(raw)
     })
     state.rawFrames[frame] = raw
     return frame
+end
+
+-- A frame of the game's that fails the spec when the addon writes a field on it.
+local function readOnly(raw, what)
+    local frame = setmetatable({}, {
+        __index = raw,
+        __newindex = function(_, key) error("the addon wrote " .. what .. " field " .. tostring(key)) end,
+    })
+    state.rawFrames[frame] = raw
+    return frame
+end
+
+-- The game's four Cooldown Manager rows (Blizzard_CooldownViewer), by global name: the icon size of
+-- the row's item template and how far its border reaches past the icon. buff: with the debuff
+-- border; bar: a bar with the icon in a frame of its own (item.Icon), the texture in that.
+local COOLDOWN_ROWS = {
+    { name = "EssentialCooldownViewer", size = 50, border = { 9, 8 } },
+    { name = "UtilityCooldownViewer", size = 30, border = { 6, 5 } },
+    { name = "BuffIconCooldownViewer", size = 40, border = { 8, 7 }, buff = true },
+    { name = "BuffBarCooldownViewer", size = 30, border = { 6, 5 }, buff = true, bar = true },
+}
+
+-- An icon as the row's template builds it: the icon with its rounded mask, the border (an unnamed
+-- texture, found by its atlas), the out-of-range shadow or the debuff border, the cooldown.
+local function newCooldownItem(row, info)
+    local item = newRegion("Frame", row)
+    item:SetSize(info.bar and 220 or info.size, info.size)
+    local holder = item
+    if info.bar then
+        holder = newRegion("Frame", item)
+        holder:SetPoint("LEFT", item, "LEFT", 0, 0)
+        holder:SetSize(info.size, info.size)
+        item.Icon = holder
+        item.Bar = newRegion("StatusBar", item)
+    end
+    holder.Icon = newRegion("Texture", holder)
+    holder.Icon:SetAllPoints(holder)
+    local mask = newRegion("MaskTexture", holder)
+    mask:SetAtlas("UI-HUD-CoolDownManager-Mask")
+    mask:SetAllPoints(holder)
+    holder.Icon:AddMaskTexture(mask)
+    local border = newRegion("Texture", holder)
+    border:SetAtlas("UI-HUD-CoolDownManager-IconOverlay")
+    border:SetPoint("TOPLEFT", holder, "TOPLEFT", -info.border[1], info.border[2])
+    border:SetPoint("BOTTOMRIGHT", holder, "BOTTOMRIGHT", info.border[1], -info.border[2])
+    border:SetDrawLayer("OVERLAY")
+    if info.buff then
+        item.DebuffBorder = newRegion("Frame", item)
+        item.DebuffBorder.Texture = newRegion("Texture", item.DebuffBorder)
+        item.DebuffBorder.Texture:SetAllPoints(item.DebuffBorder)
+    else
+        item.OutOfRange = newRegion("Texture", item)
+        item.OutOfRange:SetAtlas("UI-CooldownManager-OORshadow")
+        item.OutOfRange:SetAllPoints(item)
+        item.OutOfRange:SetDrawLayer("OVERLAY")
+    end
+    if not info.bar then
+        item.Cooldown = newRegion("Cooldown", item)
+        item.Cooldown:SetAllPoints(item)
+    end
+    return readOnly(item, "Cooldown Manager icon")
+end
+
+-- Blizzard_CooldownViewer loaded: the four rows as globals, each with `count` icons (default 3)
+-- from its pool. RefreshLayout is the game's: it takes every icon back and hands out as many as the
+-- row shows now, old ones first, new ones as the template builds them. The addon can't write on a
+-- row or an icon.
+function Stubs.NewCooldownManager(count)
+    state.cooldownRows = {}
+    for _, info in ipairs(COOLDOWN_ROWS) do
+        local row = newRegion("Frame", _G.UIParent)
+        local record = { count = count or 3, active = {}, inactive = {} }
+        state.cooldownRows[info.name] = record
+        row.itemFramePool = {
+            EnumerateActive = function()
+                local set = {}
+                for _, item in ipairs(record.active) do set[item] = true end
+                return pairs(set)
+            end,
+        }
+        function row.RefreshLayout()
+            for index = #record.active, 1, -1 do
+                table.insert(record.inactive, table.remove(record.active, index))
+            end
+            for index = 1, record.count do
+                record.active[index] = table.remove(record.inactive) or newCooldownItem(row, info)
+            end
+        end
+        row.RefreshLayout()
+        _G[info.name] = readOnly(row, "Cooldown Manager row")
+    end
+end
+
+-- The row (its global name) rebuilds with `count` icons, as after a change in the game's Cooldown
+-- Manager settings.
+function Stubs.RebuildCooldownRow(name, count)
+    state.cooldownRows[name].count = count
+    _G[name]:RefreshLayout()
+end
+
+-- The icons a row shows now, in order.
+function Stubs.CooldownIcons(name)
+    local icons = {}
+    for index, item in ipairs(state.cooldownRows[name].active) do icons[index] = item end
+    return icons
 end
 
 -- The world map: its canvas (1000 x 667 at zoom 1), its data providers and the map it shows.
@@ -1925,6 +2038,8 @@ local function install()
     G.UnitCanAttack = function(_, unit) return state.attackable and state.attackable[unit] or false end
     G.hooksecurefunc = function(target, name, hook)
         if type(target) == "string" then target, name, hook = G, target, name end
+        -- The game's hook is the one write a read-only frame takes.
+        target = state.rawFrames[target] or target
         local original = target[name]
         target[name] = function(...)
             original(...)
@@ -1972,6 +2087,7 @@ local ADDON_GLOBALS = {
     "QoLTriggerToggle", "QoLTriggerToggleLT", "QoLTriggerToggleRT",
     "QoLClickCast", "QoLClickCastKeys", "QoLClickCastClicks", "QoLClickCastEditor", "ClickCastFrames", "ClickCastHeader",
     "Grid2Frame",
+    "EssentialCooldownViewer", "UtilityCooldownViewer", "BuffIconCooldownViewer", "BuffBarCooldownViewer",
 }
 for index = 1, 5 do ADDON_GLOBALS[#ADDON_GLOBALS + 1] = "ArenaEnemyMatchFrame" .. index end
 for index = 1, 8 do ADDON_GLOBALS[#ADDON_GLOBALS + 1] = "QoLTriggerToggleRelay" .. index end

@@ -24,6 +24,27 @@ icon, and the casting and interrupt animations get alpha 0 (their animations onl
 children; reparenting them would break their `GetParent()` calls). Turning the option off puts
 back what was saved per button.
 
+Hiding the Cooldown Manager's icon borders (`Features/CooldownManager.lua`, Forever only) changes one
+texture per icon. The border is an unnamed `OVERLAY` texture in each of the four item templates
+(`Blizzard_CooldownViewer/CooldownViewer.xml`), with the atlas `UI-HUD-CoolDownManager-IconOverlay`;
+on the bar row it sits in the icon's own frame (`item.Icon`), not on the item. The game sets it in
+the template and never touches it again, so it is found among the regions by its atlas, gets
+`SetAlpha(0)`, and gets its former alpha back when the option goes off. The Cooldown Manager's code
+runs partly in the game's secure environment and keys a table by secret aura instance IDs, so
+nothing is written on a row or an icon: which border belongs to which icon, and each hidden
+border's former alpha, live in weak-keyed tables of ours. The rows and icons aren't protected and a
+texture's alpha may change in combat, so the pass runs in combat too (`ns.Later` with `true`).
+A row keeps its icons in a pool (`row.itemFramePool`): `RefreshLayout` releases them all and
+acquires as many as the row shows, building new ones as it grows. A hidden border stays hidden on a
+pooled icon, so only new icons need a pass, and nothing but the rebuild says when there are any (it
+runs from the game's settings, Edit Mode, auras and the row's `OnShow`). So each row's
+`RefreshLayout` gets a `hooksecurefunc`, the one hook QoL has on a method of a Blizzard frame: the
+hook is the game's own secure wrapper (the field stays secure, unlike a written one), it runs after
+the rebuild, and all it does is ask `ns.Later` for a pass over `itemFramePool:EnumerateActive()` (a
+read of the pool) from our own frame's OnUpdate. The rows get no hook until the player turns the
+option on; turning it off restores every border in our table, also on icons a row isn't showing.
+If the game loads `Blizzard_CooldownViewer` after QoL (`ADDON_LOADED`), the rows are picked up then.
+
 Rank upgrades (`Features/RankUpgrades.lua`, the terms are in the glossary) touch no Blizzard frame:
 only action slots, through the game's API, so there's no taint to reason about beyond staying out of
 combat, which `ns.LaterOutsideWindows` does, along with the controller windows. A slot is replaced

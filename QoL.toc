@@ -54,6 +54,7 @@ Features\MapPins.lua
 Features\Viewport.lua
 Features\ActionBars.lua
 Features\ButtonBorders.lua
+Features\CooldownManager.lua
 Features\BarPaging.lua
 Features\RankUpgrades.lua
 Features\BackButtons.lua
