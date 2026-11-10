@@ -43,6 +43,8 @@ local STEP_WIDTH = 14       -- an arrow of a number field, around the game's sli
 local FIELD_WIDTH = 2 * STEP_WIDTH + BOX_ART_LEFT + NUMBER_WIDTH
 local CELL_GAP = 10         -- between a table's columns
 local LINE_ICON_SIZE = 18   -- an icon before a table line's name
+local REMOVE_SIZE = 16      -- a table line's X
+local REMOVE_ATLAS = "common-icon-redx"
 local KEY_WIDTH, KEY_HEIGHT = 160, 22 -- a key binding's buttons, as in the game's Key Bindings
 local BUTTON_WIDTH, BUTTON_HEIGHT = 160, 22
 local BUTTON_MIN_WIDTH = 96  -- a row's button with a short text, as wide as Defaults
@@ -651,7 +653,8 @@ Table.__index = Table
 -- columns: { caption = text, width = number, tooltip = text } for each column from the left; the
 -- first one is the names', which takes the room the others leave unless it has a width. title: a
 -- section header above it; without one it goes on the section above, after a gap, unless joined.
-function Page:Table(columns, title, joined)
+-- onDrop: what dropping something on the table (a drag, or a click while the cursor holds it) does.
+function Page:Table(columns, title, joined, onDrop)
     if title then
         self:Header("wide", title)
     elseif not joined then
@@ -659,7 +662,8 @@ function Page:Table(columns, title, joined)
     end
     local frame = newRow(self, "wide", ROW_HEIGHT)
     local settingsTable = setmetatable({ page = self, frame = frame, top = self:Height() - ROW_HEIGHT, columns = {},
-        captions = {}, lines = {} }, Table)
+        captions = {}, lines = {}, onDrop = onDrop }, Table)
+    settingsTable:TakeDrops(frame)
     local others = 0
     for index = 2, #columns do others = others + CELL_GAP + columns[index].width end
     local x = 0
@@ -689,16 +693,45 @@ function Page:Table(columns, title, joined)
     return settingsTable
 end
 
--- A control in a line's cell, for an option like a row's, named after the line and the column.
+-- Lets frame take what's dropped on the table, if it takes drops.
+function Table:TakeDrops(frame)
+    local onDrop = self.onDrop
+    if not onDrop then return end
+    frame:SetScript("OnReceiveDrag", onDrop)
+    frame:SetScript("OnMouseUp", function()
+        if GetCursorInfo() then onDrop() end
+    end)
+end
+
+-- An X that does onClick, in Forever's red (its character creation removes with it).
+local function newRemoveButton(control, onClick)
+    local button = CreateFrame("Button", nil, control.row)
+    button:SetSize(REMOVE_SIZE, REMOVE_SIZE)
+    button:SetNormalAtlas(REMOVE_ATLAS)
+    button:SetHighlightAtlas(REMOVE_ATLAS, "ADD")
+    button:SetScript("OnClick", onClick)
+    button:SetScript("OnEnter", control.enter)
+    button:SetScript("OnLeave", control.leave)
+    return button
+end
+
+-- A control in a line's cell, for an option like a row's (or a value kept elsewhere, as optionRow
+-- takes it), named after the line and the column.
 local function newCell(settingsTable, line, column, cell)
     local page, info = settingsTable.page, settingsTable.columns[column]
     local frame = CreateFrame("Frame", nil, line.frame)
     frame:SetPoint("TOPLEFT", line.frame, "TOPLEFT", info.x, 0)
     frame:SetSize(info.width, ROW_HEIGHT)
-    local backing = optionBacking(cell.key)
-    page.keys[cell.key] = true
-    local control = { kind = cell.kind, key = cell.key, name = line.name, tooltip = cell.tooltip, column = "wide",
-        row = frame, shown = cell.shown, page = page, get = backing.get, set = backing.set, reset = backing.reset }
+    local key, backing = cell.key, cell.key or {}
+    if type(key) == "string" then
+        backing = optionBacking(key)
+        page.keys[key] = true
+    else
+        key = nil
+    end
+    local control = { kind = cell.kind, key = key, name = line.name, tooltip = cell.tooltip, column = "wide",
+        row = frame, shown = cell.shown, enabled = cell.enabled, page = page, get = backing.get, set = backing.set,
+        reset = backing.reset, isDefault = backing.isDefault }
     function control.title() return ("%s: %s"):format(line.name(), info.caption) end
     function control.enter()
         line.highlight:Show()
@@ -717,6 +750,8 @@ local function newCell(settingsTable, line, column, cell)
     elseif cell.kind == "dropdown" then
         widget = newDropdown(control, cell.choices)
         widget:SetWidth(info.width)
+    elseif cell.kind == "remove" then
+        widget = newRemoveButton(control, cell.onClick)
     else
         widget = numberField(page, control, cell.min, cell.max)
     end
@@ -726,40 +761,53 @@ local function newCell(settingsTable, line, column, cell)
     return control
 end
 
+-- A value, or what a function giving it gives now.
+local function now(value)
+    if type(value) == "function" then return value() end
+    return value
+end
+
 -- A line: its name, the name's tooltip, and cells: { [column] = cell } (the names' column is 1), a
--- cell being { kind = "checkbox", "dropdown" or "number", key = the option, tooltip, choices (a
--- dropdown's, as Page:Dropdown takes them), min and max (a number's), shown (a function: the cell is
--- hidden while it returns false) }. options: indent (an extra line, below the one it belongs to),
--- shown (a function: the line is left out while it returns false), icon (a texture before the name).
+-- cell being { kind = "checkbox", "dropdown", "number" or "remove" (an X), key = the option (or a
+-- value kept elsewhere, as optionRow takes it), tooltip, choices (a dropdown's, as Page:Dropdown
+-- takes them), min and max (a number's), onClick (an X's), shown (a function: the cell is hidden while
+-- it returns false), enabled (a function: greyed out while it returns false) }. options: indent (an
+-- extra line, below the one it belongs to), shown (a function: the line is left out while it returns
+-- false), icon (a texture before the name), enabled (a function: the name and icon are greyed out
+-- while it returns false), footer (the line stays below the lines added after it). The name and the
+-- icon can be functions giving them, asked again on each refresh, for a line that shows one thing
+-- after another.
 function Table:Line(label, tooltip, cells, options)
     options = options or {}
     local frame = CreateFrame("Frame", nil, self.frame)
     frame:SetHeight(ROW_HEIGHT)
     local highlight = newHighlight(frame)
     local names = self.columns[1]
-    local text = newName(frame, options.indent, label)
+    local text = newName(frame, options.indent, now(label))
     local icon
     if options.icon then
         icon = frame:CreateTexture(nil, "ARTWORK")
         icon:SetSize(LINE_ICON_SIZE, LINE_ICON_SIZE)
         icon:SetPoint("LEFT", frame, "LEFT", LABEL_X + (options.indent and INDENT or 0), 0)
-        icon:SetTexture(options.icon)
+        icon:SetTexture(now(options.icon))
         text:ClearAllPoints()
         text:SetPoint("LEFT", icon, "RIGHT", LABEL_GAP / 2, 0)
     end
     text:SetPoint("RIGHT", frame, "LEFT", names.x + names.width, 0)
+    local line = { frame = frame, label = text, icon = icon, iconOf = options.icon, tooltip = tooltip,
+        indent = options.indent, highlight = highlight, cells = {}, shown = options.shown, enabled = options.enabled,
+        footer = options.footer }
+    function line.name() return now(label) end
     frame:EnableMouse(true)
     frame:SetScript("OnEnter", function()
         highlight:Show()
-        showTooltip(frame, label, tooltip)
+        showTooltip(frame, line.name(), tooltip)
     end)
     frame:SetScript("OnLeave", function()
         highlight:Hide()
         hideTooltip()
     end)
-    local line = { frame = frame, label = text, icon = icon, indent = options.indent, highlight = highlight,
-        cells = {}, shown = options.shown }
-    function line.name() return label end
+    self:TakeDrops(frame)
     for column = 2, #self.columns do
         if cells[column] then line.cells[column] = newCell(self, line, column, cells[column]) end
     end
@@ -771,18 +819,34 @@ function Table:Line(label, tooltip, cells, options)
     return line
 end
 
--- Stacks the lines that show below the captions.
+-- Stacks the lines that show below the captions, the footers last, each with its name and icon as
+-- they are now.
 function Table:Layout()
     local y = ROW_HEIGHT
-    for _, line in ipairs(self.lines) do
+    local normal = fontColor(NORMAL_FONT_COLOR, 1, 0.82, 0)
+    local grey = fontColor(GRAY_FONT_COLOR, 0.5, 0.5, 0.5)
+    local function stack(line)
         local shown = line.shown == nil or line.shown() == true
         line.frame:SetShown(shown)
-        if shown then
-            line.frame:ClearAllPoints()
-            line.frame:SetPoint("TOPLEFT", self.frame, "TOPLEFT", 0, -y)
-            line.frame:SetPoint("TOPRIGHT", self.frame, "TOPRIGHT", 0, -y)
-            y = y + ROW_HEIGHT
+        if not shown then return end
+        line.frame:ClearAllPoints()
+        line.frame:SetPoint("TOPLEFT", self.frame, "TOPLEFT", 0, -y)
+        line.frame:SetPoint("TOPRIGHT", self.frame, "TOPRIGHT", 0, -y)
+        y = y + ROW_HEIGHT
+        local enabled = line.enabled == nil or line.enabled() == true
+        local color = enabled and normal or grey
+        line.label:SetText(line.name())
+        line.label:SetTextColor(color[1], color[2], color[3])
+        if line.icon then
+            line.icon:SetTexture(now(line.iconOf))
+            line.icon:SetDesaturated(not enabled)
         end
+    end
+    for _, line in ipairs(self.lines) do
+        if not line.footer then stack(line) end
+    end
+    for _, line in ipairs(self.lines) do
+        if line.footer then stack(line) end
     end
 end
 

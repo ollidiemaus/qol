@@ -72,6 +72,46 @@ local function overlay(icon)
     error("an icon without the overlay")
 end
 
+-- The player's own reminders: Thorns (ranks 1 and 3), Mark of the Wild (ranks 1 and 7) and Gift of
+-- the Wild, as Forever numbers them, with made-up icons.
+local THORNS_1, THORNS_3, MARK_1, MARK_7, GIFT = 467, 1075, 1126, 9885, 21849
+local THORNS_ICON, MARK_ICON = 136104, 136078
+
+-- The client has data for these spells on every character.
+local function gameSpells()
+    local spells = Stubs.state().gameSpells
+    spells[THORNS_1] = { name = "Thorns", texture = THORNS_ICON }
+    spells[THORNS_3] = { name = "Thorns", texture = THORNS_ICON }
+    spells[MARK_1] = { name = "Mark of the Wild", texture = MARK_ICON }
+    spells[MARK_7] = { name = "Mark of the Wild", texture = MARK_ICON }
+    spells[GIFT] = { name = "Gift of the Wild", texture = 136038 }
+end
+
+-- The character knows these spells ({ id, name, rank } each).
+local function learn(spells)
+    for _, s in ipairs(spells) do
+        Stubs.state().spells[s[1]] = { name = s[2], texture = s[2] == "Thorns" and THORNS_ICON or MARK_ICON,
+            subtext = "Rank " .. s[3] }
+    end
+end
+
+-- Loads the addon on Forever, with the account's own reminders saved (reminders: { { spell, on } }),
+-- the character knowing known, and logs in.
+local function startOwn(savedOptions, reminders, known)
+    local ns = Stubs.LoadAddon()
+    knowSpells(ENGLISH)
+    gameSpells()
+    learn(known or {})
+    _G.QoLDB = { options = savedOptions, reminders = reminders }
+    Stubs.Fire("ADDON_LOADED", "QoL")
+    Stubs.Fire("PLAYER_LOGIN")
+    Stubs.Fire("PLAYER_ENTERING_WORLD")
+    Stubs.RunTimers()
+    return ns
+end
+
+local DRUID = { { THORNS_1, "Thorns", 1 }, { MARK_1, "Mark of the Wild", 1 } }
+
 describe("reminders", function()
     it("shows a switched-on preset while its buff is missing, and drops it once the buff is there", function()
         local ns = start({ reminders = true, reminderWellFed = true })
@@ -220,6 +260,103 @@ describe("reminders", function()
             if preset.experience then marked[#marked + 1] = preset.key end
         end
         T.same(marked, { "reminderWellRested" })
+    end)
+
+    it("shows the player's own reminder while its buff is missing, after the presets", function()
+        local ns = startOwn({ reminders = true, reminderWellFed = true },
+            { { spell = THORNS_3, on = true }, { spell = MARK_1, on = true } }, DRUID)
+        T.same(seen(ns), { ICONS.wellFed, THORNS_ICON, MARK_ICON })
+        Stubs.SetBuffs({ buff("Thorns", THORNS_3) })
+        Stubs.RunTimers()
+        T.same(seen(ns), { ICONS.wellFed, MARK_ICON })
+    end)
+
+    it("counts a buff at any rank, from any caster", function()
+        local ns = startOwn({ reminders = true }, { { spell = THORNS_3, on = true } }, DRUID)
+        T.same(seen(ns), { THORNS_ICON }, "rank 3 saved, rank 1 known")
+        Stubs.SetBuffs({ buff("Thorns", 9910) })
+        Stubs.RunTimers()
+        T.same(seen(ns), {}, "another druid's rank 6")
+    end)
+
+    it("counts the group version", function()
+        local ns = startOwn({ reminders = true }, { { spell = MARK_7, on = true } }, DRUID)
+        T.same(seen(ns), { MARK_ICON })
+        Stubs.SetBuffs({ buff("Gift of the Wild", GIFT) })
+        Stubs.RunTimers()
+        T.same(seen(ns), {})
+    end)
+
+    it("shows nothing for a switched-off reminder of the player's own", function()
+        local ns = startOwn({ reminders = true }, { { spell = THORNS_3, on = false }, { spell = MARK_1, on = true } },
+            DRUID)
+        T.same(seen(ns), { MARK_ICON })
+        ns.Reminders.SetOn(2, false)
+        Stubs.RunTimers()
+        T.same(seen(ns), {})
+        ns.Reminders.SetOn(1, true)
+        Stubs.RunTimers()
+        T.same(seen(ns), { THORNS_ICON })
+        T.same(QoLDB.reminders, { { spell = THORNS_3, on = true }, { spell = MARK_1, on = false } })
+    end)
+
+    it("leaves out a reminder for a spell the character doesn't know, until it learns it", function()
+        local ns = startOwn({ reminders = true }, { { spell = THORNS_3, on = true } })
+        T.same(seen(ns), {})
+        T.same(ns.Reminders.Own(), { { name = "Thorns", icon = THORNS_ICON, on = true, known = false } })
+        learn({ { THORNS_1, "Thorns", 1 } })
+        Stubs.Fire("SPELLS_CHANGED")
+        Stubs.RunTimers()
+        T.same(seen(ns), { THORNS_ICON })
+        T.same(ns.Reminders.Own(), { { name = "Thorns", icon = THORNS_ICON, on = true, known = true } })
+    end)
+
+    it("adds a spell from the cursor, once, and nothing else", function()
+        local ns = startOwn({ reminders = true }, nil, DRUID)
+        local state = Stubs.state()
+        state.cursorInfo = { "spell", 1, "spell", THORNS_1, THORNS_1 }
+        T.truthy(ns.Reminders.AddFromCursor())
+        T.eq(state.cursorInfo, nil, "taken off the cursor")
+        Stubs.RunTimers()
+        T.same(seen(ns), { THORNS_ICON })
+        state.cursorInfo = { "spell", 1, "spell", THORNS_3, THORNS_3 }
+        T.falsy(ns.Reminders.AddFromCursor(), "another rank of a spell in the list")
+        state.cursorInfo = { "item", 4540, "item:4540" }
+        T.falsy(ns.Reminders.AddFromCursor())
+        state.cursorInfo = nil
+        T.falsy(ns.Reminders.AddFromCursor())
+        state.cursorInfo = { "spell", 1, "spell", MARK_1, MARK_1 }
+        T.truthy(ns.Reminders.AddFromCursor())
+        T.same(QoLDB.reminders, { { spell = THORNS_1, on = true }, { spell = MARK_1, on = true } })
+    end)
+
+    it("removes a reminder of the player's own", function()
+        local ns = startOwn({ reminders = true }, { { spell = THORNS_3, on = true }, { spell = MARK_1, on = true } },
+            DRUID)
+        ns.Reminders.Remove(1)
+        Stubs.RunTimers()
+        T.same(seen(ns), { MARK_ICON })
+        T.same(QoLDB.reminders, { { spell = MARK_1, on = true } })
+    end)
+
+    it("keeps the account's list and its order across a reload and on another character", function()
+        local ns = startOwn({ reminders = true }, nil, DRUID)
+        local state = Stubs.state()
+        for _, id in ipairs({ MARK_1, THORNS_1 }) do
+            state.cursorInfo = { "spell", 1, "spell", id, id }
+            ns.Reminders.AddFromCursor()
+        end
+        local saved = QoLDB
+        ns = startOwn(saved.options, saved.reminders, DRUID)
+        T.same(seen(ns), { MARK_ICON, THORNS_ICON })
+        ns = startOwn(saved.options, saved.reminders)
+        T.same(seen(ns), {}, "a warrior knows neither")
+        T.eq(#ns.Reminders.Own(), 2)
+    end)
+
+    it("hears the player's buffs with only a reminder of the player's own on", function()
+        startOwn({ reminders = true }, { { spell = THORNS_3, on = true } }, DRUID)
+        T.truthy(Stubs.Listens("UNIT_AURA", "player"))
     end)
 
     for _, client in ipairs({ "retail", "classicEra" }) do

@@ -67,8 +67,21 @@ an error for tainted code rather than a secret value (see `forever-notes.md`), s
 `C_Secrets.ShouldAurasBeSecret()` first and then checks each aura and name with `issecretvalue`;
 either way the row hides and nothing read is kept. No event says the data is readable again, so
 combat ending (`PLAYER_REGEN_ENABLED`) and `PLAYER_ENTERING_WORLD` ask for a refresh as well as the
-player's `UNIT_AURA`. Those events are registered only while the switch and at least one preset are
-on, so with reminders off QoL hears nothing and does no work.
+player's `UNIT_AURA`. Those events are registered only while the switch and at least one reminder
+are on, so with reminders off QoL hears nothing and does no work.
+
+The player's own reminders are `QoLDB.reminders`, account-wide: `{ spell = ID as dragged, on }` in
+the order added. The ID only says which spell it is: the buff matches by the name the client gives
+for it, so any rank on any character, and a character knows it when `IsSpellKnownOrInSpellBook` says
+so for the ID, or for what `C_Spell.GetSpellIDForSpellIdentifier` answers for its name (the rank it
+knows, as click casting asks; taken only if known, as an NPC spell can share the name). A drop is
+the cursor's `"spell"` (its base spell ID); another rank of a spell in the list, or anything else,
+does nothing and stays on the cursor. Group versions (`GROUP_VERSIONS`, Forever's IDs) add the group
+spell's name to any reminder's set of names; Forever has only three Greater Blessings. While the list
+has entries, `SPELLS_CHANGED` refreshes the row and tells the page (`Reminders.OnChange`), so
+learning a spell shows its reminder and ungreys its line. The page's own lines are table lines made
+as the list grows and reused: each shows the entry at its place, so removing one moves the rest up.
+The page doesn't scroll, so a very long list runs past the window's bottom.
 
 Rank upgrades (`Features/RankUpgrades.lua`, the terms are in the glossary) touch no Blizzard frame:
 only action slots, through the game's API, so there's no taint to reason about beyond staying out of

@@ -160,6 +160,8 @@ local function newRegion(kind, parent, template)
         if self.masks then self.masks[mask] = nil end
     end
     function region:SetMaskTexture(mask) self.mask = mask end
+    function region:SetDesaturated(desaturated) self.desaturated = desaturated and true or false end
+    function region:IsDesaturated() return self.desaturated == true end
     function region:SetTextColor(r, g, b) self.textColor = { r, g, b } end
     function region:GetTextColor()
         local c = self.textColor or { 1, 1, 1 }
@@ -295,6 +297,7 @@ local function newRegion(kind, parent, template)
     -- A button's state textures: an atlas each, and a highlight texture made on first use.
     function region:SetNormalAtlas(atlas) self.normalAtlas = atlas end
     function region:SetPushedAtlas(atlas) self.pushedAtlas = atlas end
+    function region:SetHighlightAtlas(atlas) self.highlightAtlas = atlas end
     function region:SetHighlightTexture(file, blendMode)
         self.highlight = self.highlight or newRegion("Texture", self)
         self.highlight:SetTexture(file)
