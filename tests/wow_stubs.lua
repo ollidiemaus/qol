@@ -1988,16 +1988,32 @@ local function install()
     -- may be Stubs.SECRET). state.aurasWithheld: the game keeps buff data secret, as Forever does in
     -- combat; reading a buff then raises the client's error, as it does there for tainted code.
     -- Stubs.SetBuffs and Stubs.WithholdAuras change them and fire UNIT_AURA.
+    -- Other units' buffs: state.unitBuffs[unit], the same, set by Stubs.SetUnitBuffs. Each buff may
+    -- also have sourceUnit (who cast it), applications (stacks), duration and expirationTime, any of
+    -- them Stubs.SECRET. The PLAYER filter keeps the player's own casts (sourceUnit "player").
     G.C_Secrets = { ShouldAurasBeSecret = function() return state.aurasWithheld == true end }
     G.C_UnitAuras = {
         GetAuraDataByIndex = function(unit, index, filter)
             if state.aurasWithheld then error("Auras cannot be accessed when secret while tainted") end
-            if unit ~= "player" or (filter or "HELPFUL"):find("HARMFUL") then return nil end
-            local buff = state.buffs[index]
+            filter = filter or "HELPFUL"
+            if filter:find("HARMFUL") then return nil end
+            local buffs = unit == "player" and state.buffs or state.unitBuffs[unit] or {}
+            if filter:find("PLAYER") then
+                local own = {}
+                for _, buff in ipairs(buffs) do
+                    if buff.sourceUnit == "player" then own[#own + 1] = buff end
+                end
+                buffs = own
+            end
+            local buff = buffs[index]
             if not buff then return nil end
-            return { name = buff.name, spellId = buff.spellId, icon = buff.icon, auraInstanceID = index }
+            return { name = buff.name, spellId = buff.spellId, icon = buff.icon, auraInstanceID = index,
+                sourceUnit = buff.sourceUnit, applications = buff.applications or 0, duration = buff.duration or 0,
+                expirationTime = buff.expirationTime or 0 }
         end,
     }
+    -- state.inGroup: in a party or raid. Stubs.SetGroup changes it.
+    G.IsInGroup = function() return state.inGroup == true end
 
     --- The player's character: state.resting, state.mounted, state.dead (or a ghost), state.onTaxi (on a
     -- flight path), state.level and state.maxLevel (GetMaxPlayerLevel). Stubs.SetCharacter changes them
@@ -2275,7 +2291,7 @@ function Stubs.Reset(options)
         actions = {}, modifiedClicks = {}, placed = {}, settingValues = {},
         spells = {}, items = {}, toys = {}, mounts = {}, macros = {}, flyouts = {}, equipped = {},
         -- Spells the client has data for that the character needn't know: id -> { name, texture }.
-        gameSpells = {}, buffs = {}, aurasWithheld = false, weaponBuffs = {},
+        gameSpells = {}, buffs = {}, unitBuffs = {}, aurasWithheld = false, weaponBuffs = {}, inGroup = false,
         -- The cursor in UI units, the controller's sticks (nil: no controller) and the actions
         -- secure buttons used.
         cursorX = 500, cursorY = 400, gamepad = nil, usedActions = {},
@@ -2951,6 +2967,16 @@ function Stubs.NewRaidFrame(unit)
     return frame
 end
 
+-- A raid-style frame like NewRaidFrame's that fails the spec when the addon writes a field on it.
+-- Its size is a raid frame's, 72 by 36. Stubs.SetFrameUnit hands it to another unit.
+function Stubs.NewGroupFrame(unit)
+    local raw = newUnitButton(unit)
+    raw.width, raw.height = 72, 36
+    local frame = readOnly(raw, "group frame")
+    _G.CompactUnitFrame_SetUpFrame(frame, noop)
+    return frame
+end
+
 -- A nameplate's unit frame, set up as the raid-style frames are.
 function Stubs.NewNamePlate(index)
     local frame = newRegion("Button", nil)
@@ -3026,6 +3052,26 @@ end
 function Stubs.SetBuffs(buffs)
     state.buffs = buffs
     Stubs.Fire("UNIT_AURA", "player")
+end
+
+-- A unit's buffs become these ({ name, spellId, icon, sourceUnit, applications, duration,
+-- expirationTime } each), and the game says so. The player's are state.buffs.
+function Stubs.SetUnitBuffs(unit, buffs)
+    if unit == "player" then state.buffs = buffs else state.unitBuffs[unit] = buffs end
+    Stubs.Fire("UNIT_AURA", unit)
+end
+
+-- The character joins a group (true) or leaves it (false), and the game says so.
+function Stubs.SetGroup(inGroup)
+    state.inGroup = inGroup
+    Stubs.Fire("GROUP_ROSTER_UPDATE")
+end
+
+-- The game hands a raid-style frame to another unit, as CompactUnitFrame_SetUnit does on a roster
+-- change (the frame's unit field), and says the roster changed.
+function Stubs.SetFrameUnit(frame, unit)
+    rawset(state.rawFrames[frame] or frame, "unit", unit)
+    Stubs.Fire("GROUP_ROSTER_UPDATE")
 end
 
 -- The hands' weapon buffs become these ({ [0] = main hand, [1] = off hand }), and the game says so.

@@ -194,22 +194,16 @@ local function ownReminder(spellID)
     return reminder
 end
 
--- Whether the character knows the spell at any rank: the client's answer for the spell's name is the
--- rank it knows, taken only if it knows that spell, as the name can be an NPC's too. The answers are
--- kept until SPELLS_CHANGED, so a refresh on UNIT_AURA asks the client nothing.
+-- Whether the character knows the spell at any rank (ns.KnowsAnyRank). The answers are kept until
+-- SPELLS_CHANGED, so a refresh on UNIT_AURA asks the client nothing.
 local known = {}
 
 local function knows(spellID)
     local answer = known[spellID]
-    if answer ~= nil then return answer end
-    local book = C_SpellBook
-    answer = book.IsSpellKnownOrInSpellBook(spellID) == true
-    local name, lookup = nameOf(spellID), C_Spell.GetSpellIDForSpellIdentifier
-    if not answer and name and lookup then
-        local found = lookup(name)
-        answer = ns.IsUsable(found) and book.IsSpellKnownOrInSpellBook(found) == true
+    if answer == nil then
+        answer = ns.KnowsAnyRank(spellID)
+        known[spellID] = answer
     end
-    known[spellID] = answer
     return answer
 end
 

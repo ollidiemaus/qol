@@ -42,7 +42,7 @@ read_globals = {
     "GameTooltip", "SELL_PRICE",
     "ChatFrame2", "ChatFrame2Tab", "ChatFrameMenuButton", "ChatFrameChannelButton", "ChatFrameToggleVoiceDeafenButton",
     "ChatFrameToggleVoiceMuteButton", "TextToSpeechButtonFrame", "BuffFrameTooltip",
-    "InCombatLockdown", "IsResting", "IsMounted", "UnitIsDeadOrGhost", "UnitOnTaxi", "UnitLevel", "GetMaxPlayerLevel",
+    "InCombatLockdown", "IsInGroup", "IsResting", "IsMounted", "UnitIsDeadOrGhost", "UnitOnTaxi", "UnitLevel", "GetMaxPlayerLevel",
     "UnitCanAttack", "GetPhysicalScreenSize", "ReloadUI", "IsSecureCmd", "geterrorhandler", "CinematicFrame", "MovieFrame",
     "IsShiftKeyDown", "GamepadMainActionBarFrame", "GamepadMode", "SettingsPanel", "GameMenuFrame", "GetCursorPosition", "GetCursorInfo", "GetActionInfo",
     "SecureHandlerWrapScript", "SecureHandlerExecute", "RegisterStateDriver", "GamepadActionBarEditFrame", "GamepadActionBarBindingUtil", "EditModeManagerFrame",

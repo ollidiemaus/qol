@@ -8,7 +8,7 @@ Notes for working on the addon. What it does for players is in the [README](../R
 |---|---|
 | `Core/` | Namespace and printing (`Init`), the event frame and unit listeners (`Events`), saved options with defaults and change watchers (`Options`), the saved data's version and migrations, and the character key `name-realm` (`SavedData`), deferred changes (`Later`), the hidden holder for hidden frames (`Hider`), what the back buttons and the rings share (`Buttons`: an action slot's look, override bindings), our windows' frame (`Window`: the settings), `/qol` (`Slash`) and startup (`Lifecycle`) |
 | `Data/` | Static game data: `MapPins` (dungeon entrances, docks, portals; how it was made is at the top of the file) |
-| `Features/` | One file per feature: `Merchant`, `Quests`, `FasterAutoLoot`, `Tooltips`, `HideFrames` (also the chat buttons), `BuffTooltips` (the controller interface's tooltips for new buffs), `CombatLog`, `ChatClassColors`, `SortOnOpen`, `MailBookmarks` (tabs on the Send Mail tab), `ClassHealthBars`, `DruidManaBar` (mana in bear and cat form), `GroupFrames` (the Group Frames page's game setting, Forever only), `ScreenEdge` (Edit Mode frames past the screen edge), `Minimap` (shape, positions, class colors and font sizes around the minimap, and the FPS and ping text), `MapPins`, `Viewport`, `ActionBars`, `ButtonBorders`, `CooldownManager` (the look of the game's Cooldown Manager, Forever only), `Reminders` (icons for missing buffs in a row of our own, Forever only), `BarPaging`, `RankUpgrades` (spells on the bars follow a learned rank, Forever only), `BackButtons` (the controller back buttons, Forever only), `FollowingBars` (controller bars that change with the stance, Forever only), `TriggerToggle` (a trigger pressed keeps its controller bar on, Forever only), `RingEntries` (what can go on a ring or a click casting binding, and what a character has of it), `Ring`, `RingPicker` (the editors' list and spell book page, the Ring and Click casting pages'), `RingEditor` (the settings' Ring page, `/qol ring`), `ClickCast` (bindings on unit frames), `ClickCastEditor` (the settings' Click casting page, `/qol click`), `ReloadCommand`, `HiddenSettings` (the hidden settings on the Graphics & Camera page) and `HiddenSettingsProbe` (`/qol probe`) |
+| `Features/` | One file per feature: `Merchant`, `Quests`, `FasterAutoLoot`, `Tooltips`, `HideFrames` (also the chat buttons), `BuffTooltips` (the controller interface's tooltips for new buffs), `CombatLog`, `ChatClassColors`, `SortOnOpen`, `MailBookmarks` (tabs on the Send Mail tab), `ClassHealthBars`, `DruidManaBar` (mana in bear and cat form), `GroupFrames` (tracked buffs on the group frames and the Group Frames page's game setting, Forever only), `ScreenEdge` (Edit Mode frames past the screen edge), `Minimap` (shape, positions, class colors and font sizes around the minimap, and the FPS and ping text), `MapPins`, `Viewport`, `ActionBars`, `ButtonBorders`, `CooldownManager` (the look of the game's Cooldown Manager, Forever only), `Reminders` (icons for missing buffs in a row of our own, Forever only), `BarPaging`, `RankUpgrades` (spells on the bars follow a learned rank, Forever only), `BackButtons` (the controller back buttons, Forever only), `FollowingBars` (controller bars that change with the stance, Forever only), `TriggerToggle` (a trigger pressed keeps its controller bar on, Forever only), `RingEntries` (what can go on a ring or a click casting binding, and what a character has of it), `Ring`, `RingPicker` (the editors' list and spell book page, the Ring and Click casting pages'), `RingEditor` (the settings' Ring page, `/qol ring`), `ClickCast` (bindings on unit frames), `ClickCastEditor` (the settings' Click casting page, `/qol click`), `ReloadCommand`, `HiddenSettings` (the hidden settings on the Graphics & Camera page) and `HiddenSettingsProbe` (`/qol probe`) |
 | `UI/` | `SettingsPage.lua`, a settings page (two columns, or rows across the page, tables, and key binding rows); `SettingsWindow.lua`, the window that `/qol` opens, with the list of pages in groups; `InfoPage.lua`, the information page under Options > AddOns, with a button that opens the window; `Settings.lua`, the pages built with them, in the list's order |
 | `Locales/` | English strings, German overrides |
 | `Media/` | `Icon.tga`, the addon list icon (the TOC's `IconTexture`, 128×128, 32-bit), and `Icon.svg`, its source (not packaged); `Zeppelin.tga`, `Tram.tga`, `MinimapSquareBorder.tga` and the rings' `Ring.tga`, `RingSpoke.tga`, `RingLit1.tga` to `RingLit12.tga` and `RingSlot.tga` (how they were made: [`dev/minimap.md`](dev/minimap.md), [`dev/rings.md`](dev/rings.md)); `AutoPotion.tga`, `AutoSetup.tga` and `Wayscribe.tga`, copies of the other addons' icons for the information page |
@@ -24,7 +24,9 @@ editors do: the Cooldown Manager page adds, pauses and removes the player's own 
 `Reminders.AddFromCursor`, `SetOn` and `Remove`, reads them with `Own`, and refreshes on
 `Reminders.OnChange` (an edit, a spell learned, or the reminder row locked or unlocked). Its Unlock
 and Reset position buttons call `Reminders.SetUnlocked` and `ResetPosition`, as the row's mover state
-isn't an option either.
+isn't an option either. The Group Frames page does the same with the tracked buffs:
+`GroupFrames.AddFromCursor`, `SetOn`, `Remove`, `Lines` and `OnChange`. Whether a character knows a
+spell at any rank, which both lists ask, is `ns.KnowsAnyRank` in `Core/Init.lua`.
 
 ## Saved data
 
@@ -34,7 +36,9 @@ click casting bindings by character key, `ns.PlayerKey()`; a character without a
 Left: Target and Right: Menu, so it needs no migration), `followingBars` (each character's ticked
 controller bars, the slots handed out and the bars that didn't fit, by the same key; missing until first used, so it needs no
 migration), `reminders` (the player's own reminders, `{ spell, on }` in the order added, for the
-whole account; missing until the first one is added, so it needs no migration), `probe` (the last `/qol probe`
+whole account; missing until the first one is added, so it needs no migration), `trackedBuffs` (the
+tracked buffs on the group frames, `{ spell, kind, on }` in the order added, for the whole account;
+missing until the first one is added, so it needs no migration), `probe` (the last `/qol probe`
 report, which nothing reads; missing until it first runs, so it needs no migration), and
 `version`, the layout's version (`Core/SavedData.lua`, now 3). On `ADDON_LOADED`, before anything
 reads the file, `SavedData:Migrate` runs `MIGRATIONS[n]` for every version from the saved one up
@@ -110,7 +114,8 @@ Forever beta. So:
   frame's script, run as secure code), `SecureHandlerSetFrameRef` on our own header,
   `PartyFrame.PartyMemberFramePool:EnumerateActive()` (a read of the pool) and
   `hooksecurefunc("CompactUnitFrame_SetUpFrame", ...)`: a hook on a global function, not on a
-  frame's method, which runs after it and only notes the frame. One
+  frame's method, which runs after it and only notes the frame. The tracked buffs hook it the same
+  way, to note the frames their icons go on (see [`dev/group-frames.md`](dev/group-frames.md)). One
   Blizzard table is written to: `hash_SlashCmdList`, the chat's cache of slash commands. Whenever
   the chat parses a slash command (and once at load), `ImportAllListsToHash`
   (`Blizzard_ChatFrameBase/Shared/ChatFrameUtil.lua`) moves every new entry of `SlashCmdList` into
@@ -183,7 +188,7 @@ Forever beta. So:
 Each file holds the design notes of one part of the addon. Read the one for the area you change:
 
 - [`dev/bars-and-frames.md`](dev/bars-and-frames.md): the action bar flip, button borders, the Cooldown Manager's icon borders, reminders, class-colored health bars, the druid mana bar, frames past the screen edge, portrait hit text, the frames QoL hides, quests on Classic Era
-- [`dev/group-frames.md`](dev/group-frames.md): the Group Frames page: hiding the raid manager, the game's buffs checkbox
+- [`dev/group-frames.md`](dev/group-frames.md): the Group Frames page: tracked buffs, hiding the raid manager, the game's buffs checkbox
 - [`dev/tooltips-chat-bags-mail.md`](dev/tooltips-chat-bags-mail.md): the combat log, the vendor price line and tooltip IDs, the buff tooltips, chat class colors, faster auto loot, Sort on open, the mail bookmarks
 - [`dev/minimap.md`](dev/minimap.md): the square minimap and its border, button positions, class colors and font sizes, the FPS and ping text
 - [`dev/controller.md`](dev/controller.md): bar paging, the back buttons and their bindings, following bars, the trigger toggle, the Controller page

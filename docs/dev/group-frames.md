@@ -4,6 +4,47 @@ The Group Frames page (WoW Forever only, `GroupFrames.IsAvailable`) is about the
 raid-style party and raid frames. The design for the whole area, tracked buffs included, is in issue
 #110 and [ADR 0004](../adr/0004-tracked-buffs-are-our-own-icons.md); this note grows with it.
 
+## Tracked buffs
+
+Icons of QoL's own on every group frame (`Features/GroupFrames.lua`), for the spells in
+`QoLDB.trackedBuffs` (`{ spell, kind, on }`, account-wide, in the order added; not an option, so the
+page's Defaults button only switches `groupFrameBuffs` off). So far only the "has it" kind: the icon
+shows while the player's own cast of the buff is on the member, with the cooldown sweep and a stack
+number above one, all at one spot (the top right corner, side by side towards the left, 16 pixels).
+A line applies only where the character knows the spell at some rank (`ns.KnowsAnyRank`, shared
+with the reminders); the page greys out the others. An entry with a kind this QoL doesn't know (a
+newer QoL's) stays in the list and is left out of everything else.
+
+- **Matching:** `C_UnitAuras.GetAuraDataByIndex(unit, i, "HELPFUL|PLAYER")` lists the player's own
+  casts on the member; one counts when its name is the one the client gives the stored spell ID, so
+  any rank and any locale match.
+- **Which frames:** the same hook click casting has, `hooksecurefunc("CompactUnitFrame_SetUpFrame")`,
+  a hook on a global function that only notes the frame (nameplates come through it too). Each
+  refresh reads the frame's `unit` field and draws only for `player`, `partyN` and `raidN`: pets,
+  arena and nameplates get nothing. The unit is read on every refresh, since the game hands a frame
+  to another member on a roster change (`CompactUnitFrame_SetUnit`), and `GROUP_ROSTER_UPDATE`
+  redraws every frame.
+- **Taint-safe:** each frame gets a holder of ours, made the first time it shows an icon: its child,
+  `SetAllPoints` on it, a few levels above it (`GetFrameLevel`, a read). Nothing is written on, hooked
+  on or called on the game's frame. Neither the holder nor the icons are protected or take the mouse,
+  so clicks and click casting reach the frame underneath, and they're made, shown, hidden and placed
+  in combat too (`ns.Later` with `inCombat`); a frame set up in combat gets its icons at once.
+- **Secrecy:** while `C_Secrets.ShouldAurasBeSecret()` says so, every icon hides and nothing is read
+  (reading then is an error for addon code). Otherwise every value read goes through `ns.IsUsable`
+  first: a secret aura or name hides every icon on that frame (we can't tell which buff it is), a
+  secret stack count, duration or expiry hides that one icon. Nothing read is kept, so the first
+  refresh once it's readable shows them again. `ADDON_RESTRICTION_STATE_CHANGED` (and combat starting
+  and ending) redraw every frame.
+- **Cost:** with the switch off nothing is heard (the setup hook only notes frames). On, only
+  `GROUP_ROSTER_UPDATE`, to know when the character is in a group (`IsInGroup`). In a group, the
+  members' `UNIT_AURA` through 23 unit listeners (player, party1-4, raid1-40, two units each), and
+  `SPELLS_CHANGED`, `ADDON_RESTRICTION_STATE_CHANGED`, the combat events and `PLAYER_ENTERING_WORLD`.
+  Refreshes go through one `ns.Later` key, at most one per drawn frame, and a `UNIT_AURA` redraws
+  only the frames showing that unit.
+- **In-game checklist** ([`in-game.md`](in-game.md)): icons above the health bar at real frame
+  sizes, no taint errors after a raid fight with frames reassigned, and when Forever keeps group buff
+  data secret (in and out of combat, in a dungeon).
+
 ## Hiding the raid manager
 
 The raid manager is `CompactRaidFrameManager`, the tab at the screen's edge that

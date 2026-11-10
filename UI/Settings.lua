@@ -485,17 +485,57 @@ end
 -- the right. The buffs checkbox shows and changes the game's own setting (ns.GroupFrames.GAME_BUFFS_CVAR)
 -- through ns.HiddenSettings, as the Graphics & Camera page does its rows: the game keeps it, the row has
 -- no reset, so the page's Defaults button leaves it alone, and it's greyed out while the game wouldn't
--- take it (in combat, if the game protects it).
+-- take it (in combat, if the game protects it). Under it the tracked buffs' switch and their table: a
+-- line per tracked buff (greyed out where the character doesn't know the spell, with an X), and last
+-- a line saying to drop a spell on the table, which adds one. The lines are made as the list grows and
+-- reused, each showing the list's entry at its place. The list isn't an option, so Defaults keeps it.
 local function buildGroupFrames(page)
-    local cvar = ns.GroupFrames.GAME_BUFFS_CVAR
+    local GroupFrames = ns.GroupFrames
+    local cvar = GroupFrames.GAME_BUFFS_CVAR
     local inCombat = watchGameSettings(page, "groupFramesRefresh", function(changed) return changed == cvar end)
     local gameBuffs = hiddenBacking(page, { cvar = cvar, kind = "checkbox" }, inCombat)
     gameBuffs.reset, gameBuffs.isDefault = nil, nil
     page:Header("left", L.SECTION_BUFFS)
     page:Checkbox("left", gameBuffs, L.GAME_BUFFS, L.GAME_BUFFS_TIP, { enabled = gameBuffs.canChange })
+    page:Checkbox("left", "groupFrameBuffs", L.GROUP_FRAME_BUFFS, L.GROUP_FRAME_BUFFS_TIP)
+    local ON, REMOVE = 2, 3 -- the table's columns after the tracked buffs' names
+    local NO_TITLE, JOINED = nil, true -- right below the switch, in its section
+    local tracked = page:Table({
+        { caption = L.TRACKED_BUFF },
+        { caption = L.TRACKED_BUFF_ON, width = 60 },
+        { caption = "", width = 20 },
+    }, NO_TITLE, JOINED, function() GroupFrames.AddFromCursor() end)
+    tracked:Line(L.TRACKED_BUFF_DROP, L.TRACKED_BUFF_DROP_TIP, {}, { footer = true })
 
     page:Header("right", L.SECTION_HIDE)
     page:Checkbox("right", "hideRaidManager", L.HIDE_RAID_MANAGER, L.HIDE_RAID_MANAGER_TIP)
+
+    -- The lines as the page last asked for them, and a table line for each place in the list.
+    local lines, made = GroupFrames.Lines(), 0
+    local function trackedLine(index)
+        local function entry() return lines[index] or {} end
+        local function known() return entry().known == true end
+        tracked:Line(function() return entry().name or "" end, L.TRACKED_BUFF_SPELL_TIP, {
+            [ON] = { kind = "checkbox", tooltip = L.TRACKED_BUFF_SPELL_TIP, enabled = known, key = {
+                get = function() return entry().on == true end,
+                set = function(on) GroupFrames.SetOn(entry().index, on) end,
+            } },
+            [REMOVE] = { kind = "remove", tooltip = L.TRACKED_BUFF_REMOVE_TIP,
+                onClick = function() GroupFrames.Remove(entry().index) end },
+        }, { icon = function() return entry().icon end, enabled = known,
+            shown = function() return lines[index] ~= nil end })
+    end
+
+    local refresh = page.Refresh
+    function page:Refresh()
+        lines = GroupFrames.Lines()
+        for index = made + 1, #lines do trackedLine(index) end
+        made = math.max(made, #lines)
+        refresh(self)
+    end
+    GroupFrames.OnChange(function()
+        if page.frame:IsVisible() then page:Refresh() end
+    end)
 end
 
 -- A hidden setting's game default as its row shows it: On or Off, or the number without the

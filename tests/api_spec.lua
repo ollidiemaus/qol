@@ -29,9 +29,22 @@ describe("public API", function()
         T.eq(ns.Options:Get("clickCast"), false)
     end)
 
+    it("switches tracked buffs on the group frames, leaving the game's buffs setting alone", function()
+        local ns = Stubs.LoadAddon()
+        Stubs.Login()
+        local sets = #Stubs.state().cvarSets
+        T.eq(QoLAPI.IsFeatureEnabled("groupframes"), false)
+        T.eq(QoLAPI.SetFeatureEnabled("groupFrames", true), true)
+        T.eq(ns.Options:Get("groupFrameBuffs"), true)
+        QoLAPI.SetFeatureEnabled("groupframes", false)
+        T.eq(ns.Options:Get("groupFrameBuffs"), false)
+        T.eq(#Stubs.state().cvarSets, sets, "no game setting written")
+        T.eq(Stubs.state().cvars.raidFramesDisplayBuffs, "1")
+    end)
+
     it("lists its features", function()
         Stubs.LoadAddon()
-        T.eq(table.concat(QoLAPI.GetFeatureNames(), ","), "clickcast,viewport")
+        T.eq(table.concat(QoLAPI.GetFeatureNames(), ","), "clickcast,groupframes,viewport")
     end)
 
     it("rejects unknown features", function()

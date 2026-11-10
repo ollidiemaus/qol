@@ -587,6 +587,105 @@ describe("settings pages", function()
         T.eq(gameBuffsRow(ns).widget:GetChecked(), false)
     end)
 
+    -- The Group Frames page with Regrowth's and Rejuvenation's spell data, for a character that knows
+    -- Regrowth (rank 1); the account's tracked buffs saved.
+    local REGROWTH_1, REGROWTH_2, REJUVENATION = 8936, 8938, 774
+    local function groupFramesPage(savedOptions, savedTracked)
+        local ns = Stubs.LoadAddon()
+        local state = Stubs.state()
+        state.gameSpells[REGROWTH_2] = { name = "Regrowth", texture = 136085 }
+        state.gameSpells[REJUVENATION] = { name = "Rejuvenation", texture = 136081 }
+        state.spells[REGROWTH_1] = { name = "Regrowth", texture = 136085, subtext = "Rank 1" }
+        Stubs.InstallSettings()
+        _G.QoLDB = { options = savedOptions, trackedBuffs = savedTracked }
+        Stubs.Fire("ADDON_LOADED", "QoL")
+        Stubs.Fire("PLAYER_LOGIN")
+        Stubs.Fire("PLAYER_ENTERING_WORLD")
+        Stubs.RunTimers()
+        loaded = ns
+        local page = pages(ns).groupFrames
+        show(page)
+        return ns, page
+    end
+
+    local TRACKED_HEADER, TRACKED_DROP = "Tracked buff | On | ", "Drag a spell here from your spellbook | - | -"
+
+    local function trackedRows(...)
+        local rows = { TRACKED_HEADER }
+        for _, row in ipairs({ ... }) do rows[#rows + 1] = row end
+        rows[#rows + 1] = TRACKED_DROP
+        return rows
+    end
+
+    -- A tracked buff's line, by its name.
+    local function trackedLine(page, name)
+        for _, line in ipairs(page.tables[1].lines) do
+            if line.frame:IsShown() and line.label:GetText() == name then return line end
+        end
+        return nil
+    end
+
+    it("has the tracked buffs' switch, off by default, over an empty table", function()
+        local ns, page = groupFramesPage()
+        local c, on = control(ns, "groupFrameBuffs")
+        T.eq(on, page)
+        T.eq(c.text:GetText(), "Show tracked buffs")
+        T.eq(c.tooltip, ns.L.GROUP_FRAME_BUFFS_TIP)
+        T.eq(c.widget:GetChecked(), false)
+        T.same(tableRows(page), trackedRows())
+        T.truthy(page.tables[1].lines[1].tooltip:find("group frames", 1, true))
+        QoLAPI.SetFeatureEnabled("groupframes", true)
+        page:Refresh()
+        T.eq(c.widget:GetChecked(), true, "the API's switch shows on the page")
+    end)
+
+    it("adds a line for a spell dropped on the tracked buffs, once, and nothing for anything else", function()
+        local _, page = groupFramesPage()
+        local state = Stubs.state()
+        state.cursorInfo = { "spell", 1, "spell", REGROWTH_1, REGROWTH_1 }
+        page.tables[1].lines[1].frame:RunScript("OnReceiveDrag")
+        T.same(tableRows(page), trackedRows("Regrowth | checkbox | remove"))
+        T.eq(trackedLine(page, "Regrowth").icon.texture, 136085)
+        T.eq(state.cursorInfo, nil)
+        state.cursorInfo = { "spell", 1, "spell", REGROWTH_2, REGROWTH_2 }
+        page.tables[1].frame:RunScript("OnReceiveDrag")
+        state.cursorInfo = { "item", 4540, "item:4540" }
+        trackedLine(page, "Regrowth").frame:RunScript("OnReceiveDrag")
+        T.same(tableRows(page), trackedRows("Regrowth | checkbox | remove"), "a duplicate and an item add nothing")
+        T.same(state.cursorInfo, { "item", 4540, "item:4540" }, "the item stays on the cursor")
+        state.cursorInfo = { "spell", 1, "spell", REJUVENATION, REJUVENATION }
+        page.tables[1].frame:RunScript("OnReceiveDrag")
+        T.same(tableRows(page), trackedRows("Regrowth | checkbox | remove", "Rejuvenation | checkbox | remove"),
+            "in the order added")
+    end)
+
+    it("pauses a tracked buff with its checkbox, removes it with its X, and greys out an unknown spell", function()
+        local _, page = groupFramesPage(nil, { { spell = REJUVENATION, kind = "has", on = true },
+            { spell = REGROWTH_2, kind = "has", on = true } })
+        local regrowth, rejuvenation = trackedLine(page, "Regrowth"), trackedLine(page, "Rejuvenation")
+        T.same({ rejuvenation.label:GetTextColor() }, { 0.5, 0.5, 0.5, 1 }, "a spell the character doesn't know")
+        T.truthy(rejuvenation.icon:IsDesaturated())
+        T.falsy(rejuvenation.cells[2].widget:IsEnabled())
+        T.truthy(rejuvenation.cells[3].widget:IsEnabled())
+        T.same({ regrowth.label:GetTextColor() }, { 1, 0.82, 0, 1 }, "known at another rank")
+        regrowth.cells[2].widget:Click()
+        T.same(QoLDB.trackedBuffs[2], { spell = REGROWTH_2, kind = "has", on = false })
+        T.falsy(regrowth.cells[2].widget:GetChecked())
+        rejuvenation.cells[3].widget:Click()
+        T.same(tableRows(page), trackedRows("Regrowth | checkbox | remove"))
+        T.same(QoLDB.trackedBuffs, { { spell = REGROWTH_2, kind = "has", on = false } })
+    end)
+
+    it("switches tracked buffs off with Defaults and keeps the list", function()
+        local ns, page = groupFramesPage({ groupFrameBuffs = true }, { { spell = REGROWTH_1, kind = "has", on = true } })
+        page.defaultsButton:Click()
+        page.defaultsButton:Click()
+        Stubs.RunTimers()
+        T.eq(ns.Options:Get("groupFrameBuffs"), false)
+        T.same(QoLDB.trackedBuffs, { { spell = REGROWTH_1, kind = "has", on = true } })
+        T.same(tableRows(page), trackedRows("Regrowth | checkbox | remove"))
+    end)
+
     it("names the Group Frames page and its rows in German", function()
         local ns = Stubs.LoadAddon({ locale = "deDE" })
         Stubs.InstallSettings()
