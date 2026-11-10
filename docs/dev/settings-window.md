@@ -149,7 +149,7 @@ ranks below Paging and Buttons).
 Where several things share the same options, a page has a table instead of a section for each
 (`Page:Table`, across the page): the Minimap page's elements (`Element | Position | Font size |
 Class color | Offset X | Y`), the Action Bars page's bars (`Bar | Vertical | Horizontal`) and the
-Cooldown Manager page's reminder presets (`Preset | On`, each line with the buff's icon before its
+Cooldown Manager page's reminders (`Reminder | On | X`, each line with the buff's icon before its
 name). A table has a header if given a title (without one it follows the section above after a
 gap, or `joined`, right below its last row, as the presets do below their switch), then a line of captions (`GameFontHighlightSmall`, with a
 tooltip where the caption needs one), then a line per thing (`Table:Line`): its name in the first
@@ -162,6 +162,15 @@ it as one; the mouse over a cell or the name lights the whole line. A cell or a 
 of a hidden element), and an extra line (indented, in the names' column) is there only while it
 applies (Hide its frame while the zone text is at its default spot, Show while FPS and ping is
 shown). The table keeps room for all its lines, so the page doesn't move, and stacks those shown.
+
+A table can also hold a list that changes, as the reminders table holds the player's own: a cell can
+be an X (`remove`, Forever's `common-icon-redx`, as its character creation has it) and its checkbox
+can keep its value elsewhere (`key` a `get`/`set` table, as a row's can, without a reset, so Defaults
+leaves the list alone). A line's name and icon can be functions, asked again on each refresh, so a
+line made for a place in the list shows whatever is at that place; `enabled` greys out its name and
+desaturates its icon, and a `footer` line (the reminders' "Drag a spell here") stays below the lines
+made after it. A table given `onDrop` takes a drag, or a click with something on the cursor, on its
+captions and lines.
 
 Names are one line and fit their room in English and German: a name never wraps (`SetWordWrap`
 false), and what doesn't fit in a short name goes in its tooltip, whose title is always the full

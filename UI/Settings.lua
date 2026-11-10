@@ -243,25 +243,58 @@ local function buildActionBars(page)
 end
 
 -- Cooldown Manager page (Forever): how the game's Cooldown Manager looks, then the reminders: their
--- switch and a table with a line per preset, its icon and name as the client gives them.
+-- switch and a table with a line per preset, its icon and name as the client gives them, then a line
+-- per reminder of the player's own (greyed out where the character doesn't know the spell, with an
+-- X), and last a line saying to drop a spell on the table, which adds one. The own lines are made as
+-- the list grows and reused, each showing the list's entry at its place.
 local function buildCooldownManager(page)
     page:Header("left", L.SECTION_LOOK)
     page:Checkbox("left", "hideCooldownManagerBorders", L.HIDE_COOLDOWN_BORDERS, L.HIDE_COOLDOWN_BORDERS_TIP)
     if not ns.Reminders.IsAvailable() then return end
+    local Reminders = ns.Reminders
     page:Header("left", L.SECTION_REMINDERS)
     page:Checkbox("left", "reminders", L.REMINDERS, L.REMINDERS_TIP)
-    local ON = 2 -- the table's column after the presets' names
+    local ON, REMOVE = 2, 3 -- the table's columns after the reminders' names
     local NO_TITLE, JOINED = nil, true -- right below the switch, in its section
-    local presets = page:Table({
-        { caption = L.REMINDER_PRESET },
+    local reminders = page:Table({
+        { caption = L.REMINDER },
         { caption = L.REMINDER_ON, width = 60 },
-    }, NO_TITLE, JOINED)
-    for _, preset in ipairs(ns.Reminders.PRESETS) do
+        { caption = "", width = 20 },
+    }, NO_TITLE, JOINED, function() Reminders.AddFromCursor() end)
+    for _, preset in ipairs(Reminders.PRESETS) do
         local tip = L[preset.text .. "_TIP"]
-        presets:Line(ns.Reminders.NameOf(preset) or L[preset.text], tip, {
+        reminders:Line(Reminders.NameOf(preset) or L[preset.text], tip, {
             [ON] = { kind = "checkbox", key = preset.key, tooltip = tip },
-        }, { icon = ns.Reminders.IconOf(preset) })
+        }, { icon = Reminders.IconOf(preset) })
     end
+    reminders:Line(L.REMINDER_DROP, L.REMINDER_DROP_TIP, {}, { footer = true })
+
+    -- The player's own as the page last asked for them, and a line for each place in the list. A
+    -- change to the list (or to the spells known) refreshes the page through OnChange.
+    local own, lines = Reminders.Own(), 0
+    local function ownLine(index)
+        local function entry() return own[index] or {} end
+        local function known() return entry().known == true end
+        reminders:Line(function() return entry().name or "" end, L.REMINDER_SPELL_TIP, {
+            [ON] = { kind = "checkbox", tooltip = L.REMINDER_SPELL_TIP, enabled = known, key = {
+                get = function() return entry().on == true end,
+                set = function(on) Reminders.SetOn(entry().index, on) end,
+            } },
+            [REMOVE] = { kind = "remove", tooltip = L.REMINDER_REMOVE_TIP,
+                onClick = function() Reminders.Remove(entry().index) end },
+        }, { icon = function() return entry().icon end, enabled = known,
+            shown = function() return own[index] ~= nil end })
+    end
+    local refresh = page.Refresh
+    function page:Refresh()
+        own = Reminders.Own()
+        for index = lines + 1, #own do ownLine(index) end
+        lines = math.max(lines, #own)
+        refresh(self)
+    end
+    Reminders.OnChange(function()
+        if page.frame:IsVisible() then page:Refresh() end
+    end)
 end
 
 -- Ring page (also /qol ring): the switch in the title bar, and below it, on a page of the spell

@@ -220,6 +220,16 @@ reminders** and pick the presets you want in the table below it (all off by defa
 - **Well Rested**, the buff that makes your rested experience build up faster.
 - **Camp Benefits**, the bonuses from the items set up at a camp.
 
+Add your own by dragging a spell from your spellbook onto the table, Thorns or Mark of the Wild for
+instance. Your reminders come after the presets, in the order you added them, each with a checkbox to
+pause it and an X to remove it. The list is the same on all your characters: a reminder shows only on
+a character that knows the spell, at any rank, and is greyed out on the others. A buff counts at any
+rank and whoever cast it, and so does its group version: Gift of the Wild for Mark of the Wild,
+Arcane Brilliance for Arcane Intellect, the Prayers for Power Word: Fortitude, Divine Spirit and
+Shadow Protection, and the Greater Blessings for the Blessings of Might, Wisdom and Kings. Reminders
+are for buffs on yourself: a spell that leaves no buff on you, such as a heal, shows its icon all
+the time.
+
 The icons sit in a row of their own in the middle of the screen's lower half, centred, in the
 table's order, and look like the Cooldown Manager's buff icons (**Hide icon borders** takes their
 border off too). They don't take the mouse, and they work with the game's Cooldown Manager switched

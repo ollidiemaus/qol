@@ -112,8 +112,14 @@ local function tableRows(page, index)
     local captions = {}
     for _, caption in ipairs(settingsTable.captions) do captions[#captions + 1] = caption:GetText() end
     local rows = { table.concat(captions, " | ") }
+    local shown = {}
     for _, line in ipairs(settingsTable.lines) do
-        if line.frame:IsShown() then
+        if line.frame:IsShown() then shown[#shown + 1] = line end
+    end
+    -- From the top down.
+    table.sort(shown, function(a, b) return a.frame:PointFor("TOPLEFT")[5] > b.frame:PointFor("TOPLEFT")[5] end)
+    for _, line in ipairs(shown) do
+        do
             local name = line.label:GetText()
             if line.indent then name = "  " .. name end
             local row = { name }
@@ -334,16 +340,113 @@ describe("settings pages", function()
         T.eq(switch.kind, "checkbox")
         T.eq(switch.text:GetText(), "Show reminders")
         T.falsy(switch.get(), "off by default")
-        T.same(tableRows(page), { "Preset | On", "Well Fed | checkbox", "Well Rested | checkbox",
-            "Camp Benefits | checkbox" })
+        T.same(tableRows(page), { "Reminder | On | ", "Well Fed | checkbox | -", "Well Rested | checkbox | -",
+            "Camp Benefits | checkbox | -", "Drag a spell here from your spellbook | - | -" })
         local icons = {}
-        for index, line in ipairs(page.tables[1].lines) do icons[index] = line.icon.texture end
+        for index = 1, 3 do icons[index] = page.tables[1].lines[index].icon.texture end
         T.same(icons, { 136000, 136001, 136002 })
         local wellFed = control(ns, "reminderWellFed")
         T.falsy(wellFed.get(), "off by default")
         wellFed.widget:Click()
         T.truthy(ns.Options:Get("reminderWellFed"))
         T.truthy(lineTop(page, "Well Fed") > 0)
+    end)
+
+    -- The Cooldown Manager page with the presets' and Thorns' and Mark of the Wild's spell data, for
+    -- a character that knows Thorns (rank 1); the account's own reminders saved.
+    local THORNS_1, THORNS_3, MARK = 467, 1075, 1126
+    local function remindersPage(savedReminders)
+        local ns = Stubs.LoadAddon()
+        Stubs.NewCooldownManager()
+        local state = Stubs.state()
+        state.gameSpells[19705] = { name = "Well Fed", texture = 136000 }
+        state.gameSpells[1225478] = { name = "Well Rested", texture = 136001 }
+        state.gameSpells[1229741] = { name = "Camp Benefits", texture = 136002 }
+        state.gameSpells[THORNS_3] = { name = "Thorns", texture = 136104 }
+        state.gameSpells[MARK] = { name = "Mark of the Wild", texture = 136078 }
+        state.spells[THORNS_1] = { name = "Thorns", texture = 136104, subtext = "Rank 1" }
+        Stubs.InstallSettings()
+        _G.QoLDB = { options = { reminders = true }, reminders = savedReminders }
+        Stubs.Fire("ADDON_LOADED", "QoL")
+        Stubs.Fire("PLAYER_LOGIN")
+        Stubs.Fire("PLAYER_ENTERING_WORLD")
+        Stubs.RunTimers()
+        loaded = ns
+        local page = pages(ns).cooldownManager
+        show(page)
+        return ns, page
+    end
+
+    -- The line of a reminder of the player's own, by its name.
+    local function ownLine(page, name)
+        for _, line in ipairs(page.tables[1].lines) do
+            if line.frame:IsShown() and line.label:GetText() == name then return line end
+        end
+        return nil
+    end
+
+    local PRESET_ROWS = { "Reminder | On | ", "Well Fed | checkbox | -", "Well Rested | checkbox | -",
+        "Camp Benefits | checkbox | -" }
+    local DROP_ROW = "Drag a spell here from your spellbook | - | -"
+
+    local function rowsWith(...)
+        local rows = {}
+        for _, row in ipairs(PRESET_ROWS) do rows[#rows + 1] = row end
+        for _, row in ipairs({ ... }) do rows[#rows + 1] = row end
+        rows[#rows + 1] = DROP_ROW
+        return rows
+    end
+
+    it("adds a line for a spell dropped on the reminders, once, and nothing for anything else", function()
+        local _, page = remindersPage()
+        local state = Stubs.state()
+        local drop = page.tables[1].lines[4]
+        T.truthy(drop.tooltip:find("buffs on your character", 1, true))
+        state.cursorInfo = { "spell", 1, "spell", THORNS_1, THORNS_1 }
+        drop.frame:RunScript("OnReceiveDrag")
+        T.same(tableRows(page), rowsWith("Thorns | checkbox | remove"))
+        T.eq(ownLine(page, "Thorns").icon.texture, 136104)
+        T.eq(state.cursorInfo, nil)
+        state.cursorInfo = { "spell", 1, "spell", THORNS_3, THORNS_3 }
+        page.tables[1].frame:RunScript("OnReceiveDrag")
+        state.cursorInfo = { "item", 4540, "item:4540" }
+        ownLine(page, "Thorns").frame:RunScript("OnReceiveDrag")
+        T.same(tableRows(page), rowsWith("Thorns | checkbox | remove"), "a duplicate and an item add nothing")
+        T.same(state.cursorInfo, { "item", 4540, "item:4540" }, "the item stays on the cursor")
+        state.cursorInfo = { "spell", 1, "spell", MARK, MARK }
+        drop.frame:RunScript("OnMouseUp", "LeftButton")
+        T.same(tableRows(page), rowsWith("Thorns | checkbox | remove", "Mark of the Wild | checkbox | remove"),
+            "in the order added")
+    end)
+
+    it("pauses a reminder of the player's own with its checkbox and removes it with its X", function()
+        local _, page = remindersPage({ { spell = THORNS_3, on = true }, { spell = MARK, on = true } })
+        local thorns = ownLine(page, "Thorns")
+        T.truthy(thorns.cells[2].widget:GetChecked())
+        thorns.cells[2].widget:Click()
+        T.same(QoLDB.reminders[1], { spell = THORNS_3, on = false })
+        T.falsy(thorns.cells[2].widget:GetChecked())
+        thorns.cells[3].widget:Click()
+        T.same(tableRows(page), rowsWith("Mark of the Wild | checkbox | remove"))
+        T.same(QoLDB.reminders, { { spell = MARK, on = true } })
+        T.truthy(ownLine(page, "Mark of the Wild").cells[2].widget:GetChecked(), "the line below moved up, its own state")
+    end)
+
+    it("greys out the line of a spell the character doesn't know, still removable, until it learns it", function()
+        local _, page = remindersPage({ { spell = MARK, on = true } })
+        local mark = ownLine(page, "Mark of the Wild")
+        T.same({ mark.label:GetTextColor() }, { 0.5, 0.5, 0.5, 1 })
+        T.truthy(mark.icon:IsDesaturated())
+        T.falsy(mark.cells[2].widget:IsEnabled())
+        T.truthy(mark.cells[3].widget:IsEnabled())
+        Stubs.state().spells[MARK] = { name = "Mark of the Wild", texture = 136078, subtext = "Rank 1" }
+        Stubs.Fire("SPELLS_CHANGED")
+        Stubs.RunTimers()
+        T.same({ mark.label:GetTextColor() }, { 1, 0.82, 0, 1 })
+        T.falsy(mark.icon:IsDesaturated())
+        T.truthy(mark.cells[2].widget:IsEnabled())
+        mark.cells[3].widget:Click()
+        T.same(tableRows(page), rowsWith())
     end)
 
     it("leaves the Cooldown Manager page out on Forever without the game's rows", function()
@@ -393,8 +496,11 @@ describe("settings pages", function()
         T.eq(c.text:GetText(), "Symbolränder ausblenden")
         T.truthy(c.tooltip:find("Verfolgte Stärkungseffekte", 1, true))
         T.eq(control(ns, "reminders").text:GetText(), "Erinnerungen anzeigen")
-        T.same(tableRows(pages(ns).cooldownManager), { "Vorgabe | An", "Satt | checkbox", "Gut ausgeruht | checkbox",
-            "Lagervorteile | checkbox" }, "without the client's names, the presets' own")
+        T.same(tableRows(pages(ns).cooldownManager), { "Erinnerung | An | ", "Satt | checkbox | -",
+            "Gut ausgeruht | checkbox | -", "Lagervorteile | checkbox | -",
+            "Zieht einen Zauber aus Eurem Zauberbuch hierher | - | -" }, "without the client's names, the presets' own")
+        local drop = pages(ns).cooldownManager.tables[1].lines[4]
+        T.truthy(drop.tooltip:find("Stärkungseffekte auf Eurem Charakter", 1, true))
     end)
 
     it("greys out going back to Top while the trigger toggle is off", function()

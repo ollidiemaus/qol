@@ -18,7 +18,11 @@ Notes for working on the addon. What it does for players is in the [README](../R
 Features never talk to each other or to the settings pages. A page writes `ns.Options`; a feature
 reads it with `Options:Get` and reacts to changes through `Options:Watch`. `RingEntries` and
 `RingPicker` are the one shared part: the rings made them, and click casting uses them for what a
-character has and for its page's list (the issue asked for them to be shared, not copied).
+character has and for its page's list (the issue asked for them to be shared, not copied). A list
+that isn't options goes through a small interface of its feature, as the ring and click casting
+editors do: the Cooldown Manager page adds, pauses and removes the player's own reminders with
+`Reminders.AddFromCursor`, `SetOn` and `Remove`, reads them with `Own`, and refreshes on
+`Reminders.OnChange` (an edit, or a spell learned).
 
 ## Saved data
 
@@ -27,7 +31,8 @@ default), `rings`, `characters` (the mail bookmarks' class icons), `clickCast` (
 click casting bindings by character key, `ns.PlayerKey()`; a character without any starts with
 Left: Target and Right: Menu, so it needs no migration), `followingBars` (each character's ticked
 controller bars, the slots handed out and the bars that didn't fit, by the same key; missing until first used, so it needs no
-migration), `probe` (the last `/qol probe`
+migration), `reminders` (the player's own reminders, `{ spell, on }` in the order added, for the
+whole account; missing until the first one is added, so it needs no migration), `probe` (the last `/qol probe`
 report, which nothing reads; missing until it first runs, so it needs no migration), and
 `version`, the layout's version (`Core/SavedData.lua`, now 3). On `ADDON_LOADED`, before anything
 reads the file, `SavedData:Migrate` runs `MIGRATIONS[n]` for every version from the saved one up
@@ -47,7 +52,8 @@ alone: no migrations run and the version stays. A saved option whose type doesn'
 stays in the file too; `Options:Init` marks it, `Get` returns the default for a marked key (one table
 lookup, since `Get` runs on tooltip paths) and `Set` replaces the value and clears the mark. Options
 QoL has no default for are kept and never read. Click casting keeps a binding it doesn't understand
-(an action kind of a newer QoL) where it is and leaves it out of everything else. The one exception
+(an action kind of a newer QoL) where it is and leaves it out of everything else, and so do the
+reminders with an entry that has no spell ID. The one exception
 is Ring: at login it drops what isn't a ring from `QoLDB.rings` (`clean` in `Features/Ring.lua`), as
 it did before versions.
 
