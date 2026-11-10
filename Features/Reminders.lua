@@ -61,7 +61,13 @@ local GROUP_VERSIONS = {
 
 -- The Hide reminders checkboxes, in the page's order. key: the option; text: its strings in ns.L (the
 -- label, and _TIP its tooltip); holds: whether the character is in that state now; events: the game's
--- events that say it may have changed (heard only while the box is ticked and a reminder can show).
+-- events that say it may have changed (heard only while the box is ticked and a reminder can show);
+-- experience: it hides only the reminders about experience.
+
+-- The highest level a PLAYER_LEVEL_UP named this session: the game may give the new level through
+-- UnitLevel only after the event.
+local levelReached = 0
+
 local CONDITIONS = {
     { key = "reminderHideResting", text = "REMINDER_HIDE_RESTING", events = { "PLAYER_UPDATE_RESTING" },
         holds = function() return IsResting() == true end },
@@ -71,20 +77,20 @@ local CONDITIONS = {
     { key = "reminderHideMounted", text = "REMINDER_HIDE_MOUNTED", events = { "PLAYER_MOUNT_DISPLAY_CHANGED" },
         holds = function() return IsMounted() == true end },
     -- Releasing the spirit fires PLAYER_ALIVE, still a ghost; PLAYER_UNGHOST ends it. A flight path
-    -- takes the character's control and gives it back on landing.
+    -- takes the character's control and gives it back on landing; UnitOnTaxi may turn true only
+    -- after PLAYER_CONTROL_LOST, so UPDATE_BONUS_ACTIONBAR, on which the game's own early-landing
+    -- button asks it, asks again.
     { key = "reminderHideDeadOrFlying", text = "REMINDER_HIDE_DEAD_OR_FLYING",
-        events = { "PLAYER_DEAD", "PLAYER_ALIVE", "PLAYER_UNGHOST", "PLAYER_CONTROL_LOST", "PLAYER_CONTROL_GAINED" },
+        events = { "PLAYER_DEAD", "PLAYER_ALIVE", "PLAYER_UNGHOST", "PLAYER_CONTROL_LOST", "PLAYER_CONTROL_GAINED",
+            "UPDATE_BONUS_ACTIONBAR" },
         holds = function() return UnitIsDeadOrGhost("player") == true or UnitOnTaxi("player") == true end },
-    -- Only for the reminders about experience. The game may give the new level after PLAYER_LEVEL_UP,
-    -- so the level the event names counts too.
     { key = "reminderHideMaxLevel", text = "REMINDER_HIDE_MAX_LEVEL", events = { "PLAYER_LEVEL_UP" },
-        experience = true, reached = 0,
-        holds = function(self)
-            local level = math.max(UnitLevel("player") or 0, self.reached)
-            return level >= GetMaxPlayerLevel()
+        experience = true,
+        holds = function()
+            return math.max(UnitLevel("player") or 0, levelReached) >= GetMaxPlayerLevel()
         end,
-        onEvent = function(self, _, level)
-            if type(level) == "number" then self.reached = level end
+        onEvent = function(_, level)
+            if type(level) == "number" and level > levelReached then levelReached = level end
         end },
 }
 Reminders.CONDITIONS = CONDITIONS
@@ -274,21 +280,24 @@ end
 -- for spells the character knows. Refilled by each refresh.
 local dueList = {}
 
--- Whether a ticked Hide reminders box holds now: for every reminder (false), or only for those about
--- experience (true).
-local function quiet(experience)
+-- Whether a ticked Hide reminders box of that kind (one for every reminder, or one for those about
+-- experience) holds now.
+local function hiddenBy(experienceOnly)
     for _, condition in ipairs(CONDITIONS) do
-        if (condition.experience == true) == experience and Options:Get(condition.key) and condition:holds() then
+        if (condition.experience == true) == experienceOnly and Options:Get(condition.key) and condition.holds() then
             return true
         end
     end
     return false
 end
 
+local function allHidden() return hiddenBy(false) end
+local function experienceHidden() return hiddenBy(true) end
+
 local function due()
     for index = #dueList, 1, -1 do dueList[index] = nil end
-    if quiet(false) then return dueList end
-    local noExperience = quiet(true)
+    if allHidden() then return dueList end
+    local noExperience = experienceHidden()
     for _, preset in ipairs(Reminders.PRESETS) do
         if Options:Get(preset.key) and not (preset.experience and noExperience) then
             dueList[#dueList + 1] = preset
@@ -364,9 +373,11 @@ local events = ns.Events:NewGroup({ "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABL
     schedule)
 local update
 
+-- Per Hide reminders condition, the group of its events.
+local conditionEvents = {}
 for _, condition in ipairs(CONDITIONS) do
-    condition.group = ns.Events:NewGroup(condition.events, function(...)
-        if condition.onEvent then condition:onEvent(...) end
+    conditionEvents[condition] = ns.Events:NewGroup(condition.events, function(...)
+        if condition.onEvent then condition.onEvent(...) end
         schedule()
     end)
 end
@@ -385,7 +396,7 @@ function update()
     local on = active()
     events:SetOn(on)
     for _, condition in ipairs(CONDITIONS) do
-        condition.group:SetOn(on and Options:Get(condition.key) == true)
+        conditionEvents[condition]:SetOn(on and Options:Get(condition.key) == true)
     end
     spellEvents:SetOn(#ownList() > 0)
     if on then unitEvents:On("UNIT_AURA", schedule) else unitEvents:Off("UNIT_AURA") end

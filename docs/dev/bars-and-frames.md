@@ -75,8 +75,9 @@ state and the events that say it may have changed. A refresh asks each ticked on
 (`IsResting`, `PLAYER_UPDATE_RESTING`), combat (`InCombatLockdown`, on the combat events the row
 hears anyway), mounted (`IsMounted`, `PLAYER_MOUNT_DISPLAY_CHANGED`) and dead or on a flight path
 (`UnitIsDeadOrGhost` or `UnitOnTaxi`; `PLAYER_DEAD`, `PLAYER_ALIVE` (released, still a ghost),
-`PLAYER_UNGHOST`, and `PLAYER_CONTROL_LOST` and `_GAINED` for taking off and landing) leave the row
-empty. The maximum level one (`UnitLevel` against `GetMaxPlayerLevel`, `PLAYER_LEVEL_UP`) leaves out
+`PLAYER_UNGHOST`, and `PLAYER_CONTROL_LOST` and `_GAINED` for taking off and landing, plus
+`UPDATE_BONUS_ACTIONBAR`, on which the game's early-landing button asks `UnitOnTaxi`, in case it
+turns true only after control is lost; not yet checked in game) leave the row empty. The maximum level one (`UnitLevel` against `GetMaxPlayerLevel`, `PLAYER_LEVEL_UP`) leaves out
 only the presets marked `experience`; it also takes the level the event names, as the game may update
 `UnitLevel` after it. A condition's events are heard only while its box is ticked and the row hears
 anything at all. Forever withholds buff data in every fight (#108's in-game check), so "In combat"
