@@ -82,13 +82,19 @@ local function clear(set)
     for key in pairs(set) do set[key] = nil end
 end
 
--- The tracked buffs that draw on this character, in the list's order; refilled by each refresh.
-local due = {}
+-- The tracked buffs that draw on this character, in the list's order, and the name each goes by
+-- (asked once per refresh, not per frame); refilled by each refresh. One without a name from the
+-- client yet is left out.
+local due, dueNames = {}, {}
 
 local function fillDue()
-    for index = #due, 1, -1 do due[index] = nil end
+    for index = #due, 1, -1 do due[index], dueNames[index] = nil, nil end
     for _, entry in ipairs(list()) do
-        if valid(entry) and entry.on == true and knows(entry.spell) then due[#due + 1] = entry end
+        local name = valid(entry) and entry.on == true and knows(entry.spell) and nameOf(entry.spell)
+        if name then
+            due[#due + 1] = entry
+            dueNames[#due] = name
+        end
     end
 end
 
@@ -97,7 +103,11 @@ local frames, holders = {}, {}
 
 local function note(frame)
     if type(frame) ~= "table" or type(frame.GetFrameLevel) ~= "function" then return end
-    if frame.IsForbidden and frame:IsForbidden() then return end
+    -- A secret answer counts as forbidden: it can't be tested.
+    if frame.IsForbidden then
+        local forbidden = frame:IsForbidden()
+        if not ns.IsUsable(forbidden) or forbidden then return end
+    end
     frames[frame] = true
 end
 
@@ -138,7 +148,8 @@ local function holderOf(frame)
     holder = CreateFrame("Frame", nil, frame)
     holder:SetAllPoints(frame)
     holder:EnableMouse(false)
-    holder:SetFrameLevel(frame:GetFrameLevel() + LEVEL_ABOVE)
+    local level = frame:GetFrameLevel()
+    if ns.IsUsable(level) and type(level) == "number" then holder:SetFrameLevel(level + LEVEL_ABOVE) end
     holder.icons = {}
     holders[frame] = holder
     return holder
@@ -189,18 +200,25 @@ local function numbers(aura)
     return stacks, duration, expires
 end
 
+-- Sets an icon (our own frame, which keeps what it shows) only where it changed: a UNIT_AURA redraw
+-- mostly finds it as it was.
 local function draw(icon, entry, stacks, duration, expires)
-    icon.Icon:SetTexture(C_Spell.GetSpellTexture(entry.spell))
-    if duration > 0 and expires > 0 then
-        icon.Cooldown:SetCooldown(expires - duration, duration)
-    else
-        icon.Cooldown:Clear()
+    if icon.spell ~= entry.spell then
+        icon.spell = entry.spell
+        icon.Icon:SetTexture(C_Spell.GetSpellTexture(entry.spell))
     end
-    if stacks > 1 then
-        icon.Count:SetText(tostring(stacks))
-        icon.Count:Show()
-    else
-        icon.Count:Hide()
+    if icon.expires ~= expires or icon.duration ~= duration then
+        icon.expires, icon.duration = expires, duration
+        if duration > 0 and expires > 0 then
+            icon.Cooldown:SetCooldown(expires - duration, duration)
+        else
+            icon.Cooldown:Clear()
+        end
+    end
+    if icon.stacks ~= stacks then
+        icon.stacks = stacks
+        if stacks > 1 then icon.Count:SetText(tostring(stacks)) end
+        icon.Count:SetShown(stacks > 1)
     end
 end
 
@@ -213,9 +231,8 @@ local function drawFrame(frame, unit)
         return
     end
     local count = 0
-    for _, entry in ipairs(due) do
-        local name = nameOf(entry.spell)
-        local aura = name and found[name]
+    for index, entry in ipairs(due) do
+        local aura = found[dueNames[index]]
         local stacks, duration, expires
         if aura then stacks, duration, expires = numbers(aura) end
         if stacks then
@@ -299,7 +316,7 @@ local rosterEvents = ns.Events:NewGroup({ "GROUP_ROSTER_UPDATE" }, function()
     update()
 end)
 -- Heard while icons can show: the data turning secret and back, a loading screen, spells learned.
-local groupEvents = ns.Events:NewGroup({ "ADDON_RESTRICTION_STATE_CHANGED", "PLAYER_REGEN_DISABLED",
+local activeEvents = ns.Events:NewGroup({ "ADDON_RESTRICTION_STATE_CHANGED", "PLAYER_REGEN_DISABLED",
     "PLAYER_REGEN_ENABLED", "PLAYER_ENTERING_WORLD" }, scheduleAll)
 local spellEvents = ns.Events:NewGroup({ "SPELLS_CHANGED" }, function()
     clear(known)
@@ -312,7 +329,7 @@ function update()
     local on = Options:Get(SWITCH) == true
     local inGroup = on and IsInGroup() == true
     rosterEvents:SetOn(on)
-    groupEvents:SetOn(inGroup)
+    activeEvents:SetOn(inGroup)
     -- Spells may have been learned while SPELLS_CHANGED wasn't heard.
     clear(known)
     spellEvents:SetOn(inGroup)
@@ -353,6 +370,7 @@ function GroupFrames.AddFromCursor()
     local id = cursorType == "spell" and (baseSpellID or spellID)
     if type(id) ~= "number" then return false end
     local name, entries = nameOf(id), list()
+    -- Any line with the spell counts, one of a kind this QoL doesn't know too (not just valid ones).
     for _, entry in ipairs(entries) do
         if type(entry) == "table" and type(entry.spell) == "number"
             and (entry.spell == id or (name and nameOf(entry.spell) == name)) then
