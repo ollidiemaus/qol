@@ -1961,6 +1961,16 @@ local function install()
         end,
     }
 
+    --- The player's character: state.resting, state.mounted, state.dead (or a ghost), state.onTaxi (on a
+    -- flight path), state.level and state.maxLevel (GetMaxPlayerLevel). Stubs.SetCharacter changes them
+    -- and fires the game's event.
+    G.IsResting = function() return state.resting == true end
+    G.IsMounted = function() return state.mounted == true end
+    G.UnitIsDeadOrGhost = function(unit) return unit == "player" and state.dead == true end
+    G.UnitOnTaxi = function(unit) return unit == "player" and state.onTaxi == true end
+    G.UnitLevel = function(unit) return unit == "player" and state.level or 0 end
+    G.GetMaxPlayerLevel = function() return state.maxLevel end
+
     --- Units: state.units[unit] = { isPlayer, treatAsPlayer, class }; a unit that isn't there doesn't exist.
     G.UnitIsPlayer = function(unit)
         local info = state.units[unit]
@@ -2156,6 +2166,7 @@ function Stubs.Reset(options)
         restricted = 0, regions = {}, timers = {}, delayed = {}, messages = {}, registry = {}, postCalls = {}, linePreCalls = {},
         unknownEvents = options.unknownEvents or {},
         combat = false,
+        resting = false, mounted = false, dead = false, onTaxi = false, level = 10, maxLevel = 60,
         -- GetBonusBarOffset: 0 outside a stance. Stubs.SetStance moves it and the state drivers.
         bonusBarOffset = 0, stateDrivers = {}, macroConditions = {},
         interfaceStyle = 0,
@@ -2971,6 +2982,13 @@ end
 -- The game keeps the player's buff data secret (true) or gives it again (false). No event says so.
 function Stubs.WithholdAuras(withheld)
     state.aurasWithheld = withheld
+end
+
+-- The player's character changes (changes: { resting, mounted, dead, onTaxi, level, maxLevel }), and
+-- the game fires event with its arguments, if one is given.
+function Stubs.SetCharacter(changes, event, ...)
+    for field, value in pairs(changes) do state[field] = value end
+    if event then Stubs.Fire(event, ...) end
 end
 
 function Stubs.SetCombat(inCombat)
