@@ -8,9 +8,11 @@ raid-style party and raid frames. The design for the whole area, tracked buffs i
 
 Icons of QoL's own on every group frame (`Features/GroupFrames.lua`), for the spells in
 `QoLDB.trackedBuffs` (`{ spell, kind, on }`, account-wide, in the order added; not an option, so the
-page's Defaults button only switches `groupFrameBuffs` off). So far only the "has it" kind: the icon
-shows while the player's own cast of the buff is on the member, with the cooldown sweep and a stack
-number above one, all at one spot (the top right corner, side by side towards the left, 16 pixels).
+page's Defaults button only switches `groupFrameBuffs` off). The table's Show column picks the kind
+(`GroupFrames.SetKind`): a "has it" icon shows while the player's own cast of the buff is on the
+member, with the cooldown sweep and a stack number above one; a "lacks it" icon, desaturated with
+neither, while the member has no buff of the name at all (#121). All at one spot (the top right
+corner, side by side towards the left, 16 pixels), in the list's order whatever their kind.
 A line applies only where the character knows the spell at some rank (`ns.KnowsAnyRank`, shared
 with the reminders); the page greys out the others. An entry with a kind this QoL doesn't know (a
 newer QoL's) stays in the list and is left out of everything else.
@@ -18,6 +20,14 @@ newer QoL's) stays in the list and is left out of everything else.
 - **Matching:** `C_UnitAuras.GetAuraDataByIndex(unit, i, "HELPFUL|PLAYER")` lists the player's own
   casts on the member; one counts when its name is the one the client gives the stored spell ID, so
   any rank and any locale match.
+- **"Lacks it":** read through the `HELPFUL` filter instead (anyone's buffs, read only when such a line
+  is due, as the `PLAYER` list is only for a "has it" line). The member has the buff when a name there is
+  the spell's or one of its group versions': `ns.GroupVersionNames` (`Data/GroupBuffs.lua`), the table
+  the reminders use too, Forever's single-target spell IDs and their group spells, by name. It shows
+  only for a member that's alive (`UnitIsDeadOrGhost`), online (`UnitIsConnected`) and in range
+  (`UnitInRange`, as `CompactUnitFrame_UpdateInRange` reads it: out of range only when it was checked,
+  so the player's own frame counts as in range). `UnitInRange` has secret returns; a secret answer to
+  any of the three hides the frame's "lacks it" icons, as a secret buff name hides all of them.
 - **Which frames:** the same hook click casting has, `hooksecurefunc("CompactUnitFrame_SetUpFrame")`,
   a hook on a global function that only notes the frame (nameplates come through it too). Each
   refresh reads the frame's `unit` field and draws only for `player`, `partyN` and `raidN`: pets,
@@ -39,6 +49,9 @@ newer QoL's) stays in the list and is left out of everything else.
   `GROUP_ROSTER_UPDATE`, to know when the character is in a group (`IsInGroup`). In a group, the
   members' `UNIT_AURA` through 23 unit listeners (player, party1-4, raid1-40, two units each), and
   `SPELLS_CHANGED`, `ADDON_RESTRICTION_STATE_CHANGED`, the combat events and `PLAYER_ENTERING_WORLD`.
+  While a "lacks it" line is switched on too, the members' `UNIT_CONNECTION`, `UNIT_IN_RANGE_UPDATE`
+  and `UNIT_HEALTH` through the same unit listeners; `UNIT_HEALTH` fires on every hit, so it redraws
+  only when `UnitIsDeadOrGhost` changed since the last one.
   Refreshes go through one `ns.Later` key, at most one per drawn frame, and a `UNIT_AURA` redraws
   only the frames showing that unit.
 - **In-game checklist** ([`in-game.md`](in-game.md)): icons above the health bar at real frame

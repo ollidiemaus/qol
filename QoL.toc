@@ -34,6 +34,7 @@ Core\Hider.lua
 Core\Buttons.lua
 Core\Window.lua
 
+Data\GroupBuffs.lua
 Data\MapPins.lua
 
 Features\Merchant.lua

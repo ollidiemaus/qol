@@ -498,11 +498,13 @@ local function buildGroupFrames(page)
     page:Header("left", L.SECTION_BUFFS)
     page:Checkbox("left", gameBuffs, L.GAME_BUFFS, L.GAME_BUFFS_TIP, { enabled = gameBuffs.canChange })
     page:Checkbox("left", "groupFrameBuffs", L.GROUP_FRAME_BUFFS, L.GROUP_FRAME_BUFFS_TIP)
-    local ON, REMOVE = 2, 3 -- the table's columns after the tracked buffs' names
+    local SHOW, ON, REMOVE = 2, 3, 4 -- the table's columns after the tracked buffs' names
     local NO_TITLE, JOINED = nil, true -- right below the switch, in its section
+    local kinds = { { value = "has", label = L.TRACKED_BUFF_HAS }, { value = "lacks", label = L.TRACKED_BUFF_LACKS } }
     local tracked = page:Table({
         { caption = L.TRACKED_BUFF },
-        { caption = L.TRACKED_BUFF_ON, width = 60 },
+        { caption = L.TRACKED_BUFF_SHOW, width = 90 },
+        { caption = L.TRACKED_BUFF_ON, width = 40 },
         { caption = "", width = 20 },
     }, NO_TITLE, JOINED, function() GroupFrames.AddFromCursor() end)
     tracked:Line(L.TRACKED_BUFF_DROP, L.TRACKED_BUFF_DROP_TIP, {}, { footer = true })
@@ -516,6 +518,10 @@ local function buildGroupFrames(page)
         local function entry() return lines[index] or {} end
         local function known() return entry().known == true end
         tracked:Line(function() return entry().name or "" end, L.TRACKED_BUFF_SPELL_TIP, {
+            [SHOW] = { kind = "dropdown", tooltip = L.TRACKED_BUFF_SHOW_TIP, choices = kinds, enabled = known, key = {
+                get = function() return entry().kind end,
+                set = function(kind) GroupFrames.SetKind(entry().index, kind) end,
+            } },
             [ON] = { kind = "checkbox", tooltip = L.TRACKED_BUFF_SPELL_TIP, enabled = known, key = {
                 get = function() return entry().on == true end,
                 set = function(on) GroupFrames.SetOn(entry().index, on) end,

@@ -5,10 +5,14 @@ local describe, it = T.describe, T.it
 -- Forever's Regrowth (ranks 1 and 2) and Rejuvenation, with made-up icons.
 local REGROWTH_1, REGROWTH_2, REJUVENATION = 8936, 8938, 774
 local REGROWTH_ICON, REJUVENATION_ICON = 136085, 136081
+-- Mark of the Wild (ranks 1 and 2) and its group version, Gift of the Wild.
+local MARK_1, MARK_2, GIFT = 1126, 5232, 21849
+local MARK_ICON, GIFT_ICON = 136078, 136038
 
 local DRUID = {
     [REGROWTH_1] = { name = "Regrowth", texture = REGROWTH_ICON, subtext = "Rank 1" },
     [REJUVENATION] = { name = "Rejuvenation", texture = REJUVENATION_ICON, subtext = "Rank 1" },
+    [MARK_1] = { name = "Mark of the Wild", texture = MARK_ICON, subtext = "Rank 1" },
 }
 
 -- Loads the addon on Forever with the druid spells' data, the account's tracked buffs saved
@@ -21,6 +25,9 @@ local function start(savedOptions, tracked, known, options)
     state.gameSpells[REGROWTH_1] = { name = "Regrowth", texture = REGROWTH_ICON }
     state.gameSpells[REGROWTH_2] = { name = "Regrowth", texture = REGROWTH_ICON }
     state.gameSpells[REJUVENATION] = { name = "Rejuvenation", texture = REJUVENATION_ICON }
+    state.gameSpells[MARK_1] = { name = "Mark of the Wild", texture = MARK_ICON }
+    state.gameSpells[MARK_2] = { name = "Mark of the Wild", texture = MARK_ICON }
+    state.gameSpells[GIFT] = { name = "Gift of the Wild", texture = GIFT_ICON }
     for id, info in pairs(known or DRUID) do state.spells[id] = info end
     state.inGroup = not options.solo
     _G.QoLDB = { options = savedOptions, trackedBuffs = tracked }
@@ -33,6 +40,7 @@ end
 
 local ON = { groupFrameBuffs = true }
 local function has(spell, on) return { spell = spell, kind = "has", on = on ~= false } end
+local function lacks(spell, on) return { spell = spell, kind = "lacks", on = on ~= false } end
 
 -- A buff on a member: the player's own cast unless caster says otherwise, 30 seconds of 60 left.
 local function buff(name, spellId, caster, extra)
@@ -84,6 +92,99 @@ describe("Group frames: tracked buffs", function()
         Stubs.RunTimers()
         T.same(seen(frame), { REGROWTH_ICON }, "matched by name, any rank")
         Stubs.SetUnitBuffs("raid1", {})
+        Stubs.RunTimers()
+        T.same(seen(frame), {})
+    end)
+
+    it("shows a \"lacks it\" icon on a member without the buff, desaturated with no sweep, gone once they get it", function()
+        start(ON, { lacks(MARK_1) })
+        local frame = Stubs.NewGroupFrame("raid1")
+        Stubs.SetUnitBuffs("raid1", {})
+        Stubs.RunTimers()
+        T.same(seen(frame), { MARK_ICON })
+        local icon = shownIcons(frame)[1]
+        T.truthy(icon.Icon.desaturated, "desaturated")
+        T.eq(icon.Cooldown.duration, nil, "no sweep")
+        T.falsy(icon.Count:IsShown() and icon.Count:GetText() ~= "", "no number")
+        Stubs.SetUnitBuffs("raid1", { buff("Mark of the Wild", MARK_2, "party3") })
+        Stubs.RunTimers()
+        T.same(seen(frame), {}, "another caster's, another rank")
+        Stubs.SetUnitBuffs("raid1", { buff("Gift of the Wild", GIFT, "raid7") })
+        Stubs.RunTimers()
+        T.same(seen(frame), {}, "the group version")
+        Stubs.SetUnitBuffs("raid1", {})
+        Stubs.RunTimers()
+        T.same(seen(frame), { MARK_ICON })
+    end)
+
+    it("shows a \"has it\" icon in colour next to a \"lacks it\" one", function()
+        start(ON, { has(REGROWTH_1), lacks(MARK_1) })
+        local frame = Stubs.NewGroupFrame("party1")
+        Stubs.SetUnitBuffs("party1", { buff("Regrowth", REGROWTH_1, nil, { applications = 2 }) })
+        Stubs.RunTimers()
+        T.same(seen(frame), { REGROWTH_ICON, MARK_ICON })
+        local icons = shownIcons(frame)
+        T.falsy(icons[1].Icon.desaturated)
+        T.truthy(icons[1].Cooldown.duration)
+        T.truthy(icons[2].Icon.desaturated)
+        Stubs.SetUnitBuffs("party1", { buff("Mark of the Wild", MARK_1, "player") })
+        Stubs.RunTimers()
+        T.same(seen(frame), {})
+        Stubs.SetUnitBuffs("party1", {})
+        Stubs.RunTimers()
+        local mark = shownIcons(frame)[1]
+        T.truthy(mark.Icon.desaturated, "the place a \"has it\" icon had")
+        T.eq(mark.Cooldown.duration, nil)
+        T.falsy(mark.Count:IsShown() and mark.Count:GetText() ~= "")
+    end)
+
+    it("shows no \"lacks it\" icon on a dead, offline or out-of-range member, and shows it again once back", function()
+        start(ON, { lacks(MARK_1) })
+        local frame = Stubs.NewGroupFrame("raid2")
+        Stubs.SetUnitBuffs("raid2", {})
+        Stubs.RunTimers()
+        T.same(seen(frame), { MARK_ICON })
+        for _, change in ipairs({ "dead", "offline", "outOfRange" }) do
+            Stubs.SetMember("raid2", { [change] = true })
+            Stubs.RunTimers()
+            T.same(seen(frame), {}, change)
+            Stubs.SetMember("raid2", { [change] = false })
+            Stubs.RunTimers()
+            T.same(seen(frame), { MARK_ICON }, change .. ", back")
+        end
+        for _, change in ipairs({ "dead", "offline", "outOfRange" }) do
+            Stubs.SetMember("raid2", { [change] = Stubs.SECRET })
+            Stubs.RunTimers()
+            T.same(seen(frame), {}, "a secret answer: " .. change)
+            Stubs.SetMember("raid2", { [change] = false })
+            Stubs.RunTimers()
+        end
+        T.same(seen(frame), { MARK_ICON })
+    end)
+
+    it("shows \"lacks it\" icons in combat, and on the player's own frame", function()
+        start(ON, { lacks(MARK_1) })
+        Stubs.SetCombat(true)
+        local own, party = Stubs.NewGroupFrame("player"), Stubs.NewGroupFrame("party1")
+        Stubs.RunTimers()
+        T.same(seen(own), { MARK_ICON })
+        T.same(seen(party), { MARK_ICON })
+        Stubs.SetUnitBuffs("party1", { buff("Mark of the Wild", MARK_1, "party2") })
+        Stubs.RunTimers()
+        T.same(seen(party), {})
+    end)
+
+    it("hides a \"lacks it\" icon while a buff's name is secret or the game withholds buff data", function()
+        start(ON, { lacks(MARK_1) })
+        local frame = Stubs.NewGroupFrame("raid1")
+        Stubs.SetUnitBuffs("raid1", { buff(Stubs.SECRET, REGROWTH_1, "raid3") })
+        Stubs.RunTimers()
+        T.same(seen(frame), {}, "another caster's buff with a secret name")
+        Stubs.SetUnitBuffs("raid1", {})
+        Stubs.RunTimers()
+        T.same(seen(frame), { MARK_ICON })
+        Stubs.WithholdAuras(true)
+        Stubs.Fire("ADDON_RESTRICTION_STATE_CHANGED", 0, 1)
         Stubs.RunTimers()
         T.same(seen(frame), {})
     end)
@@ -271,6 +372,41 @@ describe("Group frames: tracked buffs", function()
         T.falsy(Stubs.Listens("ADDON_RESTRICTION_STATE_CHANGED"), "switched off")
     end)
 
+    it("hears members' death, connection and range only while on, in a group, with a \"lacks it\" line on", function()
+        local STATUS = { "UNIT_HEALTH", "UNIT_CONNECTION", "UNIT_IN_RANGE_UPDATE" }
+        local function hears(unit)
+            for _, event in ipairs(STATUS) do
+                if not Stubs.Listens(event, unit) then return false end
+            end
+            return true
+        end
+        local function hearsAny(unit)
+            for _, event in ipairs(STATUS) do
+                if Stubs.Listens(event, unit) then return true end
+            end
+            return false
+        end
+        local ns = start(nil, { has(REGROWTH_1), lacks(MARK_1) }, nil, { solo = true })
+        T.falsy(hearsAny("raid1"), "off")
+        ns.Options:Set("groupFrameBuffs", true)
+        Stubs.RunTimers()
+        T.falsy(hearsAny("raid1"), "solo")
+        Stubs.SetGroup(true)
+        Stubs.RunTimers()
+        for _, unit in ipairs({ "party1", "party4", "raid1", "raid40" }) do T.truthy(hears(unit), unit) end
+        ns.GroupFrames.SetOn(2, false)
+        T.falsy(hearsAny("raid1"), "the \"lacks it\" line paused")
+        ns.GroupFrames.SetOn(2, true)
+        T.truthy(hears("raid1"))
+        Stubs.SetGroup(false)
+        Stubs.RunTimers()
+        T.falsy(hearsAny("raid1"), "left the group")
+        Stubs.SetGroup(true)
+        ns.Options:Set("groupFrameBuffs", false)
+        Stubs.RunTimers()
+        T.falsy(hearsAny("raid1"), "switched off")
+    end)
+
     it("shows a spell once the character learns it", function()
         start(ON, { has(REJUVENATION) }, { [REGROWTH_1] = DRUID[REGROWTH_1] })
         local frame = Stubs.NewGroupFrame("raid1")
@@ -298,8 +434,8 @@ describe("Group frames: tracked buffs", function()
         T.truthy(ns.GroupFrames.AddFromCursor())
         T.same(QoLDB.trackedBuffs, { newer, has(REGROWTH_1), has(REJUVENATION) })
         T.same(ns.GroupFrames.Lines(), {
-            { index = 2, name = "Regrowth", icon = REGROWTH_ICON, on = true, known = true },
-            { index = 3, name = "Rejuvenation", icon = REJUVENATION_ICON, on = true, known = true },
+            { index = 2, name = "Regrowth", icon = REGROWTH_ICON, kind = "has", on = true, known = true },
+            { index = 3, name = "Rejuvenation", icon = REJUVENATION_ICON, kind = "has", on = true, known = true },
         })
         ns.GroupFrames.SetOn(2, false)
         ns.GroupFrames.Remove(3)
@@ -314,7 +450,7 @@ describe("Group frames: tracked buffs", function()
         Stubs.SetUnitBuffs("raid1", { buff("Regrowth", REGROWTH_1) })
         Stubs.RunTimers()
         T.same(seen(frame), {})
-        T.same(ns.GroupFrames.Lines(), { { index = 1, name = "Regrowth", icon = REGROWTH_ICON, on = true, known = false } })
+        T.same(ns.GroupFrames.Lines(), { { index = 1, name = "Regrowth", icon = REGROWTH_ICON, kind = "has", on = true, known = false } })
     end)
 
     for _, client in ipairs({ "retail", "classicEra" }) do

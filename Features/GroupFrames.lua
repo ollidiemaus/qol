@@ -7,7 +7,10 @@ local Options = ns.Options
 -- (QoLDB.trackedBuffs, for the whole account, in the order added; a line applies only on a character
 -- that knows the spell at some rank). A "has it" icon shows while the player's own cast of the buff
 -- is on the member, matched by the name the client gives the stored spell ID (any rank, any locale),
--- with the cooldown sweep and a stack number above one. ADR 0004 says why they're icons of our own.
+-- with the cooldown sweep and a stack number above one. A "lacks it" icon, desaturated with neither,
+-- shows while the member has no buff of that name from anyone, nor of its group version's
+-- (ns.GroupVersionNames, shared with the reminders), and never on a dead, offline or out-of-range
+-- member. ADR 0004 says why they're icons of our own.
 -- The raid manager is hidden by Features/HideFrames.lua (hideRaidManager).
 --
 -- Taint: the group frames are found the way click casting finds raid-style frames (a hook on the
@@ -22,7 +25,9 @@ local Options = ns.Options
 -- after the data is readable shows them again.
 -- Cost: the master switch off, nothing is heard but the setup hook (which only notes frames); on,
 -- GROUP_ROSTER_UPDATE tells when the character is in a group; only then are the members' UNIT_AURA
--- (through unit listeners), spells learned and the secrecy events heard. Refreshes go through one
+-- (through unit listeners), spells learned and the secrecy events heard, and, while a "lacks it" line
+-- is on, the members' death (UNIT_HEALTH, redrawn only when it changes), connection and range.
+-- A secret answer to any of those hides the "lacks it" icons on that frame. Refreshes go through one
 -- ns.Later key, at most once per drawn frame, and a UNIT_AURA redraws only that unit's frames.
 local GroupFrames = {}
 ns.GroupFrames = GroupFrames
@@ -37,8 +42,10 @@ local SWITCH = "groupFrameBuffs"
 local SIZE, GAP, INSET = 16, 1, 2
 local LEVEL_ABOVE = 5 -- the holder's frame level over the group frame's, above its bars
 local MAX_BUFFS = 255
-local FILTER = "HELPFUL|PLAYER" -- buffs the player cast
-local KINDS = { has = true } -- the kinds of tracked buff this QoL understands
+local OWN, ANY = "HELPFUL|PLAYER", "HELPFUL" -- buffs the player cast; anyone's
+-- The kinds of tracked buff this QoL understands: "has" shows while the player's own cast is on the
+-- member, "lacks" while the member has no buff of the name (any caster, its group version too).
+local KINDS = { has = true, lacks = true }
 local PARTY, RAID = 4, 40
 
 -- Whether the client is WoW Forever, the only one the Group Frames page is for.
@@ -82,18 +89,29 @@ local function clear(set)
     for key in pairs(set) do set[key] = nil end
 end
 
--- The tracked buffs that draw on this character, in the list's order, and the name each goes by
--- (asked once per refresh, not per frame); refilled by each refresh. One without a name from the
--- client yet is left out.
-local due, dueNames = {}, {}
+-- The tracked buffs that draw on this character, in the list's order, the name each goes by and, for
+-- a "lacks it" one, its group versions' names or nil (asked once per refresh, not per frame); refilled
+-- by each refresh. One without a name from the client yet is left out. needOwn, needAny: whether a
+-- "has it" and a "lacks it" line is among them, so a frame reads only the buff lists it needs.
+local due, dueNames, dueGroups = {}, {}, {}
+local needOwn, needAny = false, false
 
 local function fillDue()
-    for index = #due, 1, -1 do due[index], dueNames[index] = nil, nil end
+    for index = #due, 1, -1 do due[index], dueNames[index], dueGroups[index] = nil, nil, nil end
+    needOwn, needAny = false, false
+    local groups
     for _, entry in ipairs(list()) do
         local name = valid(entry) and entry.on == true and knows(entry.spell) and nameOf(entry.spell)
         if name then
             due[#due + 1] = entry
             dueNames[#due] = name
+            if entry.kind == "lacks" then
+                groups = groups or ns.GroupVersionNames()
+                dueGroups[#due] = groups[name]
+                needAny = true
+            else
+                needOwn = true
+            end
         end
     end
 end
@@ -175,21 +193,45 @@ local function withheld()
     return C_Secrets ~= nil and C_Secrets.ShouldAurasBeSecret ~= nil and C_Secrets.ShouldAurasBeSecret() == true
 end
 
--- The player's own buffs on the unit by name, refilled per frame drawn.
-local found = {}
+-- The unit's buffs by name, refilled per frame drawn: the player's own (the buff), and anyone's (true).
+local found, foundAny = {}, {}
 
--- Fills found; false when the game keeps a buff's name secret.
-local function readBuffs(unit)
-    clear(found)
+-- Fills set with the unit's buffs through filter; false when the game keeps a buff's name secret.
+local function readBuffs(set, unit, filter, keep)
     for index = 1, MAX_BUFFS do
-        local aura = C_UnitAuras.GetAuraDataByIndex(unit, index, FILTER)
+        local aura = C_UnitAuras.GetAuraDataByIndex(unit, index, filter)
         -- nil: the end of the list.
         if not ns.IsUsable(aura) then return aura == nil end
         local name = aura.name
         if not ns.IsUsable(name) then return false end
-        if found[name] == nil then found[name] = aura end
+        if set[name] == nil then set[name] = keep and aura or true end
     end
     return true
+end
+
+-- Fills the sets the due lines need; false when a name is secret.
+local function read(unit)
+    if needOwn and not readBuffs(found, unit, OWN, true) then return false end
+    return not needAny or readBuffs(foundAny, unit, ANY, false)
+end
+
+-- Whether a "lacks it" icon may show for the unit: alive, online and in range (the game doesn't check
+-- the player's own range). A secret answer counts as no: we can't tell.
+local function present(unit)
+    local dead, connected = UnitIsDeadOrGhost(unit), UnitIsConnected(unit)
+    if not (ns.IsUsable(dead) and ns.IsUsable(connected)) or dead or not connected then return false end
+    local inRange, checked = UnitInRange(unit)
+    if not (ns.IsUsable(inRange) and ns.IsUsable(checked)) then return false end
+    return not checked or inRange == true
+end
+
+-- Whether the unit has a buff of the "lacks it" line's name or of its group versions'.
+local function hasAny(index)
+    if foundAny[dueNames[index]] then return true end
+    for _, name in ipairs(dueGroups[index] or {}) do
+        if foundAny[name] then return true end
+    end
+    return false
 end
 
 -- The numbers an icon needs from a buff, or nil while any is secret.
@@ -201,11 +243,17 @@ local function numbers(aura)
 end
 
 -- Sets an icon (our own frame, which keeps what it shows) only where it changed: a UNIT_AURA redraw
--- mostly finds it as it was.
+-- mostly finds it as it was. A "lacks it" icon has no numbers (0 each): no sweep, no stacks, and is
+-- desaturated.
 local function draw(icon, entry, stacks, duration, expires)
     if icon.spell ~= entry.spell then
         icon.spell = entry.spell
         icon.Icon:SetTexture(C_Spell.GetSpellTexture(entry.spell))
+    end
+    local lacking = entry.kind == "lacks"
+    if icon.lacking ~= lacking then
+        icon.lacking = lacking
+        icon.Icon:SetDesaturated(lacking)
     end
     if icon.expires ~= expires or icon.duration ~= duration then
         icon.expires, icon.duration = expires, duration
@@ -225,16 +273,22 @@ end
 -- Draws the tracked buffs on one group frame for its unit (nil: none).
 local function drawFrame(frame, unit)
     local holder = holders[frame]
-    if not unit or #due == 0 or not readBuffs(unit) then
+    if not unit or #due == 0 or not read(unit) then
         if holder then hideFrom(holder, 1) end
         clear(found)
+        clear(foundAny)
         return
     end
-    local count = 0
+    local count, here = 0, nil
     for index, entry in ipairs(due) do
-        local aura = found[dueNames[index]]
         local stacks, duration, expires
-        if aura then stacks, duration, expires = numbers(aura) end
+        if entry.kind == "lacks" then
+            if here == nil then here = present(unit) end
+            if here and not hasAny(index) then stacks, duration, expires = 0, 0, 0 end
+        else
+            local aura = found[dueNames[index]]
+            if aura then stacks, duration, expires = numbers(aura) end
+        end
         if stacks then
             holder = holder or holderOf(frame)
             count = count + 1
@@ -242,6 +296,7 @@ local function drawFrame(frame, unit)
         end
     end
     clear(found)
+    clear(foundAny)
     if holder then hideFrom(holder, count + 1) end
 end
 
@@ -290,9 +345,23 @@ local function onAura(_, unit)
     schedule()
 end
 
+-- Whether each unit was dead when last asked: UNIT_HEALTH fires on every hit, a redraw only on a change.
+local wasDead = {}
+
+local function onHealth(_, unit)
+    if type(unit) ~= "string" then return end
+    local dead = UnitIsDeadOrGhost(unit)
+    if not ns.IsUsable(dead) then dead = "unknown" end
+    if wasDead[unit] == dead then return end
+    wasDead[unit] = dead
+    onAura(nil, unit)
+end
+
 -- The members' units in pairs, one unit listener per pair: the player, the party, the raid.
 local unitListeners = {}
-local listening = false
+local listening, hearingStatus = false, false
+-- A member's death, connection and range: only "lacks it" icons care.
+local STATUS_EVENTS = { UNIT_HEALTH = onHealth, UNIT_CONNECTION = onAura, UNIT_IN_RANGE_UPDATE = onAura }
 
 local function members()
     local units = { "player" }
@@ -307,6 +376,25 @@ local function hearAuras(on)
     for _, listener in ipairs(unitListeners) do
         if on then listener:On("UNIT_AURA", onAura) else listener:Off("UNIT_AURA") end
     end
+end
+
+local function hearStatus(on)
+    if on == hearingStatus then return end
+    hearingStatus = on
+    clear(wasDead)
+    for _, listener in ipairs(unitListeners) do
+        for event, handler in pairs(STATUS_EVENTS) do
+            if on then listener:On(event, handler) else listener:Off(event) end
+        end
+    end
+end
+
+-- Whether a "lacks it" line is switched on (known or not: SPELLS_CHANGED doesn't change what's heard).
+local function lacksOn()
+    for _, entry in ipairs(list()) do
+        if valid(entry) and entry.kind == "lacks" and entry.on == true then return true end
+    end
+    return false
 end
 
 local update
@@ -334,6 +422,7 @@ function update()
     clear(known)
     spellEvents:SetOn(inGroup)
     hearAuras(inGroup)
+    hearStatus(inGroup and lacksOn())
     scheduleAll()
 end
 
@@ -345,18 +434,18 @@ function GroupFrames.OnChange(fn)
 end
 
 local function afterEdit()
-    scheduleAll()
+    update()
     for _, fn in ipairs(listeners) do fn() end
 end
 
 -- The tracked buffs QoL understands, in the list's order, as the page shows them:
--- { index (its place in the saved list, for SetOn and Remove), name, icon, on, known }.
+-- { index (its place in the saved list, for SetOn, SetKind and Remove), name, icon, kind, on, known }.
 function GroupFrames.Lines()
     local lines = {}
     for index, entry in ipairs(list()) do
         if valid(entry) then
             lines[#lines + 1] = { index = index, name = nameOf(entry.spell),
-                icon = C_Spell.GetSpellTexture(entry.spell), on = entry.on == true,
+                icon = C_Spell.GetSpellTexture(entry.spell), kind = entry.kind, on = entry.on == true,
                 known = ns.KnowsAnyRank(entry.spell) }
         end
     end
@@ -395,6 +484,14 @@ function GroupFrames.SetOn(index, on)
     local entry = list()[index]
     if not valid(entry) then return end
     entry.on = on == true
+    afterEdit()
+end
+
+-- kind: "has" or "lacks".
+function GroupFrames.SetKind(index, kind)
+    local entry = list()[index]
+    if not valid(entry) or KINDS[kind] ~= true then return end
+    entry.kind = kind
     afterEdit()
 end
 

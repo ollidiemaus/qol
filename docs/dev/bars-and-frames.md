@@ -106,8 +106,9 @@ own reminder whose spell is known makes the row listen: a warrior with only the 
 reminder hears no `UNIT_AURA`. An entry without a spell ID (a newer QoL's) stays saved, out of the
 row and the page. A drop is
 the cursor's `"spell"` (its base spell ID); another rank of a spell in the list, or anything else,
-does nothing and stays on the cursor. Group versions (`GROUP_VERSIONS`, Forever's IDs) add the group
-spell's name to any reminder's set of names; Forever has only three Greater Blessings. While the list
+does nothing and stays on the cursor. Group versions (`ns.GroupVersionNames` in
+`Data/GroupBuffs.lua`, Forever's IDs, shared with the tracked buffs) add the group spell's name to
+any reminder's set of names; Forever has only three Greater Blessings. While the list
 has entries, `SPELLS_CHANGED` refreshes the row and tells the page (`Reminders.OnChange`), so
 learning a spell shows its reminder and ungreys its line. The page's own lines are table lines made
 as the list grows and reused: each shows the entry at its place, so removing one moves the rest up.

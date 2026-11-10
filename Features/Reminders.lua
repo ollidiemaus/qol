@@ -62,20 +62,6 @@ Reminders.PRESETS = {
 local WEAPON_CLASS, FISHING_POLE = 2, 20 -- Enum.ItemClass.Weapon, Enum.ItemWeaponSubclass.Fishingpole
 local PERMANENT = 1 -- Enum.ItemEnchantType.Permanent: the weapon's enchantment, not a weapon buff
 
--- Group versions: a single-target spell (any of its ranks) and the group spells whose buff counts
--- for it too, in Forever's Spell table. Applied to any reminder. Forever has Greater Blessings of
--- Might, Wisdom and Kings only.
-local GROUP_VERSIONS = {
-    [1126] = { 21849 },  -- Mark of the Wild: Gift of the Wild
-    [1459] = { 23028 },  -- Arcane Intellect: Arcane Brilliance
-    [1243] = { 21562 },  -- Power Word: Fortitude: Prayer of Fortitude
-    [14752] = { 27681 }, -- Divine Spirit: Prayer of Spirit
-    [976] = { 27683 },   -- Shadow Protection: Prayer of Shadow Protection
-    [19740] = { 25782 }, -- Blessing of Might: Greater Blessing of Might
-    [19742] = { 25894 }, -- Blessing of Wisdom: Greater Blessing of Wisdom
-    [20217] = { 25898 }, -- Blessing of Kings: Greater Blessing of Kings
-}
-
 -- The Hide reminders checkboxes, in the page's order. key: the option; text: its strings in ns.L (the
 -- label, and _TIP its tooltip); holds: whether the character is in that state now; events: the game's
 -- events that say it may have changed (heard only while the box is ticked and a reminder can show);
@@ -123,30 +109,8 @@ local function nameOf(spellID)
     return nil
 end
 
--- A spell's name -> the names of its group versions, kept once the client has given every one.
-local groupNames
-
-local function groupVersions()
-    if groupNames then return groupNames end
-    local map, complete = {}, true
-    for single, groups in pairs(GROUP_VERSIONS) do
-        local name = nameOf(single)
-        for _, group in ipairs(groups) do
-            local groupName = nameOf(group)
-            if name and groupName then
-                map[name] = map[name] or {}
-                map[name][#map[name] + 1] = groupName
-            else
-                complete = false
-            end
-        end
-    end
-    if complete then groupNames = map end
-    return map
-end
-
--- Per reminder: the set of its buff's names, its group versions' among them, kept once the client
--- has given every one.
+-- Per reminder: the set of its buff's names, its group versions' among them (ns.GroupVersionNames,
+-- applied to any reminder), kept once the client has given every one.
 local names = {}
 
 -- The names its buff goes by, or nil while the client gives none.
@@ -154,8 +118,8 @@ local function namesOf(reminder)
     local set = names[reminder]
     if set then return set end
     set = {}
-    local groups = groupVersions()
-    local complete, any = groupNames ~= nil, false
+    local groups, complete = ns.GroupVersionNames()
+    local any = false
     for _, spellID in ipairs(reminder.spells) do
         local name = nameOf(spellID)
         if name then

@@ -608,7 +608,7 @@ describe("settings pages", function()
         return ns, page
     end
 
-    local TRACKED_HEADER, TRACKED_DROP = "Tracked buff | On | ", "Drag a spell here from your spellbook | - | -"
+    local TRACKED_HEADER, TRACKED_DROP = "Tracked buff | Show | On | ", "Drag a spell here from your spellbook | - | - | -"
 
     local function trackedRows(...)
         local rows = { TRACKED_HEADER }
@@ -644,18 +644,18 @@ describe("settings pages", function()
         local state = Stubs.state()
         state.cursorInfo = { "spell", 1, "spell", REGROWTH_1, REGROWTH_1 }
         page.tables[1].lines[1].frame:RunScript("OnReceiveDrag")
-        T.same(tableRows(page), trackedRows("Regrowth | checkbox | remove"))
+        T.same(tableRows(page), trackedRows("Regrowth | dropdown | checkbox | remove"))
         T.eq(trackedLine(page, "Regrowth").icon.texture, 136085)
         T.eq(state.cursorInfo, nil)
         state.cursorInfo = { "spell", 1, "spell", REGROWTH_2, REGROWTH_2 }
         page.tables[1].frame:RunScript("OnReceiveDrag")
         state.cursorInfo = { "item", 4540, "item:4540" }
         trackedLine(page, "Regrowth").frame:RunScript("OnReceiveDrag")
-        T.same(tableRows(page), trackedRows("Regrowth | checkbox | remove"), "a duplicate and an item add nothing")
+        T.same(tableRows(page), trackedRows("Regrowth | dropdown | checkbox | remove"), "a duplicate and an item add nothing")
         T.same(state.cursorInfo, { "item", 4540, "item:4540" }, "the item stays on the cursor")
         state.cursorInfo = { "spell", 1, "spell", REJUVENATION, REJUVENATION }
         page.tables[1].frame:RunScript("OnReceiveDrag")
-        T.same(tableRows(page), trackedRows("Regrowth | checkbox | remove", "Rejuvenation | checkbox | remove"),
+        T.same(tableRows(page), trackedRows("Regrowth | dropdown | checkbox | remove", "Rejuvenation | dropdown | checkbox | remove"),
             "in the order added")
     end)
 
@@ -666,14 +666,31 @@ describe("settings pages", function()
         T.same({ rejuvenation.label:GetTextColor() }, { 0.5, 0.5, 0.5, 1 }, "a spell the character doesn't know")
         T.truthy(rejuvenation.icon:IsDesaturated())
         T.falsy(rejuvenation.cells[2].widget:IsEnabled())
-        T.truthy(rejuvenation.cells[3].widget:IsEnabled())
+        T.falsy(rejuvenation.cells[3].widget:IsEnabled())
+        T.truthy(rejuvenation.cells[4].widget:IsEnabled())
         T.same({ regrowth.label:GetTextColor() }, { 1, 0.82, 0, 1 }, "known at another rank")
-        regrowth.cells[2].widget:Click()
+        regrowth.cells[3].widget:Click()
         T.same(QoLDB.trackedBuffs[2], { spell = REGROWTH_2, kind = "has", on = false })
-        T.falsy(regrowth.cells[2].widget:GetChecked())
-        rejuvenation.cells[3].widget:Click()
-        T.same(tableRows(page), trackedRows("Regrowth | checkbox | remove"))
+        T.falsy(regrowth.cells[3].widget:GetChecked())
+        rejuvenation.cells[4].widget:Click()
+        T.same(tableRows(page), trackedRows("Regrowth | dropdown | checkbox | remove"))
         T.same(QoLDB.trackedBuffs, { { spell = REGROWTH_2, kind = "has", on = false } })
+    end)
+
+    it("shows a tracked buff when the member has it or lacks it, with the Show column", function()
+        local ns, page = groupFramesPage(nil, { { spell = REGROWTH_2, kind = "has", on = true } })
+        local column = trackedLine(page, "Regrowth").cells[2]
+        T.eq(column.kind, "dropdown")
+        T.same(values(column), { "has", "lacks" })
+        T.eq(column.widget.text, "Has it")
+        T.truthy(column.tooltip:find("Lacks it:", 1, true) and column.tooltip:find("Has it:", 1, true),
+            "the tooltip explains both")
+        radio(column, "Lacks it").select()
+        T.same(QoLDB.trackedBuffs, { { spell = REGROWTH_2, kind = "lacks", on = true } })
+        T.eq(column.widget.text, "Lacks it")
+        T.same(ns.GroupFrames.Lines()[1].kind, "lacks")
+        radio(column, "Has it").select()
+        T.same(QoLDB.trackedBuffs, { { spell = REGROWTH_2, kind = "has", on = true } })
     end)
 
     it("switches tracked buffs off with Defaults and keeps the list", function()
@@ -683,7 +700,7 @@ describe("settings pages", function()
         Stubs.RunTimers()
         T.eq(ns.Options:Get("groupFrameBuffs"), false)
         T.same(QoLDB.trackedBuffs, { { spell = REGROWTH_1, kind = "has", on = true } })
-        T.same(tableRows(page), trackedRows("Regrowth | checkbox | remove"))
+        T.same(tableRows(page), trackedRows("Regrowth | dropdown | checkbox | remove"))
     end)
 
     it("names the Group Frames page and its rows in German", function()

@@ -160,10 +160,16 @@ On WoW Forever, a page for the game's own raid-style party and raid frames:
   on its own, and the page's Defaults button leaves it alone.
 - **Show tracked buffs:** your own icons for the buffs you choose, on every group frame: raid frames,
   party frames in raid style, your own frame too (not pets, arena, target or focus). Drag a spell from
-  your spellbook onto the page's table to track it; a spell dragged twice makes no second line. An icon
-  shows in the frame's top right corner while your own cast of that buff is on the member (another
-  druid's Regrowth doesn't count), at any rank, with a dark sweep for the time left and a number for
-  more than one stack. Each line has a checkbox to pause it and an X to remove it. The list is the same
+  your spellbook onto the page's table to track it; a spell dragged twice makes no second line. Its Show
+  column says when the icon shows, in the frame's top right corner:
+  - **Has it:** while your own cast of that buff is on the member (another druid's Regrowth doesn't
+    count), at any rank, with a dark sweep for the time left and a number for more than one stack.
+  - **Lacks it:** a grey icon while the member has no buff of that name, at any rank and from anyone;
+    the group version counts too (Gift of the Wild for Mark of the Wild, Arcane Brilliance for Arcane
+    Intellect, Greater Blessings for Blessings, and so on). It's gone the moment the member gets the
+    buff, and never shows on a dead, offline or out-of-range member.
+
+  Each line has a checkbox to pause it and an X to remove it. The list is the same
   on all your characters, in the order you added it; lines for spells a character doesn't know are
   greyed out there and show nothing. The icons let clicks through, so clicking a frame and click
   casting work as before, and they appear on frames made in combat too. While the game keeps a buff's

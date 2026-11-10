@@ -2020,7 +2020,26 @@ local function install()
     -- and fires the game's event.
     G.IsResting = function() return state.resting == true end
     G.IsMounted = function() return state.mounted == true end
-    G.UnitIsDeadOrGhost = function(unit) return unit == "player" and state.dead == true end
+    G.UnitIsDeadOrGhost = function(unit)
+        if unit == "player" then return state.dead == true end
+        local dead = (state.members[unit] or {}).dead
+        if dead == Stubs.SECRET then return dead end
+        return dead == true
+    end
+    --- Group members other than the player: state.members[unit] = { dead, offline, outOfRange }, any of
+    -- them Stubs.SECRET (UnitInRange's answers then are both secret). The player is never out of range
+    -- (UnitInRange doesn't check it). Stubs.SetMember changes them and fires the game's event.
+    G.UnitIsConnected = function(unit)
+        local offline = (state.members[unit] or {}).offline
+        if offline == Stubs.SECRET then return offline end
+        return offline ~= true
+    end
+    G.UnitInRange = function(unit)
+        if unit == "player" then return false, false end
+        local out = (state.members[unit] or {}).outOfRange
+        if out == Stubs.SECRET then return out, out end
+        return out ~= true, true
+    end
     G.UnitOnTaxi = function(unit) return unit == "player" and state.onTaxi == true end
     G.UnitLevel = function(unit) return unit == "player" and state.level or 0 end
     G.GetMaxPlayerLevel = function() return state.maxLevel end
@@ -2291,7 +2310,7 @@ function Stubs.Reset(options)
         actions = {}, modifiedClicks = {}, placed = {}, settingValues = {},
         spells = {}, items = {}, toys = {}, mounts = {}, macros = {}, flyouts = {}, equipped = {},
         -- Spells the client has data for that the character needn't know: id -> { name, texture }.
-        gameSpells = {}, buffs = {}, unitBuffs = {}, aurasWithheld = false, weaponBuffs = {}, inGroup = false,
+        gameSpells = {}, buffs = {}, unitBuffs = {}, members = {}, aurasWithheld = false, weaponBuffs = {}, inGroup = false,
         -- The cursor in UI units, the controller's sticks (nil: no controller) and the actions
         -- secure buttons used.
         cursorX = 500, cursorY = 400, gamepad = nil, usedActions = {},
@@ -3059,6 +3078,17 @@ end
 function Stubs.SetUnitBuffs(unit, buffs)
     if unit == "player" then state.buffs = buffs else state.unitBuffs[unit] = buffs end
     Stubs.Fire("UNIT_AURA", unit)
+end
+
+-- A group member's state changes (changes: { dead, offline, outOfRange }, false to undo one), and the
+-- game says so: UNIT_HEALTH for death, UNIT_CONNECTION, UNIT_IN_RANGE_UPDATE.
+function Stubs.SetMember(unit, changes)
+    local member = state.members[unit] or {}
+    state.members[unit] = member
+    for key, value in pairs(changes) do member[key] = value end
+    if changes.dead ~= nil then Stubs.Fire("UNIT_HEALTH", unit) end
+    if changes.offline ~= nil then Stubs.Fire("UNIT_CONNECTION", unit, changes.offline ~= true) end
+    if changes.outOfRange ~= nil then Stubs.Fire("UNIT_IN_RANGE_UPDATE", unit, changes.outOfRange ~= true) end
 end
 
 -- The character joins a group (true) or leaves it (false), and the game says so.
