@@ -61,13 +61,16 @@ local function newRegion(kind, parent, template)
             error("ADDON_ACTION_BLOCKED: Show or Hide on a protected frame in combat")
         end
     end
-    -- A frame's own OnShow and OnHide run when it is shown or hidden (not those of the frames under it).
+    -- A frame's own OnShow and OnHide, then their hooks, run when it is shown or hidden (not those of
+    -- the frames under it).
     function region:SetShown(shown)
         checkShow(self)
         local was = self.shown
         self.shown = shown and true or false
-        local script = was ~= self.shown and self.scripts[self.shown and "OnShow" or "OnHide"]
-        if script then script(self) end
+        if was == self.shown then return end
+        local name = self.shown and "OnShow" or "OnHide"
+        if self.scripts[name] then self.scripts[name](self) end
+        if self.hooks[name] then self.hooks[name](self) end
     end
     function region:Show() self:SetShown(true) end
     function region:Hide() self:SetShown(false) end
@@ -112,6 +115,7 @@ local function newRegion(kind, parent, template)
     function region:SetSize(width, height) self.width, self.height = width, height end
     function region:GetWidth() return self.width end
     function region:GetHeight() return self.height end
+    function region:GetSize() return self.width, self.height end
     function region:GetEffectiveScale() return self.effectiveScale end
     -- Where the middle is: set by secure code's SetPoint (Stubs' frame handles), else the parent's.
     function region:GetCenter()
@@ -184,6 +188,14 @@ local function newRegion(kind, parent, template)
         return self.mouseEnabled == true
     end
     function region:EnableMouseWheel(enabled) self.mouseWheel = enabled end
+    -- Moving by the mouse (Stubs.DragTo): moving is true between StartMoving and StopMovingOrSizing.
+    function region:SetMovable(movable) self.movable = movable end
+    function region:IsMovable() return self.movable == true end
+    function region:StartMoving()
+        if not self.movable then error("StartMoving on a frame that isn't movable") end
+        self.moving = true
+    end
+    function region:StopMovingOrSizing() self.moving = false end
     -- Whether the mouse is over it (Stubs.Hover), or over a region in it.
     function region:IsMouseOver()
         local node = state.mouseOver
@@ -2382,6 +2394,16 @@ local function mouseTaker(script, enabled)
 end
 
 -- A mouse button ("LeftButton", "Button4", ...) pressed: OnMouseDown on the frame that takes it.
+-- The player drags frame with the left button until its middle is at x, y (UIParent's middle is at
+-- 960, 540): only a frame that takes the mouse can be dragged, and it moves only if its OnDragStart
+-- starts moving it.
+function Stubs.DragTo(frame, x, y)
+    if frame:IsMouseClickEnabled() ~= true then error("a drag on a frame that takes no mouse input") end
+    frame:RunScript("OnDragStart", "LeftButton")
+    if frame.moving then frame.center = { x, y } end
+    frame:RunScript("OnDragStop")
+end
+
 function Stubs.PressMouse(button)
     local taker = mouseTaker("OnMouseDown", "mouseEnabled")
     if taker then taker:RunScript("OnMouseDown", button) end

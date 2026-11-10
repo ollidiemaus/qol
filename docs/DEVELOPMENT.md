@@ -22,7 +22,9 @@ character has and for its page's list (the issue asked for them to be shared, no
 that isn't options goes through a small interface of its feature, as the ring and click casting
 editors do: the Cooldown Manager page adds, pauses and removes the player's own reminders with
 `Reminders.AddFromCursor`, `SetOn` and `Remove`, reads them with `Own`, and refreshes on
-`Reminders.OnChange` (an edit, or a spell learned).
+`Reminders.OnChange` (an edit, a spell learned, or the reminder row locked or unlocked). Its Unlock
+and Reset position buttons call `Reminders.SetUnlocked` and `ResetPosition`, as the row's mover state
+isn't an option either.
 
 ## Saved data
 

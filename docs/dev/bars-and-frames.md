@@ -50,9 +50,8 @@ the same rows, but the page and the feature are Forever's for now, so `WOW_PROJE
 If the game loads `Blizzard_CooldownViewer` after QoL (`ADDON_LOADED`), the rows are picked up then.
 
 Reminders (`Features/Reminders.lua`, Forever only; the terms are in the glossary) touch no
-Blizzard frame. The reminder row is a plain frame of ours on `UIParent`, covering the screen's lower
-half with the mouse off, and its icons are pooled frames of ours, centred in it in the presets'
-order. It isn't the Cooldown Manager's: the game's rows are filled by its secure code from secret
+Blizzard frame. The reminder row is a plain frame of ours on `UIParent`, as big as its icons, with
+the mouse off, and its icons are pooled frames of ours, centred in it in the presets' order. It isn't the Cooldown Manager's: the game's rows are filled by its secure code from secret
 aura data and keyed by secret instance IDs, so an icon of ours among them would taint them, and the
 game decides what they show. Our frames aren't protected and nothing secure anchors to them, so
 showing, hiding and laying them out in combat is allowed: the refresh is `ns.Later("reminders", ...,
@@ -86,6 +85,20 @@ has entries, `SPELLS_CHANGED` refreshes the row and tells the page (`Reminders.O
 learning a spell shows its reminder and ungreys its line. The page's own lines are table lines made
 as the list grows and reused: each shows the entry at its place, so removing one moves the rest up.
 The page doesn't scroll, so a very long list runs past the window's bottom.
+
+The reminder row is QoL's first mover, kept inside `Reminders.lua` until a second feature needs one.
+`Reminders.SetUnlocked(true)` (the page's Unlock button) shows three question-mark placeholders
+instead of the reminders, whatever is missing or withheld, and turns the row's mouse on; it is always
+movable and registered for drags, but `OnDragStart` moves it only while unlocked, and with the mouse
+off no drag reaches it. The drag's end saves the row's middle as an offset from `UIParent`'s, rounded
+to whole units (`reminderRowX`, `reminderRowY`, account-wide options with no default), and re-anchors
+it `CENTER` to `UIParent`'s `CENTER` there, so the place holds across resolutions and UI scales
+about the screen's middle. Unset (the default, and after `Reminders.ResetPosition`), the row sits in
+the middle of a mouse-less frame covering the screen's lower half, so the default follows the screen
+too. Locking (the button, or the settings window's `OnHide`, which the page hooks) ends a drag still
+going on, so a window closed mid-drag still saves. Nothing of this is protected, so moving works in
+combat as well. `reminderIconSize` (20 to 80, default 40) sizes the icons, and the overlay's reach
+grows with it from the tracked buff's 8 and 7 at 40.
 
 Rank upgrades (`Features/RankUpgrades.lua`, the terms are in the glossary) touch no Blizzard frame:
 only action slots, through the game's API, so there's no taint to reason about beyond staying out of

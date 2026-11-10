@@ -246,7 +246,10 @@ end
 -- switch and a table with a line per preset, its icon and name as the client gives them, then a line
 -- per reminder of the player's own (greyed out where the character doesn't know the spell, with an
 -- X), and last a line saying to drop a spell on the table, which adds one. The own lines are made as
--- the list grows and reused, each showing the list's entry at its place.
+-- the list grows and reused, each showing the list's entry at its place. Below the table, the reminder
+-- row's icon size, its Unlock (Lock while unlocked) and Reset position buttons.
+local REMINDER_MIN_SIZE, REMINDER_MAX_SIZE = 20, 80 -- the reminder icons' size, in pixels
+
 local function buildCooldownManager(page)
     page:Header("left", L.SECTION_LOOK)
     page:Checkbox("left", "hideCooldownManagerBorders", L.HIDE_COOLDOWN_BORDERS, L.HIDE_COOLDOWN_BORDERS_TIP)
@@ -285,12 +288,25 @@ local function buildCooldownManager(page)
         }, { icon = function() return entry().icon end, enabled = known,
             shown = function() return own[index] ~= nil end })
     end
+
+    -- The row's size and place: Unlock puts it in its mover state until Lock or the window closes.
+    local function pixels(value) return L.PIXELS:format(value) end
+    page:Slider("left", "reminderIconSize", L.REMINDER_ICON_SIZE, REMINDER_MIN_SIZE, REMINDER_MAX_SIZE, pixels,
+        L.REMINDER_ICON_SIZE_TIP)
+    local move = page:Button("left", L.REMINDER_ROW, L.REMINDER_UNLOCK, L.REMINDER_ROW_TIP, function()
+        Reminders.SetUnlocked(not Reminders.IsUnlocked())
+    end)
+    page:Button("left", L.REMINDER_ROW_POSITION, L.REMINDER_RESET_POSITION, L.REMINDER_RESET_POSITION_TIP,
+        function() Reminders.ResetPosition() end)
+    SettingsPanel.window.frame:HookScript("OnHide", function() Reminders.SetUnlocked(false) end)
+
     local refresh = page.Refresh
     function page:Refresh()
         own = Reminders.Own()
         for index = lines + 1, #own do ownLine(index) end
         lines = math.max(lines, #own)
         refresh(self)
+        move.widget:SetText(Reminders.IsUnlocked() and L.REMINDER_LOCK or L.REMINDER_UNLOCK)
     end
     Reminders.OnChange(function()
         if page.frame:IsVisible() then page:Refresh() end

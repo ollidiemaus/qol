@@ -8,7 +8,9 @@ local Options = ns.Options
 -- not part of the game's Cooldown Manager and not protected, so it shows, hides and lays itself out
 -- in combat too, and works with the game's Cooldown Manager switched off. Its icons look like the
 -- Cooldown Manager's buff icons (mask and overlay of CooldownViewerBuffIconItemTemplate), lose the
--- overlay with the Cooldown Manager page's border checkbox, and let the mouse through.
+-- overlay with the Cooldown Manager page's border checkbox, and let the mouse through. The player
+-- places the row (the page's Unlock button puts it in a mover state, placeholders the mouse can drag)
+-- and sizes its icons; its place is saved as an offset from the screen's middle.
 -- Having the buff means a buff on the player of the same name, or of its group version's; the names
 -- come from the client for the spell IDs we have, so any rank, any caster, any food and any locale
 -- count. The game may keep buff data
@@ -22,11 +24,14 @@ ns.Reminders = Reminders
 
 local SWITCH = "reminders"
 local BORDER_KEY = "hideCooldownManagerBorders"
-local SIZE, GAP = 40, 4
+local X_KEY, Y_KEY = "reminderRowX", "reminderRowY" -- no default: nil is the default spot
+local SIZE_KEY, GAP = "reminderIconSize", 4
+local BASE_SIZE = 40 -- a tracked buff's size, which the overlay's reach below is for
 local MASK_ATLAS = "UI-HUD-CoolDownManager-Mask"
 local OVERLAY_ATLAS = "UI-HUD-CoolDownManager-IconOverlay"
 local OVERLAY_X, OVERLAY_Y = 8, 7 -- how far the overlay reaches past the icon, as on a tracked buff
 local MAX_BUFFS = 255
+local PLACEHOLDER_ICON, PLACEHOLDERS = 134400, 3 -- the game's question mark, three of them while unlocked
 
 -- The presets, in the list's order. spells: Forever's spell IDs whose names count as the buff (from
 -- its Spell table, build 1.60.1.70862); the first one's icon is the reminder's. text: its strings in
@@ -213,7 +218,6 @@ local icons = {}
 
 local function newIcon()
     local icon = CreateFrame("Frame", nil, row)
-    icon:SetSize(SIZE, SIZE)
     icon:EnableMouse(false)
     icon.Icon = icon:CreateTexture(nil, "ARTWORK")
     icon.Icon:SetAllPoints(icon)
@@ -223,18 +227,83 @@ local function newIcon()
     icon.Icon:AddMaskTexture(mask)
     icon.Overlay = icon:CreateTexture(nil, "OVERLAY")
     icon.Overlay:SetAtlas(OVERLAY_ATLAS)
-    icon.Overlay:SetPoint("TOPLEFT", icon, "TOPLEFT", -OVERLAY_X, OVERLAY_Y)
-    icon.Overlay:SetPoint("BOTTOMRIGHT", icon, "BOTTOMRIGHT", OVERLAY_X, -OVERLAY_Y)
     return icon
 end
 
--- The row covers the screen's lower half and lets the mouse through; its icons sit in its middle.
+-- The mover state: placeholder icons, and the row takes the mouse to be dragged.
+local unlocked = false
+
+-- Where the player put the row: its middle's offset from the screen's, in UIParent's units, saved
+-- when a drag ends. Without one it sits in the middle of lowerHalf, a frame covering the screen's
+-- lower half, so it stays there whatever the screen's size and scale.
+local function saved()
+    local x, y = Options:Get(X_KEY), Options:Get(Y_KEY)
+    if type(x) == "number" and type(y) == "number" then return x, y end
+    return nil
+end
+
+local lowerHalf, dragging
+
+local function place()
+    if dragging then return end
+    row:ClearAllPoints()
+    local x, y = saved()
+    if x then
+        row:SetPoint("CENTER", UIParent, "CENTER", x, y)
+    else
+        row:SetPoint("CENTER", lowerHalf, "CENTER")
+    end
+end
+
+local function round(value)
+    return math.floor(value + 0.5)
+end
+
+-- Saves where the drag left the row; the watchers on the keys put it there by place.
+local function save()
+    local x, y = row:GetCenter()
+    local middleX, middleY = UIParent:GetCenter()
+    if not (x and middleX) then return end
+    Options:Set(X_KEY, round(x - middleX))
+    Options:Set(Y_KEY, round(y - middleY))
+end
+
+local function stopDragging()
+    if not dragging then return end
+    row:StopMovingOrSizing()
+    dragging = false
+    save()
+    place()
+end
+
+-- The row is as big as its icons; it takes the mouse only while unlocked.
 local function newRow()
+    lowerHalf = CreateFrame("Frame", nil, UIParent)
+    lowerHalf:SetPoint("TOPLEFT", UIParent, "LEFT")
+    lowerHalf:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT")
+    lowerHalf:EnableMouse(false)
     row = CreateFrame("Frame", nil, UIParent)
-    row:SetPoint("TOPLEFT", UIParent, "LEFT")
-    row:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT")
     row:EnableMouse(false)
+    row:SetMovable(true)
+    row:SetClampedToScreen(true)
+    row:RegisterForDrag("LeftButton")
+    row:SetScript("OnDragStart", function()
+        if not unlocked then return end
+        dragging = true
+        row:StartMoving()
+    end)
+    row:SetScript("OnDragStop", stopDragging)
+    place()
     Reminders.row = row
+end
+
+-- The icon at a place in the row, made the first time.
+local function iconAt(index)
+    if not row then newRow() end
+    local icon = icons[index] or newIcon()
+    icons[index] = icon
+    icon:Show()
+    return icon
 end
 
 -- The reminders that apply, switched on, in the list's order: the presets', then the player's own
@@ -252,36 +321,49 @@ local function due()
     return dueList
 end
 
--- Shows the reminders whose buff is missing, centred, in the list's order.
+-- Shows the reminders whose buff is missing, centred, in the list's order; while unlocked,
+-- placeholders instead, whatever is missing.
 local function refresh()
     local count = 0
-    local reminders = Options:Get(SWITCH) and due() or {}
-    if #reminders > 0 and readBuffs() then
+    local reminders = not unlocked and Options:Get(SWITCH) and due() or {}
+    if unlocked then
+        for index = 1, PLACEHOLDERS do
+            iconAt(index).Icon:SetTexture(PLACEHOLDER_ICON)
+        end
+        count = PLACEHOLDERS
+    elseif #reminders > 0 and readBuffs() then
         for _, reminder in ipairs(reminders) do
             local set = namesOf(reminder)
             if set and not hasAny(set) then
                 count = count + 1
-                if not row then newRow() end
-                local icon = icons[count] or newIcon()
-                icons[count] = icon
-                icon.Icon:SetTexture(Reminders.IconOf(reminder))
-                icon:Show()
+                iconAt(count).Icon:SetTexture(Reminders.IconOf(reminder))
             end
         end
     end
     clear(present)
     if not row then return end
     local hideOverlay = Options:Get(BORDER_KEY) == true
-    local left = -((count * SIZE) + (count - 1) * GAP) / 2 + SIZE / 2
+    local size = Options:Get(SIZE_KEY)
+    local width = math.max(0, count * size + (count - 1) * GAP)
+    local left = -width / 2 + size / 2
+    -- The overlay reaches past the icon as far, for its size, as on a tracked buff.
+    local overlayX, overlayY = OVERLAY_X * size / BASE_SIZE, OVERLAY_Y * size / BASE_SIZE
+    row:SetSize(width, size)
+    place()
     for index, icon in ipairs(icons) do
         if index <= count then
+            icon:SetSize(size, size)
             icon:ClearAllPoints()
-            icon:SetPoint("CENTER", row, "CENTER", left + (index - 1) * (SIZE + GAP), 0)
+            icon:SetPoint("CENTER", row, "CENTER", left + (index - 1) * (size + GAP), 0)
+            icon.Overlay:ClearAllPoints()
+            icon.Overlay:SetPoint("TOPLEFT", icon, "TOPLEFT", -overlayX, overlayY)
+            icon.Overlay:SetPoint("BOTTOMRIGHT", icon, "BOTTOMRIGHT", overlayX, -overlayY)
             icon.Overlay:SetShown(not hideOverlay)
         else
             icon:Hide()
         end
     end
+    row:EnableMouse(unlocked)
     row:SetShown(count > 0)
 end
 
@@ -384,10 +466,32 @@ function Reminders.SetOn(index, on)
     afterEdit()
 end
 
+-- The mover state, from the page's Unlock button; locking (the button again, or the settings window
+-- closing) ends a drag still going on.
+function Reminders.IsUnlocked()
+    return unlocked
+end
+
+function Reminders.SetUnlocked(on)
+    on = on == true
+    if on == unlocked or not isForever() then return end
+    unlocked = on
+    if not on and row then stopDragging() end
+    schedule()
+    changed()
+end
+
+-- Back to the middle of the screen's lower half.
+function Reminders.ResetPosition()
+    if row then stopDragging() end
+    Options:Set(X_KEY, nil)
+    Options:Set(Y_KEY, nil)
+end
+
 function Reminders:Init()
     if not isForever() then return end
     unitEvents = ns.Events:NewUnitListener("player")
-    local keys = { SWITCH, BORDER_KEY }
+    local keys = { SWITCH, BORDER_KEY, SIZE_KEY, X_KEY, Y_KEY }
     for _, preset in ipairs(Reminders.PRESETS) do keys[#keys + 1] = preset.key end
     Options:Watch(keys, update)
     update()
