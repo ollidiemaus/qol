@@ -79,8 +79,9 @@ while `C_Item.GetItemInfoInstant` says the item in its slot (16, 17) is a weapon
 or held item is armor, and a two-hander leaves 17 empty; a fishing pole (weapon subclass 20) in the
 main hand turns both off. The icon is `GetInventoryItemTexture`, so the hands look apart. These reads
 come after the buffs' and so only while they're readable; a secret value from them hides the whole
-row as well. `WEAPON_ENCHANT_CHANGED` and `PLAYER_EQUIPMENT_CHANGED` join the row's events (`BuffFrame`
-updates its weapon buffs on the first).
+row as well. `WEAPON_ENCHANT_CHANGED` (`BuffFrame` updates its weapon buffs on it) and
+`PLAYER_EQUIPMENT_CHANGED` refresh the row, registered only while a weapon buff preset is on, so a
+gear swap costs nothing with only Well Fed on.
 
 The player's own reminders are `QoLDB.reminders`, account-wide: `{ spell = ID as dragged, on }` in
 the order added. The ID only says which spell it is: the buff matches by the name the client gives

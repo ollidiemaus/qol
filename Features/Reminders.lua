@@ -17,7 +17,8 @@ local Options = ns.Options
 -- The weapon buff presets read the hands' weapon enchant information instead, and apply only while
 -- the hand holds a weapon and the main hand no fishing pole.
 -- Updates come from the player's UNIT_AURA, combat starting and ending (the data turns secret and
--- readable again, with no event of its own), weapon buffs and equipment changing, spells learned,
+-- readable again, with no event of its own), weapon buffs and equipment changing (while a weapon
+-- buff preset is on), spells learned,
 -- the options and the player's list,
 -- through one ns.Later key: one refresh per frame at most, and nothing at all while no reminder is on.
 local Reminders = {}
@@ -30,6 +31,7 @@ local MASK_ATLAS = "UI-HUD-CoolDownManager-Mask"
 local OVERLAY_ATLAS = "UI-HUD-CoolDownManager-IconOverlay"
 local OVERLAY_X, OVERLAY_Y = 8, 7 -- how far the overlay reaches past the icon, as on a tracked buff
 local MAX_BUFFS = 255
+local MAIN_HAND, OFF_HAND = 16, 17 -- the hands' inventory slots
 
 -- The presets, in the list's order. spells: Forever's spell IDs whose names count as the buff (from
 -- its Spell table, build 1.60.1.70862); the first one's icon is the reminder's. text: its strings in
@@ -46,11 +48,10 @@ Reminders.PRESETS = {
     -- Weapon buffs (poisons, a shaman's weapon spells, sharpening stones, oils), one per hand, read
     -- from the hand's weapon enchant information instead of the buffs. weapon: the hand's inventory
     -- slot, and its Enum.WeaponSlot for C_Item.GetWeaponEnchantInfo. The icon is the hand's weapon.
-    { key = "reminderMainHand", text = "REMINDER_MAIN_HAND", weapon = { inventory = 16, slot = 0 } },
-    { key = "reminderOffHand", text = "REMINDER_OFF_HAND", weapon = { inventory = 17, slot = 1 } },
+    { key = "reminderMainHand", text = "REMINDER_MAIN_HAND", weapon = { inventory = MAIN_HAND, slot = 0 } },
+    { key = "reminderOffHand", text = "REMINDER_OFF_HAND", weapon = { inventory = OFF_HAND, slot = 1 } },
 }
 
-local MAIN_HAND = 16
 local WEAPON_CLASS, FISHING_POLE = 2, 20 -- Enum.ItemClass.Weapon, Enum.ItemWeaponSubclass.Fishingpole
 local PERMANENT = 1 -- Enum.ItemEnchantType.Permanent: the weapon's enchantment, not a weapon buff
 
@@ -253,7 +254,7 @@ end
 
 -- Whether a reminder shows, after readBuffs: true or false, nil while the game keeps what it needs
 -- secret.
-local function missing(reminder)
+local function shows(reminder)
     local weapon = reminder.weapon
     if weapon then
         if not armed(weapon) then return false end
@@ -315,13 +316,13 @@ local function refresh()
     local reminders = Options:Get(SWITCH) and due() or {}
     if #reminders > 0 and readBuffs() then
         for _, reminder in ipairs(reminders) do
-            local shows = missing(reminder)
+            local show = shows(reminder)
             -- Secret: the whole row hides, as for the buffs.
-            if shows == nil then
+            if show == nil then
                 count = 0
                 break
             end
-            if shows then
+            if show then
                 count = count + 1
                 if not row then newRow() end
                 local icon = icons[count] or newIcon()
@@ -374,9 +375,19 @@ local function changed()
 end
 
 local unitEvents
-local events = ns.Events:NewGroup({ "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED", "PLAYER_ENTERING_WORLD",
-    "WEAPON_ENCHANT_CHANGED", "PLAYER_EQUIPMENT_CHANGED" }, schedule)
+local events = ns.Events:NewGroup({ "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED", "PLAYER_ENTERING_WORLD" },
+    schedule)
+-- Weapon buffs and gear changing, heard only while a weapon buff preset is on.
+local weaponEvents = ns.Events:NewGroup({ "WEAPON_ENCHANT_CHANGED", "PLAYER_EQUIPMENT_CHANGED" }, schedule)
 local update
+
+local function weaponsWatched()
+    if not Options:Get(SWITCH) then return false end
+    for _, preset in ipairs(Reminders.PRESETS) do
+        if preset.weapon and Options:Get(preset.key) then return true end
+    end
+    return false
+end
 
 -- Learning a spell (or a respec) changes which of the player's own reminders apply, and so whether
 -- any can show.
@@ -391,6 +402,7 @@ end)
 function update()
     local on = active()
     events:SetOn(on)
+    weaponEvents:SetOn(weaponsWatched())
     spellEvents:SetOn(#ownList() > 0)
     if on then unitEvents:On("UNIT_AURA", schedule) else unitEvents:Off("UNIT_AURA") end
     schedule()
