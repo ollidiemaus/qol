@@ -313,6 +313,15 @@ L.REMINDER_WELL_RESTED_TIP = "Erscheint, solange Euch Gut ausgeruht fehlt, der E
 L.REMINDER_CAMP_BENEFITS = "Lagervorteile"
 L.REMINDER_CAMP_BENEFITS_TIP = "Erscheint, solange Euch Lagervorteile fehlen, die Boni der in einem Lager "
     .. "aufgestellten Gegenstände."
+L.REMINDER_MAIN_HAND = "Waffenbuff Waffenhand"
+L.REMINDER_MAIN_HAND_TIP = "Zeigt das Symbol der Waffe in Eurer Waffenhand, solange sie keinen Waffenbuff hat: "
+    .. "ein Gift, einen Waffenzauber des Schamanen wie Waffe des Felsbeißers, einen Wetzstein oder ein Öl, egal "
+    .. "welchen. Nicht mit einer Angelrute."
+L.REMINDER_OFF_HAND = "Waffenbuff Schildhand"
+L.REMINDER_OFF_HAND_TIP = "Zeigt das Symbol der Waffe in Eurer Schildhand, solange sie keinen Waffenbuff hat: "
+    .. "ein Gift, einen Waffenzauber des Schamanen, einen Wetzstein oder ein Öl, egal welchen. Nur solange Eure "
+    .. "Schildhand eine Waffe hält, keinen Schild und keinen Gegenstand für die Schildhand, und nicht mit einer "
+    .. "Angelrute."
 
 -- Settings: ring page
 L.CATEGORY_RING = "Ring"

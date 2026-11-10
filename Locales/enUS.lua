@@ -307,6 +307,13 @@ L.REMINDER_WELL_RESTED_TIP = "Shows while you lack Well Rested, the buff that ma
     .. "up faster."
 L.REMINDER_CAMP_BENEFITS = "Camp Benefits"
 L.REMINDER_CAMP_BENEFITS_TIP = "Shows while you lack Camp Benefits, the bonuses from the items set up at a camp."
+L.REMINDER_MAIN_HAND = "Main Hand Weapon Buff"
+L.REMINDER_MAIN_HAND_TIP = "Shows your main hand weapon's icon while it has no weapon buff: a poison, a shaman's "
+    .. "weapon spell such as Rockbiter Weapon, a sharpening stone or an oil, whichever. Not with a fishing pole."
+L.REMINDER_OFF_HAND = "Off Hand Weapon Buff"
+L.REMINDER_OFF_HAND_TIP = "Shows your off hand weapon's icon while it has no weapon buff: a poison, a shaman's "
+    .. "weapon spell, a sharpening stone or an oil, whichever. Only while your off hand holds a weapon, not a "
+    .. "shield or a held item, and not with a fishing pole."
 
 -- Settings: ring page
 L.CATEGORY_RING = "Ring"

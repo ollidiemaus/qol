@@ -70,6 +70,19 @@ combat ending (`PLAYER_REGEN_ENABLED`) and `PLAYER_ENTERING_WORLD` ask for a ref
 player's `UNIT_AURA`. Those events are registered only while the switch and at least one reminder
 are on, so with reminders off QoL hears nothing and does no work.
 
+The weapon buff presets (one per hand, `weapon` in `PRESETS`) don't read buffs: a poison, a
+shaman's imbue, a stone or an oil is a temporary enchantment on the item, which Forever gives through
+`C_Item.GetWeaponEnchantInfo(Enum.WeaponSlot)`, a list of `{ hasEnchant, enchantType, ... }` (its
+`BuffFrame.lua` reads it the same way). Any entry with `hasEnchant` counts, except an `enchantType` of
+`Permanent`, should the list ever carry the item's own enchantment. A hand's preset applies only
+while `C_Item.GetItemInfoInstant` says the item in its slot (16, 17) is a weapon (class 2): a shield
+or held item is armor, and a two-hander leaves 17 empty; a fishing pole (weapon subclass 20) in the
+main hand turns both off. The icon is `GetInventoryItemTexture`, so the hands look apart. These reads
+come after the buffs' and so only while they're readable; a secret value from them hides the whole
+row as well. `WEAPON_ENCHANT_CHANGED` (`BuffFrame` updates its weapon buffs on it) and
+`PLAYER_EQUIPMENT_CHANGED` refresh the row, registered only while a weapon buff preset is on, so a
+gear swap costs nothing with only Well Fed on.
+
 The player's own reminders are `QoLDB.reminders`, account-wide: `{ spell = ID as dragged, on }` in
 the order added. The ID only says which spell it is: the buff matches by the name the client gives
 for it, so any rank on any character, and a character knows it when `IsSpellKnownOrInSpellBook` says

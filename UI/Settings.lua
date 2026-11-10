@@ -265,7 +265,7 @@ local function buildCooldownManager(page)
         local tip = L[preset.text .. "_TIP"]
         reminders:Line(Reminders.NameOf(preset) or L[preset.text], tip, {
             [ON] = { kind = "checkbox", key = preset.key, tooltip = tip },
-        }, { icon = Reminders.IconOf(preset) })
+        }, { icon = function() return Reminders.IconOf(preset) end })
     end
     reminders:Line(L.REMINDER_DROP, L.REMINDER_DROP_TIP, {}, { footer = true })
 

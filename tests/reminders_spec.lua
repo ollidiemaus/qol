@@ -112,6 +112,32 @@ end
 
 local DRUID = { { THORNS_1, "Thorns", 1 }, { MARK_1, "Mark of the Wild", 1 } }
 
+-- The hands' inventory slots, and items to hold in them with made-up icons: weapons (class 2), a
+-- fishing pole (weapon subclass 20), a shield and a held item (armor, class 4).
+local MAIN_HAND, OFF_HAND = 16, 17
+local SWORD, DAGGER, POLE, SHIELD, HELD = 2131, 2632, 6256, 2129, 4984
+local SWORD_ICON, DAGGER_ICON = 135274, 135650
+local ITEMS = {
+    [SWORD] = { texture = SWORD_ICON, classID = 2, subclassID = 7 },
+    [DAGGER] = { texture = DAGGER_ICON, classID = 2, subclassID = 15 },
+    [POLE] = { texture = 132932, classID = 2, subclassID = 20 },
+    [SHIELD] = { texture = 134955, classID = 4, subclassID = 6 },
+    [HELD] = { texture = 134333, classID = 4, subclassID = 0 },
+}
+
+-- Loads the addon on Forever holding equipped ({ [slot] = item }), its hands' weapon buffs
+-- weaponBuffs ({ [0] main hand, [1] off hand }), and logs in.
+local function armed(savedOptions, equipped, weaponBuffs)
+    local ns = Stubs.LoadAddon()
+    knowSpells(ENGLISH)
+    local state = Stubs.state()
+    for id, info in pairs(ITEMS) do state.items[id] = info end
+    for slot, id in pairs(equipped) do state.equipped[slot] = id end
+    state.weaponBuffs = weaponBuffs or {}
+    Stubs.Login(savedOptions)
+    return ns
+end
+
 describe("reminders", function()
     it("shows a switched-on preset while its buff is missing, and drops it once the buff is there", function()
         local ns = start({ reminders = true, reminderWellFed = true })
@@ -385,6 +411,88 @@ describe("reminders", function()
         ns.Reminders.Remove(1)
         T.same(QoLDB.reminders, { newer, { spell = MARK_1, on = false }, { spell = THORNS_1, on = true } },
             "a newer QoL's entry stays, and Remove doesn't take it")
+    end)
+
+    it("shows a hand's weapon buff reminder while that hand has none, with the weapon's icon", function()
+        local ns = armed({ reminders = true, reminderMainHand = true, reminderOffHand = true },
+            { [MAIN_HAND] = SWORD, [OFF_HAND] = DAGGER })
+        T.same(seen(ns), { SWORD_ICON, DAGGER_ICON })
+        Stubs.SetWeaponBuffs({ [0] = true })
+        Stubs.RunTimers()
+        T.same(seen(ns), { DAGGER_ICON }, "the main hand's buff")
+        Stubs.SetWeaponBuffs({ [0] = true, [1] = true })
+        Stubs.RunTimers()
+        T.same(seen(ns), {})
+        Stubs.SetWeaponBuffs({ [1] = true })
+        Stubs.RunTimers()
+        T.same(seen(ns), { SWORD_ICON }, "the main hand's ran out")
+    end)
+
+    it("doesn't count a weapon's enchantment as a weapon buff", function()
+        local ns = armed({ reminders = true, reminderMainHand = true }, { [MAIN_HAND] = SWORD },
+            { [0] = "permanent" })
+        T.same(seen(ns), { SWORD_ICON })
+    end)
+
+    it("shows the off hand's reminder only while the off hand holds a weapon", function()
+        local ns = armed({ reminders = true, reminderMainHand = true, reminderOffHand = true },
+            { [MAIN_HAND] = SWORD, [OFF_HAND] = SHIELD })
+        T.same(seen(ns), { SWORD_ICON }, "a shield")
+        Stubs.Equip(OFF_HAND, HELD)
+        Stubs.RunTimers()
+        T.same(seen(ns), { SWORD_ICON }, "a held item")
+        Stubs.Equip(OFF_HAND, nil)
+        Stubs.RunTimers()
+        T.same(seen(ns), { SWORD_ICON }, "nothing, as with a two-handed weapon")
+        Stubs.Equip(OFF_HAND, DAGGER)
+        Stubs.RunTimers()
+        T.same(seen(ns), { SWORD_ICON, DAGGER_ICON })
+    end)
+
+    it("follows the weapon equipped", function()
+        local ns = armed({ reminders = true, reminderMainHand = true }, { [MAIN_HAND] = SWORD })
+        Stubs.Equip(MAIN_HAND, DAGGER)
+        Stubs.RunTimers()
+        T.same(seen(ns), { DAGGER_ICON })
+        Stubs.Equip(MAIN_HAND, nil)
+        Stubs.RunTimers()
+        T.same(seen(ns), {}, "no weapon, nothing to buff")
+    end)
+
+    it("shows neither hand's reminder with a fishing pole", function()
+        local ns = armed({ reminders = true, reminderMainHand = true, reminderOffHand = true },
+            { [MAIN_HAND] = POLE, [OFF_HAND] = DAGGER })
+        T.same(seen(ns), {})
+        Stubs.Equip(MAIN_HAND, SWORD)
+        Stubs.RunTimers()
+        T.same(seen(ns), { SWORD_ICON, DAGGER_ICON })
+    end)
+
+    it("hides everything while a weapon buff is secret", function()
+        local ns = armed({ reminders = true, reminderWellFed = true, reminderMainHand = true },
+            { [MAIN_HAND] = SWORD }, { [0] = Stubs.SECRET })
+        T.same(seen(ns), {})
+        Stubs.SetWeaponBuffs({})
+        Stubs.RunTimers()
+        T.same(seen(ns), { ICONS.wellFed, SWORD_ICON })
+    end)
+
+    it("hears weapon buffs change only while a weapon buff reminder is on", function()
+        local ns = armed({ reminders = true, reminderWellFed = true }, { [MAIN_HAND] = SWORD })
+        T.falsy(Stubs.Listens("WEAPON_ENCHANT_CHANGED"))
+        ns.Options:Set("reminderOffHand", true)
+        T.truthy(Stubs.Listens("WEAPON_ENCHANT_CHANGED"))
+        ns.Options:Set("reminders", false)
+        T.falsy(Stubs.Listens("WEAPON_ENCHANT_CHANGED"))
+    end)
+
+    it("starts with the weapon buff reminders off, after the other presets", function()
+        local ns = armed({ reminders = true }, { [MAIN_HAND] = SWORD, [OFF_HAND] = DAGGER })
+        T.same(seen(ns), {})
+        local keys = {}
+        for _, preset in ipairs(ns.Reminders.PRESETS) do keys[#keys + 1] = preset.key end
+        T.same(keys, { "reminderWellFed", "reminderWellRested", "reminderCampBenefits", "reminderMainHand",
+            "reminderOffHand" })
     end)
 
     for _, client in ipairs({ "retail", "classicEra" }) do
