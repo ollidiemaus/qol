@@ -91,6 +91,8 @@ local DEFAULTS = {
     pastScreenEdge = false,
     hideRaidManager = false, -- Forever only, on the Group Frames page
     groupFrameBuffs = false, -- tracked buffs on the group frames, Forever only; the list is QoLDB.trackedBuffs
+    groupFrameBuffSize = 16, -- the tracked buff icons' size, in pixels
+    groupFrameBuffCountdown = false, -- the game's countdown numbers on "has it" icons
 
     reloadCommand = true,
 
