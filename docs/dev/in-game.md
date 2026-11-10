@@ -242,6 +242,11 @@ Things only the real client can confirm:
   icon. Someone joining or leaving (frames handed around) and joining a raid in combat put the icons on
   the right members. Note when the icons go quiet because the game keeps the data secret (in and out of
   combat, in a dungeon), and that they come back. No "tainted by" error after a raid fight.
+- Tracked buffs, "lacks it" (Forever, #121): Mark of the Wild set to Lacks it shows a grey icon on
+  every member without it, yours included, and none on a member with anyone's Mark or Gift of the
+  Wild. It goes when a member dies, goes offline or runs out of range (about 40 yards) and comes back
+  when they return; note whether `UnitInRange` answers secret (`/run print(issecretvalue(UnitInRange("party1")))`)
+  in and out of combat, since a secret answer hides the icon.
 - Group buff secrecy (Forever, #119): a macro on an action button (it runs in a fight too), in a
   party, with a buff of yours on party1:
   `/run local s,u,f=C_Secrets,"party1","HELPFUL|PLAYER" local ok,a=pcall(C_UnitAuras.GetAuraDataByIndex,u,1,f) print(s.ShouldAurasBeSecret(),s.ShouldUnitAuraIndexBeSecret(u,1,f),s.ShouldSpellAuraBeSecret(8936),ok,ok and a and issecretvalue(a.spellId) or a)`

@@ -228,7 +228,9 @@ end
 -- Whether the unit has a buff of the "lacks it" line's name or of its group versions'.
 local function hasAny(index)
     if foundAny[dueNames[index]] then return true end
-    for _, name in ipairs(dueGroups[index] or {}) do
+    local groups = dueGroups[index]
+    if not groups then return false end
+    for _, name in ipairs(groups) do
         if foundAny[name] then return true end
     end
     return false
@@ -279,12 +281,12 @@ local function drawFrame(frame, unit)
         clear(foundAny)
         return
     end
-    local count, here = 0, nil
+    local count, canLack = 0, nil
     for index, entry in ipairs(due) do
         local stacks, duration, expires
         if entry.kind == "lacks" then
-            if here == nil then here = present(unit) end
-            if here and not hasAny(index) then stacks, duration, expires = 0, 0, 0 end
+            if canLack == nil then canLack = present(unit) end
+            if canLack and not hasAny(index) then stacks, duration, expires = 0, 0, 0 end
         else
             local aura = found[dueNames[index]]
             if aura then stacks, duration, expires = numbers(aura) end
