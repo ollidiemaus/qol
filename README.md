@@ -235,10 +235,16 @@ Shadow Protection, and the Greater Blessings for the Blessings of Might, Wisdom 
 are for buffs on yourself: a spell that leaves no buff on you, such as a heal, shows its icon all
 the time.
 
-The icons sit in a row of their own in the middle of the screen's lower half, centred, in the
-table's order, and look like the Cooldown Manager's buff icons (**Hide icon borders** takes their
-border off too). They don't take the mouse, and they work with the game's Cooldown Manager switched
-off. In combat the game hides buffs from addons, so the reminders go away until combat ends.
+The icons sit in a row of their own, centred, in the table's order, and look like the Cooldown
+Manager's buff icons (**Hide icon borders** takes their border off too). They don't take the mouse,
+and they work with the game's Cooldown Manager switched off. In combat the game hides buffs from
+addons, so the reminders go away until combat ends.
+
+The row starts in the middle of the screen's lower half. To move it, press **Unlock** next to
+**Reminder row**: it shows question-mark icons, even with nothing missing, and you can drag it
+anywhere. Press **Lock**, or close the settings window, to fix it there; the place is kept on all
+your characters, after a reload too, and stays put whatever your screen. **Reset** next to
+**Reminder row position** puts it back, and **Icon size** sets how big the icons are.
 
 Beside the table, the **Hide reminders** boxes say when the reminders stay away:
 

@@ -469,6 +469,48 @@ describe("settings pages", function()
         T.same(tableRows(page), rowsWith())
     end)
 
+    -- A button row on a page, by its name.
+    local function buttonRow(page, name)
+        for _, c in ipairs(page.controls) do
+            if c.kind == "button" and c.text:GetText() == name then return c end
+        end
+        error("no button row " .. name)
+    end
+
+    it("has an icon size slider for the reminder row, 40 by default", function()
+        local ns = remindersPage()
+        local size = control(ns, "reminderIconSize")
+        T.eq(size.kind, "slider")
+        T.eq(size.text:GetText(), "Icon size")
+        T.eq(size.get(), 40)
+    end)
+
+    it("unlocks the reminder row with its button, and locks it with the button again or by closing the window", function()
+        local ns, page = remindersPage()
+        local move = buttonRow(page, "Reminder row")
+        T.eq(move.widget:GetText(), "Unlock")
+        move.widget:Click()
+        T.truthy(ns.Reminders.IsUnlocked())
+        T.eq(move.widget:GetText(), "Lock")
+        move.widget:Click()
+        T.falsy(ns.Reminders.IsUnlocked())
+        T.eq(move.widget:GetText(), "Unlock")
+        move.widget:Click()
+        ns.SettingsPanel.window.frame:Hide()
+        T.falsy(ns.Reminders.IsUnlocked(), "closing the window locks it")
+        show(page)
+        T.eq(move.widget:GetText(), "Unlock")
+    end)
+
+    it("puts the reminder row back at its default spot with Reset position", function()
+        local ns, page = remindersPage()
+        ns.Options:Set("reminderRowX", 100)
+        ns.Options:Set("reminderRowY", -200)
+        buttonRow(page, "Reminder row position").widget:Click()
+        T.eq(QoLDB.options.reminderRowX, nil)
+        T.eq(QoLDB.options.reminderRowY, nil)
+    end)
+
     it("leaves the Cooldown Manager page out on Forever without the game's rows", function()
         local ns = start()
         T.eq(pages(ns).cooldownManager, nil)

@@ -14,6 +14,9 @@ local function knowSpells(names)
     spells[CAMP] = { name = names.campBenefits, texture = ICONS.campBenefits }
 end
 
+-- The placeholder icon of the row while it's unlocked: the game's question mark.
+local QUESTION_MARK = 134400
+
 local ENGLISH = { wellFed = "Well Fed", wellRested = "Well Rested", campBenefits = "Camp Benefits" }
 
 -- Loads the addon on Forever with the presets' spell data and logs in.
@@ -31,6 +34,25 @@ local function buff(name, spellId) return { name = name, spellId = spellId } end
 -- The reminder row's frames: our own, on UIParent, holding the reminder icons.
 local function row(ns)
     return ns.Reminders.row
+end
+
+-- Where a frame is: its one point, with the points of the frame it's placed on (if not UIParent)
+-- spelled out after it.
+local function placed(frame)
+    T.eq(frame:GetNumPoints(), 1)
+    local point = { frame:GetPoint(1) }
+    if point[2] ~= _G.UIParent then
+        local holder = point[2]
+        point[2] = "holder"
+        for index = 1, holder:GetNumPoints() do point[#point + 1] = { holder:GetPoint(index) } end
+    end
+    return point
+end
+
+-- The middle of the screen's lower half: the row's default spot.
+local function defaultSpot()
+    return { "CENTER", "holder", "CENTER", 0, 0,
+        { "TOPLEFT", _G.UIParent, "LEFT", 0, 0 }, { "BOTTOMRIGHT", _G.UIParent, "BOTTOMRIGHT", 0, 0 } }
 end
 
 -- The icons the player sees in the reminder row, left to right.
@@ -232,8 +254,51 @@ describe("reminders", function()
         local ns = start({ reminders = true, reminderWellFed = true })
         local frame = row(ns)
         T.eq(frame:GetParent(), _G.UIParent)
-        T.same({ frame:GetPoint(1) }, { "TOPLEFT", _G.UIParent, "LEFT", 0, 0 })
-        T.same({ frame:GetPoint(2) }, { "BOTTOMRIGHT", _G.UIParent, "BOTTOMRIGHT", 0, 0 })
+        T.same(placed(frame), defaultSpot())
+    end)
+
+    it("keeps a dragged position, relative to the screen's centre, across a reload", function()
+        local ns = start({ reminders = true, reminderWellFed = true })
+        ns.Reminders.SetUnlocked(true)
+        Stubs.RunTimers()
+        Stubs.DragTo(row(ns), 1060, 340)
+        T.same(placed(row(ns)), { "CENTER", _G.UIParent, "CENTER", 100, -200 })
+        ns.Reminders.SetUnlocked(false)
+        Stubs.RunTimers()
+        T.same(placed(row(ns)), { "CENTER", _G.UIParent, "CENTER", 100, -200 }, "where it was left")
+        ns = start(QoLDB.options)
+        T.same(seen(ns), { ICONS.wellFed })
+        T.same(placed(row(ns)), { "CENTER", _G.UIParent, "CENTER", 100, -200 }, "after a reload")
+    end)
+
+    it("sizes its icons by the icon size option, 40 by default", function()
+        local ns = start({ reminders = true, reminderWellFed = true, reminderWellRested = true })
+        T.same({ shownIcons(ns)[1]:GetSize() }, { 40, 40 })
+        ns.Options:Set("reminderIconSize", 30)
+        Stubs.RunTimers()
+        for _, icon in ipairs(shownIcons(ns)) do T.same({ icon:GetSize() }, { 30, 30 }) end
+        T.same(offsets(ns), { -17, 17 })
+        T.same({ row(ns):GetSize() }, { 64, 30 })
+        ns = start(QoLDB.options)
+        T.same({ shownIcons(ns)[1]:GetSize() }, { 30, 30 }, "after a reload")
+    end)
+
+    it("can't be dragged while locked", function()
+        local ns = start({ reminders = true, reminderWellFed = true })
+        T.falsy(pcall(Stubs.DragTo, row(ns), 1060, 340))
+        T.same(placed(row(ns)), defaultSpot())
+    end)
+
+    it("goes back to the default spot with Reset position", function()
+        local ns = start({ reminders = true, reminderWellFed = true })
+        ns.Reminders.SetUnlocked(true)
+        Stubs.RunTimers()
+        Stubs.DragTo(row(ns), 1060, 340)
+        ns.Reminders.ResetPosition()
+        Stubs.RunTimers()
+        T.same(placed(row(ns)), defaultSpot())
+        ns = start(QoLDB.options)
+        T.same(placed(row(ns)), defaultSpot(), "after a reload too")
     end)
 
     it("looks like the Cooldown Manager's icons, and loses the border with the page's checkbox", function()
@@ -551,6 +616,38 @@ describe("reminders", function()
         ns.Reminders.Remove(1)
         T.same(QoLDB.reminders, { newer, { spell = MARK_1, on = false }, { spell = THORNS_1, on = true } },
             "a newer QoL's entry stays, and Remove doesn't take it")
+    end)
+
+    it("shows placeholder icons to drag while unlocked, even with nothing missing, and locks again", function()
+        local ns = start()
+        T.same(seen(ns), {})
+        ns.Reminders.SetUnlocked(true)
+        Stubs.RunTimers()
+        T.truthy(ns.Reminders.IsUnlocked())
+        T.same(seen(ns), { QUESTION_MARK, QUESTION_MARK, QUESTION_MARK })
+        local frame = row(ns)
+        T.truthy(frame:IsMouseClickEnabled())
+        T.truthy(frame:IsMovable())
+        T.truthy(frame.scripts.OnDragStart and frame.scripts.OnDragStop)
+        ns.Reminders.SetUnlocked(false)
+        Stubs.RunTimers()
+        T.falsy(ns.Reminders.IsUnlocked())
+        T.same(seen(ns), {})
+        T.falsy(frame:IsMouseClickEnabled())
+    end)
+
+    it("shows the reminders again once locked, and takes no mouse input", function()
+        local ns = start({ reminders = true, reminderWellFed = true })
+        ns.Reminders.SetUnlocked(true)
+        Stubs.RunTimers()
+        T.same(seen(ns), { QUESTION_MARK, QUESTION_MARK, QUESTION_MARK })
+        ns.Reminders.SetUnlocked(false)
+        Stubs.RunTimers()
+        T.same(seen(ns), { ICONS.wellFed })
+        for _, frame in ipairs({ row(ns), shownIcons(ns)[1] }) do
+            T.falsy(frame:IsMouseMotionEnabled())
+            T.falsy(frame:IsMouseClickEnabled())
+        end
     end)
 
     it("shows a hand's weapon buff reminder while that hand has none, with the weapon's icon", function()
