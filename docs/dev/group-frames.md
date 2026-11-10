@@ -45,6 +45,30 @@ newer QoL's) stays in the list and is left out of everything else.
   sizes, no taint errors after a raid fight with frames reassigned, and when Forever keeps group buff
   data secret (in and out of combat, in a dungeon).
 
+## What the game already has (#119)
+
+From Forever's UI source (2026-11-10), still to be seen in game ([`in-game.md`](in-game.md)):
+
+- **Edit Mode** has, for the raid frames and for the party frames while they're raid style
+  (`EditModeUnitFrameSystemMixin:ShouldShowSetting`), "Aura organization" (Legacy, buffs top and
+  debuffs bottom, buffs right and debuffs left), "Buff icon size" (50-200%), the debuff icon size and
+  the big defensive icon's size (`Blizzard_EditMode/Shared/EditModeSettingDisplayInfo.lua`). All of
+  them place and size the game's own icons; none touches ours. So the page's size slider (#122) stays,
+  for tracked buffs only, as #110 planned, and nothing on the page duplicates Edit Mode.
+- **The Cooldown Manager's settings** have a "Group Auras" tab (`Blizzard_CooldownViewer`,
+  `GroupBuffFilter.lua`, loaded on `camelot`), greyed out while the class has fewer than two group
+  buffs (`C_CooldownViewer.GetGroupBuffItems`). It splits the class's group buffs into shown and
+  hidden, which takes a hidden one off the game's group frames (`C_UnitAuras.SetHiddenGroupBuffs`),
+  and gives a shown one a visual alert (marching ants or a flash, `SetGroupBuffVisualAlerts`) on its
+  icon while it's there. That's the per-buff filter of the game's icons #110 left out of scope (Mark
+  of the Wild on every member can be hidden there), not a "lacks it" signal, so nothing on the page or
+  in #121 repeats it. Both setters are restricted (`HasRestrictions`, secrets only when untainted):
+  QoL doesn't call them; it could read `GetHiddenGroupBuffs` if it ever needed to.
+
+When the game keeps group members' buff data secret isn't known yet: on the player, buffs are
+readable out of combat and an error to read in any fight (`forever-notes.md`, Secret values). The
+feature already goes quiet whenever `ShouldAurasBeSecret` says so; the in-game check tells how often.
+
 ## Hiding the raid manager
 
 The raid manager is `CompactRaidFrameManager`, the tab at the screen's edge that
