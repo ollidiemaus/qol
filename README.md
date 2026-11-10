@@ -282,7 +282,7 @@ anywhere. Press **Lock**, or close the settings window, to fix it there; the pla
 your characters, after a reload too, and stays put whatever your screen. **Reset** next to
 **Reminder row position** puts it back, and **Icon size** sets how big the icons are.
 
-Beside the table, the **Hide reminders** boxes say when the reminders stay away:
+On the right, the **Hide reminders** boxes say when the reminders stay away:
 
 - **While resting**, in an inn or a city (off by default).
 - **In combat** (off). Left off, a buff that runs out mid-fight shows its reminder whenever the game

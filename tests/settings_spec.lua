@@ -478,6 +478,25 @@ describe("settings pages", function()
         error("no button row " .. name)
     end
 
+    it("keeps every row above the reminders table, so a growing list covers none", function()
+        local ns, page = remindersPage()
+        local state = Stubs.state()
+        for _, spell in ipairs({ THORNS_1, MARK }) do
+            state.cursorInfo = { "spell", 1, "spell", spell, spell }
+            page.tables[1].frame:RunScript("OnReceiveDrag")
+        end
+        local tableTop = page.tables[1].top
+        local rows = { buttonRow(page, "Reminder row"), buttonRow(page, "Reminder row position") }
+        for _, key in ipairs({ "reminders", "reminderIconSize", "reminderHideResting", "reminderHideCombat",
+            "reminderHideMounted", "reminderHideDeadOrFlying", "reminderHideMaxLevel" }) do
+            rows[#rows + 1] = control(ns, key)
+        end
+        for _, c in ipairs(rows) do
+            local row = c.row
+            T.truthy(-row:PointFor("TOPLEFT")[5] + row:GetHeight() <= tableTop, c.text:GetText() .. " above the table")
+        end
+    end)
+
     it("has an icon size slider for the reminder row, 40 by default", function()
         local ns = remindersPage()
         local size = control(ns, "reminderIconSize")

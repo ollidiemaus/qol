@@ -244,12 +244,12 @@ local function buildActionBars(page)
 end
 
 -- Cooldown Manager page (Forever): how the game's Cooldown Manager looks, then the reminders: their
--- switch and a table with a line per preset, its icon and name as the client gives them, then a line
--- per reminder of the player's own (greyed out where the character doesn't know the spell, with an
--- X), and last a line saying to drop a spell on the table, which adds one. The own lines are made as
--- the list grows and reused, each showing the list's entry at its place. Below the table, the reminder
--- row's icon size, its Unlock (Lock while unlocked) and Reset position buttons; beside them, on the
--- right, the Hide reminders checkboxes.
+-- switch, the reminder row's icon size, its Unlock (Lock while unlocked) and Reset position buttons;
+-- beside them, on the right, the Hide reminders checkboxes. Below both, a table with a line per preset,
+-- its icon and name as the client gives them, then a line per reminder of the player's own (greyed out
+-- where the character doesn't know the spell, with an X), and last a line saying to drop a spell on the
+-- table, which adds one. The own lines are made as the list grows and reused, each showing the list's
+-- entry at its place. Rows are placed once and the table grows downwards, so every row comes before it.
 local REMINDER_MIN_SIZE, REMINDER_MAX_SIZE = 20, 80 -- the reminder icons' size, in pixels
 local TRACKED_BUFF_MIN_SIZE, TRACKED_BUFF_MAX_SIZE = 10, 40 -- the tracked buff icons' size, in pixels
 
@@ -264,8 +264,22 @@ local function buildCooldownManager(page)
     page:Align()
     page:Header("left", L.SECTION_REMINDERS)
     page:Checkbox("left", "reminders", L.REMINDERS, L.REMINDERS_TIP)
+    -- The row's size and place: Unlock puts it in its mover state until Lock or the window closes.
+    page:Slider("left", "reminderIconSize", L.REMINDER_ICON_SIZE, REMINDER_MIN_SIZE, REMINDER_MAX_SIZE, pixels,
+        L.REMINDER_ICON_SIZE_TIP)
+    local move = page:Button("left", L.REMINDER_ROW, L.REMINDER_UNLOCK, L.REMINDER_ROW_TIP, function()
+        Reminders.SetUnlocked(not Reminders.IsUnlocked())
+    end)
+    page:Button("left", L.REMINDER_ROW_POSITION, L.REMINDER_RESET_POSITION, L.REMINDER_RESET_POSITION_TIP,
+        function() Reminders.ResetPosition() end)
+    SettingsPanel.window.frame:HookScript("OnHide", function() Reminders.SetUnlocked(false) end)
+    page:Header("right", L.SECTION_HIDE_REMINDERS)
+    for _, condition in ipairs(Reminders.CONDITIONS) do
+        page:Checkbox("right", condition.key, L[condition.text], L[condition.text .. "_TIP"])
+    end
+
     local ON, REMOVE = 2, 3 -- the table's columns after the reminders' names
-    local NO_TITLE, JOINED = nil, true -- right below the switch, in its section
+    local NO_TITLE, JOINED = nil, true -- right below the rows above, in the Reminders section
     local reminders = page:Table({
         { caption = L.REMINDER },
         { caption = L.REMINDER_ON, width = 60 },
@@ -278,10 +292,6 @@ local function buildCooldownManager(page)
         }, { icon = function() return Reminders.IconOf(preset) end })
     end
     reminders:Line(L.REMINDER_DROP, L.REMINDER_DROP_TIP, {}, { footer = true })
-    page:Header("right", L.SECTION_HIDE_REMINDERS)
-    for _, condition in ipairs(Reminders.CONDITIONS) do
-        page:Checkbox("right", condition.key, L[condition.text], L[condition.text .. "_TIP"])
-    end
 
     -- The player's own as the page last asked for them, and a line for each place in the list. A
     -- change to the list (or to the spells known) refreshes the page through OnChange.
@@ -299,16 +309,6 @@ local function buildCooldownManager(page)
         }, { icon = function() return entry().icon end, enabled = known,
             shown = function() return own[index] ~= nil end })
     end
-
-    -- The row's size and place: Unlock puts it in its mover state until Lock or the window closes.
-    page:Slider("left", "reminderIconSize", L.REMINDER_ICON_SIZE, REMINDER_MIN_SIZE, REMINDER_MAX_SIZE, pixels,
-        L.REMINDER_ICON_SIZE_TIP)
-    local move = page:Button("left", L.REMINDER_ROW, L.REMINDER_UNLOCK, L.REMINDER_ROW_TIP, function()
-        Reminders.SetUnlocked(not Reminders.IsUnlocked())
-    end)
-    page:Button("left", L.REMINDER_ROW_POSITION, L.REMINDER_RESET_POSITION, L.REMINDER_RESET_POSITION_TIP,
-        function() Reminders.ResetPosition() end)
-    SettingsPanel.window.frame:HookScript("OnHide", function() Reminders.SetUnlocked(false) end)
 
     local refresh = page.Refresh
     function page:Refresh()

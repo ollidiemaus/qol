@@ -171,9 +171,8 @@ line made for a place in the list shows whatever is at that place; `enabled` gre
 desaturates its icon, and a `footer` line (the reminders' "Drag a spell here") stays below the lines
 made after it. A table given `onDrop` takes a drag, or a click with something on the cursor, on its
 captions and lines. Rows are placed once, at a fixed height, and a list's table grows downwards as lines
-are made, so nothing on either side may come after it: the Group Frames page puts all its rows, the right
-column's too, above its tracked buffs' table (#122). The Cooldown Manager page's reminders table still
-has rows below it.
+are made, so nothing on either side may come after it: the Cooldown Manager and Group Frames pages put
+all their rows, the right column's too, above their list's table (#122), and a settings spec checks it.
 
 Names are one line and fit their room in English and German: a name never wraps (`SetWordWrap`
 false), and what doesn't fit in a short name goes in its tooltip, whose title is always the full
