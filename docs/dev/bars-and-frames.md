@@ -51,7 +51,8 @@ If the game loads `Blizzard_CooldownViewer` after QoL (`ADDON_LOADED`), the rows
 
 Reminders (`Features/Reminders.lua`, Forever only; the terms are in the glossary) touch no
 Blizzard frame. The reminder row is a plain frame of ours on `UIParent`, as big as its icons, with
-the mouse off, and its icons are pooled frames of ours, centred in it in the presets' order. It isn't the Cooldown Manager's: the game's rows are filled by its secure code from secret
+the mouse off, and its icons are pooled frames of ours, centred in it in the presets' order. It
+isn't the Cooldown Manager's: the game's rows are filled by its secure code from secret
 aura data and keyed by secret instance IDs, so an icon of ours among them would taint them, and the
 game decides what they show. Our frames aren't protected and nothing secure anchors to them, so
 showing, hiding and laying them out in combat is allowed: the refresh is `ns.Later("reminders", ...,

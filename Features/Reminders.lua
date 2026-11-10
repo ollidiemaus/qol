@@ -236,7 +236,7 @@ local unlocked = false
 -- Where the player put the row: its middle's offset from the screen's, in UIParent's units, saved
 -- when a drag ends. Without one it sits in the middle of lowerHalf, a frame covering the screen's
 -- lower half, so it stays there whatever the screen's size and scale.
-local function saved()
+local function savedOffset()
     local x, y = Options:Get(X_KEY), Options:Get(Y_KEY)
     if type(x) == "number" and type(y) == "number" then return x, y end
     return nil
@@ -244,10 +244,11 @@ end
 
 local lowerHalf, dragging
 
+-- Puts the row where savedOffset says: when it's made, when a drag ends, and when the offset changes.
 local function place()
-    if dragging then return end
+    if dragging or not row then return end
     row:ClearAllPoints()
-    local x, y = saved()
+    local x, y = savedOffset()
     if x then
         row:SetPoint("CENTER", UIParent, "CENTER", x, y)
     else
@@ -259,8 +260,8 @@ local function round(value)
     return math.floor(value + 0.5)
 end
 
--- Saves where the drag left the row; the watchers on the keys put it there by place.
-local function save()
+-- Saves where the drag left the row.
+local function saveDrag()
     local x, y = row:GetCenter()
     local middleX, middleY = UIParent:GetCenter()
     if not (x and middleX) then return end
@@ -272,7 +273,7 @@ local function stopDragging()
     if not dragging then return end
     row:StopMovingOrSizing()
     dragging = false
-    save()
+    saveDrag()
     place()
 end
 
@@ -283,7 +284,7 @@ local function newRow()
     lowerHalf:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT")
     lowerHalf:EnableMouse(false)
     row = CreateFrame("Frame", nil, UIParent)
-    row:EnableMouse(false)
+    row:EnableMouse(unlocked)
     row:SetMovable(true)
     row:SetClampedToScreen(true)
     row:RegisterForDrag("LeftButton")
@@ -321,6 +322,9 @@ local function due()
     return dueList
 end
 
+-- How the row was last laid out: its icons' count, size and whether their overlay hides.
+local laid = {}
+
 -- Shows the reminders whose buff is missing, centred, in the list's order; while unlocked,
 -- placeholders instead, whatever is missing.
 local function refresh()
@@ -342,14 +346,17 @@ local function refresh()
     end
     clear(present)
     if not row then return end
+    row:SetShown(count > 0)
     local hideOverlay = Options:Get(BORDER_KEY) == true
     local size = Options:Get(SIZE_KEY)
+    -- A refresh on UNIT_AURA mostly finds the row as it was: lay it out only when it changed.
+    if count == laid.count and size == laid.size and hideOverlay == laid.hideOverlay then return end
+    laid.count, laid.size, laid.hideOverlay = count, size, hideOverlay
     local width = math.max(0, count * size + (count - 1) * GAP)
     local left = -width / 2 + size / 2
     -- The overlay reaches past the icon as far, for its size, as on a tracked buff.
     local overlayX, overlayY = OVERLAY_X * size / BASE_SIZE, OVERLAY_Y * size / BASE_SIZE
     row:SetSize(width, size)
-    place()
     for index, icon in ipairs(icons) do
         if index <= count then
             icon:SetSize(size, size)
@@ -363,8 +370,6 @@ local function refresh()
             icon:Hide()
         end
     end
-    row:EnableMouse(unlocked)
-    row:SetShown(count > 0)
 end
 
 local function schedule()
@@ -476,7 +481,10 @@ function Reminders.SetUnlocked(on)
     on = on == true
     if on == unlocked or not isForever() then return end
     unlocked = on
-    if not on and row then stopDragging() end
+    if row then
+        if not on then stopDragging() end
+        row:EnableMouse(on)
+    end
     schedule()
     changed()
 end
@@ -491,8 +499,9 @@ end
 function Reminders:Init()
     if not isForever() then return end
     unitEvents = ns.Events:NewUnitListener("player")
-    local keys = { SWITCH, BORDER_KEY, SIZE_KEY, X_KEY, Y_KEY }
+    local keys = { SWITCH, BORDER_KEY, SIZE_KEY }
     for _, preset in ipairs(Reminders.PRESETS) do keys[#keys + 1] = preset.key end
     Options:Watch(keys, update)
+    Options:Watch({ X_KEY, Y_KEY }, place)
     update()
 end

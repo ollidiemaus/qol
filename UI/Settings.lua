@@ -250,6 +250,9 @@ end
 -- row's icon size, its Unlock (Lock while unlocked) and Reset position buttons.
 local REMINDER_MIN_SIZE, REMINDER_MAX_SIZE = 20, 80 -- the reminder icons' size, in pixels
 
+-- A slider's value as the slider shows it, in pixels.
+local function pixels(value) return L.PIXELS:format(value) end
+
 local function buildCooldownManager(page)
     page:Header("left", L.SECTION_LOOK)
     page:Checkbox("left", "hideCooldownManagerBorders", L.HIDE_COOLDOWN_BORDERS, L.HIDE_COOLDOWN_BORDERS_TIP)
@@ -290,7 +293,6 @@ local function buildCooldownManager(page)
     end
 
     -- The row's size and place: Unlock puts it in its mover state until Lock or the window closes.
-    local function pixels(value) return L.PIXELS:format(value) end
     page:Slider("left", "reminderIconSize", L.REMINDER_ICON_SIZE, REMINDER_MIN_SIZE, REMINDER_MAX_SIZE, pixels,
         L.REMINDER_ICON_SIZE_TIP)
     local move = page:Button("left", L.REMINDER_ROW, L.REMINDER_UNLOCK, L.REMINDER_ROW_TIP, function()
@@ -407,7 +409,6 @@ local function buildViewport(page)
         { key = "viewportLeft", label = L.VIEWPORT_LEFT },
         { key = "viewportRight", label = L.VIEWPORT_RIGHT },
     }
-    local function pixels(value) return L.PIXELS:format(value) end
     for _, margin in ipairs(margins) do
         page:Slider("wide", margin.key, margin.label, 0, VIEWPORT_MAX_MARGIN, pixels, L.VIEWPORT_MARGIN_TIP, enabled)
     end
