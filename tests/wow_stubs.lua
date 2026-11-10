@@ -1354,6 +1354,10 @@ local function install()
     --- Frames the addon hides
     G.MicroMenuContainer = newRegion("Frame", G.UIParent)
     G.BagsBar = newRegion("Frame", G.UIParent)
+    -- The raid manager, the tab at the screen's edge in a group, and the group frames' container:
+    -- on Forever both are UIParent's, the container not the manager's.
+    G.CompactRaidFrameManager = newRegion("Frame", G.UIParent)
+    G.CompactRaidFrameContainer = newRegion("Frame", G.UIParent)
     G.QuickJoinToastButton = newRegion("Frame", G.UIParent)
     -- Edit Mode, closed, with no frames yet (Stubs.NewEditModeFrame adds them).
     G.EditModeManagerFrame = newRegion("Frame", G.UIParent)
@@ -2233,7 +2237,7 @@ function Stubs.Reset(options)
             farclip = "6000", horizonStart = "1400", horizonClip = "6000", lodObjectFadeScale = "90",
             lodObjectCullSize = "20", lodObjectCullDist = "30",
             cameraDistanceMaxZoomFactor = "1", RAIDgroundEffectDist = "70", RAIDgroundEffectFade = "70", RAIDgroundEffectDensity = "16",
-            RAIDweatherDensity = "2", RAIDfarclip = "6000" },
+            RAIDweatherDensity = "2", RAIDfarclip = "6000", raidFramesDisplayBuffs = "1" },
         cvarRanges = { groundEffectDist = { 40, 500 }, groundEffectDensity = { 16, 256 }, weatherDensity = { 0, 3 },
             lodObjectFadeScale = { 50, 5000 }, lodObjectCullSize = { 1, 100 }, lodObjectCullDist = { 1, 200 },
             cameraDistanceMaxZoomFactor = { 1, 4 } },
@@ -2242,7 +2246,8 @@ function Stubs.Reset(options)
             groundEffectDensity = "16", weatherDensity = "2", ResampleAlwaysSharpen = "0",
             farclip = "1000", horizonStart = "800", horizonClip = "1600", lodObjectFadeScale = "100",
             lodObjectCullSize = "15", lodObjectCullDist = "30",
-            cameraDistanceMaxZoomFactor = "1" }, cvarSecure = {}, cvarWhole = {}, cvarSets = {}, cvarReads = 0,
+            cameraDistanceMaxZoomFactor = "1", raidFramesDisplayBuffs = "1" },
+        cvarSecure = {}, cvarWhole = {}, cvarSets = {}, cvarReads = 0,
         gameSliders = {}, gameSliderRewrites = true,
         shift = false,
         quest = { npc = "Creature-0-1-0-1-3139-0001", gossipActive = {}, gossipAvailable = {}, greetingActive = {},

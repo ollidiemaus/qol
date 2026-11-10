@@ -97,6 +97,22 @@ describe("hiding frames", function()
         T.falsy(MicroMenuContainer:IsVisible())
     end)
 
+    it("hides the raid manager and brings it back, leaving the group frames showing", function()
+        local ns = start()
+        T.truthy(CompactRaidFrameManager:IsVisible(), "shown by default")
+        ns.Options:Set("hideRaidManager", true)
+        Stubs.RunTimers()
+        T.falsy(CompactRaidFrameManager:IsVisible())
+        -- Joining a group shows it (CompactRaidFrameManager_UpdateShown).
+        CompactRaidFrameManager:Show()
+        T.falsy(CompactRaidFrameManager:IsVisible())
+        T.truthy(CompactRaidFrameContainer:IsVisible(), "the group frames stay")
+        ns.Options:Set("hideRaidManager", false)
+        Stubs.RunTimers()
+        T.eq(CompactRaidFrameManager:GetParent(), UIParent)
+        T.truthy(CompactRaidFrameManager:IsVisible())
+    end)
+
     it("hides every other chat button with one option, and brings them back", function()
         local ns = start()
         local buttons = { ChatFrameMenuButton, ChatFrameChannelButton, ChatFrameToggleVoiceDeafenButton,

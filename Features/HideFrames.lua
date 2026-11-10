@@ -32,6 +32,9 @@ HideFrames.TARGETS = {
         local indicator = main and main.HitIndicator
         return (indicator and indicator.HitText) or PlayerHitIndicator, PetHitIndicator
     end,
+    -- The raid manager, the tab at the screen's edge the game shows in every group. The group frames
+    -- (CompactRaidFrameContainer) are UIParent's, not its children, so they stay.
+    hideRaidManager = function() return CompactRaidFrameManager end,
 }
 
 local KEYS = {}

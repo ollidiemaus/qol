@@ -99,6 +99,16 @@ L.HIDE_PORTRAIT_HIT_TEXT = "Trefferanzeige am Porträt ausblenden"
 L.HIDE_PORTRAIT_HIT_TEXT_TIP = "Blendet die Schadens- und Heilungszahlen aus, die über deinem Porträt und dem "
     .. "deines Begleiters aufblitzen."
 
+-- Settings: group frames page
+L.CATEGORY_GROUP_FRAMES = "Gruppenfenster"
+L.GAME_BUFFS = "Buffs des Spiels anzeigen"
+L.GAME_BUFFS_TIP = "Die Einstellung „Stärkungszauber anzeigen“ des Spiels für Gruppen- und Schlachtzugsfenster "
+    .. "im Schlachtzugsstil: die Buffsymbole, die das Spiel für jedes Mitglied auswählt. Das ändert die "
+    .. "Einstellung des Spiels selbst, und das Spiel behält sie; die Schaltfläche Standard lässt sie, wie sie ist."
+L.HIDE_RAID_MANAGER = "Schlachtzugsmanager ausblenden"
+L.HIDE_RAID_MANAGER_TIP = "Blendet den Reiter am Bildschirmrand aus, den das Spiel in jeder Gruppe zeigt, mit "
+    .. "Bereitschaftscheck, Weltmarkierungen und den Optionen der Gruppenfenster. Deine Gruppenfenster bleiben."
+
 L.SECTION_EDIT_MODE = "Bearbeitungsmodus"
 L.PAST_SCREEN_EDGE = "Fenster über den Bildschirmrand"
 L.PAST_SCREEN_EDGE_TIP = "Im Bearbeitungsmodus lassen sich Fenster ein Stück über den Bildschirmrand hinaus "

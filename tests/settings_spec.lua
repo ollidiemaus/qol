@@ -92,7 +92,8 @@ local function listed(ns)
 end
 
 -- The list on a client without Forever's controller action bar.
-local LISTED = { "[General]", "Automation", "Chat", "Mail", "[Display]", "Interface", "Unit Frames", "Action Bars",
+local LISTED = { "[General]", "Automation", "Chat", "Mail", "[Display]", "Interface", "Unit Frames", "Group Frames",
+    "Action Bars",
     "Viewport", "[Maps]", "Minimap", "World map", "[Input]", "Ring", "Click casting", "[System]",
     "Graphics & Camera" }
 
@@ -199,7 +200,7 @@ describe("settings pages", function()
         Stubs.InstallSettings()
         Stubs.Login()
         T.same(listed(ns), { "[Allgemein]", "Automatisierung", "Chat", "Post", "[Darstellung]", "Oberfläche",
-            "Einheitenfenster", "Aktionsleisten", "Viewport", "[Karten]", "Minimap", "Weltkarte", "[Eingabe]", "Ring",
+            "Einheitenfenster", "Gruppenfenster", "Aktionsleisten", "Viewport", "[Karten]", "Minimap", "Weltkarte", "[Eingabe]", "Ring",
             "Klickzauber", "[System]", "Grafik & Kamera" })
     end)
 
@@ -298,7 +299,7 @@ describe("settings pages", function()
         local ns = start(nil, true)
         local names = listed(ns)
         T.eq(#names, #LISTED + 2)
-        T.same({ names[15], names[16], names[17], names[18] }, { "Ring", "Click casting", "Controller", "[System]" },
+        T.same({ names[16], names[17], names[18], names[19] },{ "Ring", "Click casting", "Controller", "[System]" },
             "under Input")
         T.same(headers(pages(ns).controller, "left"), { "Back buttons", "Triggers" })
         T.same(headers(pages(ns).controller, "right"), { "Buffs", "Bars that follow the stance" })
@@ -314,7 +315,7 @@ describe("settings pages", function()
     it("adds a Cooldown Manager page on Forever, in Display after Action Bars", function()
         local ns = start(nil, true)
         local names = listed(ns)
-        T.same({ names[8], names[9], names[10] }, { "Action Bars", "Cooldown Manager", "Viewport" })
+        T.same({ names[9], names[10], names[11] }, { "Action Bars", "Cooldown Manager", "Viewport" })
         local page = pages(ns).cooldownManager
         T.same(headers(page, "left"), { "Look", "Reminders" })
         local c = control(ns, "hideCooldownManagerBorders")
@@ -509,6 +510,89 @@ describe("settings pages", function()
         buttonRow(page, "Reminder row position").widget:Click()
         T.eq(QoLDB.options.reminderRowX, nil)
         T.eq(QoLDB.options.reminderRowY, nil)
+    end)
+
+    -- The Group Frames page's checkbox for the game's "Display buffs" setting.
+    local function gameBuffsRow(ns)
+        for _, c in ipairs(pages(ns).groupFrames.controls) do
+            if c.name() == "Show the game's buffs" then return c end
+        end
+        error("no game's buffs row")
+    end
+
+    it("has the Group Frames page on Forever with the raid manager and the game's buffs, both with tooltips", function()
+        local ns = start()
+        local page = pages(ns).groupFrames
+        T.eq(page.title, "Group Frames")
+        local names = listed(ns)
+        T.same({ names[7], names[8], names[9] }, { "Unit Frames", "Group Frames", "Action Bars" }, "in Display")
+        local c, on = control(ns, "hideRaidManager")
+        T.eq(on, page)
+        T.eq(c.text:GetText(), "Hide the raid manager")
+        T.eq(c.tooltip, ns.L.HIDE_RAID_MANAGER_TIP)
+        T.truthy(ns.L.HIDE_RAID_MANAGER_TIP ~= "")
+        T.eq(gameBuffsRow(ns).tooltip, ns.L.GAME_BUFFS_TIP)
+    end)
+
+    for _, client in ipairs({ "retail", "classicEra" }) do
+        it("leaves the Group Frames page out on " .. client, function()
+            local ns = Stubs.LoadAddon({ client = client })
+            Stubs.InstallSettings()
+            Stubs.Login()
+            T.eq(pages(ns).groupFrames, nil)
+            T.eq(control(ns, "hideRaidManager"), nil)
+        end)
+    end
+
+    it("hides the raid manager with its checkbox, off by default", function()
+        local ns = start()
+        local c, page = control(ns, "hideRaidManager")
+        show(page)
+        T.eq(c.widget:GetChecked(), false)
+        c.widget:Click()
+        Stubs.RunTimers()
+        T.eq(ns.Options:Get("hideRaidManager"), true)
+        T.falsy(CompactRaidFrameManager:IsVisible())
+    end)
+
+    it("shows the game's Display buffs setting and changes it, keeping no copy", function()
+        local ns = start()
+        local c = gameBuffsRow(ns)
+        show(pages(ns).groupFrames)
+        T.eq(c.widget:GetChecked(), true)
+        c.widget:Click()
+        T.eq(Stubs.state().cvars.raidFramesDisplayBuffs, "0")
+        T.eq(c.widget:GetChecked(), false)
+        T.eq(QoLDB.options.raidFramesDisplayBuffs, nil)
+        -- Changed in the game's options or by /console.
+        Stubs.state().cvars.raidFramesDisplayBuffs = "1"
+        Stubs.Fire("CVAR_UPDATE", "raidFramesDisplayBuffs", "1")
+        Stubs.RunTimers()
+        T.eq(c.widget:GetChecked(), true)
+    end)
+
+    it("resets the raid manager with Defaults and leaves the game's buffs setting alone", function()
+        local ns = start({ hideRaidManager = true })
+        Stubs.state().cvars.raidFramesDisplayBuffs = "0"
+        local page = pages(ns).groupFrames
+        show(page)
+        local sets = #Stubs.state().cvarSets
+        page.defaultsButton:Click()
+        page.defaultsButton:Click()
+        Stubs.RunTimers()
+        T.eq(ns.Options:Get("hideRaidManager"), false)
+        T.truthy(CompactRaidFrameManager:IsVisible())
+        T.eq(Stubs.state().cvars.raidFramesDisplayBuffs, "0")
+        T.eq(#Stubs.state().cvarSets, sets, "no game setting written")
+        T.eq(gameBuffsRow(ns).widget:GetChecked(), false)
+    end)
+
+    it("names the Group Frames page and its rows in German", function()
+        local ns = Stubs.LoadAddon({ locale = "deDE" })
+        Stubs.InstallSettings()
+        Stubs.Login()
+        T.eq(ns.SettingsPanel.window.buttons.groupFrames.label:GetText(), "Gruppenfenster")
+        T.eq(control(ns, "hideRaidManager").text:GetText(), "Schlachtzugsmanager ausblenden")
     end)
 
     it("leaves the Cooldown Manager page out on Forever without the game's rows", function()

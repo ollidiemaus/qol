@@ -89,6 +89,7 @@ local DEFAULTS = {
     druidManaBar = false,
     hidePortraitHitText = false,
     pastScreenEdge = false,
+    hideRaidManager = false, -- Forever only, on the Group Frames page
 
     reloadCommand = true,
 

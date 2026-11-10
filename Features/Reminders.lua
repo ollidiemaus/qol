@@ -112,12 +112,8 @@ local CONDITIONS = {
 }
 Reminders.CONDITIONS = CONDITIONS
 
-local function isForever()
-    return WOW_PROJECT_ID ~= nil and WOW_PROJECT_ID == WOW_PROJECT_CAMELOT
-end
-
 function Reminders.IsAvailable()
-    return isForever()
+    return ns.IsForever()
 end
 
 -- A spell's name from the client, or nil.
@@ -621,7 +617,7 @@ end
 
 function Reminders.SetUnlocked(on)
     on = on == true
-    if on == unlocked or not isForever() then return end
+    if on == unlocked or not ns.IsForever() then return end
     unlocked = on
     if row then
         if not on then stopDragging() end
@@ -639,7 +635,7 @@ function Reminders.ResetPosition()
 end
 
 function Reminders:Init()
-    if not isForever() then return end
+    if not ns.IsForever() then return end
     unitEvents = ns.Events:NewUnitListener("player")
     local keys = { SWITCH, BORDER_KEY, SIZE_KEY }
     for _, preset in ipairs(Reminders.PRESETS) do keys[#keys + 1] = preset.key end

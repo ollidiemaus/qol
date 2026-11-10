@@ -97,6 +97,16 @@ L.DRUID_MANA_BAR_TIP = "Shows your mana in a third bar below rage or energy whil
 L.HIDE_PORTRAIT_HIT_TEXT = "Hide portrait hit text"
 L.HIDE_PORTRAIT_HIT_TEXT_TIP = "Hides the damage and healing numbers that flash over your and your pet's portrait."
 
+-- Settings: group frames page
+L.CATEGORY_GROUP_FRAMES = "Group Frames"
+L.GAME_BUFFS = "Show the game's buffs"
+L.GAME_BUFFS_TIP = "The game's own Display buffs setting for raid-style party and raid frames: the buff icons "
+    .. "the game picks for each member. This changes the game's setting itself, and the game keeps it; "
+    .. "the Defaults button leaves it as it is."
+L.HIDE_RAID_MANAGER = "Hide the raid manager"
+L.HIDE_RAID_MANAGER_TIP = "Hides the tab at the edge of the screen that the game shows in every group, with ready "
+    .. "check, world markers and the group frames' options. Your group frames stay."
+
 L.SECTION_EDIT_MODE = "Edit Mode"
 L.PAST_SCREEN_EDGE = "Frames past the screen edge"
 L.PAST_SCREEN_EDGE_TIP = "Lets you move frames in Edit Mode a little past the edge of the screen, so their art "

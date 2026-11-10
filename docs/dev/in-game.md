@@ -230,6 +230,11 @@ Things only the real client can confirm:
   game menu closes, the cursor goes to the middle and hides (these three confirmed 2026-10-11, Steam
   Deck). Turning it off brings the pop-ups back without a reload. Right-clicking a buff away in
   combat still works.
+- Group Frames page (Forever): in a party with raid-style frames and in a raid, Hide the raid manager
+  takes the tab away and the group frames stay where they were, also with an Edit Mode preset layout
+  (which anchors them to the manager); unticking brings the tab back. Show the game's buffs agrees with
+  the game's own setting, turns the game's buff icons on the group frames on and off, and a `/reload`
+  keeps what the game has. No "tainted by" error after a fight with the raid manager hidden.
 
 ## The hidden settings probe
 

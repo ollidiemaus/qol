@@ -151,6 +151,17 @@ icon (Classic Era has no ferry icon). On retail, the default map marks dungeon e
   flashing over your and your pet's portrait. Floating combat text in the world stays as it is. Off by
   default.
 
+### Group frames
+
+On WoW Forever, a page for the game's own raid-style party and raid frames:
+
+- **Show the game's buffs:** the game's own Display buffs setting for its group frames, right on the
+  page. The checkbox shows what the game has and changes it there; QoL keeps no copy, never changes it
+  on its own, and the page's Defaults button leaves it alone.
+- **Hide the raid manager:** the tab at the edge of the screen that the game shows in every group (ready
+  check, world markers, the group frames' options) is gone while you're in a group, and back the moment
+  you untick the box. Your group frames stay. Off by default.
+
 ### Chat commands
 
 - **`/rl`** reloads the interface, as a short form of `/reload`. It's only added when neither the
@@ -512,6 +523,7 @@ The pages, in five groups:
 - **Display**
   - **Interface:** hiding the system and bag bars, frames past the screen edge, tooltips.
   - **Unit Frames:** mana in bear and cat form, portrait hit text, health bars in class color.
+  - **Group Frames** (on Forever): the game's buffs on the group frames, hiding the raid manager.
   - **Action Bars**, **Cooldown Manager** (on Forever) and **Viewport**.
 - **Maps:** **Minimap** and **World map** (on Forever and Classic Era).
 - **Input:** **Ring**, **Click casting** and **Controller** (on Forever).
