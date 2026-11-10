@@ -219,6 +219,11 @@ reminders** and pick the presets you want in the table below it (all off by defa
 - **Well Fed**, from any food or drink that makes you Well Fed.
 - **Well Rested**, the buff that makes your rested experience build up faster.
 - **Camp Benefits**, the bonuses from the items set up at a camp.
+- **Main Hand Weapon Buff** and **Off Hand Weapon Buff**, one per hand: shows while that hand's
+  weapon has no weapon buff (a poison, a shaman's weapon spell such as Rockbiter Weapon, a sharpening
+  stone or an oil, any of them), with the weapon's own icon so you can tell the hands apart. The off
+  hand's shows only while you hold a weapon there, not a shield or a held item, and neither shows
+  with a fishing pole in your hands.
 
 Add your own by dragging a spell from your spellbook onto the table, Thorns or Mark of the Wild for
 instance. Your reminders come after the presets, in the order you added them, each with a checkbox to

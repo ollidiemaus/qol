@@ -1746,7 +1746,29 @@ local function install()
         local cooldown = (item(id) or {}).cooldown or { 0, 0 }
         return cooldown[1], cooldown[2], true
     end
-    G.C_Item.GetItemInfoInstant = function(link) return tonumber(tostring(link):match("item:(%d+)")) end
+    -- By ID or link: the ID, then state.items[id]'s texture, classID and subclassID where it has them.
+    G.C_Item.GetItemInfoInstant = function(link)
+        local id = type(link) == "number" and link or tonumber(tostring(link):match("item:(%d+)"))
+        local info = id and item(id)
+        if not info then return id end
+        return id, nil, nil, nil, info.texture, info.classID, info.subclassID
+    end
+    -- The weapons in the player's hands: state.equipped[16] (main hand) and [17] (off hand) are item
+    -- IDs, their kind in state.items[id] = { texture, classID, subclassID } (classID 2 a weapon,
+    -- subclassID 20 of it a fishing pole; classID 4 armor, a shield or a held item).
+    -- state.weaponBuffs[weapon slot] (0 main hand, 1 off hand): true while that hand has a weapon
+    -- buff, "permanent" for an enchantment that isn't one, or Stubs.SECRET. Stubs.Equip and
+    -- Stubs.SetWeaponBuffs change them and fire the game's events.
+    G.GetInventoryItemTexture = function(_, slot)
+        local id = state.equipped[slot]
+        return id and (item(id) or {}).texture
+    end
+    G.C_Item.GetWeaponEnchantInfo = function(slot)
+        local has = state.weaponBuffs[slot]
+        if not has then return {} end
+        return { { hasEnchant = has == "permanent" or has, enchantType = has == "permanent" and 1 or 2,
+            timeLeft = 1800000, charges = 0, enchantID = 1, enchantIconID = 136000 } }
+    end
     G.C_Item.PickupItem = function(id) state.cursorInfo = { "item", id, "item:" .. id } end
     G.PlayerHasToy = function(id) return state.toys[id] ~= nil end
     -- The toy box lists the toys this character has, by ID (its filter shows them all).
@@ -2236,7 +2258,7 @@ function Stubs.Reset(options)
         actions = {}, modifiedClicks = {}, placed = {}, settingValues = {},
         spells = {}, items = {}, toys = {}, mounts = {}, macros = {}, flyouts = {}, equipped = {},
         -- Spells the client has data for that the character needn't know: id -> { name, texture }.
-        gameSpells = {}, buffs = {}, aurasWithheld = false,
+        gameSpells = {}, buffs = {}, aurasWithheld = false, weaponBuffs = {},
         -- The cursor in UI units, the controller's sticks (nil: no controller) and the actions
         -- secure buttons used.
         cursorX = 500, cursorY = 400, gamepad = nil, usedActions = {},
@@ -2977,6 +2999,18 @@ end
 function Stubs.SetBuffs(buffs)
     state.buffs = buffs
     Stubs.Fire("UNIT_AURA", "player")
+end
+
+-- The hands' weapon buffs become these ({ [0] = main hand, [1] = off hand }), and the game says so.
+function Stubs.SetWeaponBuffs(buffs)
+    state.weaponBuffs = buffs
+    Stubs.Fire("WEAPON_ENCHANT_CHANGED")
+end
+
+-- The player equips itemID in the inventory slot (nil: takes it off), and the game says so.
+function Stubs.Equip(slot, itemID)
+    state.equipped[slot] = itemID
+    Stubs.Fire("PLAYER_EQUIPMENT_CHANGED", slot, itemID == nil)
 end
 
 -- The game keeps the player's buff data secret (true) or gives it again (false). No event says so.

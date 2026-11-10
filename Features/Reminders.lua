@@ -14,12 +14,15 @@ local Options = ns.Options
 -- count. The game may keep buff data
 -- secret (Forever does in combat, and reading it then is an error): while C_Secrets says so, or a
 -- value read is secret, the whole row hides and nothing read is kept.
+-- The weapon buff presets read the hands' weapon enchant information instead, and apply only while
+-- the hand holds a weapon and the main hand no fishing pole.
 -- The Hide reminders checkboxes (CONDITIONS) hide every reminder while the character rests, fights,
 -- rides, is dead or on a flight path, and the experience reminders at maximum level.
 -- Updates come from the player's UNIT_AURA, combat starting and ending (the data turns secret and
--- readable again, with no event of its own), the ticked conditions' events, spells learned, the
--- options and the player's list, through one ns.Later key: one refresh per frame at most, and nothing
--- at all while no reminder is on.
+-- readable again, with no event of its own), weapon buffs and equipment changing (while a weapon
+-- buff preset is on), the ticked conditions' events, spells learned, the options and the player's
+-- list, through one ns.Later key: one refresh per frame at most, and nothing at all while no reminder
+-- is on.
 local Reminders = {}
 ns.Reminders = Reminders
 
@@ -30,6 +33,7 @@ local MASK_ATLAS = "UI-HUD-CoolDownManager-Mask"
 local OVERLAY_ATLAS = "UI-HUD-CoolDownManager-IconOverlay"
 local OVERLAY_X, OVERLAY_Y = 8, 7 -- how far the overlay reaches past the icon, as on a tracked buff
 local MAX_BUFFS = 255
+local MAIN_HAND, OFF_HAND = 16, 17 -- the hands' inventory slots
 
 -- The presets, in the list's order. spells: Forever's spell IDs whose names count as the buff (from
 -- its Spell table, build 1.60.1.70862); the first one's icon is the reminder's. text: its strings in
@@ -43,7 +47,15 @@ Reminders.PRESETS = {
     { key = "reminderWellRested", text = "REMINDER_WELL_RESTED", spells = { 1225478 }, experience = true },
     -- The camp's bonuses, from the items set up at a camp.
     { key = "reminderCampBenefits", text = "REMINDER_CAMP_BENEFITS", spells = { 1229741 } },
+    -- Weapon buffs (poisons, a shaman's weapon spells, sharpening stones, oils), one per hand, read
+    -- from the hand's weapon enchant information instead of the buffs. weapon: the hand's inventory
+    -- slot, and its Enum.WeaponSlot for C_Item.GetWeaponEnchantInfo. The icon is the hand's weapon.
+    { key = "reminderMainHand", text = "REMINDER_MAIN_HAND", weapon = { inventory = MAIN_HAND, slot = 0 } },
+    { key = "reminderOffHand", text = "REMINDER_OFF_HAND", weapon = { inventory = OFF_HAND, slot = 1 } },
 }
+
+local WEAPON_CLASS, FISHING_POLE = 2, 20 -- Enum.ItemClass.Weapon, Enum.ItemWeaponSubclass.Fishingpole
+local PERMANENT = 1 -- Enum.ItemEnchantType.Permanent: the weapon's enchantment, not a weapon buff
 
 -- Group versions: a single-target spell (any of its ranks) and the group spells whose buff counts
 -- for it too, in Forever's Spell table. Applied to any reminder. Forever has Greater Blessings of
@@ -205,13 +217,44 @@ local function applies(entry)
     return valid(entry) and entry.on == true and knows(entry.spell)
 end
 
--- The name a preset goes by in the player's language.
+-- The name a preset goes by in the player's language; nil for a weapon buff's (its name is ours).
 function Reminders.NameOf(preset)
+    if preset.weapon then return nil end
     return C_Spell.GetSpellName(preset.spells[1])
 end
 
+-- A weapon buff's is the weapon in its hand (nil with none).
 function Reminders.IconOf(preset)
+    if preset.weapon then return GetInventoryItemTexture("player", preset.weapon.inventory) end
     return C_Spell.GetSpellTexture(preset.spells[1])
+end
+
+-- The item class and subclass of what the player has in an inventory slot, nil with nothing there.
+local function kindIn(slot)
+    local id = GetInventoryItemID("player", slot)
+    if not id then return nil end
+    local _, _, _, _, _, classID, subclassID = C_Item.GetItemInfoInstant(id)
+    return classID, subclassID
+end
+
+-- Whether a hand's weapon buff reminder applies: the hand holds a weapon (not a shield or a held
+-- item), and the main hand no fishing pole.
+local function armed(weapon)
+    if kindIn(weapon.inventory) ~= WEAPON_CLASS then return false end
+    local class, subclass = kindIn(MAIN_HAND)
+    return not (class == WEAPON_CLASS and subclass == FISHING_POLE)
+end
+
+-- Whether the hand has a weapon buff (any kind): true or false, nil while the game keeps it secret.
+local function weaponBuffed(weapon)
+    local enchants = C_Item.GetWeaponEnchantInfo(weapon.slot)
+    if not ns.IsUsable(enchants) then return nil end
+    for _, enchant in ipairs(enchants) do
+        local has, kind = enchant.hasEnchant, enchant.enchantType
+        if not ns.IsUsable(has) or not ns.IsUsable(kind) then return nil end
+        if has and kind ~= PERMANENT then return true end
+    end
+    return false
 end
 
 -- The player's buff names, refilled by each refresh.
@@ -245,6 +288,20 @@ local function hasAny(set)
         if present[name] then return true end
     end
     return false
+end
+
+-- Whether a reminder shows, after readBuffs: true or false, nil while the game keeps what it needs
+-- secret.
+local function shows(reminder)
+    local weapon = reminder.weapon
+    if weapon then
+        if not armed(weapon) then return false end
+        local buffed = weaponBuffed(weapon)
+        if buffed == nil then return nil end
+        return not buffed
+    end
+    local set = namesOf(reminder)
+    return set ~= nil and not hasAny(set)
 end
 
 local row
@@ -315,8 +372,13 @@ local function refresh()
     local reminders = Options:Get(SWITCH) and due() or {}
     if #reminders > 0 and readBuffs() then
         for _, reminder in ipairs(reminders) do
-            local set = namesOf(reminder)
-            if set and not hasAny(set) then
+            local show = shows(reminder)
+            -- Secret: the whole row hides, as for the buffs.
+            if show == nil then
+                count = 0
+                break
+            end
+            if show then
                 count = count + 1
                 if not row then newRow() end
                 local icon = icons[count] or newIcon()
@@ -371,6 +433,8 @@ end
 local unitEvents
 local events = ns.Events:NewGroup({ "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED", "PLAYER_ENTERING_WORLD" },
     schedule)
+-- Weapon buffs and gear changing, heard only while a weapon buff preset is on.
+local weaponEvents = ns.Events:NewGroup({ "WEAPON_ENCHANT_CHANGED", "PLAYER_EQUIPMENT_CHANGED" }, schedule)
 local update
 
 -- Per Hide reminders condition, the group of its events.
@@ -380,6 +444,14 @@ for _, condition in ipairs(CONDITIONS) do
         if condition.onEvent then condition.onEvent(...) end
         schedule()
     end)
+end
+
+local function weaponsWatched()
+    if not Options:Get(SWITCH) then return false end
+    for _, preset in ipairs(Reminders.PRESETS) do
+        if preset.weapon and Options:Get(preset.key) then return true end
+    end
+    return false
 end
 
 -- Learning a spell (or a respec) changes which of the player's own reminders apply, and so whether
@@ -398,6 +470,7 @@ function update()
     for _, condition in ipairs(CONDITIONS) do
         conditionEvents[condition]:SetOn(on and Options:Get(condition.key) == true)
     end
+    weaponEvents:SetOn(weaponsWatched())
     spellEvents:SetOn(#ownList() > 0)
     if on then unitEvents:On("UNIT_AURA", schedule) else unitEvents:Off("UNIT_AURA") end
     schedule()

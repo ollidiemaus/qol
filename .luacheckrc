@@ -55,7 +55,7 @@ read_globals = {
     "CreateKeyChordStringUsingMetaKeyState", "NOT_BOUND", "SaveBindings", "GetCurrentBindingSet",
     -- Action slots, and what goes on a ring
     "PickupAction", "PlaceAction", "ClearCursor", "PlayerHasToy", "GetMacroInfo", "GetMacroIndexByName",
-    "GetMacroSpell", "GetMacroItem", "PickupMacro", "GetNumMacros", "MAX_ACCOUNT_MACROS", "GetInventoryItemID",
+    "GetMacroSpell", "GetMacroItem", "PickupMacro", "GetNumMacros", "MAX_ACCOUNT_MACROS", "GetInventoryItemID", "GetInventoryItemTexture",
     "GetFlyoutInfo", "GetFlyoutSlotInfo", "SPELLBOOK_FONT_COLOR",
     -- Classic Era's spell book and tabs
     "GetNumSpellTabs", "GetSpellTabInfo", "GetSpellBookItemInfo", "IsPassiveSpell", "BOOKTYPE_SPELL",
