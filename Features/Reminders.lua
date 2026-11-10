@@ -118,16 +118,16 @@ local function namesOf(reminder)
 end
 
 -- The player's own reminders: QoLDB.reminders, { spell = the spell ID as dragged, on = boolean } each,
--- in the order added. Entries QoL doesn't understand are dropped.
+-- in the order added. An entry QoL doesn't understand (a newer QoL's) stays where it is, left out of
+-- everything else (see valid).
 local function ownList()
     local db = ns.db
     if type(db.reminders) ~= "table" then db.reminders = {} end
-    local list = db.reminders
-    for index = #list, 1, -1 do
-        local entry = list[index]
-        if type(entry) ~= "table" or type(entry.spell) ~= "number" then table.remove(list, index) end
-    end
-    return list
+    return db.reminders
+end
+
+local function valid(entry)
+    return type(entry) == "table" and type(entry.spell) == "number"
 end
 
 -- An own reminder as a preset is one ({ spells }), made once per spell.
@@ -143,14 +143,27 @@ local function ownReminder(spellID)
 end
 
 -- Whether the character knows the spell at any rank: the client's answer for the spell's name is the
--- rank it knows, taken only if it knows that spell, as the name can be an NPC's too.
+-- rank it knows, taken only if it knows that spell, as the name can be an NPC's too. The answers are
+-- kept until SPELLS_CHANGED, so a refresh on UNIT_AURA asks the client nothing.
+local known = {}
+
 local function knows(spellID)
+    local answer = known[spellID]
+    if answer ~= nil then return answer end
     local book = C_SpellBook
-    if book.IsSpellKnownOrInSpellBook(spellID) then return true end
+    answer = book.IsSpellKnownOrInSpellBook(spellID) == true
     local name, lookup = nameOf(spellID), C_Spell.GetSpellIDForSpellIdentifier
-    if not name or not lookup then return false end
-    local found = lookup(name)
-    return ns.IsUsable(found) and book.IsSpellKnownOrInSpellBook(found) == true
+    if not answer and name and lookup then
+        local found = lookup(name)
+        answer = ns.IsUsable(found) and book.IsSpellKnownOrInSpellBook(found) == true
+    end
+    known[spellID] = answer
+    return answer
+end
+
+-- An own reminder that can show on this character: understood, switched on, its spell known.
+local function applies(entry)
+    return valid(entry) and entry.on == true and knows(entry.spell)
 end
 
 -- The name a preset goes by in the player's language.
@@ -225,16 +238,18 @@ local function newRow()
 end
 
 -- The reminders that apply, switched on, in the list's order: the presets', then the player's own
--- for spells the character knows.
+-- for spells the character knows. Refilled by each refresh.
+local dueList = {}
+
 local function due()
-    local list = {}
+    for index = #dueList, 1, -1 do dueList[index] = nil end
     for _, preset in ipairs(Reminders.PRESETS) do
-        if Options:Get(preset.key) then list[#list + 1] = preset end
+        if Options:Get(preset.key) then dueList[#dueList + 1] = preset end
     end
     for _, entry in ipairs(ownList()) do
-        if entry.on and knows(entry.spell) then list[#list + 1] = ownReminder(entry.spell) end
+        if applies(entry) then dueList[#dueList + 1] = ownReminder(entry.spell) end
     end
-    return list
+    return dueList
 end
 
 -- Shows the reminders whose buff is missing, centred, in the list's order.
@@ -280,7 +295,7 @@ local function active()
         if Options:Get(preset.key) then return true end
     end
     for _, entry in ipairs(ownList()) do
-        if entry.on then return true end
+        if applies(entry) then return true end
     end
     return false
 end
@@ -299,14 +314,19 @@ end
 local unitEvents
 local events = ns.Events:NewGroup({ "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED", "PLAYER_ENTERING_WORLD" },
     schedule)
--- Learning a spell (or a respec) changes which of the player's own reminders apply.
+local update
+
+-- Learning a spell (or a respec) changes which of the player's own reminders apply, and so whether
+-- any can show.
 local spellEvents = ns.Events:NewGroup({ "SPELLS_CHANGED" }, function()
-    schedule()
+    clear(known)
+    update()
     changed()
 end)
 
--- Hears the events only while a reminder can show, then refreshes.
-local function update()
+-- Hears the events only while a reminder can show (SPELLS_CHANGED while the player has reminders of
+-- their own), then refreshes.
+function update()
     local on = active()
     events:SetOn(on)
     spellEvents:SetOn(#ownList() > 0)
@@ -314,17 +334,21 @@ local function update()
     schedule()
 end
 
--- The player's own reminders, in the list's order, as the page shows them: { name, icon, on, known }.
+-- The player's own reminders QoL understands, in the list's order, as the page shows them:
+-- { index (its place in the saved list, for SetOn and Remove), name, icon, on, known }.
 function Reminders.Own()
     local lines = {}
     for index, entry in ipairs(ownList()) do
-        lines[index] = { name = nameOf(entry.spell), icon = C_Spell.GetSpellTexture(entry.spell),
-            on = entry.on == true, known = knows(entry.spell) }
+        if valid(entry) then
+            lines[#lines + 1] = { index = index, name = nameOf(entry.spell),
+                icon = C_Spell.GetSpellTexture(entry.spell), on = entry.on == true, known = knows(entry.spell) }
+        end
     end
     return lines
 end
 
-local function edited()
+-- After the player's list changed: what the row hears and shows, and the page.
+local function afterEdit()
     update()
     changed()
 end
@@ -337,26 +361,27 @@ function Reminders.AddFromCursor()
     if type(id) ~= "number" then return false end
     local name, list = nameOf(id), ownList()
     for _, entry in ipairs(list) do
-        if entry.spell == id or (name and nameOf(entry.spell) == name) then return false end
+        if valid(entry) and (entry.spell == id or (name and nameOf(entry.spell) == name)) then return false end
     end
     list[#list + 1] = { spell = id, on = true }
     ClearCursor()
-    edited()
+    afterEdit()
     return true
 end
 
+-- index: the reminder's place in the saved list (Own's index).
 function Reminders.Remove(index)
     local list = ownList()
-    if not list[index] then return end
+    if not valid(list[index]) then return end
     table.remove(list, index)
-    edited()
+    afterEdit()
 end
 
 function Reminders.SetOn(index, on)
     local entry = ownList()[index]
-    if not entry then return end
+    if not valid(entry) then return end
     entry.on = on == true
-    edited()
+    afterEdit()
 end
 
 function Reminders:Init()

@@ -74,7 +74,11 @@ The player's own reminders are `QoLDB.reminders`, account-wide: `{ spell = ID as
 the order added. The ID only says which spell it is: the buff matches by the name the client gives
 for it, so any rank on any character, and a character knows it when `IsSpellKnownOrInSpellBook` says
 so for the ID, or for what `C_Spell.GetSpellIDForSpellIdentifier` answers for its name (the rank it
-knows, as click casting asks; taken only if known, as an NPC spell can share the name). A drop is
+knows, as click casting asks; taken only if known, as an NPC spell can share the name). The answers
+are kept until `SPELLS_CHANGED`, so a refresh on `UNIT_AURA` asks the spellbook nothing, and only an
+own reminder whose spell is known makes the row listen: a warrior with only the druid's Thorns
+reminder hears no `UNIT_AURA`. An entry without a spell ID (a newer QoL's) stays saved, out of the
+row and the page. A drop is
 the cursor's `"spell"` (its base spell ID); another rank of a spell in the list, or anything else,
 does nothing and stays on the cursor. Group versions (`GROUP_VERSIONS`, Forever's IDs) add the group
 spell's name to any reminder's set of names; Forever has only three Greater Blessings. While the list

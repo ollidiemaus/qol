@@ -278,10 +278,10 @@ local function buildCooldownManager(page)
         reminders:Line(function() return entry().name or "" end, L.REMINDER_SPELL_TIP, {
             [ON] = { kind = "checkbox", tooltip = L.REMINDER_SPELL_TIP, enabled = known, key = {
                 get = function() return entry().on == true end,
-                set = function(on) Reminders.SetOn(index, on) end,
+                set = function(on) Reminders.SetOn(entry().index, on) end,
             } },
             [REMOVE] = { kind = "remove", tooltip = L.REMINDER_REMOVE_TIP,
-                onClick = function() Reminders.Remove(index) end },
+                onClick = function() Reminders.Remove(entry().index) end },
         }, { icon = function() return entry().icon end, enabled = known,
             shown = function() return own[index] ~= nil end })
     end
