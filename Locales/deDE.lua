@@ -282,6 +282,14 @@ L.ACTION_BAR = "Aktionsleiste %d"
 L.STANCE_BAR = "Haltungsleiste"
 L.PET_BAR = "Begleiterleiste"
 
+-- Settings: Cooldown Manager page
+L.CATEGORY_COOLDOWN_MANAGER = "Abklingzeitmanager"
+L.SECTION_LOOK = "Aussehen"
+L.HIDE_COOLDOWN_BORDERS = "Symbolränder ausblenden"
+L.HIDE_COOLDOWN_BORDERS_TIP = "Nimmt den Symbolen des Abklingzeitmanagers des Spiels den Rand, in allen vier Reihen: "
+    .. "Essenzielle Abklingzeiten, Strategische Abklingzeiten, Verfolgte Stärkungseffekte und Verfolgte Leisten. "
+    .. "Alles andere an einem Symbol bleibt, wie es ist."
+
 -- Settings: ring page
 L.CATEGORY_RING = "Ring"
 L.RING = "Aktionsringe"

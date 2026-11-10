@@ -278,6 +278,13 @@ L.ACTION_BAR = "Action Bar %d"
 L.STANCE_BAR = "Stance Bar"
 L.PET_BAR = "Pet Bar"
 
+-- Settings: Cooldown Manager page. The game's own name for it, and for its rows in the tooltip.
+L.CATEGORY_COOLDOWN_MANAGER = "Cooldown Manager"
+L.SECTION_LOOK = "Look"
+L.HIDE_COOLDOWN_BORDERS = "Hide icon borders"
+L.HIDE_COOLDOWN_BORDERS_TIP = "Takes the border off the icons of the game's Cooldown Manager, in all four rows: "
+    .. "Essential Cooldowns, Utilities, Tracked Buffs and Tracked Bars. Everything else on an icon stays as it is."
+
 -- Settings: ring page
 L.CATEGORY_RING = "Ring"
 L.RING = "Rings of actions"

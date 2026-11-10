@@ -200,6 +200,19 @@ of combat, an empty cursor and, in the controller interface, for the game's wind
 once, downranks included, whether the option is on or off. Macros, the pet bar and rings are left
 alone by both. Click casting already casts the highest rank.
 
+### Cooldown Manager
+
+On WoW Forever, a page for the game's own Cooldown Manager (the rows of cooldowns and tracked buffs
+you set up in Edit Mode).
+
+**Hide icon borders:** the icons of all four rows (Essential Cooldowns, Utilities, Tracked Buffs
+and Tracked Bars) lose their border, so they match action buttons without borders. Everything else
+on an icon stays: its rounded shape, the cooldown swipe, stack counts, the colored border of a
+debuff and the out-of-range tint. Off by default; untick it and the borders are back at once.
+
+A tracked buff whose icon shows all the time isn't QoL's doing: that is the game's own Edit Mode
+setting "Hide When Inactive" on the buff row being off.
+
 ### Rings
 
 Rings of actions, drawn in the bronze of Forever's minimap, as many as you like. Hold a ring's key,
@@ -454,7 +467,7 @@ The pages, in five groups:
 - **Display**
   - **Interface:** hiding the system and bag bars, frames past the screen edge, tooltips.
   - **Unit Frames:** mana in bear and cat form, portrait hit text, health bars in class color.
-  - **Action Bars** and **Viewport**.
+  - **Action Bars**, **Cooldown Manager** (on Forever) and **Viewport**.
 - **Maps:** **Minimap** and **World map** (on Forever and Classic Era).
 - **Input:** **Ring**, **Click casting** and **Controller** (on Forever).
 - **System**

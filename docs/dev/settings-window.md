@@ -110,7 +110,8 @@ The options are grouped by part of the game, in five groups:
 - General: Automation (merchant, quests, loot and the bags), Chat (the chat window, `/rl`), Mail
   (the bookmarks' names).
 - Display: Interface (the frames to hide, Edit Mode, tooltips), Unit Frames (the player frame, the
-  class-colored health bars), Action Bars, Viewport.
+  class-colored health bars), Action Bars, Cooldown Manager (only where
+  `CooldownManager.IsAvailable()`: Forever, with the game's rows), Viewport.
 - Maps: Minimap, World map (only where `MapPins.IsAvailable()`).
 - Input: Ring, Click casting, Controller (only on Forever).
 - System: Graphics & Camera ([`advanced-settings.md`](advanced-settings.md); its page key is still

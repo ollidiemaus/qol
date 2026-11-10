@@ -5,10 +5,14 @@ local describe, it = T.describe, T.it
 -- The addon loaded last, for show.
 local loaded
 
--- forever: with Forever's controller action bar, which brings the Controller page.
+-- forever: with Forever's controller action bar, which brings the Controller page, and the game's
+-- Cooldown Manager, which brings the Cooldown Manager page.
 local function start(savedOptions, forever)
     local ns = Stubs.LoadAddon()
-    if forever then Stubs.NewGamepadBar() end
+    if forever then
+        Stubs.NewGamepadBar()
+        Stubs.NewCooldownManager()
+    end
     local api = Stubs.InstallSettings()
     Stubs.Login(savedOptions)
     loaded = ns
@@ -287,8 +291,8 @@ describe("settings pages", function()
     it("adds a Controller page on Forever, for the controller action bar", function()
         local ns = start(nil, true)
         local names = listed(ns)
-        T.eq(#names, #LISTED + 1)
-        T.same({ names[14], names[15], names[16], names[17] }, { "Ring", "Click casting", "Controller", "[System]" },
+        T.eq(#names, #LISTED + 2)
+        T.same({ names[15], names[16], names[17], names[18] }, { "Ring", "Click casting", "Controller", "[System]" },
             "under Input")
         T.same(headers(pages(ns).controller, "left"), { "Back buttons", "Triggers" })
         T.same(headers(pages(ns).controller, "right"), { "Buffs", "Bars that follow the stance" })
@@ -299,6 +303,68 @@ describe("settings pages", function()
         T.falsy(c.enabled(), "the bar waits for the back buttons")
         ns.Options:Set("controllerBackButtons", true)
         T.truthy(c.enabled(), "enabled with the back buttons")
+    end)
+
+    it("adds a Cooldown Manager page on Forever, in Display after Action Bars", function()
+        local ns = start(nil, true)
+        local names = listed(ns)
+        T.same({ names[8], names[9], names[10] }, { "Action Bars", "Cooldown Manager", "Viewport" })
+        local page = pages(ns).cooldownManager
+        T.same(headers(page, "left"), { "Look" })
+        local c = control(ns, "hideCooldownManagerBorders")
+        T.eq(c.kind, "checkbox")
+        T.eq(c.text:GetText(), "Hide icon borders")
+        for _, row in ipairs({ "Essential Cooldowns", "Utilities", "Tracked Buffs", "Tracked Bars" }) do
+            T.truthy(c.tooltip:find(row, 1, true), "the tooltip names " .. row)
+        end
+    end)
+
+    it("leaves the Cooldown Manager page out on Forever without the game's rows", function()
+        local ns = start()
+        T.eq(pages(ns).cooldownManager, nil)
+    end)
+
+    for _, client in ipairs({ "retail", "classicEra" }) do
+        it("leaves the Cooldown Manager page out on " .. client .. ", even with the game's rows", function()
+            local ns = Stubs.LoadAddon({ client = client })
+            Stubs.NewCooldownManager()
+            Stubs.InstallSettings()
+            Stubs.Login()
+            T.eq(pages(ns).cooldownManager, nil)
+            T.eq(control(ns, "hideCooldownManagerBorders"), nil)
+        end)
+    end
+
+    it("hides the Cooldown Manager's borders with the checkbox, and shows them again with Defaults", function()
+        local ns = start(nil, true)
+        local c, page = control(ns, "hideCooldownManagerBorders")
+        show(page)
+        local border
+        for _, region in ipairs({ Stubs.CooldownIcons("EssentialCooldownViewer")[1]:GetRegions() }) do
+            if region:GetAtlas() == "UI-HUD-CoolDownManager-IconOverlay" then border = region end
+        end
+        c.widget:Click()
+        Stubs.RunTimers()
+        T.eq(ns.Options:Get("hideCooldownManagerBorders"), true)
+        T.eq(border:GetAlpha(), 0)
+        page.defaultsButton:Click()
+        page.defaultsButton:Click()
+        Stubs.RunTimers()
+        T.eq(ns.Options:Get("hideCooldownManagerBorders"), false)
+        T.eq(c.widget:GetChecked(), false)
+        T.eq(border:GetAlpha(), 1)
+    end)
+
+    it("names the Cooldown Manager page and its row in German", function()
+        local ns = Stubs.LoadAddon({ locale = "deDE" })
+        Stubs.NewCooldownManager()
+        Stubs.InstallSettings()
+        Stubs.Login()
+        T.eq(ns.SettingsPanel.window.buttons.cooldownManager.label:GetText(), "Abklingzeitmanager")
+        T.same(headers(pages(ns).cooldownManager, "left"), { "Aussehen" })
+        local c = control(ns, "hideCooldownManagerBorders")
+        T.eq(c.text:GetText(), "Symbolränder ausblenden")
+        T.truthy(c.tooltip:find("Verfolgte Stärkungseffekte", 1, true))
     end)
 
     it("greys out going back to Top while the trigger toggle is off", function()
