@@ -48,6 +48,7 @@ Features\SortOnOpen.lua
 Features\MailBookmarks.lua
 Features\ClassHealthBars.lua
 Features\DruidManaBar.lua
+Features\GroupFrames.lua
 Features\ScreenEdge.lua
 Features\Minimap.lua
 Features\MapPins.lua

@@ -4,8 +4,9 @@ local Options = ns.Options
 
 -- Quality of Life's settings: a window of our own (UI/SettingsWindow.lua), which /qol opens, with a
 -- page for each part of the game, in groups: General (Automation, Chat, Mail), Display (Interface,
--- Unit Frames, Action Bars, Viewport), Maps (Minimap, World map on Forever's maps), Input (Ring, Click
--- casting, Controller on Forever, which has the controller action bar) and System (Graphics &
+-- Unit Frames, Group Frames on Forever, Action Bars, Cooldown Manager on Forever, Viewport), Maps
+-- (Minimap, World map on Forever's maps), Input (Ring, Click casting, Controller on Forever, which
+-- has the controller action bar) and System (Graphics &
 -- Camera, the game's hidden settings).
 -- Under Options > AddOns there's only the information page (UI/InfoPage.lua), with a button that
 -- opens the window. The game's settings have nothing of ours to change: on Forever, with the
@@ -77,6 +78,42 @@ local function buildUnitFrames(page)
     page:Checkbox("right", "classColorTargetOfTarget", L.CLASS_COLOR_TARGET_OF_TARGET, L.CLASS_COLOR_TIP)
     page:Checkbox("right", "classColorFocus", L.CLASS_COLOR_FOCUS, L.CLASS_COLOR_TIP)
     page:Checkbox("right", "classColorFocusTarget", L.CLASS_COLOR_FOCUS_TARGET, L.CLASS_COLOR_TIP)
+end
+
+-- Group Frames page (Forever only): the game's own buff icons on the left, the raid manager to hide on
+-- the right. The buffs checkbox shows and changes the game's own setting (ns.GroupFrames.GAME_BUFFS_CVAR)
+-- through ns.HiddenSettings, as the Graphics & Camera page does its rows: the game keeps it, the row has
+-- no reset, so the page's Defaults button leaves it alone, and it's greyed out while the game wouldn't
+-- take it (in combat, if the game protects it).
+local function buildGroupFrames(page)
+    local Hidden = ns.HiddenSettings
+    local cvar = ns.GroupFrames.GAME_BUFFS_CVAR
+    -- From PLAYER_REGEN_DISABLED, which comes while InCombatLockdown is still false, to
+    -- PLAYER_REGEN_ENABLED.
+    local combat = false
+    local function canChange() return Hidden.CanChange(cvar, combat or InCombatLockdown()) end
+    local gameBuffs = {
+        get = function() return Hidden.Get(cvar) == "1" end,
+        set = function(checked)
+            if canChange() then Hidden.Set(cvar, checked and "1" or "0") end
+            page:Refresh()
+        end,
+    }
+    page:Header("left", L.SECTION_BUFFS)
+    page:Checkbox("left", gameBuffs, L.GAME_BUFFS, L.GAME_BUFFS_TIP, { enabled = canChange })
+
+    page:Header("right", L.SECTION_HIDE)
+    page:Checkbox("right", "hideRaidManager", L.HIDE_RAID_MANAGER, L.HIDE_RAID_MANAGER_TIP)
+
+    -- A change in the game's options, by /console or another addon, and combat starting or ending.
+    local function refreshShown()
+        if page.frame:IsVisible() then page:Refresh() end
+    end
+    ns.Events:On("CVAR_UPDATE", function(_, changed)
+        if changed == cvar and page.frame:IsVisible() then ns.Later("groupFramesRefresh", refreshShown, true) end
+    end)
+    ns.Events:On("PLAYER_REGEN_DISABLED", function() combat = true refreshShown() end)
+    ns.Events:On("PLAYER_REGEN_ENABLED", function() combat = false refreshShown() end)
 end
 
 -- Chat page: the chat window on the left, the chat commands on the right.
@@ -553,6 +590,9 @@ local GROUPS = {
     { title = L.GROUP_DISPLAY, pages = {
         { key = "interface", title = L.CATEGORY_INTERFACE, build = buildInterface },
         { key = "unitFrames", title = L.CATEGORY_UNIT_FRAMES, build = buildUnitFrames },
+        -- Only on Forever.
+        { key = "groupFrames", title = L.CATEGORY_GROUP_FRAMES, build = buildGroupFrames,
+            available = function() return ns.GroupFrames.IsAvailable() end },
         { key = "actionBars", title = L.CATEGORY_ACTION_BARS, build = buildActionBars },
         -- Only on Forever, where the game has its Cooldown Manager's rows.
         { key = "cooldownManager", title = L.CATEGORY_COOLDOWN_MANAGER, build = buildCooldownManager,

@@ -290,6 +290,9 @@ font string straight on `PlayerFrame` (`Blizzard_UnitFrame/Classic/PlayerFrame.x
 `PetHitIndicator`. The micro menu (`MicroMenuContainer`), the bags bar and the chat menu and channel
 buttons have the same names there; it has no voice buttons, which are skipped as missing.
 
+One more target, the raid manager (`hideRaidManager`, Forever's Group Frames page), is explained in
+[`group-frames.md`](group-frames.md).
+
 Quests on Classic Era: its quest greeting (`QUEST_GREETING`, the old list of quests) has no quest
 IDs: there's no `GetActiveQuestID`, and `GetAvailableQuestInfo` returns only isTrivial, isDaily,
 isRepeatable and isLegendary (`Blizzard_UIPanels_Game/Classic/QuestFrame.lua`). Where
