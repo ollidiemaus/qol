@@ -16,11 +16,13 @@ local Options = ns.Options
 -- value read is secret, the whole row hides and nothing read is kept.
 -- The weapon buff presets read the hands' weapon enchant information instead, and apply only while
 -- the hand holds a weapon and the main hand no fishing pole.
+-- The Hide reminders checkboxes (CONDITIONS) hide every reminder while the character rests, fights,
+-- rides, is dead or on a flight path, and the experience reminders at maximum level.
 -- Updates come from the player's UNIT_AURA, combat starting and ending (the data turns secret and
 -- readable again, with no event of its own), weapon buffs and equipment changing (while a weapon
--- buff preset is on), spells learned,
--- the options and the player's list,
--- through one ns.Later key: one refresh per frame at most, and nothing at all while no reminder is on.
+-- buff preset is on), the ticked conditions' events, spells learned, the options and the player's
+-- list, through one ns.Later key: one refresh per frame at most, and nothing at all while no reminder
+-- is on.
 local Reminders = {}
 ns.Reminders = Reminders
 
@@ -68,6 +70,42 @@ local GROUP_VERSIONS = {
     [19742] = { 25894 }, -- Blessing of Wisdom: Greater Blessing of Wisdom
     [20217] = { 25898 }, -- Blessing of Kings: Greater Blessing of Kings
 }
+
+-- The Hide reminders checkboxes, in the page's order. key: the option; text: its strings in ns.L (the
+-- label, and _TIP its tooltip); holds: whether the character is in that state now; events: the game's
+-- events that say it may have changed (heard only while the box is ticked and a reminder can show);
+-- experience: it hides only the reminders about experience.
+
+-- The highest level a PLAYER_LEVEL_UP named this session: the game may give the new level through
+-- UnitLevel only after the event.
+local levelReached = 0
+
+local CONDITIONS = {
+    { key = "reminderHideResting", text = "REMINDER_HIDE_RESTING", events = { "PLAYER_UPDATE_RESTING" },
+        holds = function() return IsResting() == true end },
+    -- Combat starting and ending refresh the row anyway (the buff data turns secret and back).
+    { key = "reminderHideCombat", text = "REMINDER_HIDE_COMBAT", events = {},
+        holds = function() return InCombatLockdown() == true end },
+    { key = "reminderHideMounted", text = "REMINDER_HIDE_MOUNTED", events = { "PLAYER_MOUNT_DISPLAY_CHANGED" },
+        holds = function() return IsMounted() == true end },
+    -- Releasing the spirit fires PLAYER_ALIVE, still a ghost; PLAYER_UNGHOST ends it. A flight path
+    -- takes the character's control and gives it back on landing; UnitOnTaxi may turn true only
+    -- after PLAYER_CONTROL_LOST, so UPDATE_BONUS_ACTIONBAR, on which the game's own early-landing
+    -- button asks it, asks again.
+    { key = "reminderHideDeadOrFlying", text = "REMINDER_HIDE_DEAD_OR_FLYING",
+        events = { "PLAYER_DEAD", "PLAYER_ALIVE", "PLAYER_UNGHOST", "PLAYER_CONTROL_LOST", "PLAYER_CONTROL_GAINED",
+            "UPDATE_BONUS_ACTIONBAR" },
+        holds = function() return UnitIsDeadOrGhost("player") == true or UnitOnTaxi("player") == true end },
+    { key = "reminderHideMaxLevel", text = "REMINDER_HIDE_MAX_LEVEL", events = { "PLAYER_LEVEL_UP" },
+        experience = true,
+        holds = function()
+            return math.max(UnitLevel("player") or 0, levelReached) >= GetMaxPlayerLevel()
+        end,
+        onEvent = function(_, level)
+            if type(level) == "number" and level > levelReached then levelReached = level end
+        end },
+}
+Reminders.CONDITIONS = CONDITIONS
 
 local function isForever()
     return WOW_PROJECT_ID ~= nil and WOW_PROJECT_ID == WOW_PROJECT_CAMELOT
@@ -299,10 +337,28 @@ end
 -- for spells the character knows. Refilled by each refresh.
 local dueList = {}
 
+-- Whether a ticked Hide reminders box of that kind (one for every reminder, or one for those about
+-- experience) holds now.
+local function hiddenBy(experienceOnly)
+    for _, condition in ipairs(CONDITIONS) do
+        if (condition.experience == true) == experienceOnly and Options:Get(condition.key) and condition.holds() then
+            return true
+        end
+    end
+    return false
+end
+
+local function allHidden() return hiddenBy(false) end
+local function experienceHidden() return hiddenBy(true) end
+
 local function due()
     for index = #dueList, 1, -1 do dueList[index] = nil end
+    if allHidden() then return dueList end
+    local noExperience = experienceHidden()
     for _, preset in ipairs(Reminders.PRESETS) do
-        if Options:Get(preset.key) then dueList[#dueList + 1] = preset end
+        if Options:Get(preset.key) and not (preset.experience and noExperience) then
+            dueList[#dueList + 1] = preset
+        end
     end
     for _, entry in ipairs(ownList()) do
         if applies(entry) then dueList[#dueList + 1] = ownReminder(entry.spell) end
@@ -381,6 +437,15 @@ local events = ns.Events:NewGroup({ "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABL
 local weaponEvents = ns.Events:NewGroup({ "WEAPON_ENCHANT_CHANGED", "PLAYER_EQUIPMENT_CHANGED" }, schedule)
 local update
 
+-- Per Hide reminders condition, the group of its events.
+local conditionEvents = {}
+for _, condition in ipairs(CONDITIONS) do
+    conditionEvents[condition] = ns.Events:NewGroup(condition.events, function(...)
+        if condition.onEvent then condition.onEvent(...) end
+        schedule()
+    end)
+end
+
 local function weaponsWatched()
     if not Options:Get(SWITCH) then return false end
     for _, preset in ipairs(Reminders.PRESETS) do
@@ -402,6 +467,9 @@ end)
 function update()
     local on = active()
     events:SetOn(on)
+    for _, condition in ipairs(CONDITIONS) do
+        conditionEvents[condition]:SetOn(on and Options:Get(condition.key) == true)
+    end
     weaponEvents:SetOn(weaponsWatched())
     spellEvents:SetOn(#ownList() > 0)
     if on then unitEvents:On("UNIT_AURA", schedule) else unitEvents:Off("UNIT_AURA") end
@@ -463,6 +531,7 @@ function Reminders:Init()
     unitEvents = ns.Events:NewUnitListener("player")
     local keys = { SWITCH, BORDER_KEY }
     for _, preset in ipairs(Reminders.PRESETS) do keys[#keys + 1] = preset.key end
+    for _, condition in ipairs(CONDITIONS) do keys[#keys + 1] = condition.key end
     Options:Watch(keys, update)
     update()
 end

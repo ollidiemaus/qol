@@ -82,6 +82,19 @@ come after the buffs' and so only while they're readable; a secret value from th
 row as well. `WEAPON_ENCHANT_CHANGED` (`BuffFrame` updates its weapon buffs on it) and
 `PLAYER_EQUIPMENT_CHANGED` refresh the row, registered only while a weapon buff preset is on, so a
 gear swap costs nothing with only Well Fed on.
+The Hide reminders checkboxes are `CONDITIONS` in the feature: an option, a test of the character's
+state and the events that say it may have changed. A refresh asks each ticked one; resting
+(`IsResting`, `PLAYER_UPDATE_RESTING`), combat (`InCombatLockdown`, on the combat events the row
+hears anyway), mounted (`IsMounted`, `PLAYER_MOUNT_DISPLAY_CHANGED`) and dead or on a flight path
+(`UnitIsDeadOrGhost` or `UnitOnTaxi`; `PLAYER_DEAD`, `PLAYER_ALIVE` (released, still a ghost),
+`PLAYER_UNGHOST`, and `PLAYER_CONTROL_LOST` and `_GAINED` for taking off and landing, plus
+`UPDATE_BONUS_ACTIONBAR`, on which the game's early-landing button asks `UnitOnTaxi`, in case it
+turns true only after control is lost; not yet checked in game) leave the row empty. The maximum
+level one (`UnitLevel` against `GetMaxPlayerLevel`, `PLAYER_LEVEL_UP`) leaves out only the presets
+marked `experience`; it also takes the level the event names, as the game may update `UnitLevel`
+after it. A condition's events are heard only while its box is ticked and the row hears
+anything at all. Forever withholds buff data in every fight (#108's in-game check), so "In combat"
+changes nothing there today; left off, a buff lost mid-fight shows as soon as the data is readable.
 
 The player's own reminders are `QoLDB.reminders`, account-wide: `{ spell = ID as dragged, on }` in
 the order added. The ID only says which spell it is: the buff matches by the name the client gives

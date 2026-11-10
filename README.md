@@ -240,6 +240,18 @@ table's order, and look like the Cooldown Manager's buff icons (**Hide icon bord
 border off too). They don't take the mouse, and they work with the game's Cooldown Manager switched
 off. In combat the game hides buffs from addons, so the reminders go away until combat ends.
 
+Beside the table, the **Hide reminders** boxes say when the reminders stay away:
+
+- **While resting**, in an inn or a city (off by default).
+- **In combat** (off). Left off, a buff that runs out mid-fight shows its reminder whenever the game
+  lets addons see your buffs; for now WoW Forever hides them in every fight anyway.
+- **While mounted** (off).
+- **While dead or on a flight path** (on), when you can't put a buff up anyway.
+- **Experience reminders at maximum level** (on): only Well Rested, once your character can't gain
+  experience any more. The other reminders still show.
+
+They come back as soon as the condition ends.
+
 ### Rings
 
 Rings of actions, drawn in the bronze of Forever's minimap, as many as you like. Hold a ring's key,

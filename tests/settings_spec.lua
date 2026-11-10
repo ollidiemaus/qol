@@ -356,6 +356,22 @@ describe("settings pages", function()
         T.truthy(lineTop(page, "Well Fed") > 0)
     end)
 
+    it("has a Hide reminders section beside Reminders, a box per condition", function()
+        local ns = start(nil, true)
+        T.same(headers(pages(ns).cooldownManager, "right"), { "Hide reminders" })
+        local seen = {}
+        for _, key in ipairs({ "reminderHideResting", "reminderHideCombat", "reminderHideMounted",
+            "reminderHideDeadOrFlying", "reminderHideMaxLevel" }) do
+            local c = control(ns, key)
+            T.eq(c.kind, "checkbox")
+            T.eq(c.column, "right")
+            seen[#seen + 1] = c.text:GetText() .. (c.get() and " (on)" or "")
+        end
+        T.same(seen, { "While resting", "In combat", "While mounted", "While dead or on a flight path (on)",
+            "Experience reminders at maximum level (on)" })
+        T.truthy(control(ns, "reminderHideMaxLevel").tooltip:find("Well Rested", 1, true))
+    end)
+
     -- The Cooldown Manager page with the presets' and Thorns' and Mark of the Wild's spell data, for
     -- a character that knows Thorns (rank 1); the account's own reminders saved.
     local THORNS_1, THORNS_3, MARK = 467, 1075, 1126
@@ -496,6 +512,8 @@ describe("settings pages", function()
         Stubs.Login()
         T.eq(ns.SettingsPanel.window.buttons.cooldownManager.label:GetText(), "Abklingzeitmanager")
         T.same(headers(pages(ns).cooldownManager, "left"), { "Aussehen", "Erinnerungen" })
+        T.same(headers(pages(ns).cooldownManager, "right"), { "Erinnerungen ausblenden" })
+        T.eq(control(ns, "reminderHideResting").text:GetText(), "Beim Ausruhen")
         local c = control(ns, "hideCooldownManagerBorders")
         T.eq(c.text:GetText(), "Symbolränder ausblenden")
         T.truthy(c.tooltip:find("Verfolgte Stärkungseffekte", 1, true))
