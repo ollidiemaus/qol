@@ -7,12 +7,25 @@ raid-style party and raid frames. The design for the whole area, tracked buffs i
 ## Tracked buffs
 
 Icons of QoL's own on every group frame (`Features/GroupFrames.lua`), for the spells in
-`QoLDB.trackedBuffs` (`{ spell, kind, on }`, account-wide, in the order added; not an option, so the
-page's Defaults button only switches `groupFrameBuffs` off). The table's Show column picks the kind
-(`GroupFrames.SetKind`): a "has it" icon shows while the player's own cast of the buff is on the
-member, with the cooldown sweep and a stack number above one; a "lacks it" icon, desaturated with
-neither, while the member has no buff of the name at all (#121). All at one spot (the top right
-corner, side by side towards the left, 16 pixels), in the list's order whatever their kind.
+`QoLDB.trackedBuffs` (`{ spell, kind, spot, on }`, account-wide, in the order added; not an option,
+so the page's Defaults button switches `groupFrameBuffs` off and resets the size and countdown numbers,
+and keeps the list). The table's Show column picks the kind (`GroupFrames.SetKind`): a "has it" icon
+shows while the player's own cast of the buff is on the member, with the cooldown sweep and a stack
+number above one; a "lacks it" icon, desaturated with neither, while the member has no buff of the
+name at all (#121).
+
+- **Spots (#122):** the Position column (`GroupFrames.SetSpot`) picks one of `GroupFrames.SPOTS`, the
+  nine anchor points of the frame, `TOPRIGHT` for a line saved before there were spots or with one this
+  QoL doesn't know. Icons on one spot line up in the list's order, whatever their kind, 1 pixel apart
+  and 2 in from the edges: from a left spot rightwards, from a right spot leftwards, and on the middle
+  column (top, centre, bottom) in a row centred on the spot. All rows run across the frame, as raid
+  frames are wide and short. A frame's shown icons are counted per spot before any is placed, so a
+  centred row knows its length and a hidden icon leaves no gap; an icon is re-anchored only when its
+  spot, place or size changed.
+- **Size and countdown:** `groupFrameBuffSize` (16, the slider 10 to 40) sizes every icon;
+  `groupFrameBuffCountdown` (off) turns on the cooldown frame's own countdown numbers
+  (`SetHideCountdownNumbers`), so a "has it" icon shows the seconds left; a "lacks it" icon has no
+  cooldown, so none. Both are watched and redraw every frame.
 A line applies only where the character knows the spell at some rank (`ns.KnowsAnyRank`, shared
 with the reminders); the page greys out the others. An entry with a kind this QoL doesn't know (a
 newer QoL's) stays in the list and is left out of everything else.

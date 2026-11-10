@@ -247,6 +247,13 @@ Things only the real client can confirm:
   Wild. It goes when a member dies, goes offline or runs out of range (about 40 yards) and comes back
   when they return; note whether `UnitInRange` answers secret (`/run print(issecretvalue(UnitInRange("party1")))`)
   in and out of combat, since a secret answer hides the icon.
+- Tracked buffs, spots and size (Forever, #122): each of the nine Positions puts the icon at that
+  place on a raid frame and a raid-style party frame, clear of the frame's border; two lines on one
+  corner sit side by side towards the middle, two on Centre centred, and when one goes the other moves
+  up to close the gap. The size slider resizes them at once (at 40 two still fit on a raid frame's
+  top edge?). Countdown numbers ticked: the game's seconds show on a "has it" icon and are readable at
+  16 pixels (note if the game hides them on small cooldowns, its own size threshold); none on a
+  "lacks it" icon.
 - Group buff secrecy (Forever, #119): a macro on an action button (it runs in a fight too), in a
   party, with a buff of yours on party1:
   `/run local s,u,f=C_Secrets,"party1","HELPFUL|PLAYER" local ok,a=pcall(C_UnitAuras.GetAuraDataByIndex,u,1,f) print(s.ShouldAurasBeSecret(),s.ShouldUnitAuraIndexBeSecret(u,1,f),s.ShouldSpellAuraBeSecret(8936),ok,ok and a and issecretvalue(a.spellId) or a)`

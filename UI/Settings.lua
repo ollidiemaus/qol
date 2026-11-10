@@ -244,13 +244,14 @@ local function buildActionBars(page)
 end
 
 -- Cooldown Manager page (Forever): how the game's Cooldown Manager looks, then the reminders: their
--- switch and a table with a line per preset, its icon and name as the client gives them, then a line
--- per reminder of the player's own (greyed out where the character doesn't know the spell, with an
--- X), and last a line saying to drop a spell on the table, which adds one. The own lines are made as
--- the list grows and reused, each showing the list's entry at its place. Below the table, the reminder
--- row's icon size, its Unlock (Lock while unlocked) and Reset position buttons; beside them, on the
--- right, the Hide reminders checkboxes.
+-- switch, the reminder row's icon size, its Unlock (Lock while unlocked) and Reset position buttons;
+-- beside them, on the right, the Hide reminders checkboxes. Below both, a table with a line per preset,
+-- its icon and name as the client gives them, then a line per reminder of the player's own (greyed out
+-- where the character doesn't know the spell, with an X), and last a line saying to drop a spell on the
+-- table, which adds one. The own lines are made as the list grows and reused, each showing the list's
+-- entry at its place. Rows are placed once and the table grows downwards, so every row comes before it.
 local REMINDER_MIN_SIZE, REMINDER_MAX_SIZE = 20, 80 -- the reminder icons' size, in pixels
+local TRACKED_BUFF_MIN_SIZE, TRACKED_BUFF_MAX_SIZE = 10, 40 -- the tracked buff icons' size, in pixels
 
 -- A slider's value as the slider shows it, in pixels.
 local function pixels(value) return L.PIXELS:format(value) end
@@ -263,8 +264,22 @@ local function buildCooldownManager(page)
     page:Align()
     page:Header("left", L.SECTION_REMINDERS)
     page:Checkbox("left", "reminders", L.REMINDERS, L.REMINDERS_TIP)
+    -- The row's size and place: Unlock puts it in its mover state until Lock or the window closes.
+    page:Slider("left", "reminderIconSize", L.REMINDER_ICON_SIZE, REMINDER_MIN_SIZE, REMINDER_MAX_SIZE, pixels,
+        L.REMINDER_ICON_SIZE_TIP)
+    local move = page:Button("left", L.REMINDER_ROW, L.REMINDER_UNLOCK, L.REMINDER_ROW_TIP, function()
+        Reminders.SetUnlocked(not Reminders.IsUnlocked())
+    end)
+    page:Button("left", L.REMINDER_ROW_POSITION, L.REMINDER_RESET_POSITION, L.REMINDER_RESET_POSITION_TIP,
+        function() Reminders.ResetPosition() end)
+    SettingsPanel.window.frame:HookScript("OnHide", function() Reminders.SetUnlocked(false) end)
+    page:Header("right", L.SECTION_HIDE_REMINDERS)
+    for _, condition in ipairs(Reminders.CONDITIONS) do
+        page:Checkbox("right", condition.key, L[condition.text], L[condition.text .. "_TIP"])
+    end
+
     local ON, REMOVE = 2, 3 -- the table's columns after the reminders' names
-    local NO_TITLE, JOINED = nil, true -- right below the switch, in its section
+    local NO_TITLE, JOINED = nil, true -- right below the rows above, in the Reminders section
     local reminders = page:Table({
         { caption = L.REMINDER },
         { caption = L.REMINDER_ON, width = 60 },
@@ -277,10 +292,6 @@ local function buildCooldownManager(page)
         }, { icon = function() return Reminders.IconOf(preset) end })
     end
     reminders:Line(L.REMINDER_DROP, L.REMINDER_DROP_TIP, {}, { footer = true })
-    page:Header("right", L.SECTION_HIDE_REMINDERS)
-    for _, condition in ipairs(Reminders.CONDITIONS) do
-        page:Checkbox("right", condition.key, L[condition.text], L[condition.text .. "_TIP"])
-    end
 
     -- The player's own as the page last asked for them, and a line for each place in the list. A
     -- change to the list (or to the spells known) refreshes the page through OnChange.
@@ -298,16 +309,6 @@ local function buildCooldownManager(page)
         }, { icon = function() return entry().icon end, enabled = known,
             shown = function() return own[index] ~= nil end })
     end
-
-    -- The row's size and place: Unlock puts it in its mover state until Lock or the window closes.
-    page:Slider("left", "reminderIconSize", L.REMINDER_ICON_SIZE, REMINDER_MIN_SIZE, REMINDER_MAX_SIZE, pixels,
-        L.REMINDER_ICON_SIZE_TIP)
-    local move = page:Button("left", L.REMINDER_ROW, L.REMINDER_UNLOCK, L.REMINDER_ROW_TIP, function()
-        Reminders.SetUnlocked(not Reminders.IsUnlocked())
-    end)
-    page:Button("left", L.REMINDER_ROW_POSITION, L.REMINDER_RESET_POSITION, L.REMINDER_RESET_POSITION_TIP,
-        function() Reminders.ResetPosition() end)
-    SettingsPanel.window.frame:HookScript("OnHide", function() Reminders.SetUnlocked(false) end)
 
     local refresh = page.Refresh
     function page:Refresh()
@@ -485,10 +486,13 @@ end
 -- the right. The buffs checkbox shows and changes the game's own setting (ns.GroupFrames.GAME_BUFFS_CVAR)
 -- through ns.HiddenSettings, as the Graphics & Camera page does its rows: the game keeps it, the row has
 -- no reset, so the page's Defaults button leaves it alone, and it's greyed out while the game wouldn't
--- take it (in combat, if the game protects it). Under it the tracked buffs' switch and their table: a
--- line per tracked buff (greyed out where the character doesn't know the spell, with an X), and last
--- a line saying to drop a spell on the table, which adds one. The lines are made as the list grows and
--- reused, each showing the list's entry at its place. The list isn't an option, so Defaults keeps it.
+-- take it (in combat, if the game protects it). Under it the tracked buffs' switch, the icons' size and
+-- the countdown numbers (plain options), and the tracked buffs' table across the page: a line per
+-- tracked buff (its Show and Position, greyed out where the character doesn't know the spell, with an X),
+-- and last a line saying to drop a spell on the table, which adds one. The lines are made as the list
+-- grows and reused, each showing the list's entry at its place. Rows are placed once and a table grows
+-- downwards, so every row, the right column's too, comes before it. The list isn't an option, so Defaults
+-- keeps it.
 local function buildGroupFrames(page)
     local GroupFrames = ns.GroupFrames
     local cvar = GroupFrames.GAME_BUFFS_CVAR
@@ -498,19 +502,26 @@ local function buildGroupFrames(page)
     page:Header("left", L.SECTION_BUFFS)
     page:Checkbox("left", gameBuffs, L.GAME_BUFFS, L.GAME_BUFFS_TIP, { enabled = gameBuffs.canChange })
     page:Checkbox("left", "groupFrameBuffs", L.GROUP_FRAME_BUFFS, L.GROUP_FRAME_BUFFS_TIP)
-    local SHOW, ON, REMOVE = 2, 3, 4 -- the table's columns after the tracked buffs' names
-    local NO_TITLE, JOINED = nil, true -- right below the switch, in its section
+    page:Slider("left", "groupFrameBuffSize", L.TRACKED_BUFF_SIZE, TRACKED_BUFF_MIN_SIZE, TRACKED_BUFF_MAX_SIZE,
+        pixels, L.TRACKED_BUFF_SIZE_TIP)
+    page:Checkbox("left", "groupFrameBuffCountdown", L.TRACKED_BUFF_COUNTDOWN, L.TRACKED_BUFF_COUNTDOWN_TIP)
+
+    page:Header("right", L.SECTION_HIDE)
+    page:Checkbox("right", "hideRaidManager", L.HIDE_RAID_MANAGER, L.HIDE_RAID_MANAGER_TIP)
+
+    local SHOW, SPOT, ON, REMOVE = 2, 3, 4, 5 -- the table's columns after the tracked buffs' names
+    local NO_TITLE, JOINED = nil, true -- right below the rows above, in the Buffs section
     local kinds = { { value = "has", label = L.TRACKED_BUFF_HAS }, { value = "lacks", label = L.TRACKED_BUFF_LACKS } }
+    local spots = {}
+    for _, spot in ipairs(GroupFrames.SPOTS) do spots[#spots + 1] = { value = spot, label = L["TRACKED_BUFF_SPOT_" .. spot] } end
     local tracked = page:Table({
         { caption = L.TRACKED_BUFF },
         { caption = L.TRACKED_BUFF_SHOW, width = 90 },
+        { caption = L.TRACKED_BUFF_POSITION, width = 110 },
         { caption = L.TRACKED_BUFF_ON, width = 40 },
         { caption = "", width = 20 },
     }, NO_TITLE, JOINED, function() GroupFrames.AddFromCursor() end)
     tracked:Line(L.TRACKED_BUFF_DROP, L.TRACKED_BUFF_DROP_TIP, {}, { footer = true })
-
-    page:Header("right", L.SECTION_HIDE)
-    page:Checkbox("right", "hideRaidManager", L.HIDE_RAID_MANAGER, L.HIDE_RAID_MANAGER_TIP)
 
     -- The lines as the page last asked for them, and a table line for each place in the list.
     local lines, made = GroupFrames.Lines(), 0
@@ -522,6 +533,11 @@ local function buildGroupFrames(page)
                 get = function() return entry().kind end,
                 set = function(kind) GroupFrames.SetKind(entry().index, kind) end,
             } },
+            [SPOT] = { kind = "dropdown", tooltip = L.TRACKED_BUFF_POSITION_TIP, choices = spots, enabled = known,
+                key = {
+                    get = function() return entry().spot end,
+                    set = function(spot) GroupFrames.SetSpot(entry().index, spot) end,
+                } },
             [ON] = { kind = "checkbox", tooltip = L.TRACKED_BUFF_SPELL_TIP, enabled = known, key = {
                 get = function() return entry().on == true end,
                 set = function(on) GroupFrames.SetOn(entry().index, on) end,

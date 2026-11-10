@@ -161,21 +161,27 @@ On WoW Forever, a page for the game's own raid-style party and raid frames:
 - **Show tracked buffs:** your own icons for the buffs you choose, on every group frame: raid frames,
   party frames in raid style, your own frame too (not pets, arena, target or focus). Drag a spell from
   your spellbook onto the page's table to track it; a spell dragged twice makes no second line. Its Show
-  column says when the icon shows, in the frame's top right corner:
+  column says when the icon shows:
   - **Has it:** while your own cast of that buff is on the member (another druid's Regrowth doesn't
     count), at any rank, with a dark sweep for the time left and a number for more than one stack.
+    Tick **Countdown numbers** to add the game's seconds-left numbers too.
   - **Lacks it:** a grey icon while the member has no buff of that name, at any rank and from anyone;
     the group version counts too (Gift of the Wild for Mark of the Wild, Arcane Brilliance for Arcane
     Intellect, Greater Blessings for Blessings, and so on). It's gone the moment the member gets the
     buff, and never shows on a dead, offline or out-of-range member.
+
+  Its **Position** puts the icon at one of nine spots on the frame: a corner, the middle of an edge or
+  the centre (new lines start at the top right). Icons on the same spot sit side by side in the list's
+  order, from the spot towards the middle, and one that isn't showing leaves no gap. The **Tracked buff
+  size** slider sets how big all of them are.
 
   Each line has a checkbox to pause it and an X to remove it. The list is the same
   on all your characters, in the order you added it; lines for spells a character doesn't know are
   greyed out there and show nothing. The icons let clicks through, so clicking a frame and click
   casting work as before, and they appear on frames made in combat too. While the game keeps a buff's
   data secret its icon stays hidden, and it comes back once the data is readable. Off by default, and
-  it costs nothing while it's off or you're not in a group; the Defaults button switches it off and
-  keeps your list. Other addons can switch it through QoL's API (`groupframes`), which never touches
+  it costs nothing while it's off or you're not in a group; the Defaults button switches it off, resets
+  the size and countdown numbers, and keeps your list. Other addons can switch it through QoL's API (`groupframes`), which never touches
   the game's Display buffs setting.
 - **Hide the raid manager:** the tab at the edge of the screen that the game shows in every group (ready
   check, world markers, the group frames' options) is gone while you're in a group, and back the moment
@@ -276,7 +282,7 @@ anywhere. Press **Lock**, or close the settings window, to fix it there; the pla
 your characters, after a reload too, and stays put whatever your screen. **Reset** next to
 **Reminder row position** puts it back, and **Icon size** sets how big the icons are.
 
-Beside the table, the **Hide reminders** boxes say when the reminders stay away:
+On the right, the **Hide reminders** boxes say when the reminders stay away:
 
 - **While resting**, in an inn or a city (off by default).
 - **In combat** (off). Left off, a buff that runs out mid-fight shows its reminder whenever the game

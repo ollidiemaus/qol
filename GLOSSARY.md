@@ -81,7 +81,8 @@ _Avoid_: minimap feature, minimap widget
 
 **Spot**:
 Where an element's Position puts it: the game's own place, a row above or below the minimap, or a place
-inside the map.
+inside the map; for a tracked buff, one of nine places on the group frame (four corners, four edge
+middles, the centre).
 _Avoid_: position (that's the setting that picks the spot), slot, anchor
 
 **Offset**:

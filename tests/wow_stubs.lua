@@ -1220,6 +1220,7 @@ local function install()
             function frame:SetCooldownFromDurationObject(duration) self.duration = duration end
             function frame:SetCooldown(start, duration) self.duration = { start = start, seconds = duration } end
             function frame:Clear() self.duration = nil end
+            function frame:SetHideCountdownNumbers(hide) self.hideCountdownNumbers = hide == true end
         end
         return frame
     end

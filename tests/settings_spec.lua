@@ -478,6 +478,25 @@ describe("settings pages", function()
         error("no button row " .. name)
     end
 
+    it("keeps every row above the reminders table, so a growing list covers none", function()
+        local ns, page = remindersPage()
+        local state = Stubs.state()
+        for _, spell in ipairs({ THORNS_1, MARK }) do
+            state.cursorInfo = { "spell", 1, "spell", spell, spell }
+            page.tables[1].frame:RunScript("OnReceiveDrag")
+        end
+        local tableTop = page.tables[1].top
+        local rows = { buttonRow(page, "Reminder row"), buttonRow(page, "Reminder row position") }
+        for _, key in ipairs({ "reminders", "reminderIconSize", "reminderHideResting", "reminderHideCombat",
+            "reminderHideMounted", "reminderHideDeadOrFlying", "reminderHideMaxLevel" }) do
+            rows[#rows + 1] = control(ns, key)
+        end
+        for _, c in ipairs(rows) do
+            local row = c.row
+            T.truthy(-row:PointFor("TOPLEFT")[5] + row:GetHeight() <= tableTop, c.text:GetText() .. " above the table")
+        end
+    end)
+
     it("has an icon size slider for the reminder row, 40 by default", function()
         local ns = remindersPage()
         local size = control(ns, "reminderIconSize")
@@ -608,7 +627,8 @@ describe("settings pages", function()
         return ns, page
     end
 
-    local TRACKED_HEADER, TRACKED_DROP = "Tracked buff | Show | On | ", "Drag a spell here from your spellbook | - | - | -"
+    local TRACKED_HEADER, TRACKED_DROP = "Tracked buff | Show | Position | On | ",
+        "Drag a spell here from your spellbook | - | - | - | -"
 
     local function trackedRows(...)
         local rows = { TRACKED_HEADER }
@@ -644,19 +664,19 @@ describe("settings pages", function()
         local state = Stubs.state()
         state.cursorInfo = { "spell", 1, "spell", REGROWTH_1, REGROWTH_1 }
         page.tables[1].lines[1].frame:RunScript("OnReceiveDrag")
-        T.same(tableRows(page), trackedRows("Regrowth | dropdown | checkbox | remove"))
+        T.same(tableRows(page), trackedRows("Regrowth | dropdown | dropdown | checkbox | remove"))
         T.eq(trackedLine(page, "Regrowth").icon.texture, 136085)
         T.eq(state.cursorInfo, nil)
         state.cursorInfo = { "spell", 1, "spell", REGROWTH_2, REGROWTH_2 }
         page.tables[1].frame:RunScript("OnReceiveDrag")
         state.cursorInfo = { "item", 4540, "item:4540" }
         trackedLine(page, "Regrowth").frame:RunScript("OnReceiveDrag")
-        T.same(tableRows(page), trackedRows("Regrowth | dropdown | checkbox | remove"), "a duplicate and an item add nothing")
+        T.same(tableRows(page), trackedRows("Regrowth | dropdown | dropdown | checkbox | remove"), "a duplicate and an item add nothing")
         T.same(state.cursorInfo, { "item", 4540, "item:4540" }, "the item stays on the cursor")
         state.cursorInfo = { "spell", 1, "spell", REJUVENATION, REJUVENATION }
         page.tables[1].frame:RunScript("OnReceiveDrag")
-        T.same(tableRows(page), trackedRows("Regrowth | dropdown | checkbox | remove", "Rejuvenation | dropdown | checkbox | remove"),
-            "in the order added")
+        T.same(tableRows(page), trackedRows("Regrowth | dropdown | dropdown | checkbox | remove",
+            "Rejuvenation | dropdown | dropdown | checkbox | remove"), "in the order added")
     end)
 
     it("pauses a tracked buff with its checkbox, removes it with its X, and greys out an unknown spell", function()
@@ -667,13 +687,14 @@ describe("settings pages", function()
         T.truthy(rejuvenation.icon:IsDesaturated())
         T.falsy(rejuvenation.cells[2].widget:IsEnabled())
         T.falsy(rejuvenation.cells[3].widget:IsEnabled())
-        T.truthy(rejuvenation.cells[4].widget:IsEnabled())
+        T.falsy(rejuvenation.cells[4].widget:IsEnabled())
+        T.truthy(rejuvenation.cells[5].widget:IsEnabled())
         T.same({ regrowth.label:GetTextColor() }, { 1, 0.82, 0, 1 }, "known at another rank")
-        regrowth.cells[3].widget:Click()
+        regrowth.cells[4].widget:Click()
         T.same(QoLDB.trackedBuffs[2], { spell = REGROWTH_2, kind = "has", on = false })
-        T.falsy(regrowth.cells[3].widget:GetChecked())
-        rejuvenation.cells[4].widget:Click()
-        T.same(tableRows(page), trackedRows("Regrowth | dropdown | checkbox | remove"))
+        T.falsy(regrowth.cells[4].widget:GetChecked())
+        rejuvenation.cells[5].widget:Click()
+        T.same(tableRows(page), trackedRows("Regrowth | dropdown | dropdown | checkbox | remove"))
         T.same(QoLDB.trackedBuffs, { { spell = REGROWTH_2, kind = "has", on = false } })
     end)
 
@@ -693,14 +714,60 @@ describe("settings pages", function()
         T.same(QoLDB.trackedBuffs, { { spell = REGROWTH_2, kind = "has", on = true } })
     end)
 
-    it("switches tracked buffs off with Defaults and keeps the list", function()
-        local ns, page = groupFramesPage({ groupFrameBuffs = true }, { { spell = REGROWTH_1, kind = "has", on = true } })
+    it("puts a tracked buff at one of nine spots on the frame, with the Position column", function()
+        local ns, page = groupFramesPage(nil, { { spell = REGROWTH_2, kind = "has", on = true } })
+        local column = trackedLine(page, "Regrowth").cells[3]
+        T.eq(column.kind, "dropdown")
+        T.same(values(column), { "TOPLEFT", "TOP", "TOPRIGHT", "LEFT", "CENTER", "RIGHT", "BOTTOMLEFT", "BOTTOM",
+            "BOTTOMRIGHT" })
+        T.eq(column.widget.text, "Top right", "a line saved without a spot")
+        T.truthy(column.tooltip:find("towards the middle", 1, true))
+        radio(column, "Bottom left").select()
+        T.same(QoLDB.trackedBuffs, { { spell = REGROWTH_2, kind = "has", spot = "BOTTOMLEFT", on = true } })
+        T.eq(column.widget.text, "Bottom left")
+        T.eq(ns.GroupFrames.Lines()[1].spot, "BOTTOMLEFT")
+    end)
+
+    it("has the icon size slider and the countdown numbers checkbox, off by default, with tooltips", function()
+        local ns = groupFramesPage()
+        local size, on = control(ns, "groupFrameBuffSize")
+        T.eq(on, pages(ns).groupFrames)
+        T.eq(size.text:GetText(), "Tracked buff size")
+        T.eq(size.tooltip, ns.L.TRACKED_BUFF_SIZE_TIP)
+        T.eq(size.widget:GetValue(), 16)
+        local countdown = control(ns, "groupFrameBuffCountdown")
+        T.eq(countdown.text:GetText(), "Countdown numbers")
+        T.eq(countdown.tooltip, ns.L.TRACKED_BUFF_COUNTDOWN_TIP)
+        T.eq(countdown.widget:GetChecked(), false)
+        countdown.widget:Click()
+        T.eq(ns.Options:Get("groupFrameBuffCountdown"), true)
+    end)
+
+    it("keeps every row above the tracked buffs' table, so a growing list covers none", function()
+        local ns, page = groupFramesPage()
+        local state = Stubs.state()
+        for _, spell in ipairs({ REGROWTH_1, REJUVENATION }) do
+            state.cursorInfo = { "spell", 1, "spell", spell, spell }
+            page.tables[1].frame:RunScript("OnReceiveDrag")
+        end
+        local tableTop = page.tables[1].top
+        for _, key in ipairs({ "groupFrameBuffs", "groupFrameBuffSize", "groupFrameBuffCountdown", "hideRaidManager" }) do
+            local row = control(ns, key).row
+            T.truthy(-row:PointFor("TOPLEFT")[5] + row:GetHeight() <= tableTop, key .. " above the table")
+        end
+    end)
+
+    it("switches tracked buffs off and resets size and countdown numbers with Defaults, and keeps the list", function()
+        local ns, page = groupFramesPage({ groupFrameBuffs = true, groupFrameBuffSize = 30, groupFrameBuffCountdown = true },
+            { { spell = REGROWTH_1, kind = "has", on = true } })
         page.defaultsButton:Click()
         page.defaultsButton:Click()
         Stubs.RunTimers()
         T.eq(ns.Options:Get("groupFrameBuffs"), false)
+        T.eq(ns.Options:Get("groupFrameBuffSize"), 16)
+        T.eq(ns.Options:Get("groupFrameBuffCountdown"), false)
         T.same(QoLDB.trackedBuffs, { { spell = REGROWTH_1, kind = "has", on = true } })
-        T.same(tableRows(page), trackedRows("Regrowth | dropdown | checkbox | remove"))
+        T.same(tableRows(page), trackedRows("Regrowth | dropdown | dropdown | checkbox | remove"))
     end)
 
     it("names the Group Frames page and its rows in German", function()
@@ -709,6 +776,8 @@ describe("settings pages", function()
         Stubs.Login()
         T.eq(ns.SettingsPanel.window.buttons.groupFrames.label:GetText(), "Gruppenfenster")
         T.eq(control(ns, "hideRaidManager").text:GetText(), "Schlachtzugsmanager ausblenden")
+        T.eq(control(ns, "groupFrameBuffSize").text:GetText(), "Größe verfolgter Buffs")
+        T.eq(ns.L.TRACKED_BUFF_SPOT_BOTTOMLEFT, "Unten links")
     end)
 
     it("leaves the Cooldown Manager page out on Forever without the game's rows", function()

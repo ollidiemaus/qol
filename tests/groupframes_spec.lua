@@ -5,6 +5,7 @@ local describe, it = T.describe, T.it
 -- Forever's Regrowth (ranks 1 and 2) and Rejuvenation, with made-up icons.
 local REGROWTH_1, REGROWTH_2, REJUVENATION = 8936, 8938, 774
 local REGROWTH_ICON, REJUVENATION_ICON = 136085, 136081
+local LIFEBLOOM, LIFEBLOOM_ICON = 33763, 134206
 -- Mark of the Wild (ranks 1 and 2) and its group version, Gift of the Wild.
 local MARK_1, MARK_2, GIFT = 1126, 5232, 21849
 local MARK_ICON, GIFT_ICON = 136078, 136038
@@ -12,6 +13,7 @@ local MARK_ICON, GIFT_ICON = 136078, 136038
 local DRUID = {
     [REGROWTH_1] = { name = "Regrowth", texture = REGROWTH_ICON, subtext = "Rank 1" },
     [REJUVENATION] = { name = "Rejuvenation", texture = REJUVENATION_ICON, subtext = "Rank 1" },
+    [LIFEBLOOM] = { name = "Lifebloom", texture = LIFEBLOOM_ICON, subtext = "" },
     [MARK_1] = { name = "Mark of the Wild", texture = MARK_ICON, subtext = "Rank 1" },
 }
 
@@ -25,7 +27,8 @@ local function start(savedOptions, tracked, known, options)
     state.gameSpells[REGROWTH_1] = { name = "Regrowth", texture = REGROWTH_ICON }
     state.gameSpells[REGROWTH_2] = { name = "Regrowth", texture = REGROWTH_ICON }
     state.gameSpells[REJUVENATION] = { name = "Rejuvenation", texture = REJUVENATION_ICON }
-    state.gameSpells[MARK_1] = { name = "Mark of the Wild", texture = MARK_ICON }
+    state.gameSpells[LIFEBLOOM] = { name = "Lifebloom", texture = LIFEBLOOM_ICON }
+    state.gameSpells[MARK_1] ={ name = "Mark of the Wild", texture = MARK_ICON }
     state.gameSpells[MARK_2] = { name = "Mark of the Wild", texture = MARK_ICON }
     state.gameSpells[GIFT] = { name = "Gift of the Wild", texture = GIFT_ICON }
     for id, info in pairs(known or DRUID) do state.spells[id] = info end
@@ -39,8 +42,8 @@ local function start(savedOptions, tracked, known, options)
 end
 
 local ON = { groupFrameBuffs = true }
-local function has(spell, on) return { spell = spell, kind = "has", on = on ~= false } end
-local function lacks(spell, on) return { spell = spell, kind = "lacks", on = on ~= false } end
+local function has(spell, on, spot) return { spell = spell, kind = "has", on = on ~= false, spot = spot } end
+local function lacks(spell, on, spot) return { spell = spell, kind = "lacks", on = on ~= false, spot = spot } end
 
 -- A buff on a member: the player's own cast unless caster says otherwise, 30 seconds of 60 left.
 local function buff(name, spellId, caster, extra)
@@ -73,6 +76,16 @@ local function shownIcons(frame)
     end
     table.sort(icons, function(a, b) return a:GetPoint(1) and select(4, a:GetPoint(1)) > select(4, b:GetPoint(1)) end)
     return icons
+end
+
+-- Where each shown icon sits, by texture: { point, relativePoint, x, y } of its anchor on the frame.
+local function places(frame)
+    local found = {}
+    for _, icon in ipairs(shownIcons(frame)) do
+        local point, _, relativePoint, x, y = icon:GetPoint(1)
+        found[icon.Icon.texture] = { point, relativePoint, x, y }
+    end
+    return found
 end
 
 -- Each shown icon's texture.
@@ -228,6 +241,94 @@ describe("Group frames: tracked buffs", function()
         Stubs.SetUnitBuffs("raid1", { buff("Regrowth", REGROWTH_1) })
         Stubs.RunTimers()
         T.same({ shownIcons(frame)[1]:GetPoint(1) }, first, "a hidden one leaves no gap")
+    end)
+
+    -- The anchor each spot gives a lone 16-pixel icon, 2 pixels in from the frame's edges.
+    local SPOT_PLACES = {
+        TOPLEFT = { "TOPLEFT", "TOPLEFT", 2, -2 }, TOP = { "TOP", "TOP", 0, -2 },
+        TOPRIGHT = { "TOPRIGHT", "TOPRIGHT", -2, -2 }, LEFT = { "LEFT", "LEFT", 2, 0 },
+        CENTER = { "CENTER", "CENTER", 0, 0 }, RIGHT = { "RIGHT", "RIGHT", -2, 0 },
+        BOTTOMLEFT = { "BOTTOMLEFT", "BOTTOMLEFT", 2, 2 }, BOTTOM = { "BOTTOM", "BOTTOM", 0, 2 },
+        BOTTOMRIGHT = { "BOTTOMRIGHT", "BOTTOMRIGHT", -2, 2 },
+    }
+    for spot, place in pairs(SPOT_PLACES) do
+        it("puts an icon at its spot on the frame: " .. spot, function()
+            start(ON, { has(REGROWTH_1, true, spot) })
+            local frame = Stubs.NewGroupFrame("raid1")
+            Stubs.SetUnitBuffs("raid1", { buff("Regrowth", REGROWTH_1) })
+            Stubs.RunTimers()
+            T.same(places(frame), { [REGROWTH_ICON] = place })
+        end)
+    end
+
+    it("puts a line without a spot, or with one this QoL doesn't know, at the top right", function()
+        start(ON, { has(REGROWTH_1), has(REJUVENATION, true, "SOMEWHERE") })
+        local frame = Stubs.NewGroupFrame("raid1")
+        Stubs.SetUnitBuffs("raid1", { buff("Regrowth", REGROWTH_1), buff("Rejuvenation", REJUVENATION) })
+        Stubs.RunTimers()
+        T.same(places(frame), {
+            [REGROWTH_ICON] = { "TOPRIGHT", "TOPRIGHT", -2, -2 },
+            [REJUVENATION_ICON] = { "TOPRIGHT", "TOPRIGHT", -19, -2 },
+        })
+    end)
+
+    it("lines up icons on one spot in the list's order towards the middle, and closes a hidden one's gap", function()
+        start(ON, { has(REGROWTH_1, true, "BOTTOMLEFT"), lacks(MARK_1, true, "CENTER"),
+            has(REJUVENATION, true, "BOTTOMLEFT"), has(LIFEBLOOM, true, "CENTER") })
+        local frame = Stubs.NewGroupFrame("raid1")
+        Stubs.SetUnitBuffs("raid1", { buff("Regrowth", REGROWTH_1), buff("Rejuvenation", REJUVENATION),
+            buff("Lifebloom", LIFEBLOOM) })
+        Stubs.RunTimers()
+        T.same(places(frame), {
+            [REGROWTH_ICON] = { "BOTTOMLEFT", "BOTTOMLEFT", 2, 2 },
+            [REJUVENATION_ICON] = { "BOTTOMLEFT", "BOTTOMLEFT", 19, 2 },
+            [MARK_ICON] = { "CENTER", "CENTER", -8.5, 0 },
+            [LIFEBLOOM_ICON] = { "CENTER", "CENTER", 8.5, 0 },
+        }, "corners grow towards the middle, the centre's row is centred")
+        Stubs.SetUnitBuffs("raid1", { buff("Rejuvenation", REJUVENATION), buff("Lifebloom", LIFEBLOOM),
+            buff("Mark of the Wild", MARK_1) })
+        Stubs.RunTimers()
+        T.same(places(frame), {
+            [REJUVENATION_ICON] = { "BOTTOMLEFT", "BOTTOMLEFT", 2, 2 },
+            [LIFEBLOOM_ICON] = { "CENTER", "CENTER", 0, 0 },
+        }, "no gap where one hid")
+    end)
+
+    it("sizes every icon by the size slider", function()
+        local ns = start(ON, { has(REGROWTH_1), lacks(MARK_1, true, "BOTTOM") })
+        T.eq(ns.Options:Get("groupFrameBuffSize"), 16)
+        local frame = Stubs.NewGroupFrame("raid1")
+        Stubs.SetUnitBuffs("raid1", { buff("Regrowth", REGROWTH_1) })
+        Stubs.RunTimers()
+        ns.Options:Set("groupFrameBuffSize", 24)
+        Stubs.RunTimers()
+        for _, icon in ipairs(shownIcons(frame)) do
+            T.eq(icon:GetWidth(), 24)
+            T.eq(icon:GetHeight(), 24)
+        end
+        T.eq(#shownIcons(frame), 2)
+    end)
+
+    it("adds the game's countdown numbers to \"has it\" icons once ticked, off by default", function()
+        local ns = start(ON, { has(REGROWTH_1) })
+        T.eq(ns.Options:Get("groupFrameBuffCountdown"), false)
+        local frame = Stubs.NewGroupFrame("raid1")
+        Stubs.SetUnitBuffs("raid1", { buff("Regrowth", REGROWTH_1) })
+        Stubs.RunTimers()
+        T.truthy(shownIcons(frame)[1].Cooldown.hideCountdownNumbers)
+        ns.Options:Set("groupFrameBuffCountdown", true)
+        Stubs.RunTimers()
+        T.falsy(shownIcons(frame)[1].Cooldown.hideCountdownNumbers)
+        ns.GroupFrames.SetKind(1, "lacks")
+        Stubs.SetUnitBuffs("raid1", {})
+        Stubs.RunTimers()
+        T.eq(shownIcons(frame)[1].Cooldown.duration, nil, "a \"lacks it\" icon has no cooldown to count down")
+        ns.GroupFrames.SetKind(1, "has")
+        Stubs.SetUnitBuffs("raid1", { buff("Regrowth", REGROWTH_1) })
+        Stubs.RunTimers()
+        ns.Options:Set("groupFrameBuffCountdown", false)
+        Stubs.RunTimers()
+        T.truthy(shownIcons(frame)[1].Cooldown.hideCountdownNumbers)
     end)
 
     it("shows the time left as a sweep and the stacks above one", function()
@@ -432,14 +533,18 @@ describe("Group frames: tracked buffs", function()
         T.falsy(ns.GroupFrames.AddFromCursor())
         state.cursorInfo = { "spell", 1, "spell", REJUVENATION, REJUVENATION }
         T.truthy(ns.GroupFrames.AddFromCursor())
-        T.same(QoLDB.trackedBuffs, { newer, has(REGROWTH_1), has(REJUVENATION) })
+        T.same(QoLDB.trackedBuffs, { newer, has(REGROWTH_1, true, "TOPRIGHT"), has(REJUVENATION, true, "TOPRIGHT") },
+            "at the top right")
+        ns.GroupFrames.SetSpot(3, "BOTTOMLEFT")
+        ns.GroupFrames.SetSpot(2, "NOWHERE")
         T.same(ns.GroupFrames.Lines(), {
-            { index = 2, name = "Regrowth", icon = REGROWTH_ICON, kind = "has", on = true, known = true },
-            { index = 3, name = "Rejuvenation", icon = REJUVENATION_ICON, kind = "has", on = true, known = true },
+            { index = 2, name = "Regrowth", icon = REGROWTH_ICON, kind = "has", spot = "TOPRIGHT", on = true, known = true },
+            { index = 3, name = "Rejuvenation", icon = REJUVENATION_ICON, kind = "has", spot = "BOTTOMLEFT", on = true,
+                known = true },
         })
         ns.GroupFrames.SetOn(2, false)
         ns.GroupFrames.Remove(3)
-        T.same(QoLDB.trackedBuffs, { newer, has(REGROWTH_1, false) })
+        T.same(QoLDB.trackedBuffs, { newer, has(REGROWTH_1, false, "TOPRIGHT") })
     end)
 
     it("keeps the account's list across a reload and on a character that knows none of it", function()
@@ -450,7 +555,8 @@ describe("Group frames: tracked buffs", function()
         Stubs.SetUnitBuffs("raid1", { buff("Regrowth", REGROWTH_1) })
         Stubs.RunTimers()
         T.same(seen(frame), {})
-        T.same(ns.GroupFrames.Lines(), { { index = 1, name = "Regrowth", icon = REGROWTH_ICON, kind = "has", on = true, known = false } })
+        T.same(ns.GroupFrames.Lines(), { { index = 1, name = "Regrowth", icon = REGROWTH_ICON, kind = "has",
+            spot = "TOPRIGHT", on = true, known = false } })
     end)
 
     for _, client in ipairs({ "retail", "classicEra" }) do
