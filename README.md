@@ -158,6 +158,19 @@ On WoW Forever, a page for the game's own raid-style party and raid frames:
 - **Show the game's buffs:** the game's own Display buffs setting for its group frames, right on the
   page. The checkbox shows what the game has and changes it there; QoL keeps no copy, never changes it
   on its own, and the page's Defaults button leaves it alone.
+- **Show tracked buffs:** your own icons for the buffs you choose, on every group frame: raid frames,
+  party frames in raid style, your own frame too (not pets, arena, target or focus). Drag a spell from
+  your spellbook onto the page's table to track it; a spell dragged twice makes no second line. An icon
+  shows in the frame's top right corner while your own cast of that buff is on the member (another
+  druid's Regrowth doesn't count), at any rank, with a dark sweep for the time left and a number for
+  more than one stack. Each line has a checkbox to pause it and an X to remove it. The list is the same
+  on all your characters, in the order you added it; lines for spells a character doesn't know are
+  greyed out there and show nothing. The icons let clicks through, so clicking a frame and click
+  casting work as before, and they appear on frames made in combat too. While the game keeps a buff's
+  data secret its icon stays hidden, and it comes back once the data is readable. Off by default, and
+  it costs nothing while it's off or you're not in a group; the Defaults button switches it off and
+  keeps your list. Other addons can switch it through QoL's API (`groupframes`), which never touches
+  the game's Display buffs setting.
 - **Hide the raid manager:** the tab at the edge of the screen that the game shows in every group (ready
   check, world markers, the group frames' options) is gone while you're in a group, and back the moment
   you untick the box. Your group frames stay. Off by default.
@@ -523,7 +536,7 @@ The pages, in five groups:
 - **Display**
   - **Interface:** hiding the system and bag bars, frames past the screen edge, tooltips.
   - **Unit Frames:** mana in bear and cat form, portrait hit text, health bars in class color.
-  - **Group Frames** (on Forever): the game's buffs on the group frames, hiding the raid manager.
+  - **Group Frames** (on Forever): the game's buffs and tracked buffs on the group frames, hiding the raid manager.
   - **Action Bars**, **Cooldown Manager** (on Forever) and **Viewport**.
 - **Maps:** **Minimap** and **World map** (on Forever and Classic Era).
 - **Input:** **Ring**, **Click casting** and **Controller** (on Forever).

@@ -32,6 +32,19 @@ function ns.IsUsable(value)
     return true
 end
 
+-- Whether the character knows a spell at any rank (the reminders' and the tracked buffs' lines): the
+-- client's answer for the spell's name is the rank it knows, taken only if it knows that spell, as the
+-- name can be an NPC's too. It asks the client each time; a caller on a busy path keeps the answer
+-- until SPELLS_CHANGED.
+function ns.KnowsAnyRank(spellID)
+    local book = C_SpellBook
+    if book.IsSpellKnownOrInSpellBook(spellID) == true then return true end
+    local name, lookup = C_Spell.GetSpellName(spellID), C_Spell.GetSpellIDForSpellIdentifier
+    if not (ns.IsUsable(name) and lookup) then return false end
+    local found = lookup(name)
+    return ns.IsUsable(found) and book.IsSpellKnownOrInSpellBook(found) == true
+end
+
 -- Whether the client is WoW Forever, for the features that are Forever's only (Retail may have the
 -- same frames, so the project decides, not the frames).
 function ns.IsForever()

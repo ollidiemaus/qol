@@ -235,6 +235,13 @@ Things only the real client can confirm:
   (which anchors them to the manager); unticking brings the tab back. Show the game's buffs agrees with
   the game's own setting, turns the game's buff icons on the group frames on and off, and a `/reload`
   keeps what the game has. No "tainted by" error after a fight with the raid manager hidden.
+- Tracked buffs (Forever): with Show tracked buffs ticked and Regrowth dragged onto the table, a
+  Regrowth of yours on a member shows its icon in the frame's top right corner, above the health bar
+  and readable at the frame's real size, with the sweep and stack number; another druid's doesn't.
+  Your own frame too, none on pet frames. Clicking the frame and click casting still work through the
+  icon. Someone joining or leaving (frames handed around) and joining a raid in combat put the icons on
+  the right members. Note when the icons go quiet because the game keeps the data secret (in and out of
+  combat, in a dungeon), and that they come back. No "tainted by" error after a raid fight.
 
 ## The hidden settings probe
 

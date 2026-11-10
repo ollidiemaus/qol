@@ -90,6 +90,7 @@ local DEFAULTS = {
     hidePortraitHitText = false,
     pastScreenEdge = false,
     hideRaidManager = false, -- Forever only, on the Group Frames page
+    groupFrameBuffs = false, -- tracked buffs on the group frames, Forever only; the list is QoLDB.trackedBuffs
 
     reloadCommand = true,
 
