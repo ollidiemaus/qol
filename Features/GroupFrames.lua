@@ -48,13 +48,14 @@ local GAP, INSET = 1, 2
 GroupFrames.SPOTS = { "TOPLEFT", "TOP", "TOPRIGHT", "LEFT", "CENTER", "RIGHT", "BOTTOMLEFT", "BOTTOM",
     "BOTTOMRIGHT" }
 GroupFrames.DEFAULT_SPOT = "TOPRIGHT"
--- Per spot, which way the icons on it line up across the frame (1 rightwards from the left edge, -1
--- leftwards from the right edge, 0 a row centred on the spot) and which way they're moved in from the
--- top or bottom edge (-1 down, 1 up, 0 not at all).
+-- Per spot, which way the icons on it line up across the frame (across: 1 rightwards from the left
+-- edge, -1 leftwards from the right edge, 0 a row centred on the spot) and which way they're moved in
+-- from the top or bottom edge (inward: -1 down, 1 up, 0 not at all).
 local LAYOUT = {
-    TOPLEFT = { 1, -1 }, TOP = { 0, -1 }, TOPRIGHT = { -1, -1 },
-    LEFT = { 1, 0 }, CENTER = { 0, 0 }, RIGHT = { -1, 0 },
-    BOTTOMLEFT = { 1, 1 }, BOTTOM = { 0, 1 }, BOTTOMRIGHT = { -1, 1 },
+    TOPLEFT = { across = 1, inward = -1 }, TOP = { across = 0, inward = -1 }, TOPRIGHT = { across = -1, inward = -1 },
+    LEFT = { across = 1, inward = 0 }, CENTER = { across = 0, inward = 0 }, RIGHT = { across = -1, inward = 0 },
+    BOTTOMLEFT = { across = 1, inward = 1 }, BOTTOM = { across = 0, inward = 1 },
+    BOTTOMRIGHT = { across = -1, inward = 1 },
 }
 local LEVEL_ABOVE = 5 -- the holder's frame level over the group frame's, above its bars
 local MAX_BUFFS = 255
@@ -117,7 +118,7 @@ end
 -- size, countdown: the size slider's and the countdown numbers checkbox's values, read with them.
 local due, dueNames, dueGroups = {}, {}, {}
 local needOwn, needAny = false, false
-local size, countdown = 16, false
+local size, countdown
 
 local function fillDue()
     for index = #due, 1, -1 do due[index], dueNames[index], dueGroups[index] = nil, nil, nil end
@@ -213,13 +214,13 @@ end
 -- only when its place or size changed.
 local function place(icon, holder, spot, nth, count)
     local layout, step = LAYOUT[spot], size + GAP
-    local across, x = layout[1]
-    if across == 0 then
+    local x
+    if layout.across == 0 then
         x = (nth - 1) * step - (count - 1) * step / 2
     else
-        x = across * (INSET + (nth - 1) * step)
+        x = layout.across * (INSET + (nth - 1) * step)
     end
-    local y = layout[2] * INSET
+    local y = layout.inward * INSET
     if icon.spot == spot and icon.x == x and icon.y == y and icon.size == size then return end
     icon.spot, icon.x, icon.y, icon.size = spot, x, y, size
     icon:ClearAllPoints()
@@ -320,10 +321,10 @@ local function draw(icon, entry, stacks, duration, expires)
     end
 end
 
--- The icons a frame shows, refilled per frame drawn: each one's line and numbers, and how many go on
--- each spot (so a centred row knows its length before its first icon is placed), then how many of them
--- are placed so far.
-local shownEntries, shownStacks, shownDurations, shownExpiries = {}, {}, {}, {}
+-- The icons a frame shows, refilled per frame drawn: each one's line, spot and numbers (parallel
+-- arrays, not a table per icon: this runs on every UNIT_AURA), and how many go on each spot (so a
+-- centred row knows its length before its first icon is placed), then how many of them are placed.
+local shownEntries, shownSpots, shownStacks, shownDurations, shownExpiries = {}, {}, {}, {}, {}
 local onSpot, placed = {}, {}
 
 -- Draws the tracked buffs on one group frame for its unit (nil: none).
@@ -350,6 +351,7 @@ local function drawFrame(frame, unit)
             shownEntries[count], shownStacks[count] = entry, stacks
             shownDurations[count], shownExpiries[count] = duration, expires
             local spot = spotOf(entry)
+            shownSpots[count] = spot
             onSpot[spot] = (onSpot[spot] or 0) + 1
         end
     end
@@ -357,8 +359,7 @@ local function drawFrame(frame, unit)
     clear(foundAny)
     if count > 0 then holder = holder or holderOf(frame) end
     for index = 1, count do
-        local entry = shownEntries[index]
-        local spot = spotOf(entry)
+        local entry, spot = shownEntries[index], shownSpots[index]
         local nth = (placed[spot] or 0) + 1
         placed[spot] = nth
         local icon = iconAt(holder, index)

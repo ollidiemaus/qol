@@ -164,7 +164,7 @@ On WoW Forever, a page for the game's own raid-style party and raid frames:
   column says when the icon shows:
   - **Has it:** while your own cast of that buff is on the member (another druid's Regrowth doesn't
     count), at any rank, with a dark sweep for the time left and a number for more than one stack.
-    Tick **Countdown numbers** under the table to add the game's seconds-left numbers too.
+    Tick **Countdown numbers** to add the game's seconds-left numbers too.
   - **Lacks it:** a grey icon while the member has no buff of that name, at any rank and from anyone;
     the group version counts too (Gift of the Wild for Mark of the Wild, Arcane Brilliance for Arcane
     Intellect, Greater Blessings for Blessings, and so on). It's gone the moment the member gets the

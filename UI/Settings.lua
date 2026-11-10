@@ -486,11 +486,13 @@ end
 -- the right. The buffs checkbox shows and changes the game's own setting (ns.GroupFrames.GAME_BUFFS_CVAR)
 -- through ns.HiddenSettings, as the Graphics & Camera page does its rows: the game keeps it, the row has
 -- no reset, so the page's Defaults button leaves it alone, and it's greyed out while the game wouldn't
--- take it (in combat, if the game protects it). Under it the tracked buffs' switch and their table: a
--- line per tracked buff (its Show and Position, greyed out where the character doesn't know the spell,
--- with an X), and last a line saying to drop a spell on the table, which adds one. The lines are made as
--- the list grows and reused, each showing the list's entry at its place. Below the table the icons' size
--- and the countdown numbers, plain options. The list isn't an option, so Defaults keeps it.
+-- take it (in combat, if the game protects it). Under it the tracked buffs' switch, the icons' size and
+-- the countdown numbers (plain options), and the tracked buffs' table across the page: a line per
+-- tracked buff (its Show and Position, greyed out where the character doesn't know the spell, with an X),
+-- and last a line saying to drop a spell on the table, which adds one. The lines are made as the list
+-- grows and reused, each showing the list's entry at its place. Rows are placed once and a table grows
+-- downwards, so every row, the right column's too, comes before it. The list isn't an option, so Defaults
+-- keeps it.
 local function buildGroupFrames(page)
     local GroupFrames = ns.GroupFrames
     local cvar = GroupFrames.GAME_BUFFS_CVAR
@@ -500,8 +502,15 @@ local function buildGroupFrames(page)
     page:Header("left", L.SECTION_BUFFS)
     page:Checkbox("left", gameBuffs, L.GAME_BUFFS, L.GAME_BUFFS_TIP, { enabled = gameBuffs.canChange })
     page:Checkbox("left", "groupFrameBuffs", L.GROUP_FRAME_BUFFS, L.GROUP_FRAME_BUFFS_TIP)
+    page:Slider("left", "groupFrameBuffSize", L.TRACKED_BUFF_SIZE, TRACKED_BUFF_MIN_SIZE, TRACKED_BUFF_MAX_SIZE,
+        pixels, L.TRACKED_BUFF_SIZE_TIP)
+    page:Checkbox("left", "groupFrameBuffCountdown", L.TRACKED_BUFF_COUNTDOWN, L.TRACKED_BUFF_COUNTDOWN_TIP)
+
+    page:Header("right", L.SECTION_HIDE)
+    page:Checkbox("right", "hideRaidManager", L.HIDE_RAID_MANAGER, L.HIDE_RAID_MANAGER_TIP)
+
     local SHOW, SPOT, ON, REMOVE = 2, 3, 4, 5 -- the table's columns after the tracked buffs' names
-    local NO_TITLE, JOINED = nil, true -- right below the switch, in its section
+    local NO_TITLE, JOINED = nil, true -- right below the rows above, in the Buffs section
     local kinds = { { value = "has", label = L.TRACKED_BUFF_HAS }, { value = "lacks", label = L.TRACKED_BUFF_LACKS } }
     local spots = {}
     for _, spot in ipairs(GroupFrames.SPOTS) do spots[#spots + 1] = { value = spot, label = L["TRACKED_BUFF_SPOT_" .. spot] } end
@@ -513,14 +522,6 @@ local function buildGroupFrames(page)
         { caption = "", width = 20 },
     }, NO_TITLE, JOINED, function() GroupFrames.AddFromCursor() end)
     tracked:Line(L.TRACKED_BUFF_DROP, L.TRACKED_BUFF_DROP_TIP, {}, { footer = true })
-
-    page:Header("right", L.SECTION_HIDE)
-    page:Checkbox("right", "hideRaidManager", L.HIDE_RAID_MANAGER, L.HIDE_RAID_MANAGER_TIP)
-
-    -- Under the table: one size for every icon, and the game's countdown numbers on "has it" icons.
-    page:Slider("left", "groupFrameBuffSize", L.TRACKED_BUFF_SIZE, TRACKED_BUFF_MIN_SIZE, TRACKED_BUFF_MAX_SIZE,
-        pixels, L.TRACKED_BUFF_SIZE_TIP)
-    page:Checkbox("left", "groupFrameBuffCountdown", L.TRACKED_BUFF_COUNTDOWN, L.TRACKED_BUFF_COUNTDOWN_TIP)
 
     -- The lines as the page last asked for them, and a table line for each place in the list.
     local lines, made = GroupFrames.Lines(), 0

@@ -724,6 +724,20 @@ describe("settings pages", function()
         T.eq(ns.Options:Get("groupFrameBuffCountdown"), true)
     end)
 
+    it("keeps every row above the tracked buffs' table, so a growing list covers none", function()
+        local ns, page = groupFramesPage()
+        local state = Stubs.state()
+        for _, spell in ipairs({ REGROWTH_1, REJUVENATION }) do
+            state.cursorInfo = { "spell", 1, "spell", spell, spell }
+            page.tables[1].frame:RunScript("OnReceiveDrag")
+        end
+        local tableTop = page.tables[1].top
+        for _, key in ipairs({ "groupFrameBuffs", "groupFrameBuffSize", "groupFrameBuffCountdown", "hideRaidManager" }) do
+            local row = control(ns, key).row
+            T.truthy(-row:PointFor("TOPLEFT")[5] + row:GetHeight() <= tableTop, key .. " above the table")
+        end
+    end)
+
     it("switches tracked buffs off and resets size and countdown numbers with Defaults, and keeps the list", function()
         local ns, page = groupFramesPage({ groupFrameBuffs = true, groupFrameBuffSize = 30, groupFrameBuffCountdown = true },
             { { spell = REGROWTH_1, kind = "has", on = true } })
