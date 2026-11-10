@@ -79,7 +79,7 @@ read_globals = {
     -- Namespaces
     "Enum", "C_ActionBar", "C_AddOns", "C_Container", "C_CVar", "C_EventUtils", "C_GossipInfo", "C_Item", "C_Map", "C_MerchantFrame",
     "C_InputInterfaceStyle", "C_KeyBindings", "C_Texture", "C_Timer", "C_XMLUtil",
-    "C_GamePad", "C_TooltipInfo", "C_Spell", "C_SpellBook", "C_MountJournal", "C_ToyBox",
+    "C_GamePad", "C_TooltipInfo", "C_Spell", "C_UnitAuras", "C_Secrets", "C_SpellBook", "C_MountJournal", "C_ToyBox",
 }
 
 files["Locales/"] = { max_line_length = false }

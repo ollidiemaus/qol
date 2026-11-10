@@ -49,6 +49,27 @@ the option off restores every border in our table, also on icons a row isn't sho
 the same rows, but the page and the feature are Forever's for now, so `WOW_PROJECT_ID` gates them.
 If the game loads `Blizzard_CooldownViewer` after QoL (`ADDON_LOADED`), the rows are picked up then.
 
+Reminders (`Features/Reminders.lua`, Forever only; the terms are in the glossary) touch no
+Blizzard frame. The reminder row is a plain frame of ours on `UIParent`, covering the screen's lower
+half with the mouse off, and its icons are pooled frames of ours, centred in it in the presets'
+order. It isn't the Cooldown Manager's: the game's rows are filled by its secure code from secret
+aura data and keyed by secret instance IDs, so an icon of ours among them would taint them, and the
+game decides what they show. Our frames aren't protected and nothing secure anchors to them, so
+showing, hiding and laying them out in combat is allowed: the refresh is `ns.Later("reminders", ...,
+true)`, which also folds a burst of `UNIT_AURA` into one pass per frame. An icon copies
+`CooldownViewerBuffIconItemTemplate` (40 by 40, the `UI-HUD-CoolDownManager-Mask` mask, the
+`IconOverlay` atlas 8 and 7 past the edges), and the overlay hides with the page's border option.
+A preset's buff counts when a buff on the player has one of the names `C_Spell.GetSpellName` gives
+for the preset's spell IDs (Forever's Spell table: Well Fed is thirty spells of one name, Well
+Rested 1225478, Camp Benefits 1229741), so food, rank and locale don't matter. The names are cached
+once the client has given them all. Forever withholds buff data in combat, and reading it there is
+an error for tainted code rather than a secret value (see `forever-notes.md`), so a refresh asks
+`C_Secrets.ShouldAurasBeSecret()` first and then checks each aura and name with `issecretvalue`;
+either way the row hides and nothing read is kept. No event says the data is readable again, so
+combat ending (`PLAYER_REGEN_ENABLED`) and `PLAYER_ENTERING_WORLD` ask for a refresh as well as the
+player's `UNIT_AURA`. Those events are registered only while the switch and at least one preset are
+on, so with reminders off QoL hears nothing and does no work.
+
 Rank upgrades (`Features/RankUpgrades.lua`, the terms are in the glossary) touch no Blizzard frame:
 only action slots, through the game's API, so there's no taint to reason about beyond staying out of
 combat, which `ns.LaterOutsideWindows` does, along with the controller windows. A slot is replaced

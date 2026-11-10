@@ -1661,8 +1661,8 @@ local function install()
     local function spell(id) return state.spells[id] end
     local function item(id) return state.items[id] end
     G.C_Spell = {
-        GetSpellTexture = function(id) return (spell(id) or {}).texture end,
-        GetSpellName = function(id) return (spell(id) or {}).name end,
+        GetSpellTexture = function(id) return (spell(id) or state.gameSpells[id] or {}).texture end,
+        GetSpellName = function(id) return (spell(id) or state.gameSpells[id] or {}).name end,
         IsSpellUsable = function(id)
             local info = spell(id) or {}
             return info.usable ~= false, info.noMana == true
@@ -1943,6 +1943,21 @@ local function install()
     function G.GameTooltip:Show() self.shown = true end
     function G.GameTooltip:Hide() self.shown = false end
 
+    --- The player's buffs: state.buffs = { { name, spellId, icon }, ... } in the game's order (a name
+    -- may be Stubs.SECRET). state.aurasWithheld: the game keeps buff data secret, as Forever does in
+    -- combat; reading a buff then raises the client's error, as it does there for tainted code.
+    -- Stubs.SetBuffs and Stubs.WithholdAuras change them and fire UNIT_AURA.
+    G.C_Secrets = { ShouldAurasBeSecret = function() return state.aurasWithheld == true end }
+    G.C_UnitAuras = {
+        GetAuraDataByIndex = function(unit, index, filter)
+            if state.aurasWithheld then error("Auras cannot be accessed when secret while tainted") end
+            if unit ~= "player" or (filter or "HELPFUL"):find("HARMFUL") then return nil end
+            local buff = state.buffs[index]
+            if not buff then return nil end
+            return { name = buff.name, spellId = buff.spellId, icon = buff.icon, auraInstanceID = index }
+        end,
+    }
+
     --- Units: state.units[unit] = { isPlayer, treatAsPlayer, class }; a unit that isn't there doesn't exist.
     G.UnitIsPlayer = function(unit)
         local info = state.units[unit]
@@ -2206,6 +2221,8 @@ function Stubs.Reset(options)
         barClicks = {},
         actions = {}, modifiedClicks = {}, placed = {}, settingValues = {},
         spells = {}, items = {}, toys = {}, mounts = {}, macros = {}, flyouts = {}, equipped = {},
+        -- Spells the client has data for that the character needn't know: id -> { name, texture }.
+        gameSpells = {}, buffs = {}, aurasWithheld = false,
         -- The cursor in UI units, the controller's sticks (nil: no controller) and the actions
         -- secure buttons used.
         cursorX = 500, cursorY = 400, gamepad = nil, usedActions = {},
@@ -2940,6 +2957,17 @@ function Stubs.SetStick(x, y)
         { x = 0, y = 0, len = 0 },
         { x = x, y = y, len = math.sqrt(x * x + y * y) },
     } }
+end
+
+-- The player's buffs become these ({ name, spellId, icon } each), and the game says so.
+function Stubs.SetBuffs(buffs)
+    state.buffs = buffs
+    Stubs.Fire("UNIT_AURA", "player")
+end
+
+-- The game keeps the player's buff data secret (true) or gives it again (false). No event says so.
+function Stubs.WithholdAuras(withheld)
+    state.aurasWithheld = withheld
 end
 
 function Stubs.SetCombat(inCombat)

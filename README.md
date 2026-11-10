@@ -213,6 +213,18 @@ debuff and the out-of-range tint. Off by default; untick it and the borders are 
 A tracked buff whose icon shows all the time isn't QoL's doing: that is the game's own Edit Mode
 setting "Hide When Inactive" on the buff row being off.
 
+**Reminders:** an icon for a buff your character is missing, gone once you have it. Turn on **Show
+reminders** and pick the presets you want in the table below it (all off by default):
+
+- **Well Fed**, from any food or drink that makes you Well Fed.
+- **Well Rested**, the buff that makes your rested experience build up faster.
+- **Camp Benefits**, the bonuses from the items set up at a camp.
+
+The icons sit in a row of their own in the middle of the screen's lower half, centred, in the
+table's order, and look like the Cooldown Manager's buff icons (**Hide icon borders** takes their
+border off too). They don't take the mouse, and they work with the game's Cooldown Manager switched
+off. In combat the game hides buffs from addons, so the reminders go away until combat ends.
+
 ### Rings
 
 Rings of actions, drawn in the bronze of Forever's minimap, as many as you like. Hold a ring's key,

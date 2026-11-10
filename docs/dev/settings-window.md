@@ -148,8 +148,10 @@ ranks below Paging and Buttons).
 
 Where several things share the same options, a page has a table instead of a section for each
 (`Page:Table`, across the page): the Minimap page's elements (`Element | Position | Font size |
-Class color | Offset X | Y`) and the Action Bars page's bars (`Bar | Vertical | Horizontal`). A
-table has a header if given a title, then a line of captions (`GameFontHighlightSmall`, with a
+Class color | Offset X | Y`), the Action Bars page's bars (`Bar | Vertical | Horizontal`) and the
+Cooldown Manager page's reminder presets (`Preset | On`, each line with the buff's icon before its
+name). A table has a header if given a title (without one it follows the section above after a
+gap, or `joined`, right below its last row, as the presets do below their switch), then a line of captions (`GameFontHighlightSmall`, with a
 tooltip where the caption needs one), then a line per thing (`Table:Line`): its name in the first
 column, which gets what the others leave, and a cell per column, a checkbox, a dropdown as wide as
 its column or a number field (a box between two plain buttons with the slider's arrow atlases:
