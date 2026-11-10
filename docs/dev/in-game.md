@@ -242,11 +242,15 @@ Things only the real client can confirm:
   icon. Someone joining or leaving (frames handed around) and joining a raid in combat put the icons on
   the right members. Note when the icons go quiet because the game keeps the data secret (in and out of
   combat, in a dungeon), and that they come back. No "tainted by" error after a raid fight.
-- Group buff secrecy (Forever, #119): in a party, with a buff of yours on party1, out of combat, in
-  a fight, in a dungeon, and with a few tracked spells (Regrowth, Rejuvenation, Mark of the Wild):
-  `/run local s=C_Secrets print(s.ShouldAurasBeSecret(), s.ShouldUnitAuraIndexBeSecret("party1",1,"HELPFUL"), s.ShouldSpellAuraBeSecret(8936), pcall(C_UnitAuras.GetAuraDataByIndex,"party1",1,"HELPFUL"))`
-  (8936 is Regrowth; swap the ID per spell). Results go to `docs/dev/group-frames.md` and, if they
-  hold for any addon, the wow-data skill's `forever-notes.md`.
+- Group buff secrecy (Forever, #119): a macro on an action button (it runs in a fight too), in a
+  party, with a buff of yours on party1:
+  `/run local s,u,f=C_Secrets,"party1","HELPFUL|PLAYER" local ok,a=pcall(C_UnitAuras.GetAuraDataByIndex,u,1,f) print(s.ShouldAurasBeSecret(),s.ShouldUnitAuraIndexBeSecret(u,1,f),s.ShouldSpellAuraBeSecret(8936),ok,ok and a and issecretvalue(a.spellId) or a)`
+  It prints five values: auras secret in general; your first buff on party1 secret; Regrowth (8936,
+  swap the ID for Rejuvenation 774 or Mark of the Wild 1126) secret as an aura; whether reading the
+  buff worked; and then whether its spell ID came back secret, or the error message, or `nil` if
+  party1 has no buff of yours. Press it out of combat and in a fight, in the open world and in a
+  dungeon. Results go to `docs/dev/group-frames.md` and, if they hold for any addon, the wow-data
+  skill's `forever-notes.md`.
 - Edit Mode and the Cooldown Manager (Forever, #119): Edit Mode shows "Aura organization" and "Buff
   icon size" on the raid frames and the raid-style party frames, and the Cooldown Manager's settings
   have the "Group Auras" tab (a druid has two group buffs or more); hiding Mark of the Wild there takes
