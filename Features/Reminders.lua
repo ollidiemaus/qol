@@ -5,7 +5,7 @@ local Options = ns.Options
 -- character lacks, gone once the buff is there. The reminder row is a frame of our own on UIParent,
 -- not part of the game's Cooldown Manager and not protected, so it shows, hides and lays itself out
 -- in combat too, and works with the game's Cooldown Manager switched off. Its icons look like the
--- Cooldown Manager's tracked buffs (mask and overlay of CooldownViewerBuffIconItemTemplate), lose the
+-- Cooldown Manager's buff icons (mask and overlay of CooldownViewerBuffIconItemTemplate), lose the
 -- overlay with the Cooldown Manager page's border checkbox, and let the mouse through.
 -- Having the buff means a buff on the player of the same name; the names come from the client for
 -- the presets' spell IDs, so any rank, any food and any locale count. The game may keep buff data
@@ -94,11 +94,11 @@ local function readBuffs()
     if withheld() then return false end
     for index = 1, MAX_BUFFS do
         local aura = C_UnitAuras.GetAuraDataByIndex("player", index, "HELPFUL")
-        if aura == nil then break end
-        if issecretvalue(aura) then return false end
+        -- nil: the end of the list.
+        if not ns.IsUsable(aura) then return aura == nil end
         local name = aura.name
-        if issecretvalue(name) then return false end
-        if name then present[name] = true end
+        if not ns.IsUsable(name) then return false end
+        present[name] = true
     end
     return true
 end

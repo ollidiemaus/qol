@@ -221,7 +221,7 @@ reminders** and pick the presets you want in the table below it (all off by defa
 - **Camp Benefits**, the bonuses from the items set up at a camp.
 
 The icons sit in a row of their own in the middle of the screen's lower half, centred, in the
-table's order, and look like the Cooldown Manager's tracked buffs (**Hide icon borders** takes their
+table's order, and look like the Cooldown Manager's buff icons (**Hide icon borders** takes their
 border off too). They don't take the mouse, and they work with the game's Cooldown Manager switched
 off. In combat the game hides buffs from addons, so the reminders go away until combat ends.
 

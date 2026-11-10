@@ -251,10 +251,11 @@ local function buildCooldownManager(page)
     page:Header("left", L.SECTION_REMINDERS)
     page:Checkbox("left", "reminders", L.REMINDERS, L.REMINDERS_TIP)
     local ON = 2 -- the table's column after the presets' names
+    local NO_TITLE, JOINED = nil, true -- right below the switch, in its section
     local presets = page:Table({
         { caption = L.REMINDER_PRESET },
         { caption = L.REMINDER_ON, width = 60 },
-    }, nil, true)
+    }, NO_TITLE, JOINED)
     for _, preset in ipairs(ns.Reminders.PRESETS) do
         local tip = L[preset.text .. "_TIP"]
         presets:Line(ns.Reminders.NameOf(preset) or L[preset.text], tip, {

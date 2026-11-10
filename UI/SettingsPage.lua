@@ -738,7 +738,6 @@ function Table:Line(label, tooltip, cells, options)
     local highlight = newHighlight(frame)
     local names = self.columns[1]
     local text = newName(frame, options.indent, label)
-    text:SetPoint("RIGHT", frame, "LEFT", names.x + names.width, 0)
     local icon
     if options.icon then
         icon = frame:CreateTexture(nil, "ARTWORK")
@@ -747,8 +746,8 @@ function Table:Line(label, tooltip, cells, options)
         icon:SetTexture(options.icon)
         text:ClearAllPoints()
         text:SetPoint("LEFT", icon, "RIGHT", LABEL_GAP / 2, 0)
-        text:SetPoint("RIGHT", frame, "LEFT", names.x + names.width, 0)
     end
+    text:SetPoint("RIGHT", frame, "LEFT", names.x + names.width, 0)
     frame:EnableMouse(true)
     frame:SetScript("OnEnter", function()
         highlight:Show()
