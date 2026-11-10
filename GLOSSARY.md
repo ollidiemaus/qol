@@ -212,7 +212,8 @@ _Avoid_: cooldown viewer, CDM, cooldown bar
 **Reminder**:
 An icon shown while the character lacks a buff, gone once they have it. A buff of that name counts at
 any rank and from any caster, and so does its group version. A reminder for a spell shows only on a
-character that knows the spell.
+character that knows the spell. A weapon buff's reminder (a poison, a shaman's weapon spell, a stone
+or an oil) is per hand and shows that hand's weapon.
 _Avoid_: missing buff, tracker, custom spell, alert
 
 **Preset**:

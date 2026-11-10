@@ -134,6 +134,32 @@ end
 
 local DRUID = { { THORNS_1, "Thorns", 1 }, { MARK_1, "Mark of the Wild", 1 } }
 
+-- The hands' inventory slots, and items to hold in them with made-up icons: weapons (class 2), a
+-- fishing pole (weapon subclass 20), a shield and a held item (armor, class 4).
+local MAIN_HAND, OFF_HAND = 16, 17
+local SWORD, DAGGER, POLE, SHIELD, HELD = 2131, 2632, 6256, 2129, 4984
+local SWORD_ICON, DAGGER_ICON = 135274, 135650
+local ITEMS = {
+    [SWORD] = { texture = SWORD_ICON, classID = 2, subclassID = 7 },
+    [DAGGER] = { texture = DAGGER_ICON, classID = 2, subclassID = 15 },
+    [POLE] = { texture = 132932, classID = 2, subclassID = 20 },
+    [SHIELD] = { texture = 134955, classID = 4, subclassID = 6 },
+    [HELD] = { texture = 134333, classID = 4, subclassID = 0 },
+}
+
+-- Loads the addon on Forever holding equipped ({ [slot] = item }), its hands' weapon buffs
+-- weaponBuffs ({ [0] main hand, [1] off hand }), and logs in.
+local function armed(savedOptions, equipped, weaponBuffs)
+    local ns = Stubs.LoadAddon()
+    knowSpells(ENGLISH)
+    local state = Stubs.state()
+    for id, info in pairs(ITEMS) do state.items[id] = info end
+    for slot, id in pairs(equipped) do state.equipped[slot] = id end
+    state.weaponBuffs = weaponBuffs or {}
+    Stubs.Login(savedOptions)
+    return ns
+end
+
 describe("reminders", function()
     it("shows a switched-on preset while its buff is missing, and drops it once the buff is there", function()
         local ns = start({ reminders = true, reminderWellFed = true })
@@ -327,6 +353,146 @@ describe("reminders", function()
         T.same(marked, { "reminderWellRested" })
     end)
 
+    it("hides every reminder while resting, with that box ticked, and shows them again after", function()
+        local ns = startOwn({ reminders = true, reminderWellFed = true, reminderHideResting = true },
+            { { spell = THORNS_3, on = true } }, DRUID)
+        T.same(seen(ns), { ICONS.wellFed, THORNS_ICON })
+        Stubs.SetCharacter({ resting = true }, "PLAYER_UPDATE_RESTING")
+        Stubs.RunTimers()
+        T.same(seen(ns), {})
+        Stubs.SetCharacter({ resting = false }, "PLAYER_UPDATE_RESTING")
+        Stubs.RunTimers()
+        T.same(seen(ns), { ICONS.wellFed, THORNS_ICON })
+    end)
+
+    it("hides every reminder while mounted, with that box ticked, and shows them again after", function()
+        local ns = start({ reminders = true, reminderWellFed = true, reminderHideMounted = true })
+        Stubs.SetCharacter({ mounted = true }, "PLAYER_MOUNT_DISPLAY_CHANGED")
+        Stubs.RunTimers()
+        T.same(seen(ns), {})
+        Stubs.SetCharacter({ mounted = false }, "PLAYER_MOUNT_DISPLAY_CHANGED")
+        Stubs.RunTimers()
+        T.same(seen(ns), { ICONS.wellFed })
+    end)
+
+    it("hides every reminder while dead or a ghost, by default, and shows them again once alive", function()
+        local ns = start({ reminders = true, reminderWellFed = true })
+        Stubs.SetCharacter({ dead = true }, "PLAYER_DEAD")
+        Stubs.RunTimers()
+        T.same(seen(ns), {})
+        Stubs.SetCharacter({}, "PLAYER_ALIVE") -- released: a ghost, still dead
+        Stubs.RunTimers()
+        T.same(seen(ns), {})
+        Stubs.SetCharacter({ dead = false }, "PLAYER_UNGHOST")
+        Stubs.RunTimers()
+        T.same(seen(ns), { ICONS.wellFed })
+    end)
+
+    it("hides every reminder on a flight path, by default, and shows them again on landing", function()
+        local ns = start({ reminders = true, reminderWellFed = true })
+        Stubs.SetCharacter({ onTaxi = true }, "PLAYER_CONTROL_LOST")
+        Stubs.RunTimers()
+        T.same(seen(ns), {})
+        Stubs.SetCharacter({ onTaxi = false }, "PLAYER_CONTROL_GAINED")
+        Stubs.RunTimers()
+        T.same(seen(ns), { ICONS.wellFed })
+    end)
+
+    it("hides them too when the game says it's a flight path only after taking control", function()
+        local ns = start({ reminders = true, reminderWellFed = true })
+        Stubs.SetCharacter({}, "PLAYER_CONTROL_LOST")
+        Stubs.RunTimers()
+        T.same(seen(ns), { ICONS.wellFed })
+        Stubs.SetCharacter({ onTaxi = true }, "UPDATE_BONUS_ACTIONBAR")
+        Stubs.RunTimers()
+        T.same(seen(ns), {})
+    end)
+
+    it("shows reminders while dead or flying with that box unticked", function()
+        local ns = start({ reminders = true, reminderWellFed = true, reminderHideDeadOrFlying = false })
+        Stubs.SetCharacter({ dead = true }, "PLAYER_DEAD")
+        Stubs.RunTimers()
+        T.same(seen(ns), { ICONS.wellFed })
+        Stubs.SetCharacter({ dead = false, onTaxi = true }, "PLAYER_CONTROL_LOST")
+        Stubs.RunTimers()
+        T.same(seen(ns), { ICONS.wellFed })
+    end)
+
+    it("hides every reminder in combat, with that box ticked, and shows them again after", function()
+        local ns = start({ reminders = true, reminderWellFed = true, reminderHideCombat = true })
+        Stubs.SetCombat(true)
+        Stubs.Fire("PLAYER_REGEN_DISABLED")
+        Stubs.RunTimers()
+        T.same(seen(ns), {})
+        Stubs.SetCombat(false)
+        Stubs.RunTimers()
+        T.same(seen(ns), { ICONS.wellFed })
+    end)
+
+    it("shows a buff lost in combat as a reminder with that box unticked, while buff data is readable", function()
+        local ns = start({ reminders = true, reminderWellFed = true }, { buffs = { buff("Well Fed", WELL_FED) } })
+        T.same(seen(ns), {})
+        Stubs.SetCombat(true)
+        Stubs.Fire("PLAYER_REGEN_DISABLED")
+        Stubs.SetBuffs({})
+        Stubs.RunTimers()
+        T.same(seen(ns), { ICONS.wellFed })
+    end)
+
+    it("hides only the experience reminders at maximum level, by default, from the level-up on", function()
+        local ns = startOwn({ reminders = true, reminderWellFed = true, reminderWellRested = true },
+            { { spell = THORNS_3, on = true } }, DRUID)
+        Stubs.SetCharacter({ level = 59, maxLevel = 60 }, "PLAYER_LEVEL_UP", 59)
+        Stubs.RunTimers()
+        T.same(seen(ns), { ICONS.wellFed, ICONS.wellRested, THORNS_ICON })
+        -- The game may give the new level only after its event.
+        Stubs.SetCharacter({}, "PLAYER_LEVEL_UP", 60)
+        Stubs.RunTimers()
+        T.same(seen(ns), { ICONS.wellFed, THORNS_ICON })
+    end)
+
+    it("hides the experience reminders of a character at maximum level from login", function()
+        local ns = start({ reminders = true, reminderWellFed = true, reminderWellRested = true })
+        Stubs.SetCharacter({ level = 60 })
+        Stubs.Fire("PLAYER_ENTERING_WORLD")
+        Stubs.RunTimers()
+        T.same(seen(ns), { ICONS.wellFed })
+    end)
+
+    it("shows the experience reminders at maximum level with that box unticked", function()
+        local ns = start({ reminders = true, reminderWellRested = true, reminderHideMaxLevel = false })
+        Stubs.SetCharacter({ level = 60 }, "PLAYER_LEVEL_UP", 60)
+        Stubs.RunTimers()
+        T.same(seen(ns), { ICONS.wellRested })
+    end)
+
+    it("starts hiding reminders while dead or on a flight path and at maximum level only", function()
+        local ns = start()
+        local ticked = {}
+        for _, key in ipairs({ "reminderHideResting", "reminderHideCombat", "reminderHideMounted",
+            "reminderHideDeadOrFlying", "reminderHideMaxLevel" }) do
+            ticked[#ticked + 1] = ns.Options:Get(key)
+        end
+        T.same(ticked, { false, false, false, true, true })
+    end)
+
+    it("hears a Hide reminders box's events only while it's ticked and a reminder is on", function()
+        local ns = start({ reminderWellFed = true })
+        T.falsy(Stubs.Listens("PLAYER_DEAD"))
+        T.falsy(Stubs.Listens("PLAYER_UPDATE_RESTING"))
+        ns.Options:Set("reminders", true)
+        T.truthy(Stubs.Listens("PLAYER_DEAD"))
+        T.truthy(Stubs.Listens("PLAYER_LEVEL_UP"))
+        T.falsy(Stubs.Listens("PLAYER_UPDATE_RESTING"))
+        ns.Options:Set("reminderHideResting", true)
+        T.truthy(Stubs.Listens("PLAYER_UPDATE_RESTING"))
+        ns.Options:Set("reminderHideDeadOrFlying", false)
+        T.falsy(Stubs.Listens("PLAYER_DEAD"))
+        ns.Options:Set("reminders", false)
+        T.falsy(Stubs.Listens("PLAYER_UPDATE_RESTING"))
+        T.falsy(Stubs.Listens("PLAYER_LEVEL_UP"))
+    end)
+
     it("shows the player's own reminder while its buff is missing, after the presets", function()
         local ns = startOwn({ reminders = true, reminderWellFed = true },
             { { spell = THORNS_3, on = true }, { spell = MARK_1, on = true } }, DRUID)
@@ -482,6 +648,88 @@ describe("reminders", function()
             T.falsy(frame:IsMouseMotionEnabled())
             T.falsy(frame:IsMouseClickEnabled())
         end
+    end)
+
+    it("shows a hand's weapon buff reminder while that hand has none, with the weapon's icon", function()
+        local ns = armed({ reminders = true, reminderMainHand = true, reminderOffHand = true },
+            { [MAIN_HAND] = SWORD, [OFF_HAND] = DAGGER })
+        T.same(seen(ns), { SWORD_ICON, DAGGER_ICON })
+        Stubs.SetWeaponBuffs({ [0] = true })
+        Stubs.RunTimers()
+        T.same(seen(ns), { DAGGER_ICON }, "the main hand's buff")
+        Stubs.SetWeaponBuffs({ [0] = true, [1] = true })
+        Stubs.RunTimers()
+        T.same(seen(ns), {})
+        Stubs.SetWeaponBuffs({ [1] = true })
+        Stubs.RunTimers()
+        T.same(seen(ns), { SWORD_ICON }, "the main hand's ran out")
+    end)
+
+    it("doesn't count a weapon's enchantment as a weapon buff", function()
+        local ns = armed({ reminders = true, reminderMainHand = true }, { [MAIN_HAND] = SWORD },
+            { [0] = "permanent" })
+        T.same(seen(ns), { SWORD_ICON })
+    end)
+
+    it("shows the off hand's reminder only while the off hand holds a weapon", function()
+        local ns = armed({ reminders = true, reminderMainHand = true, reminderOffHand = true },
+            { [MAIN_HAND] = SWORD, [OFF_HAND] = SHIELD })
+        T.same(seen(ns), { SWORD_ICON }, "a shield")
+        Stubs.Equip(OFF_HAND, HELD)
+        Stubs.RunTimers()
+        T.same(seen(ns), { SWORD_ICON }, "a held item")
+        Stubs.Equip(OFF_HAND, nil)
+        Stubs.RunTimers()
+        T.same(seen(ns), { SWORD_ICON }, "nothing, as with a two-handed weapon")
+        Stubs.Equip(OFF_HAND, DAGGER)
+        Stubs.RunTimers()
+        T.same(seen(ns), { SWORD_ICON, DAGGER_ICON })
+    end)
+
+    it("follows the weapon equipped", function()
+        local ns = armed({ reminders = true, reminderMainHand = true }, { [MAIN_HAND] = SWORD })
+        Stubs.Equip(MAIN_HAND, DAGGER)
+        Stubs.RunTimers()
+        T.same(seen(ns), { DAGGER_ICON })
+        Stubs.Equip(MAIN_HAND, nil)
+        Stubs.RunTimers()
+        T.same(seen(ns), {}, "no weapon, nothing to buff")
+    end)
+
+    it("shows neither hand's reminder with a fishing pole", function()
+        local ns = armed({ reminders = true, reminderMainHand = true, reminderOffHand = true },
+            { [MAIN_HAND] = POLE, [OFF_HAND] = DAGGER })
+        T.same(seen(ns), {})
+        Stubs.Equip(MAIN_HAND, SWORD)
+        Stubs.RunTimers()
+        T.same(seen(ns), { SWORD_ICON, DAGGER_ICON })
+    end)
+
+    it("hides everything while a weapon buff is secret", function()
+        local ns = armed({ reminders = true, reminderWellFed = true, reminderMainHand = true },
+            { [MAIN_HAND] = SWORD }, { [0] = Stubs.SECRET })
+        T.same(seen(ns), {})
+        Stubs.SetWeaponBuffs({})
+        Stubs.RunTimers()
+        T.same(seen(ns), { ICONS.wellFed, SWORD_ICON })
+    end)
+
+    it("hears weapon buffs change only while a weapon buff reminder is on", function()
+        local ns = armed({ reminders = true, reminderWellFed = true }, { [MAIN_HAND] = SWORD })
+        T.falsy(Stubs.Listens("WEAPON_ENCHANT_CHANGED"))
+        ns.Options:Set("reminderOffHand", true)
+        T.truthy(Stubs.Listens("WEAPON_ENCHANT_CHANGED"))
+        ns.Options:Set("reminders", false)
+        T.falsy(Stubs.Listens("WEAPON_ENCHANT_CHANGED"))
+    end)
+
+    it("starts with the weapon buff reminders off, after the other presets", function()
+        local ns = armed({ reminders = true }, { [MAIN_HAND] = SWORD, [OFF_HAND] = DAGGER })
+        T.same(seen(ns), {})
+        local keys = {}
+        for _, preset in ipairs(ns.Reminders.PRESETS) do keys[#keys + 1] = preset.key end
+        T.same(keys, { "reminderWellFed", "reminderWellRested", "reminderCampBenefits", "reminderMainHand",
+            "reminderOffHand" })
     end)
 
     for _, client in ipairs({ "retail", "classicEra" }) do

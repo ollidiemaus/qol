@@ -247,7 +247,8 @@ end
 -- per reminder of the player's own (greyed out where the character doesn't know the spell, with an
 -- X), and last a line saying to drop a spell on the table, which adds one. The own lines are made as
 -- the list grows and reused, each showing the list's entry at its place. Below the table, the reminder
--- row's icon size, its Unlock (Lock while unlocked) and Reset position buttons.
+-- row's icon size, its Unlock (Lock while unlocked) and Reset position buttons; beside them, on the
+-- right, the Hide reminders checkboxes.
 local REMINDER_MIN_SIZE, REMINDER_MAX_SIZE = 20, 80 -- the reminder icons' size, in pixels
 
 -- A slider's value as the slider shows it, in pixels.
@@ -258,6 +259,7 @@ local function buildCooldownManager(page)
     page:Checkbox("left", "hideCooldownManagerBorders", L.HIDE_COOLDOWN_BORDERS, L.HIDE_COOLDOWN_BORDERS_TIP)
     if not ns.Reminders.IsAvailable() then return end
     local Reminders = ns.Reminders
+    page:Align()
     page:Header("left", L.SECTION_REMINDERS)
     page:Checkbox("left", "reminders", L.REMINDERS, L.REMINDERS_TIP)
     local ON, REMOVE = 2, 3 -- the table's columns after the reminders' names
@@ -271,9 +273,13 @@ local function buildCooldownManager(page)
         local tip = L[preset.text .. "_TIP"]
         reminders:Line(Reminders.NameOf(preset) or L[preset.text], tip, {
             [ON] = { kind = "checkbox", key = preset.key, tooltip = tip },
-        }, { icon = Reminders.IconOf(preset) })
+        }, { icon = function() return Reminders.IconOf(preset) end })
     end
     reminders:Line(L.REMINDER_DROP, L.REMINDER_DROP_TIP, {}, { footer = true })
+    page:Header("right", L.SECTION_HIDE_REMINDERS)
+    for _, condition in ipairs(Reminders.CONDITIONS) do
+        page:Checkbox("right", condition.key, L[condition.text], L[condition.text .. "_TIP"])
+    end
 
     -- The player's own as the page last asked for them, and a line for each place in the list. A
     -- change to the list (or to the spells known) refreshes the page through OnChange.

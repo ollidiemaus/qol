@@ -331,6 +331,8 @@ describe("settings pages", function()
         Stubs.state().gameSpells[19705] = { name = "Well Fed", texture = 136000 }
         Stubs.state().gameSpells[1225478] = { name = "Well Rested", texture = 136001 }
         Stubs.state().gameSpells[1229741] = { name = "Camp Benefits", texture = 136002 }
+        Stubs.state().items[2131] = { texture = 135274, classID = 2, subclassID = 7 }
+        Stubs.state().equipped[16] = 2131
         Stubs.InstallSettings()
         Stubs.Login()
         loaded = ns
@@ -341,15 +343,33 @@ describe("settings pages", function()
         T.eq(switch.text:GetText(), "Show reminders")
         T.falsy(switch.get(), "off by default")
         T.same(tableRows(page), { "Reminder | On | ", "Well Fed | checkbox | -", "Well Rested | checkbox | -",
-            "Camp Benefits | checkbox | -", "Drag a spell here from your spellbook | - | -" })
+            "Camp Benefits | checkbox | -", "Main Hand Weapon Buff | checkbox | -",
+            "Off Hand Weapon Buff | checkbox | -", "Drag a spell here from your spellbook | - | -" })
+        show(page)
         local icons = {}
-        for index = 1, 3 do icons[index] = page.tables[1].lines[index].icon.texture end
-        T.same(icons, { 136000, 136001, 136002 })
+        for index = 1, 4 do icons[index] = page.tables[1].lines[index].icon.texture end
+        T.same(icons, { 136000, 136001, 136002, 135274 }, "the main hand's: the sword in it")
         local wellFed = control(ns, "reminderWellFed")
         T.falsy(wellFed.get(), "off by default")
         wellFed.widget:Click()
         T.truthy(ns.Options:Get("reminderWellFed"))
         T.truthy(lineTop(page, "Well Fed") > 0)
+    end)
+
+    it("has a Hide reminders section beside Reminders, a box per condition", function()
+        local ns = start(nil, true)
+        T.same(headers(pages(ns).cooldownManager, "right"), { "Hide reminders" })
+        local seen = {}
+        for _, key in ipairs({ "reminderHideResting", "reminderHideCombat", "reminderHideMounted",
+            "reminderHideDeadOrFlying", "reminderHideMaxLevel" }) do
+            local c = control(ns, key)
+            T.eq(c.kind, "checkbox")
+            T.eq(c.column, "right")
+            seen[#seen + 1] = c.text:GetText() .. (c.get() and " (on)" or "")
+        end
+        T.same(seen, { "While resting", "In combat", "While mounted", "While dead or on a flight path (on)",
+            "Experience reminders at maximum level (on)" })
+        T.truthy(control(ns, "reminderHideMaxLevel").tooltip:find("Well Rested", 1, true))
     end)
 
     -- The Cooldown Manager page with the presets' and Thorns' and Mark of the Wild's spell data, for
@@ -386,7 +406,7 @@ describe("settings pages", function()
     end
 
     local PRESET_ROWS = { "Reminder | On | ", "Well Fed | checkbox | -", "Well Rested | checkbox | -",
-        "Camp Benefits | checkbox | -" }
+        "Camp Benefits | checkbox | -", "Main Hand Weapon Buff | checkbox | -", "Off Hand Weapon Buff | checkbox | -" }
     local DROP_ROW = "Drag a spell here from your spellbook | - | -"
 
     local function rowsWith(...)
@@ -400,7 +420,7 @@ describe("settings pages", function()
     it("adds a line for a spell dropped on the reminders, once, and nothing for anything else", function()
         local _, page = remindersPage()
         local state = Stubs.state()
-        local drop = page.tables[1].lines[4]
+        local drop = page.tables[1].lines[6]
         T.truthy(drop.tooltip:find("buffs on your character", 1, true))
         state.cursorInfo = { "spell", 1, "spell", THORNS_1, THORNS_1 }
         drop.frame:RunScript("OnReceiveDrag")
@@ -534,14 +554,17 @@ describe("settings pages", function()
         Stubs.Login()
         T.eq(ns.SettingsPanel.window.buttons.cooldownManager.label:GetText(), "Abklingzeitmanager")
         T.same(headers(pages(ns).cooldownManager, "left"), { "Aussehen", "Erinnerungen" })
+        T.same(headers(pages(ns).cooldownManager, "right"), { "Erinnerungen ausblenden" })
+        T.eq(control(ns, "reminderHideResting").text:GetText(), "Beim Ausruhen")
         local c = control(ns, "hideCooldownManagerBorders")
         T.eq(c.text:GetText(), "Symbolränder ausblenden")
         T.truthy(c.tooltip:find("Verfolgte Stärkungseffekte", 1, true))
         T.eq(control(ns, "reminders").text:GetText(), "Erinnerungen anzeigen")
         T.same(tableRows(pages(ns).cooldownManager), { "Erinnerung | An | ", "Satt | checkbox | -",
-            "Gut ausgeruht | checkbox | -", "Lagervorteile | checkbox | -",
+            "Gut ausgeruht | checkbox | -", "Lagervorteile | checkbox | -", "Waffenbuff Waffenhand | checkbox | -",
+            "Waffenbuff Schildhand | checkbox | -",
             "Zieht einen Zauber aus Eurem Zauberbuch hierher | - | -" }, "without the client's names, the presets' own")
-        local drop = pages(ns).cooldownManager.tables[1].lines[4]
+        local drop = pages(ns).cooldownManager.tables[1].lines[6]
         T.truthy(drop.tooltip:find("Stärkungseffekte auf Eurem Charakter", 1, true))
     end)
 

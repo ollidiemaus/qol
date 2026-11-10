@@ -42,7 +42,8 @@ read_globals = {
     "GameTooltip", "SELL_PRICE",
     "ChatFrame2", "ChatFrame2Tab", "ChatFrameMenuButton", "ChatFrameChannelButton", "ChatFrameToggleVoiceDeafenButton",
     "ChatFrameToggleVoiceMuteButton", "TextToSpeechButtonFrame", "BuffFrameTooltip",
-    "InCombatLockdown", "UnitCanAttack", "GetPhysicalScreenSize", "ReloadUI", "IsSecureCmd", "geterrorhandler", "CinematicFrame", "MovieFrame",
+    "InCombatLockdown", "IsResting", "IsMounted", "UnitIsDeadOrGhost", "UnitOnTaxi", "UnitLevel", "GetMaxPlayerLevel",
+    "UnitCanAttack", "GetPhysicalScreenSize", "ReloadUI", "IsSecureCmd", "geterrorhandler", "CinematicFrame", "MovieFrame",
     "IsShiftKeyDown", "GamepadMainActionBarFrame", "GamepadMode", "SettingsPanel", "GameMenuFrame", "GetCursorPosition", "GetCursorInfo", "GetActionInfo",
     "SecureHandlerWrapScript", "SecureHandlerExecute", "RegisterStateDriver", "GamepadActionBarEditFrame", "GamepadActionBarBindingUtil", "EditModeManagerFrame",
     "MailFrame", "SendMailFrame", "SendMailNameEditBox", "SendMailSubjectEditBox",
@@ -54,7 +55,7 @@ read_globals = {
     "CreateKeyChordStringUsingMetaKeyState", "NOT_BOUND", "SaveBindings", "GetCurrentBindingSet",
     -- Action slots, and what goes on a ring
     "PickupAction", "PlaceAction", "ClearCursor", "PlayerHasToy", "GetMacroInfo", "GetMacroIndexByName",
-    "GetMacroSpell", "GetMacroItem", "PickupMacro", "GetNumMacros", "MAX_ACCOUNT_MACROS", "GetInventoryItemID",
+    "GetMacroSpell", "GetMacroItem", "PickupMacro", "GetNumMacros", "MAX_ACCOUNT_MACROS", "GetInventoryItemID", "GetInventoryItemTexture",
     "GetFlyoutInfo", "GetFlyoutSlotInfo", "SPELLBOOK_FONT_COLOR",
     -- Classic Era's spell book and tabs
     "GetNumSpellTabs", "GetSpellTabInfo", "GetSpellBookItemInfo", "IsPassiveSpell", "BOOKTYPE_SPELL",

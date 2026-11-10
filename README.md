@@ -219,6 +219,11 @@ reminders** and pick the presets you want in the table below it (all off by defa
 - **Well Fed**, from any food or drink that makes you Well Fed.
 - **Well Rested**, the buff that makes your rested experience build up faster.
 - **Camp Benefits**, the bonuses from the items set up at a camp.
+- **Main Hand Weapon Buff** and **Off Hand Weapon Buff**, one per hand: shows while that hand's
+  weapon has no weapon buff (a poison, a shaman's weapon spell such as Rockbiter Weapon, a sharpening
+  stone or an oil, any of them), with the weapon's own icon so you can tell the hands apart. The off
+  hand's shows only while you hold a weapon there, not a shield or a held item, and neither shows
+  with a fishing pole in your hands.
 
 Add your own by dragging a spell from your spellbook onto the table, Thorns or Mark of the Wild for
 instance. Your reminders come after the presets, in the order you added them, each with a checkbox to
@@ -240,6 +245,18 @@ The row starts in the middle of the screen's lower half. To move it, press **Unl
 anywhere. Press **Lock**, or close the settings window, to fix it there; the place is kept on all
 your characters, after a reload too, and stays put whatever your screen. **Reset** next to
 **Reminder row position** puts it back, and **Icon size** sets how big the icons are.
+
+Beside the table, the **Hide reminders** boxes say when the reminders stay away:
+
+- **While resting**, in an inn or a city (off by default).
+- **In combat** (off). Left off, a buff that runs out mid-fight shows its reminder whenever the game
+  lets addons see your buffs; for now WoW Forever hides them in every fight anyway.
+- **While mounted** (off).
+- **While dead or on a flight path** (on), when you can't put a buff up anyway.
+- **Experience reminders at maximum level** (on): only Well Rested, once your character can't gain
+  experience any more. The other reminders still show.
+
+They come back as soon as the condition ends.
 
 ### Rings
 

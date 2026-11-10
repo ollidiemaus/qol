@@ -109,6 +109,13 @@ local DEFAULTS = {
     reminderIconSize = 40,
     -- The reminder row's position, reminderRowX and reminderRowY (its middle's offset from the
     -- screen's), has no default: unset, the row sits in the middle of the screen's lower half.
+    reminderMainHand = false,
+    reminderOffHand = false,
+    reminderHideResting = false,
+    reminderHideCombat = false,
+    reminderHideMounted = false,
+    reminderHideDeadOrFlying = true,
+    reminderHideMaxLevel = true,
     upgradeSpellRanks = false,
     ring = false,
     clickCast = false,
