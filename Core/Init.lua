@@ -32,6 +32,12 @@ function ns.IsUsable(value)
     return true
 end
 
+-- Whether the client is WoW Forever, for the features that are Forever's only (Retail may have the
+-- same frames, so the project decides, not the frames).
+function ns.IsForever()
+    return WOW_PROJECT_ID ~= nil and WOW_PROJECT_ID == WOW_PROJECT_CAMELOT
+end
+
 -- Forever's controller interface (Enable Controller UI in the controller settings) brings action
 -- bars of its own. The game hides the standard bars then and never shows them while it's on, so the
 -- features for those bars stand aside.

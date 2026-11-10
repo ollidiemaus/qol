@@ -20,7 +20,10 @@ reasons:
 - The group frames stay: on Forever (the `Mainline` family of `Blizzard_CompactRaidFrames`)
   `CompactRaidFrameContainer` is `UIParent`'s, not a child of the manager, so hiding the manager
   doesn't take them along. The manager keeps working while hidden; the container doesn't depend on it
-  being shown.
+  being shown. Edit Mode's preset layouts anchor the party and raid frames to the manager
+  (`EditModePresetLayouts.lua`, `relativeTo = "CompactRaidFrameManager"`); a frame anchored to a hidden
+  one still gets its position, and the manager keeps its own anchor to `UIParent` under the holder, so
+  they stay where they were (on the in-game checklist, [`in-game.md`](in-game.md)).
 
 ## The game's buffs
 

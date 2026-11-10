@@ -11,11 +11,7 @@ ns.GroupFrames = GroupFrames
 -- it only when the player clicks its checkbox, never on its own.
 GroupFrames.GAME_BUFFS_CVAR = "raidFramesDisplayBuffs"
 
-local function isForever()
-    return WOW_PROJECT_ID ~= nil and WOW_PROJECT_ID == WOW_PROJECT_CAMELOT
-end
-
 -- Whether the client is WoW Forever, the only one the Group Frames page is for.
 function GroupFrames.IsAvailable()
-    return isForever()
+    return ns.IsForever()
 end

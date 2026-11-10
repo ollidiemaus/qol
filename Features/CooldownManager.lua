@@ -21,14 +21,9 @@ local BORDER_ATLAS = "ui-hud-cooldownmanager-iconoverlay"
 -- The game's rows, by global name.
 local ROWS = { "EssentialCooldownViewer", "UtilityCooldownViewer", "BuffIconCooldownViewer", "BuffBarCooldownViewer" }
 
--- Retail has the same rows; the feature is Forever's for now, so the project decides, not the rows.
-local function isForever()
-    return WOW_PROJECT_ID ~= nil and WOW_PROJECT_ID == WOW_PROJECT_CAMELOT
-end
-
 -- Whether the client is WoW Forever and has the Cooldown Manager's rows.
 function CooldownManager.IsAvailable()
-    if not isForever() then return false end
+    if not ns.IsForever() then return false end
     for _, name in ipairs(ROWS) do
         if _G[name] then return true end
     end
@@ -113,7 +108,7 @@ function CooldownManager:Apply()
 end
 
 function CooldownManager:Init()
-    if not isForever() then return end
+    if not ns.IsForever() then return end
     Options:Watch({ KEY }, schedule)
     -- Should the game load its Cooldown Manager after us.
     ns.Events:On("ADDON_LOADED", function(_, name)

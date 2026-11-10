@@ -6,13 +6,13 @@ local Options = ns.Options
 -- page for each part of the game, in groups: General (Automation, Chat, Mail), Display (Interface,
 -- Unit Frames, Group Frames on Forever, Action Bars, Cooldown Manager on Forever, Viewport), Maps
 -- (Minimap, World map on Forever's maps), Input (Ring, Click casting, Controller on Forever, which
--- has the controller action bar) and System (Graphics &
--- Camera, the game's hidden settings).
+-- has the controller action bar) and System (Graphics & Camera, the game's hidden settings).
 -- Under Options > AddOns there's only the information page (UI/InfoPage.lua), with a button that
 -- opens the window. The game's settings have nothing of ours to change: on Forever, with the
 -- controller interface on, the game stopped responding now and then when they closed after a
 -- change (see docs/dev/settings-window.md). The pages read and write ns.Options, and the features react
--- through Options:Watch; the Graphics & Camera page reads and writes the game's own values through
+-- through Options:Watch; the Graphics & Camera page, and the Group Frames page's game buffs row, read
+-- and write the game's own values through
 -- ns.HiddenSettings.
 local SettingsPanel = {}
 ns.SettingsPanel = SettingsPanel
@@ -78,42 +78,6 @@ local function buildUnitFrames(page)
     page:Checkbox("right", "classColorTargetOfTarget", L.CLASS_COLOR_TARGET_OF_TARGET, L.CLASS_COLOR_TIP)
     page:Checkbox("right", "classColorFocus", L.CLASS_COLOR_FOCUS, L.CLASS_COLOR_TIP)
     page:Checkbox("right", "classColorFocusTarget", L.CLASS_COLOR_FOCUS_TARGET, L.CLASS_COLOR_TIP)
-end
-
--- Group Frames page (Forever only): the game's own buff icons on the left, the raid manager to hide on
--- the right. The buffs checkbox shows and changes the game's own setting (ns.GroupFrames.GAME_BUFFS_CVAR)
--- through ns.HiddenSettings, as the Graphics & Camera page does its rows: the game keeps it, the row has
--- no reset, so the page's Defaults button leaves it alone, and it's greyed out while the game wouldn't
--- take it (in combat, if the game protects it).
-local function buildGroupFrames(page)
-    local Hidden = ns.HiddenSettings
-    local cvar = ns.GroupFrames.GAME_BUFFS_CVAR
-    -- From PLAYER_REGEN_DISABLED, which comes while InCombatLockdown is still false, to
-    -- PLAYER_REGEN_ENABLED.
-    local combat = false
-    local function canChange() return Hidden.CanChange(cvar, combat or InCombatLockdown()) end
-    local gameBuffs = {
-        get = function() return Hidden.Get(cvar) == "1" end,
-        set = function(checked)
-            if canChange() then Hidden.Set(cvar, checked and "1" or "0") end
-            page:Refresh()
-        end,
-    }
-    page:Header("left", L.SECTION_BUFFS)
-    page:Checkbox("left", gameBuffs, L.GAME_BUFFS, L.GAME_BUFFS_TIP, { enabled = canChange })
-
-    page:Header("right", L.SECTION_HIDE)
-    page:Checkbox("right", "hideRaidManager", L.HIDE_RAID_MANAGER, L.HIDE_RAID_MANAGER_TIP)
-
-    -- A change in the game's options, by /console or another addon, and combat starting or ending.
-    local function refreshShown()
-        if page.frame:IsVisible() then page:Refresh() end
-    end
-    ns.Events:On("CVAR_UPDATE", function(_, changed)
-        if changed == cvar and page.frame:IsVisible() then ns.Later("groupFramesRefresh", refreshShown, true) end
-    end)
-    ns.Events:On("PLAYER_REGEN_DISABLED", function() combat = true refreshShown() end)
-    ns.Events:On("PLAYER_REGEN_ENABLED", function() combat = false refreshShown() end)
 end
 
 -- Chat page: the chat window on the left, the chat commands on the right.
@@ -497,6 +461,43 @@ local function hiddenBacking(page, setting, inCombat)
     return backing
 end
 
+-- Keeps a page of the game's own settings up to date while it shows: refreshes it on a CVAR_UPDATE
+-- for one of its settings (isOurs(cvar)), once on the next frame for a burst of them, in combat too (a
+-- game slider writes several, and /qol probe hundreds), and when combat starts or ends, as a
+-- protected setting's row greys out in combat. The window refreshes a page each time it shows it too,
+-- in case the game doesn't send CVAR_UPDATE for every change. Returns inCombat for the rows'
+-- backings: from PLAYER_REGEN_DISABLED, which comes while InCombatLockdown is still false, to
+-- PLAYER_REGEN_ENABLED.
+local function watchGameSettings(page, laterKey, isOurs)
+    local combat = false
+    local function refreshShown()
+        if page.frame:IsVisible() then page:Refresh() end
+    end
+    ns.Events:On("CVAR_UPDATE", function(_, cvar)
+        if page.frame:IsVisible() and isOurs(cvar) then ns.Later(laterKey, refreshShown, true) end
+    end)
+    ns.Events:On("PLAYER_REGEN_DISABLED", function() combat = true refreshShown() end)
+    ns.Events:On("PLAYER_REGEN_ENABLED", function() combat = false refreshShown() end)
+    return function() return combat or InCombatLockdown() end
+end
+
+-- Group Frames page (Forever only): the game's own buff icons on the left, the raid manager to hide on
+-- the right. The buffs checkbox shows and changes the game's own setting (ns.GroupFrames.GAME_BUFFS_CVAR)
+-- through ns.HiddenSettings, as the Graphics & Camera page does its rows: the game keeps it, the row has
+-- no reset, so the page's Defaults button leaves it alone, and it's greyed out while the game wouldn't
+-- take it (in combat, if the game protects it).
+local function buildGroupFrames(page)
+    local cvar = ns.GroupFrames.GAME_BUFFS_CVAR
+    local inCombat = watchGameSettings(page, "groupFramesRefresh", function(changed) return changed == cvar end)
+    local gameBuffs = hiddenBacking(page, { cvar = cvar, kind = "checkbox" }, inCombat)
+    gameBuffs.reset, gameBuffs.isDefault = nil, nil
+    page:Header("left", L.SECTION_BUFFS)
+    page:Checkbox("left", gameBuffs, L.GAME_BUFFS, L.GAME_BUFFS_TIP, { enabled = gameBuffs.canChange })
+
+    page:Header("right", L.SECTION_HIDE)
+    page:Checkbox("right", "hideRaidManager", L.HIDE_RAID_MANAGER, L.HIDE_RAID_MANAGER_TIP)
+end
+
 -- A hidden setting's game default as its row shows it: On or Off, or the number without the
 -- trailing zeros the game may add (1.900000).
 local function gameDefaultText(setting)
@@ -525,10 +526,8 @@ end
 -- page for each part of the game (Features/HiddenSettings.lua), those this client knows.
 local function buildAdvanced(page)
     page:Text("wide", L.ADVANCED_INTRO)
-    -- From PLAYER_REGEN_DISABLED, which comes while InCombatLockdown is still false, to
-    -- PLAYER_REGEN_ENABLED.
-    local combat = false
-    local function inCombat() return combat or InCombatLockdown() end
+    -- A change through /console, the game's options or another addon.
+    local inCombat = watchGameSettings(page, "advancedSettingsRefresh", ns.HiddenSettings.Find)
     local section
     local known = ns.HiddenSettings.Known()
     for _, setting in ipairs(known) do
@@ -556,25 +555,6 @@ local function buildAdvanced(page)
             page:Slider("wide", backing, setting.label, setting.min, setting.max, nil, tooltip, options)
         end
     end
-    -- A change through /console, the game's options or another addon. The window refreshes the page
-    -- each time it shows it too, in case the game doesn't send this for every change. Once on the
-    -- next frame for a burst of them, in combat too: a game slider writes several, and /qol probe
-    -- hundreds.
-    local function refreshShown()
-        if page.frame:IsVisible() then page:Refresh() end
-    end
-    ns.Events:On("CVAR_UPDATE", function(_, cvar)
-        if page.frame:IsVisible() and ns.HiddenSettings.Find(cvar) then
-            ns.Later("advancedSettingsRefresh", refreshShown, true)
-        end
-    end)
-    -- A protected setting's row greys out in combat and comes back after it.
-    local function combatChanged(inCombatNow)
-        combat = inCombatNow
-        if page.frame:IsVisible() then page:Refresh() end
-    end
-    ns.Events:On("PLAYER_REGEN_DISABLED", function() combatChanged(true) end)
-    ns.Events:On("PLAYER_REGEN_ENABLED", function() combatChanged(false) end)
 end
 
 -- The window's list: its groups and their pages, in order. Page keys are what /qol and the other
