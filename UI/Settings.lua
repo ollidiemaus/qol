@@ -242,10 +242,25 @@ local function buildActionBars(page)
     end
 end
 
--- Cooldown Manager page (Forever): how the game's Cooldown Manager looks.
+-- Cooldown Manager page (Forever): how the game's Cooldown Manager looks, then the reminders: their
+-- switch and a table with a line per preset, its icon and name as the client gives them.
 local function buildCooldownManager(page)
     page:Header("left", L.SECTION_LOOK)
     page:Checkbox("left", "hideCooldownManagerBorders", L.HIDE_COOLDOWN_BORDERS, L.HIDE_COOLDOWN_BORDERS_TIP)
+    if not ns.Reminders.IsAvailable() then return end
+    page:Header("left", L.SECTION_REMINDERS)
+    page:Checkbox("left", "reminders", L.REMINDERS, L.REMINDERS_TIP)
+    local ON = 2 -- the table's column after the presets' names
+    local presets = page:Table({
+        { caption = L.REMINDER_PRESET },
+        { caption = L.REMINDER_ON, width = 60 },
+    }, nil, true)
+    for _, preset in ipairs(ns.Reminders.PRESETS) do
+        local tip = L[preset.text .. "_TIP"]
+        presets:Line(ns.Reminders.NameOf(preset) or L[preset.text], tip, {
+            [ON] = { kind = "checkbox", key = preset.key, tooltip = tip },
+        }, { icon = ns.Reminders.IconOf(preset) })
+    end
 end
 
 -- Ring page (also /qol ring): the switch in the title bar, and below it, on a page of the spell

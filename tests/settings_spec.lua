@@ -115,7 +115,7 @@ local function tableRows(page, index)
     for _, line in ipairs(settingsTable.lines) do
         if line.frame:IsShown() then
             local name = line.label:GetText()
-            if line.label:PointFor("LEFT")[4] > 7 then name = "  " .. name end
+            if line.indent then name = "  " .. name end
             local row = { name }
             for column = 2, #settingsTable.captions do
                 local c = line.cells[column]
@@ -310,13 +310,40 @@ describe("settings pages", function()
         local names = listed(ns)
         T.same({ names[8], names[9], names[10] }, { "Action Bars", "Cooldown Manager", "Viewport" })
         local page = pages(ns).cooldownManager
-        T.same(headers(page, "left"), { "Look" })
+        T.same(headers(page, "left"), { "Look", "Reminders" })
         local c = control(ns, "hideCooldownManagerBorders")
         T.eq(c.kind, "checkbox")
         T.eq(c.text:GetText(), "Hide icon borders")
         for _, row in ipairs({ "Essential Cooldowns", "Utilities", "Tracked Buffs", "Tracked Bars" }) do
             T.truthy(c.tooltip:find(row, 1, true), "the tooltip names " .. row)
         end
+    end)
+
+    it("has a Reminders section under Look, with its switch and a line per preset", function()
+        local ns = Stubs.LoadAddon()
+        Stubs.NewCooldownManager()
+        Stubs.state().gameSpells[19705] = { name = "Well Fed", texture = 136000 }
+        Stubs.state().gameSpells[1225478] = { name = "Well Rested", texture = 136001 }
+        Stubs.state().gameSpells[1229741] = { name = "Camp Benefits", texture = 136002 }
+        Stubs.InstallSettings()
+        Stubs.Login()
+        loaded = ns
+        local page = pages(ns).cooldownManager
+        T.same(headers(page, "left"), { "Look", "Reminders" })
+        local switch = control(ns, "reminders")
+        T.eq(switch.kind, "checkbox")
+        T.eq(switch.text:GetText(), "Show reminders")
+        T.falsy(switch.get(), "off by default")
+        T.same(tableRows(page), { "Preset | On", "Well Fed | checkbox", "Well Rested | checkbox",
+            "Camp Benefits | checkbox" })
+        local icons = {}
+        for index, line in ipairs(page.tables[1].lines) do icons[index] = line.icon.texture end
+        T.same(icons, { 136000, 136001, 136002 })
+        local wellFed = control(ns, "reminderWellFed")
+        T.falsy(wellFed.get(), "off by default")
+        wellFed.widget:Click()
+        T.truthy(ns.Options:Get("reminderWellFed"))
+        T.truthy(lineTop(page, "Well Fed") > 0)
     end)
 
     it("leaves the Cooldown Manager page out on Forever without the game's rows", function()
@@ -361,10 +388,13 @@ describe("settings pages", function()
         Stubs.InstallSettings()
         Stubs.Login()
         T.eq(ns.SettingsPanel.window.buttons.cooldownManager.label:GetText(), "Abklingzeitmanager")
-        T.same(headers(pages(ns).cooldownManager, "left"), { "Aussehen" })
+        T.same(headers(pages(ns).cooldownManager, "left"), { "Aussehen", "Erinnerungen" })
         local c = control(ns, "hideCooldownManagerBorders")
         T.eq(c.text:GetText(), "Symbolränder ausblenden")
         T.truthy(c.tooltip:find("Verfolgte Stärkungseffekte", 1, true))
+        T.eq(control(ns, "reminders").text:GetText(), "Erinnerungen anzeigen")
+        T.same(tableRows(pages(ns).cooldownManager), { "Vorgabe | An", "Satt | checkbox", "Gut ausgeruht | checkbox",
+            "Lagervorteile | checkbox" }, "without the client's names, the presets' own")
     end)
 
     it("greys out going back to Top while the trigger toggle is off", function()

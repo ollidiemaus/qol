@@ -55,6 +55,7 @@ Features\Viewport.lua
 Features\ActionBars.lua
 Features\ButtonBorders.lua
 Features\CooldownManager.lua
+Features\Reminders.lua
 Features\BarPaging.lua
 Features\RankUpgrades.lua
 Features\BackButtons.lua

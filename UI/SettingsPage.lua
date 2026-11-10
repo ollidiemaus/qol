@@ -42,6 +42,7 @@ local TITLE_ROW_Y, TITLE_ROW_RIGHT, TITLE_ROW_WIDTH = 14, 28, 300 -- an option i
 local STEP_WIDTH = 14       -- an arrow of a number field, around the game's slider arrow
 local FIELD_WIDTH = 2 * STEP_WIDTH + BOX_ART_LEFT + NUMBER_WIDTH
 local CELL_GAP = 10         -- between a table's columns
+local LINE_ICON_SIZE = 18   -- an icon before a table line's name
 local KEY_WIDTH, KEY_HEIGHT = 160, 22 -- a key binding's buttons, as in the game's Key Bindings
 local BUTTON_WIDTH, BUTTON_HEIGHT = 160, 22
 local BUTTON_MIN_WIDTH = 96  -- a row's button with a short text, as wide as Defaults
@@ -648,9 +649,14 @@ local Table = {}
 Table.__index = Table
 
 -- columns: { caption = text, width = number, tooltip = text } for each column from the left; the
--- first one is the names', which takes the room the others leave unless it has a width.
-function Page:Table(columns, title)
-    if title then self:Header("wide", title) else sectionGap(self, "wide") end
+-- first one is the names', which takes the room the others leave unless it has a width. title: a
+-- section header above it; without one it goes on the section above, after a gap, unless joined.
+function Page:Table(columns, title, joined)
+    if title then
+        self:Header("wide", title)
+    elseif not joined then
+        sectionGap(self, "wide")
+    end
     local frame = newRow(self, "wide", ROW_HEIGHT)
     local settingsTable = setmetatable({ page = self, frame = frame, top = self:Height() - ROW_HEIGHT, columns = {},
         captions = {}, lines = {} }, Table)
@@ -724,7 +730,7 @@ end
 -- cell being { kind = "checkbox", "dropdown" or "number", key = the option, tooltip, choices (a
 -- dropdown's, as Page:Dropdown takes them), min and max (a number's), shown (a function: the cell is
 -- hidden while it returns false) }. options: indent (an extra line, below the one it belongs to),
--- shown (a function: the line is left out while it returns false).
+-- shown (a function: the line is left out while it returns false), icon (a texture before the name).
 function Table:Line(label, tooltip, cells, options)
     options = options or {}
     local frame = CreateFrame("Frame", nil, self.frame)
@@ -733,6 +739,16 @@ function Table:Line(label, tooltip, cells, options)
     local names = self.columns[1]
     local text = newName(frame, options.indent, label)
     text:SetPoint("RIGHT", frame, "LEFT", names.x + names.width, 0)
+    local icon
+    if options.icon then
+        icon = frame:CreateTexture(nil, "ARTWORK")
+        icon:SetSize(LINE_ICON_SIZE, LINE_ICON_SIZE)
+        icon:SetPoint("LEFT", frame, "LEFT", LABEL_X + (options.indent and INDENT or 0), 0)
+        icon:SetTexture(options.icon)
+        text:ClearAllPoints()
+        text:SetPoint("LEFT", icon, "RIGHT", LABEL_GAP / 2, 0)
+        text:SetPoint("RIGHT", frame, "LEFT", names.x + names.width, 0)
+    end
     frame:EnableMouse(true)
     frame:SetScript("OnEnter", function()
         highlight:Show()
@@ -742,7 +758,8 @@ function Table:Line(label, tooltip, cells, options)
         highlight:Hide()
         hideTooltip()
     end)
-    local line = { frame = frame, label = text, highlight = highlight, cells = {}, shown = options.shown }
+    local line = { frame = frame, label = text, icon = icon, indent = options.indent, highlight = highlight,
+        cells = {}, shown = options.shown }
     function line.name() return label end
     for column = 2, #self.columns do
         if cells[column] then line.cells[column] = newCell(self, line, column, cells[column]) end
