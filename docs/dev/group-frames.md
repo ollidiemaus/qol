@@ -68,8 +68,8 @@ newer QoL's) stays in the list and is left out of everything else.
   Refreshes go through one `ns.Later` key, at most one per drawn frame, and a `UNIT_AURA` redraws
   only the frames showing that unit.
 - **In-game checklist** ([`in-game.md`](in-game.md)): icons above the health bar at real frame
-  sizes, no taint errors after a raid fight with frames reassigned, and when Forever keeps group buff
-  data secret (in and out of combat, in a dungeon).
+  sizes and no taint errors after a raid fight with frames reassigned. When the data is secret: in
+  every fight (below).
 
 ## What the game already has (#119)
 
@@ -91,9 +91,23 @@ From Forever's UI source (2026-11-10), still to be seen in game ([`in-game.md`](
   in #121 repeats it. Both setters are restricted (`HasRestrictions`, secrets only when untainted):
   QoL doesn't call them; it could read `GetHiddenGroupBuffs` if it ever needed to.
 
-When the game keeps group members' buff data secret isn't known yet: on the player, buffs are
-readable out of combat and an error to read in any fight (`forever-notes.md`, Secret values). The
-feature already goes quiet whenever `ShouldAurasBeSecret` says so; the in-game check tells how often.
+## When group buff data is secret (#119)
+
+Seen in game 2026-11-10 (a `/run` macro on an action button, a party of three, Regrowth of the
+player's on party1, the macro in [`in-game.md`](in-game.md)): group members' buffs behave like the
+player's own.
+
+- **Out of combat**, in the open world and in a dungeon: `ShouldAurasBeSecret()` false,
+  `ShouldUnitAuraIndexBeSecret("party1", 1, "HELPFUL|PLAYER")` false,
+  `ShouldSpellAuraBeSecret(8936)` (Regrowth) false, and `GetAuraDataByIndex` returns the aura.
+- **In any fight**, open world and dungeon alike: all three say true, and `GetAuraDataByIndex` raises
+  `Auras cannot be accessed when secret while tainted` instead of returning secret values. The docs
+  agree: every aura read (`GetAuraDataByIndex`, `GetAuraDataByAuraInstanceID`, `GetUnitAuras`,
+  `GetAuraDuration`) is `RequiresUnitAuraAccess`. Only Regrowth was asked per spell.
+
+So tracked buffs, "has it" and "lacks it" alike, are blank for the whole of every fight and come back
+when it ends: the feature's `ShouldAurasBeSecret` check hides them without reading, so it raises no
+error. That is more than "goes quiet now and then", which #110 assumed.
 
 ## Hiding the raid manager
 
