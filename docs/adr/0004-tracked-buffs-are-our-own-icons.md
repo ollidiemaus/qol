@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: accepted, partly superseded by ADR-0005
 ---
 
 # Tracked buffs are QoL's own icons on the group frames
@@ -20,6 +20,7 @@ so the player can turn them all off and keep only tracked buffs.
 ## Consequences
 
 - QoL reads the group's buffs itself, so a tracked buff hides while the game keeps that buff's data
-  secret, and shows again once it's readable.
+  secret, and shows again once it's readable. Superseded for "has it" icons by
+  [ADR 0005](0005-has-it-icons-filled-by-the-game.md): the game fills them, in fights too.
 - The icons are plain and let the mouse through: a button that casts would have to be protected, and
   click casting on the group frame underneath already does that job.
