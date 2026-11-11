@@ -33,7 +33,7 @@ local RIVALS = {
 local countingNames
 
 -- The client's names for the spell IDs it has given, and whether it gave every one.
-local function namesOf(ids)
+local function spellNames(ids)
     local names, complete = {}, true
     for _, id in ipairs(ids) do
         local name = C_Spell.GetSpellName(id)
@@ -67,13 +67,13 @@ function ns.CountingNames()
         for _, name in ipairs(names) do add(map, name, others) end
     end
     for single, groups in pairs(GROUP_VERSIONS) do
-        local names, namesComplete = namesOf({ single })
-        local groupNames, groupsComplete = namesOf(groups)
+        local names, namesComplete = spellNames({ single })
+        local groupNames, groupsComplete = spellNames(groups)
         link(names, namesComplete, groupNames, groupsComplete)
     end
     for _, pair in ipairs(RIVALS) do
-        local left, leftComplete = namesOf(pair[1])
-        local right, rightComplete = namesOf(pair[2])
+        local left, leftComplete = spellNames(pair[1])
+        local right, rightComplete = spellNames(pair[2])
         link(left, leftComplete, right, rightComplete)
         link(right, rightComplete, left, leftComplete)
     end

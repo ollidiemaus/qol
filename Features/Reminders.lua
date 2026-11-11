@@ -12,9 +12,8 @@ local Options = ns.Options
 -- places the row (the page's Unlock button puts it in a mover state, placeholders the mouse can drag)
 -- and sizes its icons; its place is saved as an offset from the screen's middle.
 -- Having the buff means a buff on the player of the same name, or of its group version's or a rival's
--- (a buff the game won't keep alongside it); the names
--- come from the client for the spell IDs we have, so any rank, any caster, any food and any locale
--- count. The game may keep buff data
+-- (a buff the game won't keep alongside it); the names come from the client for the spell IDs we
+-- have, so any rank, any caster, any food and any locale count. The game may keep buff data
 -- secret (Forever does in combat, and reading it then is an error): while C_Secrets says so, or a
 -- value read is secret, the whole row hides and nothing read is kept.
 -- The weapon buff presets read the hands' weapon enchant information instead, and apply only while
@@ -123,13 +122,13 @@ local function namesOf(reminder)
     local set = names[reminder]
     if set then return set end
     set = {}
-    local groups, complete = ns.CountingNames()
+    local counting, complete = ns.CountingNames()
     local any = false
     for _, spellID in ipairs(reminder.spells) do
         local name = nameOf(spellID)
         if name then
             set[name], any = true, true
-            for _, groupName in ipairs(groups[name] or {}) do set[groupName] = true end
+            for _, other in ipairs(counting[name] or {}) do set[other] = true end
         else
             complete = false
         end
