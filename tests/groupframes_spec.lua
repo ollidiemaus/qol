@@ -257,13 +257,13 @@ describe("Group frames: tracked buffs", function()
         T.eq(number(mark), nil)
     end)
 
-    it("shows no \"lacks it\" icon on a dead, offline or out-of-range member, and shows it again once back", function()
+    it("shows no \"lacks it\" icon on a dead or offline member, and shows it again once back", function()
         start(ON, { lacks(MARK_1) })
         local frame = Stubs.NewGroupFrame("raid2")
         Stubs.SetUnitBuffs("raid2", {})
         Stubs.RunTimers()
         T.same(seen(frame), { MARK_ICON })
-        for _, change in ipairs({ "dead", "offline", "outOfRange" }) do
+        for _, change in ipairs({ "dead", "offline" }) do
             Stubs.SetMember("raid2", { [change] = true })
             Stubs.RunTimers()
             T.same(seen(frame), {}, change)
@@ -271,13 +271,23 @@ describe("Group frames: tracked buffs", function()
             Stubs.RunTimers()
             T.same(seen(frame), { MARK_ICON }, change .. ", back")
         end
-        for _, change in ipairs({ "dead", "offline", "outOfRange" }) do
+        for _, change in ipairs({ "dead", "offline" }) do
             Stubs.SetMember("raid2", { [change] = Stubs.SECRET })
             Stubs.RunTimers()
             T.same(seen(frame), {}, "a secret answer: " .. change)
             Stubs.SetMember("raid2", { [change] = false })
             Stubs.RunTimers()
         end
+        T.same(seen(frame), { MARK_ICON })
+    end)
+
+    -- UnitInRange is always secret to an addon on Forever; the game fades the member's whole frame.
+    it("shows a \"lacks it\" icon on an out-of-range member, the range being the frame's fade", function()
+        start(ON, { lacks(MARK_1) })
+        local frame = Stubs.NewGroupFrame("raid2")
+        Stubs.SetUnitBuffs("raid2", {})
+        Stubs.SetMember("raid2", { outOfRange = true })
+        Stubs.RunTimers()
         T.same(seen(frame), { MARK_ICON })
     end)
 
@@ -438,6 +448,25 @@ describe("Group frames: tracked buffs", function()
         end
         T.eq(#shownIcons(frame), 2)
         T.same(places(frame)[REGROWTH_ICON], { "TOPRIGHT", "TOPRIGHT", -2, -2 })
+    end)
+
+    it("sets the countdown numbers' size from its slider, in the game's font, and waits out a fight", function()
+        local ns = start(ON, { has(REGROWTH_1) })
+        T.eq(ns.Options:Get("groupFrameBuffCountdownSize"), 10)
+        local frame = Stubs.NewGroupFrame("raid1")
+        Stubs.SetUnitBuffs("raid1", { buff("Regrowth", REGROWTH_1) })
+        Stubs.RunTimers()
+        local text = cooldownOf(shownIcons(frame)[1]):GetCountdownFontString()
+        T.same({ text:GetFont() }, { "Fonts\\ARIALN.TTF", 10, "OUTLINE" })
+        ns.Options:Set("groupFrameBuffCountdownSize", 16)
+        Stubs.RunTimers()
+        T.eq(select(2, text:GetFont()), 16)
+        fight(true)
+        ns.Options:Set("groupFrameBuffCountdownSize", 12)
+        Stubs.RunTimers()
+        T.eq(select(2, text:GetFont()), 16, "the button can't be touched while buffs are secret")
+        fight(false)
+        T.eq(select(2, text:GetFont()), 12, "once readable again")
     end)
 
     it("adds the game's countdown numbers to \"has it\" icons once ticked, off by default", function()
@@ -616,8 +645,8 @@ describe("Group frames: tracked buffs", function()
         T.falsy(Stubs.Listens("ADDON_RESTRICTION_STATE_CHANGED"), "switched off")
     end)
 
-    it("hears members' buffs, death, connection and range only on, in a group, out of combat, with a \"lacks it\" line on", function()
-        local EVENTS = { "UNIT_AURA", "UNIT_HEALTH", "UNIT_CONNECTION", "UNIT_IN_RANGE_UPDATE" }
+    it("hears members' buffs, death and connection only on, in a group, out of combat, with a \"lacks it\" line on", function()
+        local EVENTS = { "UNIT_AURA", "UNIT_HEALTH", "UNIT_CONNECTION" }
         local function hears(unit)
             for _, event in ipairs(EVENTS) do
                 if not Stubs.Listens(event, unit) then return false end

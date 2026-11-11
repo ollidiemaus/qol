@@ -252,6 +252,7 @@ end
 -- entry at its place. Rows are placed once and the table grows downwards, so every row comes before it.
 local REMINDER_MIN_SIZE, REMINDER_MAX_SIZE = 20, 80 -- the reminder icons' size, in pixels
 local TRACKED_BUFF_MIN_SIZE, TRACKED_BUFF_MAX_SIZE = 10, 40 -- the tracked buff icons' size, in pixels
+local COUNTDOWN_MIN_SIZE, COUNTDOWN_MAX_SIZE = 6, 24 -- their countdown numbers' font size, in pixels
 
 -- A slider's value as the slider shows it, in pixels.
 local function pixels(value) return L.PIXELS:format(value) end
@@ -505,6 +506,8 @@ local function buildGroupFrames(page)
     page:Slider("left", "groupFrameBuffSize", L.TRACKED_BUFF_SIZE, TRACKED_BUFF_MIN_SIZE, TRACKED_BUFF_MAX_SIZE,
         pixels, L.TRACKED_BUFF_SIZE_TIP)
     page:Checkbox("left", "groupFrameBuffCountdown", L.TRACKED_BUFF_COUNTDOWN, L.TRACKED_BUFF_COUNTDOWN_TIP)
+    page:Slider("left", "groupFrameBuffCountdownSize", L.TRACKED_BUFF_COUNTDOWN_SIZE, COUNTDOWN_MIN_SIZE,
+        COUNTDOWN_MAX_SIZE, pixels, L.TRACKED_BUFF_COUNTDOWN_SIZE_TIP)
 
     page:Header("right", L.SECTION_HIDE)
     page:Checkbox("right", "hideRaidManager", L.HIDE_RAID_MANAGER, L.HIDE_RAID_MANAGER_TIP)
