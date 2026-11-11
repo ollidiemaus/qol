@@ -240,17 +240,27 @@ Things only the real client can confirm:
   and readable at the frame's real size, with the sweep and stack number; another druid's doesn't.
   Your own frame too, none on pet frames. Clicking the frame and click casting still work through the
   icon. Someone joining or leaving (frames handed around) and joining a raid in combat put the icons on
-  the right members. Note when the icons go quiet because the game keeps the data secret (in and out of
-  combat, in a dungeon), and that they come back. No "tainted by" error after a raid fight.
+  the right members. No "tainted by" error after a raid fight.
+- Tracked buffs, "has it" in fights (Forever, #135): the game's aura container can be made and its unit
+  set in combat (a frame set up mid-fight, a member joining a raid in combat gets the icon at once).
+  A "has it" icon shows and counts down in a fight (sweep, stacks, countdown numbers when ticked),
+  appears the moment you cast and goes when the buff ends; another druid's Regrowth shows nothing. A
+  lower rank of Regrowth you know shows the icon too (the spell book lists every rank?), and a rank
+  learnt at the trainer counts without a `/reload`. Frames reassigned mid-fight (someone leaving)
+  show the icon on the right member. The icon takes no tooltip and lets clicks and click casting
+  through. Changing a line's Position in a fight hides that icon until the fight ends, then it shows
+  at the new place (the game denies access to the button while buffs are secret). No "tainted by" or
+  Lua error with the containers on the frames, in and after a fight.
 - Tracked buffs, "lacks it" (Forever, #121): Mark of the Wild set to Lacks it shows a grey icon on
   every member without it, yours included, and none on a member with anyone's Mark or Gift of the
   Wild. It goes when a member dies, goes offline or runs out of range (about 40 yards) and comes back
   when they return; note whether `UnitInRange` answers secret (`/run print(issecretvalue(UnitInRange("party1")))`)
-  in and out of combat, since a secret answer hides the icon.
+  in and out of combat, since a secret answer hides the icon. Every "lacks it" icon hides the moment a
+  fight starts and comes back when it ends, without a click.
 - Tracked buffs, spots and size (Forever, #122): each of the nine Positions puts the icon at that
   place on a raid frame and a raid-style party frame, clear of the frame's border; two lines on one
-  corner sit side by side towards the middle, two on Centre centred, and when one goes the other moves
-  up to close the gap. The size slider resizes them at once (at 40 two still fit on a raid frame's
+  corner sit side by side towards the middle, two on Centre centred, and when one goes the other stays
+  where it is (#135: fixed places). The size slider resizes them at once (at 40 two still fit on a raid frame's
   top edge?). Countdown numbers ticked: the game's seconds show on a "has it" icon and are readable at
   16 pixels (note if the game hides them on small cooldowns, its own size threshold); none on a
   "lacks it" icon.

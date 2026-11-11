@@ -163,23 +163,27 @@ On WoW Forever, a page for the game's own raid-style party and raid frames:
   your spellbook onto the page's table to track it; a spell dragged twice makes no second line. Its Show
   column says when the icon shows:
   - **Has it:** while your own cast of that buff is on the member (another druid's Regrowth doesn't
-    count), at any rank, with a dark sweep for the time left and a number for more than one stack.
-    Tick **Countdown numbers** to add the game's seconds-left numbers too.
+    count), at any rank you know, with a dark sweep for the time left and a number for more than one
+    stack. Tick **Countdown numbers** to add the game's seconds-left numbers too. It works in fights
+    too, when you need it most: the game itself fills it, so it appears the moment you cast and goes the
+    moment the buff ends.
   - **Lacks it:** a grey icon while the member has no buff of that name, at any rank and from anyone;
     the group version counts too (Gift of the Wild for Mark of the Wild, Arcane Brilliance for Arcane
     Intellect, Greater Blessings for Blessings, and so on). It's gone the moment the member gets the
-    buff, and never shows on a dead, offline or out-of-range member.
+    buff, and never shows on a dead, offline or out-of-range member. It shows **only out of combat**,
+    when you buff the group: every one hides when a fight starts and comes back when it ends, as the
+    game doesn't let addons read the group's buffs during a fight.
 
   Its **Position** puts the icon at one of nine spots on the frame: a corner, the middle of an edge or
   the centre (new lines start at the top right). Icons on the same spot sit side by side in the list's
-  order, from the spot towards the middle, and one that isn't showing leaves no gap. The **Tracked buff
-  size** slider sets how big all of them are.
+  order, from the spot towards the middle. Each line keeps its place on every frame, so an icon never
+  moves mid-fight: one that isn't showing leaves a gap, while a paused line or one for a spell this
+  character doesn't know takes no place. The **Tracked buff size** slider sets how big all of them are.
 
   Each line has a checkbox to pause it and an X to remove it. The list is the same
   on all your characters, in the order you added it; lines for spells a character doesn't know are
   greyed out there and show nothing. The icons let clicks through, so clicking a frame and click
-  casting work as before, and they appear on frames made in combat too. While the game keeps a buff's
-  data secret its icon stays hidden, and it comes back once the data is readable. Off by default, and
+  casting work as before, and they appear on frames made in combat too. Off by default, and
   it costs nothing while it's off or you're not in a group; the Defaults button switches it off, resets
   the size and countdown numbers, and keeps your list. Other addons can switch it through QoL's API (`groupframes`), which never touches
   the game's Display buffs setting.

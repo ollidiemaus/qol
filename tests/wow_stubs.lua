@@ -833,6 +833,157 @@ local function bookSlots()
     return slots
 end
 
+-- The game's aura container (CreateFrame("AuraContainer", nil, parent, "CustomAuraContainerTemplate")),
+-- as Forever's Blizzard_CustomAuraContainer: a unit (SetUnit), enabled or not (SetEnabled), and aura
+-- slots by key (AddAuraSlot(key, filter, { candidateFilters, initializeFrame }) returns the slot's
+-- button, a Button child of the container, taking the mouse until told otherwise). The button keeps
+-- the texture (SetIcon), cooldown (SetDurationCooldown) and font string (SetApplicationCount) handed
+-- to it, each its own descendant or an error. The game fills it on its own, in and out of combat and
+-- whether or not buff data is secret: an enabled slot on an enabled container shows the first buff on
+-- its unit that the filter keeps (PLAYER: the player's own cast) whose spell ID is in
+-- candidateFilters.includeSpellIDs (a set), with that buff's icon, cooldown and stacks above one, and
+-- hides when there's none. While state.aurasWithheld, the addon may not change the button or what it
+-- handed over (DenyTaintedAccessWhenAurasAreSecret), except in initializeFrame: that's an error.
+-- state.noAuraContainer: the client can't make one (CreateFrame raises an error).
+local auraFilling = false
+
+local function guardSlotRegion(region)
+    for key, value in pairs(region) do
+        if type(value) == "function" and type(key) == "string"
+            and (key:find("^Set") or key:find("^Clear") or key == "Show" or key == "Hide" or key == "EnableMouse") then
+            region[key] = function(...)
+                if state.aurasWithheld and not auraFilling then
+                    error("Aura frames cannot be accessed when auras are secret while tainted", 2)
+                end
+                return value(...)
+            end
+        end
+    end
+end
+
+local function descends(region, owner)
+    local node = region and region.parent
+    while node do
+        if node == owner then return true end
+        node = node.parent
+    end
+    return false
+end
+
+local function fillAuraContainer(container)
+    local was = auraFilling
+    auraFilling = true
+    local unit = container.auraUnit
+    local buffs = unit == "player" and state.buffs or state.unitBuffs[unit] or {}
+    for _, slot in pairs(container.auraSlots) do
+        local found
+        if container.auraEnabled and slot.enabled and unit and unit ~= "none" then
+            local include = slot.candidateFilters and slot.candidateFilters.includeSpellIDs
+            for _, buff in ipairs(buffs) do
+                local mine = not slot.filter:find("PLAYER") or buff.sourceUnit == "player"
+                if mine and (not include or include[buff.spellId]) then
+                    found = buff
+                    break
+                end
+            end
+        end
+        local button = slot.button
+        button:SetShown(found ~= nil)
+        if found then
+            if button.handedIcon then button.handedIcon:SetTexture(found.icon) end
+            local cooldown = button.handedCooldown
+            if cooldown then
+                local duration, expires = found.duration or 0, found.expirationTime or 0
+                if duration > 0 and expires > 0 then cooldown:SetCooldown(expires - duration, duration) else cooldown:Clear() end
+            end
+            if button.handedCount then
+                local stacks = found.applications or 0
+                button.handedCount:SetText(stacks > 1 and tostring(stacks) or "")
+            end
+        end
+    end
+    auraFilling = was
+end
+
+local function makeAuraContainer(container)
+    container.auraUnit, container.auraEnabled, container.auraSlots = nil, true, {}
+    function container:SetUnit(unit)
+        assert(type(unit) == "string")
+        self.auraUnit = unit
+        fillAuraContainer(self)
+    end
+    function container:GetUnit() return self.auraUnit end
+    function container:SetEnabled(enabled)
+        self.auraEnabled = enabled
+        fillAuraContainer(self)
+    end
+    function container:IsEnabled() return self.auraEnabled == true end
+    function container:HasAuraSlot(key) return self.auraSlots[key] ~= nil end
+    local function slotOf(self, key)
+        local slot = self.auraSlots[key]
+        if not slot then error(("aura slot '%s' was not found with this key."):format(tostring(key)), 3) end
+        return slot
+    end
+    function container:AddAuraSlot(key, filter, options)
+        assert(type(key) == "string" and key ~= "", "slotKey must be a non-empty string.")
+        assert(type(filter) == "string")
+        if self.auraSlots[key] then error(("aura slot '%s' already exists with this key."):format(key), 2) end
+        options = options or {}
+        local button = newRegion("Button", self)
+        button.mouseEnabled = true
+        local function hand(field, region, kind)
+            if not descends(region, button) or region.kind ~= kind then
+                error("bad object in function call (must be a descendant of owner)", 3)
+            end
+            button[field] = region
+        end
+        function button:SetIcon(texture) hand("handedIcon", texture, "Texture") end
+        function button:SetDurationCooldown(cooldown) hand("handedCooldown", cooldown, "Cooldown") end
+        function button:SetApplicationCount(fontString) hand("handedCount", fontString, "FontString") end
+        function button:ClearIcon() self.handedIcon = nil end
+        function button:ClearDurationCooldown() self.handedCooldown = nil end
+        function button:ClearApplicationCount() self.handedCount = nil end
+        button:Hide()
+        self.auraSlots[key] = { filter = filter, candidateFilters = options.candidateFilters, enabled = true,
+            button = button }
+        if options.initializeFrame then
+            local was = auraFilling
+            auraFilling = true
+            options.initializeFrame(button)
+            auraFilling = was
+        end
+        -- What the addon makes on the button, and what it hands over, is the button's too.
+        guardSlotRegion(button)
+        for _, region in ipairs(state.regions) do
+            if descends(region, button) then guardSlotRegion(region) end
+        end
+        fillAuraContainer(self)
+        return button
+    end
+    function container:GetAuraSlotFrame(key) return slotOf(self, key).button end
+    function container:IsAuraSlotEnabled(key) return slotOf(self, key).enabled end
+    function container:SetAuraSlotEnabled(key, enabled)
+        assert(type(enabled) == "boolean", "enabled must be a boolean.")
+        slotOf(self, key).enabled = enabled
+        fillAuraContainer(self)
+    end
+    function container:SetAuraSlotFilterString(key, filter)
+        slotOf(self, key).filter = filter
+        fillAuraContainer(self)
+    end
+    function container:SetAuraSlotCandidateFilters(key, candidateFilters)
+        slotOf(self, key).candidateFilters = candidateFilters
+        fillAuraContainer(self)
+    end
+end
+
+-- The game fills every aura container on a UNIT_AURA for its unit.
+local function fillAuraContainers(unit)
+    for _, region in ipairs(state.regions) do
+        if region.kind == "AuraContainer" and (unit == nil or region.auraUnit == unit) then fillAuraContainer(region) end
+    end
+end
+
 -- Classic Era's spell book tabs: state.spellTabs ({ numSlots, offSpecID, shouldHide } each, the
 -- slots of the book in turn), or one tab with every slot.
 local function spellTabs()
@@ -1110,8 +1261,12 @@ local function install()
         for each in tostring(template or ""):gmatch("[^,%s]+") do
             if not hasTemplate(each) then error("CreateFrame(): Couldn't find inherited node \"" .. each .. "\"", 2) end
         end
+        if kind == "AuraContainer" and state.noAuraContainer then
+            error("CreateFrame: Unknown frame type 'AuraContainer'", 2)
+        end
         local frame = newRegion(kind or "Frame", parent, template)
         if name then G[name], frame.name = frame, name end
+        if kind == "AuraContainer" then makeAuraContainer(frame) end
         if template == "MinimalSliderWithSteppersTemplate" then Stubs.BuildSlider(frame) end
         if template == "ColorSwatchTemplate" then
             function frame:SetColorRGB(r, g, b) self.color = { r, g, b } end
@@ -2355,6 +2510,7 @@ local function receives(region, event, unit)
 end
 
 function Stubs.Fire(event, ...)
+    if event == "UNIT_AURA" then fillAuraContainers((...)) end
     for _, region in ipairs(state.regions) do
         if receives(region, event, ...) then
             region.scripts.OnEvent(region, event, ...)
