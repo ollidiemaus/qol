@@ -11,7 +11,8 @@ local Options = ns.Options
 -- overlay with the Cooldown Manager page's border checkbox, and let the mouse through. The player
 -- places the row (the page's Unlock button puts it in a mover state, placeholders the mouse can drag)
 -- and sizes its icons; its place is saved as an offset from the screen's middle.
--- Having the buff means a buff on the player of the same name, or of its group version's; the names
+-- Having the buff means a buff on the player of the same name, or of its group version's or a rival's
+-- (a buff the game won't keep alongside it); the names
 -- come from the client for the spell IDs we have, so any rank, any caster, any food and any locale
 -- count. The game may keep buff data
 -- secret (Forever does in combat, and reading it then is an error): while C_Secrets says so, or a
@@ -47,7 +48,11 @@ local MAIN_HAND, OFF_HAND = 16, 17 -- the hands' inventory slots
 Reminders.PRESETS = {
     { key = "reminderWellFed", text = "REMINDER_WELL_FED", spells = { 19705, 19706, 19708, 19709, 19710, 19711, 24799, 24870, 25694, 25941,
         1225778, 1225779, 1225780, 1225782, 1248406, 1248420, 1248421, 1248422, 1248688, 1249519, 1249520,
-        1249521, 1249523, 1249907, 1249926, 1249927, 1283082, 1294007, 1302064, 1319310 } },
+        1249521, 1249523, 1249907, 1249926, 1249927, 1283082, 1294007, 1302064, 1319310,
+        -- Food buffs that take the Well Fed slot under names of their own: Blessed Sunfruit, Blessed
+        -- Sunfruit Juice, Alterac Spring Water, Dragonbreath Chili, Increased Stamina, Agility and
+        -- Intellect, Mana and Health Regeneration.
+        18125, 18141, 23697, 15852, 18191, 18192, 22730, 18194, 18222 } },
     -- Rested experience accumulates faster.
     { key = "reminderWellRested", text = "REMINDER_WELL_RESTED", spells = { 1225478 }, experience = true },
     -- The camp's bonuses, from the items set up at a camp.
@@ -109,8 +114,8 @@ local function nameOf(spellID)
     return nil
 end
 
--- Per reminder: the set of its buff's names, its group versions' among them (ns.GroupVersionNames,
--- applied to any reminder), kept once the client has given every one.
+-- Per reminder: the set of its buff's names, its group versions' and rivals' among them
+-- (ns.CountingNames, applied to any reminder), kept once the client has given every one.
 local names = {}
 
 -- The names its buff goes by, or nil while the client gives none.
@@ -118,7 +123,7 @@ local function namesOf(reminder)
     local set = names[reminder]
     if set then return set end
     set = {}
-    local groups, complete = ns.GroupVersionNames()
+    local groups, complete = ns.CountingNames()
     local any = false
     for _, spellID in ipairs(reminder.spells) do
         local name = nameOf(spellID)

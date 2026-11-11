@@ -57,8 +57,10 @@ newer QoL's) stays in the list and is left out of everything else.
   known rank by name and the line's own spell when known, in case the book lags. Kept per line, rebuilt
   on `SPELLS_CHANGED`; a rebuilt set is a new table, which hands every slot new candidate filters.
 - **"Lacks it":** read through the `HELPFUL` filter (anyone's buffs). The member has the buff when a name
-  there is the spell's or one of its group versions': `ns.GroupVersionNames` (`Data/GroupBuffs.lua`),
-  the table the reminders use too, Forever's single-target spell IDs and their group spells, by name. It
+  there is the spell's, one of its group versions' or a rival buff's: `ns.CountingNames`
+  (`Data/GroupBuffs.lua`), the tables the reminders use too, Forever's single-target spell IDs and their
+  group spells, and the hand-written rival pairs (why and where they came from: `bars-and-frames.md`,
+  Reminders), by name. It
   shows only for a member that's alive (`UnitIsDeadOrGhost`) and online (`UnitIsConnected`); a secret
   answer to either hides the frame's "lacks it" icons, as a secret buff name does. Range isn't asked:
   Forever's `UnitInRange` is `SecretReturns = true`, secret to an addon in and out of combat, so a check

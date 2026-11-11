@@ -9,14 +9,18 @@ local LIFEBLOOM, LIFEBLOOM_ICON = 33763, 134206
 -- Mark of the Wild (ranks 1 and 2) and its group version, Gift of the Wild.
 local MARK_1, MARK_2, GIFT = 1126, 5232, 21849
 local MARK_ICON, GIFT_ICON = 136078, 136038
+-- Thorns and a rival buff the game won't keep alongside it, Forever's ally Fire Shield II.
+local THORNS, THORNS_ICON, FIRE_SHIELD_2, FIRE_SHIELD_ICON = 467, 136104, 184, 135806
 local ICONS = { Regrowth = REGROWTH_ICON, Rejuvenation = REJUVENATION_ICON, Lifebloom = LIFEBLOOM_ICON,
-    ["Mark of the Wild"] = MARK_ICON, ["Gift of the Wild"] = GIFT_ICON }
+    ["Mark of the Wild"] = MARK_ICON, ["Gift of the Wild"] = GIFT_ICON, Thorns = THORNS_ICON,
+    ["Fire Shield II"] = FIRE_SHIELD_ICON }
 
 local DRUID = {
     [REGROWTH_1] = { name = "Regrowth", texture = REGROWTH_ICON, subtext = "Rank 1" },
     [REJUVENATION] = { name = "Rejuvenation", texture = REJUVENATION_ICON, subtext = "Rank 1" },
     [LIFEBLOOM] = { name = "Lifebloom", texture = LIFEBLOOM_ICON, subtext = "" },
     [MARK_1] = { name = "Mark of the Wild", texture = MARK_ICON, subtext = "Rank 1" },
+    [THORNS] = { name = "Thorns", texture = THORNS_ICON, subtext = "Rank 1" },
 }
 local REGROWTH_RANK_2 = { name = "Regrowth", texture = REGROWTH_ICON, subtext = "Rank 2" }
 
@@ -34,6 +38,8 @@ local function start(savedOptions, tracked, known, options)
     state.gameSpells[MARK_1] ={ name = "Mark of the Wild", texture = MARK_ICON }
     state.gameSpells[MARK_2] = { name = "Mark of the Wild", texture = MARK_ICON }
     state.gameSpells[GIFT] = { name = "Gift of the Wild", texture = GIFT_ICON }
+    state.gameSpells[THORNS] = { name = "Thorns", texture = THORNS_ICON }
+    state.gameSpells[FIRE_SHIELD_2] = { name = "Fire Shield II", texture = FIRE_SHIELD_ICON }
     for id, info in pairs(known or DRUID) do state.spells[id] = info end
     state.inGroup = not options.solo
     state.noAuraContainer = options.noAuraContainer
@@ -233,6 +239,20 @@ describe("Group frames: tracked buffs", function()
         Stubs.SetUnitBuffs("raid1", {})
         Stubs.RunTimers()
         T.same(seen(frame), { MARK_ICON })
+    end)
+
+    it("shows no \"lacks it\" icon on a member with a rival buff the game won't keep alongside it", function()
+        start(ON, { lacks(THORNS) })
+        local frame = Stubs.NewGroupFrame("raid1")
+        Stubs.SetUnitBuffs("raid1", {})
+        Stubs.RunTimers()
+        T.same(seen(frame), { THORNS_ICON })
+        Stubs.SetUnitBuffs("raid1", { buff("Fire Shield II", FIRE_SHIELD_2, "raid4") })
+        Stubs.RunTimers()
+        T.same(seen(frame), {}, "Fire Shield")
+        Stubs.SetUnitBuffs("raid1", { buff("Mark of the Wild", MARK_2, "raid4") })
+        Stubs.RunTimers()
+        T.same(seen(frame), { THORNS_ICON }, "an unrelated buff")
     end)
 
     it("shows a \"has it\" icon in colour next to a \"lacks it\" one, each at its own place", function()

@@ -12,8 +12,8 @@ local Options = ns.Options
 -- ranks the character knows is on the member, and fills the icon, cooldown sweep and stack count we
 -- handed it. QoL never reads a buff for a "has it" line.
 -- A "lacks it" icon is QoL's own, desaturated, and shows out of combat only, while the member has no
--- buff of that name from anyone, nor of its group version's (ns.GroupVersionNames, shared with the
--- reminders), and never on a dead or offline member (an out-of-range one's frame fades, icons with it).
+-- buff of that name from anyone, nor of its group version's or a rival's (ns.CountingNames, shared
+-- with the reminders), and never on a dead or offline member (an out-of-range one's frame fades, icons with it).
 -- Places: every line that is on and known has a fixed place on its spot (one of nine), in the list's
 -- order towards the frame's middle, whether its icon shows or not, at one size for all
 -- (groupFrameBuffSize); the game's countdown numbers show on "has it" icons while
@@ -71,7 +71,8 @@ local LEVEL_ABOVE = 5 -- the holder's frame level over the group frame's, above 
 local MAX_BUFFS = 255
 local OWN, ANY = "HELPFUL|PLAYER", "HELPFUL" -- buffs the player cast; anyone's
 -- The kinds of tracked buff this QoL understands: "has" shows while the player's own cast is on the
--- member, "lacks" while the member has no buff of the name (any caster, its group version too).
+-- member, "lacks" while the member has no buff of the name (any caster, its group version and rivals
+-- too).
 local KINDS = { has = true, lacks = true }
 local PARTY, RAID = 4, 40
 
@@ -175,7 +176,7 @@ local function fillDue()
             local index = #due + 1
             due[index], dueNames[index] = entry, name
             if entry.kind == "lacks" then
-                groups = groups or ns.GroupVersionNames()
+                groups = groups or ns.CountingNames()
                 dueGroups[index] = groups[name]
                 lacksCount = lacksCount + 1
             else
