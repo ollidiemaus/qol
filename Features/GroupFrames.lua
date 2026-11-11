@@ -13,11 +13,11 @@ local Options = ns.Options
 -- handed it. QoL never reads a buff for a "has it" line.
 -- A "lacks it" icon is QoL's own, desaturated, and shows out of combat only, while the member has no
 -- buff of that name from anyone, nor of its group version's (ns.GroupVersionNames, shared with the
--- reminders), and never on a dead, offline or out-of-range member.
+-- reminders), and never on a dead or offline member (an out-of-range one's frame fades, icons with it).
 -- Places: every line that is on and known has a fixed place on its spot (one of nine), in the list's
 -- order towards the frame's middle, whether its icon shows or not, at one size for all
 -- (groupFrameBuffSize); the game's countdown numbers show on "has it" icons while
--- groupFrameBuffCountdown is on.
+-- groupFrameBuffCountdown is on, at groupFrameBuffCountdownSize.
 -- The raid manager is hidden by Features/HideFrames.lua (hideRaidManager).
 --
 -- Taint: the group frames are found the way click casting finds raid-style frames (a hook on the
@@ -36,7 +36,7 @@ local Options = ns.Options
 -- Cost: the master switch off, nothing is heard but the setup hook (which only notes frames); on,
 -- GROUP_ROSTER_UPDATE tells when the character is in a group; only then are spells learned, the
 -- secrecy and combat events heard, and, while a "lacks it" line is on and out of combat, the
--- members' UNIT_AURA, death (UNIT_HEALTH, redrawn only when it changes), connection and range
+-- members' UNIT_AURA, death (UNIT_HEALTH, redrawn only when it changes) and connection
 -- (through unit listeners). Refreshes go through one ns.Later key, at most once per drawn frame, and a
 -- UNIT_AURA redraws only that unit's frames. A buff change costs QoL nothing for "has it" icons.
 local GroupFrames = {}
@@ -48,6 +48,9 @@ ns.GroupFrames = GroupFrames
 GroupFrames.GAME_BUFFS_CVAR = "raidFramesDisplayBuffs"
 
 local SWITCH, SIZE, COUNTDOWN = "groupFrameBuffs", "groupFrameBuffSize", "groupFrameBuffCountdown"
+local COUNTDOWN_SIZE = "groupFrameBuffCountdownSize"
+-- The countdown numbers' font when the game's countdown font string has none to keep.
+local COUNTDOWN_FONT, COUNTDOWN_FLAGS = "Fonts\\FRIZQT__.TTF", "OUTLINE"
 -- The pixels between two icons on a spot, and between an icon and the frame's edge.
 local GAP, INSET = 1, 2
 -- The nine spots a line's Position picks, in the page's order, each the anchor point it puts the icons
@@ -151,10 +154,11 @@ end
 -- one's line, the name it goes by, for a "lacks it" one its group versions' names or nil (asked once
 -- per refresh, not per frame), for a "has it" one its ranks, and its place: spot and offsets. One
 -- without a name from the client yet is left out. hasCount, lacksCount: how many of each kind.
--- size, countdown: the size slider's and the countdown numbers checkbox's values, read with them.
+-- size, countdown, countdownSize: the size slider's, the countdown numbers checkbox's and the countdown
+-- size slider's values, read with them.
 local due, dueNames, dueGroups, dueRanks, dueSpots, dueX, dueY = {}, {}, {}, {}, {}, {}, {}
 local hasCount, lacksCount = 0, 0
-local size, countdown
+local size, countdown, countdownSize
 local onSpot, placed = {}, {}
 
 local function fillDue()
@@ -163,7 +167,7 @@ local function fillDue()
         dueSpots[index], dueX[index], dueY[index] = nil, nil, nil
     end
     hasCount, lacksCount = 0, 0
-    size, countdown = Options:Get(SIZE), Options:Get(COUNTDOWN) == true
+    size, countdown, countdownSize = Options:Get(SIZE), Options:Get(COUNTDOWN) == true, Options:Get(COUNTDOWN_SIZE)
     local groups
     for _, entry in ipairs(list()) do
         local name = valid(entry) and entry.on == true and knows(entry.spell) and nameOf(entry.spell)
@@ -259,11 +263,24 @@ end
 
 -- "Has it" icons --------------------------------------------------------------------------------
 
--- The game's countdown numbers on the cooldown frame, shown while the checkbox is on.
+-- The game's countdown numbers on the cooldown frame, shown while the checkbox is on, at the slider's
+-- size in the game's font file and outline for them.
 local function styleButton(slot)
-    if not slot.cooldown or slot.countdown == countdown then return end
-    slot.countdown = countdown
-    slot.cooldown:SetHideCountdownNumbers(not countdown)
+    local cooldown = slot.cooldown
+    if not cooldown then return end
+    if slot.countdown ~= countdown then
+        slot.countdown = countdown
+        cooldown:SetHideCountdownNumbers(not countdown)
+    end
+    if slot.countdownSize ~= countdownSize then
+        local text = cooldown.GetCountdownFontString and cooldown:GetCountdownFontString()
+        if not text then return end
+        slot.countdownSize = countdownSize
+        local file, _, flags = text:GetFont()
+        if not ns.IsUsable(file) or type(file) ~= "string" then file, flags = COUNTDOWN_FONT, COUNTDOWN_FLAGS end
+        if not ns.IsUsable(flags) or type(flags) ~= "string" then flags = COUNTDOWN_FLAGS end
+        text:SetFont(file, countdownSize, flags)
+    end
 end
 
 -- Gives a slot's button (the game's, made for us) what the game fills: our texture, a cooldown frame
@@ -324,7 +341,7 @@ end
 -- Sets the slot of the index-th due line, a "has it" one, keyed by the line's spell (lines are one per
 -- spell), so a line switched off or removed leaves the others' slots alone: its ranks, its place,
 -- enabled. While buff data is secret its button can't be touched: one that should move stays
--- disabled until it can be; one that only needs the countdown numbers changed waits as it is.
+-- disabled until it can be; one that only needs the countdown numbers restyled waits as it is.
 local function showSlot(holder, container, index, secret, stamp)
     local key, set = "spell" .. due[index].spell, dueRanks[index]
     local slot = holder.slots[key]
@@ -414,14 +431,13 @@ local function readBuffs(unit)
     return true
 end
 
--- Whether a "lacks it" icon may show for the unit: alive, online and in range (the game doesn't check
--- the player's own range). A secret answer counts as no: we can't tell.
+-- Whether a "lacks it" icon may show for the unit: alive and online. A secret answer counts as no: we
+-- can't tell. Range isn't asked: UnitInRange's answers are always secret to an addon (SecretReturns),
+-- and the game already fades an out-of-range member's frame, our holder and its icons with it.
 local function present(unit)
     local dead, connected = UnitIsDeadOrGhost(unit), UnitIsConnected(unit)
-    if not (ns.IsUsable(dead) and ns.IsUsable(connected)) or dead or not connected then return false end
-    local inRange, checked = UnitInRange(unit)
-    if not (ns.IsUsable(inRange) and ns.IsUsable(checked)) then return false end
-    return not checked or inRange == true
+    if not (ns.IsUsable(dead) and ns.IsUsable(connected)) then return false end
+    return not dead and connected
 end
 
 -- Whether the unit has a buff of the "lacks it" line's name or of its group versions'.
@@ -533,9 +549,8 @@ end
 -- The members' units in pairs, one unit listener per pair: the player, the party, the raid.
 local unitListeners = {}
 local hearingMembers, drawing = false, false
--- What "lacks it" icons depend on: a member's buffs, death, connection and range.
-local MEMBER_EVENTS = { UNIT_AURA = onAura, UNIT_HEALTH = onHealth, UNIT_CONNECTION = onAura,
-    UNIT_IN_RANGE_UPDATE = onAura }
+-- What "lacks it" icons depend on: a member's buffs, death and connection.
+local MEMBER_EVENTS = { UNIT_AURA = onAura, UNIT_HEALTH = onHealth, UNIT_CONNECTION = onAura }
 
 local function members()
     local units = { "player" }
@@ -695,6 +710,6 @@ function GroupFrames:Init()
             if drawing then scheduleAll() end
         end)
     end
-    Options:Watch({ SWITCH, SIZE, COUNTDOWN }, update)
+    Options:Watch({ SWITCH, SIZE, COUNTDOWN, COUNTDOWN_SIZE }, update)
     update()
 end

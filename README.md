@@ -164,13 +164,14 @@ On WoW Forever, a page for the game's own raid-style party and raid frames:
   column says when the icon shows:
   - **Has it:** while your own cast of that buff is on the member (another druid's Regrowth doesn't
     count), at any rank you know, with a dark sweep for the time left and a number for more than one
-    stack. Tick **Countdown numbers** to add the game's seconds-left numbers too. It works in fights
+    stack. Tick **Countdown numbers** to add the game's seconds-left numbers too, sized by the
+    **Countdown number size** slider. It works in fights
     too, when you need it most: the game itself fills it, so it appears the moment you cast and goes the
     moment the buff ends.
   - **Lacks it:** a grey icon while the member has no buff of that name, at any rank and from anyone;
     the group version counts too (Gift of the Wild for Mark of the Wild, Arcane Brilliance for Arcane
     Intellect, Greater Blessings for Blessings, and so on). It's gone the moment the member gets the
-    buff, and never shows on a dead, offline or out-of-range member. It shows **only out of combat**,
+    buff, and never shows on a dead or offline member; an out-of-range member's frame fades, the icon with it. It shows **only out of combat**,
     when you buff the group: every one hides when a fight starts and comes back when it ends, as the
     game doesn't let addons read the group's buffs during a fight.
 
@@ -185,7 +186,7 @@ On WoW Forever, a page for the game's own raid-style party and raid frames:
   greyed out there and show nothing. The icons let clicks through, so clicking a frame and click
   casting work as before, and they appear on frames made in combat too. Off by default, and
   it costs nothing while it's off or you're not in a group; the Defaults button switches it off, resets
-  the size and countdown numbers, and keeps your list. Other addons can switch it through QoL's API (`groupframes`), which never touches
+  the sizes and countdown numbers, and keeps your list. Other addons can switch it through QoL's API (`groupframes`), which never touches
   the game's Display buffs setting.
 - **Hide the raid manager:** the tab at the edge of the screen that the game shows in every group (ready
   check, world markers, the group frames' options) is gone while you're in a group, and back the moment

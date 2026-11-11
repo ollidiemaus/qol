@@ -253,9 +253,9 @@ Things only the real client can confirm:
   Lua error with the containers on the frames, in and after a fight.
 - Tracked buffs, "lacks it" (Forever, #121): Mark of the Wild set to Lacks it shows a grey icon on
   every member without it, yours included, and none on a member with anyone's Mark or Gift of the
-  Wild. It goes when a member dies, goes offline or runs out of range (about 40 yards) and comes back
-  when they return; note whether `UnitInRange` answers secret (`/run print(issecretvalue(UnitInRange("party1")))`)
-  in and out of combat, since a secret answer hides the icon. Every "lacks it" icon hides the moment a
+  Wild. It goes when a member dies or goes offline and comes back when they return; out of range
+  (about 40 yards) it stays, faded with the member's frame (`UnitInRange` is always secret to addons,
+  so it isn't asked). Every "lacks it" icon hides the moment a
   fight starts and comes back when it ends, without a click.
 - Tracked buffs, spots and size (Forever, #122): each of the nine Positions puts the icon at that
   place on a raid frame and a raid-style party frame, clear of the frame's border; two lines on one
@@ -263,7 +263,8 @@ Things only the real client can confirm:
   where it is (#135: fixed places). The size slider resizes them at once (at 40 two still fit on a raid frame's
   top edge?). Countdown numbers ticked: the game's seconds show on a "has it" icon and are readable at
   16 pixels (note if the game hides them on small cooldowns, its own size threshold); none on a
-  "lacks it" icon.
+  "lacks it" icon. The Countdown number size slider resizes them at once out of combat; moved in a
+  fight, they keep their size until it ends.
 - Group buff secrecy (Forever, #119): a macro on an action button (it runs in a fight too), in a
   party, with a buff of yours on party1:
   `/run local s,u,f=C_Secrets,"party1","HELPFUL|PLAYER" local ok,a=pcall(C_UnitAuras.GetAuraDataByIndex,u,1,f) print(s.ShouldAurasBeSecret(),s.ShouldUnitAuraIndexBeSecret(u,1,f),s.ShouldSpellAuraBeSecret(8936),ok,ok and a and (issecretvalue(a.spellId) and "secret" or "readable") or a)`

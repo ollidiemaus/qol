@@ -149,6 +149,8 @@ L.TRACKED_BUFF_SIZE_TIP = "Wie groß die Symbole der verfolgten Buffs auf den Gr
 L.TRACKED_BUFF_COUNTDOWN = "Countdown-Zahlen"
 L.TRACKED_BUFF_COUNTDOWN_TIP = "Zeigt auf den Symbolen der Buffs, die ein Mitglied hat, die Countdown-Zahlen des "
     .. "Spiels, die verbleibenden Sekunden."
+L.TRACKED_BUFF_COUNTDOWN_SIZE = "Größe der Countdown-Zahlen"
+L.TRACKED_BUFF_COUNTDOWN_SIZE_TIP = "Wie groß die Countdown-Zahlen auf den Symbolen der verfolgten Buffs sind."
 
 L.SECTION_EDIT_MODE = "Bearbeitungsmodus"
 L.PAST_SCREEN_EDGE = "Fenster über den Bildschirmrand"

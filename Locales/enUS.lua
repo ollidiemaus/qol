@@ -145,6 +145,8 @@ L.TRACKED_BUFF_SIZE_TIP = "How big the tracked buffs' icons are on the group fra
 L.TRACKED_BUFF_COUNTDOWN = "Countdown numbers"
 L.TRACKED_BUFF_COUNTDOWN_TIP = "Adds the game's countdown numbers, the seconds left, to the icons of buffs a "
     .. "member has."
+L.TRACKED_BUFF_COUNTDOWN_SIZE = "Countdown number size"
+L.TRACKED_BUFF_COUNTDOWN_SIZE_TIP = "How big the countdown numbers are on the tracked buffs' icons."
 
 L.SECTION_EDIT_MODE = "Edit Mode"
 L.PAST_SCREEN_EDGE = "Frames past the screen edge"

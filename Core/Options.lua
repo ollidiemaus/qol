@@ -93,6 +93,7 @@ local DEFAULTS = {
     groupFrameBuffs = false, -- tracked buffs on the group frames, Forever only; the list is QoLDB.trackedBuffs
     groupFrameBuffSize = 16, -- the tracked buff icons' size, in pixels
     groupFrameBuffCountdown = false, -- the game's countdown numbers on "has it" icons
+    groupFrameBuffCountdownSize = 10, -- their font size, in pixels
 
     reloadCommand = true,
 

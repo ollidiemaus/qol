@@ -9,7 +9,7 @@ and [ADR 0005](../adr/0005-has-it-icons-filled-by-the-game.md); this note grows 
 
 Icons on every group frame (`Features/GroupFrames.lua`), for the spells in `QoLDB.trackedBuffs`
 (`{ spell, kind, spot, on }`, account-wide, in the order added; not an option, so the page's Defaults
-button switches `groupFrameBuffs` off and resets the size and countdown numbers, and keeps the list).
+button switches `groupFrameBuffs` off and resets the size and countdown numbers and their size, and keeps the list).
 The table's Show column picks the kind (`GroupFrames.SetKind`): a "has it" icon shows while the
 player's own cast of the buff is on the member, with the cooldown sweep and a stack number above one,
 in and out of combat; a "lacks it" icon, desaturated with neither, while the member has no buff of the
@@ -30,7 +30,9 @@ newer QoL's) stays in the list and is left out of everything else.
   can't tell in a fight whether a "has it" icon shows, which is why the places can't close up.
 - **Size and countdown:** `groupFrameBuffSize` (16, the slider 10 to 40) sizes every icon;
   `groupFrameBuffCountdown` (off) turns on the cooldown frame's own countdown numbers
-  (`SetHideCountdownNumbers`) on "has it" icons. Both are watched and redraw every frame.
+  (`SetHideCountdownNumbers`) on "has it" icons; `groupFrameBuffCountdownSize` (10, the slider 6 to 24)
+  is their font size, set on the cooldown's `GetCountdownFontString` with the font file and outline the
+  game gave it. All are watched and redraw every frame.
 - **"Has it" through the game's aura container:** each holder gets one
   `CreateFrame("AuraContainer", nil, holder, "CustomAuraContainerTemplate")`
   (`Blizzard_AuraContainer/Blizzard_CustomAuraContainer.lua`), made the first time its frame has a
@@ -57,10 +59,11 @@ newer QoL's) stays in the list and is left out of everything else.
 - **"Lacks it":** read through the `HELPFUL` filter (anyone's buffs). The member has the buff when a name
   there is the spell's or one of its group versions': `ns.GroupVersionNames` (`Data/GroupBuffs.lua`),
   the table the reminders use too, Forever's single-target spell IDs and their group spells, by name. It
-  shows only for a member that's alive (`UnitIsDeadOrGhost`), online (`UnitIsConnected`) and in range
-  (`UnitInRange`, as `CompactUnitFrame_UpdateInRange` reads it: out of range only when it was checked,
-  so the player's own frame counts as in range). `UnitInRange` has secret returns; a secret answer to
-  any of the three hides the frame's "lacks it" icons, as a secret buff name does. From
+  shows only for a member that's alive (`UnitIsDeadOrGhost`) and online (`UnitIsConnected`); a secret
+  answer to either hides the frame's "lacks it" icons, as a secret buff name does. Range isn't asked:
+  Forever's `UnitInRange` is `SecretReturns = true`, secret to an addon in and out of combat, so a check
+  on it hid every "lacks it" icon all the time (#121 to #135, found in game 2026-11-11). The game fades an
+  out-of-range member's frame (`CompactUnitFrame_GetRangeAlpha`), and our holder, its child, fades with it. From
   `PLAYER_REGEN_DISABLED` (before the lockdown, so the flag is ours, not `InCombatLockdown`) to
   `PLAYER_REGEN_ENABLED` every "lacks it" icon hides and nothing is read or heard; `ShouldAurasBeSecret`
   stays a second guard. A hidden "lacks it" icon keeps its place, so the "has it" icons beside it don't
@@ -83,12 +86,12 @@ newer QoL's) stays in the list and is left out of everything else.
   is set up and placed in `initializeFrame`, and moved or restyled later only while
   `ShouldAurasBeSecret` is false. A slot whose place changed in a fight (a line moved to another spot,
   the size changed) is disabled until the fight ends, rather than shown in the wrong place; a countdown
-  checkbox change waits as it is.
+  checkbox or countdown size change waits as it is.
 - **Cost:** with the switch off nothing is heard (the setup hook only notes frames). On, only
   `GROUP_ROSTER_UPDATE`, to know when the character is in a group (`IsInGroup`). In a group,
   `SPELLS_CHANGED`, `ADDON_RESTRICTION_STATE_CHANGED`, the combat events and `PLAYER_ENTERING_WORLD`.
   "Has it" icons cost QoL nothing per buff change: the containers listen for themselves. While a "lacks
-  it" line is on and out of combat, the members' `UNIT_AURA`, `UNIT_CONNECTION`, `UNIT_IN_RANGE_UPDATE`
+  it" line is on and out of combat, the members' `UNIT_AURA`, `UNIT_CONNECTION`
   and `UNIT_HEALTH` through 23 unit listeners (player, party1-4, raid1-40, two units each);
   `UNIT_HEALTH` fires on every hit, so it redraws only when `UnitIsDeadOrGhost` changed since the last
   one. Refreshes go through one `ns.Later` key, at most one per drawn frame; a `UNIT_AURA` redraws only

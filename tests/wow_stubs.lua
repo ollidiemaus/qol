@@ -1376,6 +1376,14 @@ local function install()
             function frame:SetCooldown(start, duration) self.duration = { start = start, seconds = duration } end
             function frame:Clear() self.duration = nil end
             function frame:SetHideCountdownNumbers(hide) self.hideCountdownNumbers = hide == true end
+            -- The countdown numbers' font string, in the game's font for them.
+            function frame:GetCountdownFontString()
+                if not self.countdownText then
+                    self.countdownText = newRegion("FontString", self)
+                    self.countdownText:SetFont("Fonts\\ARIALN.TTF", 18, "OUTLINE")
+                end
+                return self.countdownText
+            end
         end
         return frame
     end
@@ -2183,18 +2191,15 @@ local function install()
         return dead == true
     end
     --- Group members other than the player: state.members[unit] = { dead, offline, outOfRange }, any of
-    -- them Stubs.SECRET (UnitInRange's answers then are both secret). The player is never out of range
-    -- (UnitInRange doesn't check it). Stubs.SetMember changes them and fires the game's event.
+    -- them Stubs.SECRET. As Forever's client (SecretReturns), UnitInRange's answers are always secret to
+    -- an addon, whatever outOfRange says. Stubs.SetMember changes them and fires the game's event.
     G.UnitIsConnected = function(unit)
         local offline = (state.members[unit] or {}).offline
         if offline == Stubs.SECRET then return offline end
         return offline ~= true
     end
-    G.UnitInRange = function(unit)
-        if unit == "player" then return false, false end
-        local out = (state.members[unit] or {}).outOfRange
-        if out == Stubs.SECRET then return out, out end
-        return out ~= true, true
+    G.UnitInRange = function()
+        return Stubs.SECRET, Stubs.SECRET
     end
     G.UnitOnTaxi = function(unit) return unit == "player" and state.onTaxi == true end
     G.UnitLevel = function(unit) return unit == "player" and state.level or 0 end
