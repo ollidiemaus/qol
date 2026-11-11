@@ -170,7 +170,8 @@ On WoW Forever, a page for the game's own raid-style party and raid frames:
     moment the buff ends.
   - **Lacks it:** a grey icon while the member has no buff of that name, at any rank and from anyone;
     the group version counts too (Gift of the Wild for Mark of the Wild, Arcane Brilliance for Arcane
-    Intellect, Greater Blessings for Blessings, and so on). It's gone the moment the member gets the
+    Intellect, Greater Blessings for Blessings, and so on), and so does a rival buff, one the game
+    won't keep alongside it (see Reminders below for the list). It's gone the moment the member gets the
     buff, and never shows on a dead or offline member; an out-of-range member's frame fades, the icon with it. It shows **only out of combat**,
     when you buff the group: every one hides when a fight starts and comes back when it ends, as the
     game doesn't let addons read the group's buffs during a fight.
@@ -257,7 +258,8 @@ setting "Hide When Inactive" on the buff row being off.
 **Reminders:** an icon for a buff your character is missing, gone once you have it. Turn on **Show
 reminders** and pick the presets you want in the table below it (all off by default):
 
-- **Well Fed**, from any food or drink that makes you Well Fed.
+- **Well Fed**, from any food or drink that makes you Well Fed, or that takes its place under a name
+  of its own (Blessed Sunfruit, Alterac Spring Water, Dragonbreath Chili, "Increased Stamina", ...).
 - **Well Rested**, the buff that makes your rested experience build up faster.
 - **Camp Benefits**, the bonuses from the items set up at a camp.
 - **Main Hand Weapon Buff** and **Off Hand Weapon Buff**, one per hand: shows while that hand's
@@ -272,7 +274,11 @@ pause it and an X to remove it. The list is the same on all your characters: a r
 a character that knows the spell, at any rank, and is greyed out on the others. A buff counts at any
 rank and whoever cast it, and so does its group version: Gift of the Wild for Mark of the Wild,
 Arcane Brilliance for Arcane Intellect, the Prayers for Power Word: Fortitude, Divine Spirit and
-Shadow Protection, and the Greater Blessings for the Blessings of Might, Wisdom and Kings. Reminders
+Shadow Protection, and the Greater Blessings for the Blessings of Might, Wisdom and Kings. So does a
+rival buff, a different buff the game won't keep on you alongside it ("A more powerful spell is
+already active"), whichever of the two is stronger and both ways: Fire Shield (the imp's, and the
+ally spell at every rank) for Thorns, Dampen Magic for Amplify Magic, and the Scrolls of Stamina,
+Intellect and Spirit for Power Word: Fortitude, Arcane Intellect and Divine Spirit. Reminders
 are for buffs on yourself: a spell that leaves no buff on you, such as a heal, shows its icon all
 the time.
 

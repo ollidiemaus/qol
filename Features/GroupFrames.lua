@@ -12,8 +12,8 @@ local Options = ns.Options
 -- ranks the character knows is on the member, and fills the icon, cooldown sweep and stack count we
 -- handed it. QoL never reads a buff for a "has it" line.
 -- A "lacks it" icon is QoL's own, desaturated, and shows out of combat only, while the member has no
--- buff of that name from anyone, nor of its group version's (ns.GroupVersionNames, shared with the
--- reminders), and never on a dead or offline member (an out-of-range one's frame fades, icons with it).
+-- buff of that name from anyone, nor of its group version's or a rival's (ns.CountingNames, shared
+-- with the reminders), and never on a dead or offline member (an out-of-range one's frame fades, icons with it).
 -- Places: every line that is on and known has a fixed place on its spot (one of nine), in the list's
 -- order towards the frame's middle, whether its icon shows or not, at one size for all
 -- (groupFrameBuffSize); the game's countdown numbers show on "has it" icons while
@@ -71,7 +71,8 @@ local LEVEL_ABOVE = 5 -- the holder's frame level over the group frame's, above 
 local MAX_BUFFS = 255
 local OWN, ANY = "HELPFUL|PLAYER", "HELPFUL" -- buffs the player cast; anyone's
 -- The kinds of tracked buff this QoL understands: "has" shows while the player's own cast is on the
--- member, "lacks" while the member has no buff of the name (any caster, its group version too).
+-- member, "lacks" while the member has no buff of the name (any caster, its group version and rivals
+-- too).
 local KINDS = { has = true, lacks = true }
 local PARTY, RAID = 4, 40
 
@@ -151,32 +152,32 @@ local function ranksOf(spellID, name)
 end
 
 -- The tracked buffs that draw on this character, in the list's order, refilled by each refresh: each
--- one's line, the name it goes by, for a "lacks it" one its group versions' names or nil (asked once
+-- one's line, the name it goes by, for a "lacks it" one its group versions' and rivals' names or nil (asked once
 -- per refresh, not per frame), for a "has it" one its ranks, and its place: spot and offsets. One
 -- without a name from the client yet is left out. hasCount, lacksCount: how many of each kind.
 -- size, countdown, countdownSize: the size slider's, the countdown numbers checkbox's and the countdown
 -- size slider's values, read with them.
-local due, dueNames, dueGroups, dueRanks, dueSpots, dueX, dueY = {}, {}, {}, {}, {}, {}, {}
+local due, dueNames, dueCounting, dueRanks, dueSpots, dueX, dueY = {}, {}, {}, {}, {}, {}, {}
 local hasCount, lacksCount = 0, 0
 local size, countdown, countdownSize
 local onSpot, placed = {}, {}
 
 local function fillDue()
     for index = #due, 1, -1 do
-        due[index], dueNames[index], dueGroups[index], dueRanks[index] = nil, nil, nil, nil
+        due[index], dueNames[index], dueCounting[index], dueRanks[index] = nil, nil, nil, nil
         dueSpots[index], dueX[index], dueY[index] = nil, nil, nil
     end
     hasCount, lacksCount = 0, 0
     size, countdown, countdownSize = Options:Get(SIZE), Options:Get(COUNTDOWN) == true, Options:Get(COUNTDOWN_SIZE)
-    local groups
+    local counting
     for _, entry in ipairs(list()) do
         local name = valid(entry) and entry.on == true and knows(entry.spell) and nameOf(entry.spell)
         if name then
             local index = #due + 1
             due[index], dueNames[index] = entry, name
             if entry.kind == "lacks" then
-                groups = groups or ns.GroupVersionNames()
-                dueGroups[index] = groups[name]
+                counting = counting or ns.CountingNames()
+                dueCounting[index] = counting[name]
                 lacksCount = lacksCount + 1
             else
                 dueRanks[index] = ranksOf(entry.spell, name)
@@ -440,12 +441,12 @@ local function present(unit)
     return not dead and connected
 end
 
--- Whether the unit has a buff of the "lacks it" line's name or of its group versions'.
+-- Whether the unit has a buff of the "lacks it" line's name or of its group versions' or rivals'.
 local function hasAny(index)
     if found[dueNames[index]] then return true end
-    local groups = dueGroups[index]
-    if not groups then return false end
-    for _, name in ipairs(groups) do
+    local others = dueCounting[index]
+    if not others then return false end
+    for _, name in ipairs(others) do
         if found[name] then return true end
     end
     return false

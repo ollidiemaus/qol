@@ -4,6 +4,7 @@ local describe, it = T.describe, T.it
 
 -- Forever's spells for the presets, as its client names them in English, and a made-up icon each.
 local WELL_FED, WELL_FED_OTHER, WELL_RESTED, CAMP = 19705, 1248406, 1225478, 1229741
+local SUNFRUIT, STAMINA_FOOD = 18125, 18191
 local ICONS = { wellFed = 136000, wellRested = 136001, campBenefits = 136002 }
 
 local function knowSpells(names)
@@ -12,6 +13,9 @@ local function knowSpells(names)
     spells[WELL_FED_OTHER] = { name = names.wellFed, texture = 133943 }
     spells[WELL_RESTED] = { name = names.wellRested, texture = ICONS.wellRested }
     spells[CAMP] = { name = names.campBenefits, texture = ICONS.campBenefits }
+    -- Food buffs that take the Well Fed slot under names of their own.
+    spells[SUNFRUIT] = { name = "Blessed Sunfruit", texture = 133997 }
+    spells[STAMINA_FOOD] = { name = "Increased Stamina", texture = 133998 }
 end
 
 -- The placeholder icon of the row while it's unlocked: the game's question mark.
@@ -98,6 +102,10 @@ end
 -- the Wild, as Forever numbers them, with made-up icons.
 local THORNS_1, THORNS_3, MARK_1, MARK_7, GIFT = 467, 1075, 1126, 9885, 21849
 local THORNS_ICON, MARK_ICON = 136104, 136078
+local RIVALS = { [2947] = "Fire Shield", [134] = "Fire Shield", [184] = "Fire Shield II", [2601] = "Fire Shield III",
+    [2602] = "Fire Shield IV", [1008] = "Amplify Magic", [604] = "Dampen Magic", [1243] = "Power Word: Fortitude",
+    [8099] = "Stamina", [1459] = "Arcane Intellect", [8096] = "Intellect", [14752] = "Divine Spirit",
+    [8112] = "Spirit" }
 
 -- The client has data for these spells on every character.
 local function gameSpells()
@@ -107,6 +115,9 @@ local function gameSpells()
     spells[MARK_1] = { name = "Mark of the Wild", texture = MARK_ICON }
     spells[MARK_7] = { name = "Mark of the Wild", texture = MARK_ICON }
     spells[GIFT] = { name = "Gift of the Wild", texture = 136038 }
+    -- Rival buffs: Fire Shield (the imp's and Forever's ally ranks), Amplify and Dampen Magic, the
+    -- scrolls' buffs and the class buffs they rival.
+    for id, name in pairs(RIVALS) do spells[id] = { name = name, texture = 136000 + id } end
 end
 
 -- The character knows these spells ({ id, name, rank } each).
@@ -175,6 +186,17 @@ describe("reminders", function()
     it("counts any Well Fed buff, whichever food it came from", function()
         local ns = start({ reminders = true, reminderWellFed = true }, { buffs = { buff("Well Fed", WELL_FED_OTHER) } })
         T.same(seen(ns), {})
+    end)
+
+    it("counts a food buff of another name", function()
+        local ns = start({ reminders = true, reminderWellFed = true })
+        T.same(seen(ns), { ICONS.wellFed })
+        Stubs.SetBuffs({ buff("Blessed Sunfruit", SUNFRUIT) })
+        Stubs.RunTimers()
+        T.same(seen(ns), {}, "Blessed Sunfruit")
+        Stubs.SetBuffs({ buff("Increased Stamina", STAMINA_FOOD) })
+        Stubs.RunTimers()
+        T.same(seen(ns), {}, "Increased Stamina")
     end)
 
     it("goes by the client's names, in any language", function()
@@ -519,6 +541,61 @@ describe("reminders", function()
         Stubs.SetBuffs({ buff("Gift of the Wild", GIFT) })
         Stubs.RunTimers()
         T.same(seen(ns), {})
+    end)
+
+    it("counts a rival buff the game won't keep alongside it, any of its names", function()
+        local ns = startOwn({ reminders = true }, { { spell = THORNS_3, on = true } }, DRUID)
+        T.same(seen(ns), { THORNS_ICON })
+        Stubs.SetBuffs({ buff("Fire Shield", 2947) })
+        Stubs.RunTimers()
+        T.same(seen(ns), {}, "the imp's Fire Shield")
+        Stubs.SetBuffs({ buff("Fire Shield II", 184) })
+        Stubs.RunTimers()
+        T.same(seen(ns), {}, "Forever's ally Fire Shield II")
+        Stubs.SetBuffs({ buff("Mark of the Wild", MARK_1) })
+        Stubs.RunTimers()
+        T.same(seen(ns), { THORNS_ICON }, "an unrelated buff")
+    end)
+
+    it("still shows a reminder with no rival while another buff's rival is on", function()
+        local ns = startOwn({ reminders = true }, { { spell = MARK_1, on = true } }, DRUID)
+        T.same(seen(ns), { MARK_ICON })
+        Stubs.SetBuffs({ buff("Fire Shield", 2947), buff("Stamina", 8099) })
+        Stubs.RunTimers()
+        T.same(seen(ns), { MARK_ICON })
+    end)
+
+    it("counts rivals both ways: Thorns for Fire Shield", function()
+        local ns = startOwn({ reminders = true }, { { spell = 134, on = true } }, { { 134, "Fire Shield", 1 } })
+        T.eq(#seen(ns), 1)
+        Stubs.SetBuffs({ buff("Thorns", THORNS_3) })
+        Stubs.RunTimers()
+        T.same(seen(ns), {})
+    end)
+
+    it("counts Amplify Magic and Dampen Magic for each other", function()
+        local mage = { { 1008, "Amplify Magic", 1 }, { 604, "Dampen Magic", 1 } }
+        local ns = startOwn({ reminders = true }, { { spell = 1008, on = true } }, mage)
+        T.eq(#seen(ns), 1)
+        Stubs.SetBuffs({ buff("Dampen Magic", 604) })
+        Stubs.RunTimers()
+        T.same(seen(ns), {}, "Dampen Magic for Amplify Magic")
+        ns = startOwn({ reminders = true }, { { spell = 604, on = true } }, mage)
+        T.eq(#seen(ns), 1)
+        Stubs.SetBuffs({ buff("Amplify Magic", 1008) })
+        Stubs.RunTimers()
+        T.same(seen(ns), {}, "Amplify Magic for Dampen Magic")
+    end)
+
+    it("counts a scroll's buff for the class buff it rivals", function()
+        for _, case in ipairs({ { 1243, "Power Word: Fortitude", "Stamina", 8099 },
+            { 1459, "Arcane Intellect", "Intellect", 8096 }, { 14752, "Divine Spirit", "Spirit", 8112 } }) do
+            local ns = startOwn({ reminders = true }, { { spell = case[1], on = true } }, { { case[1], case[2], 1 } })
+            T.eq(#seen(ns), 1, case[2])
+            Stubs.SetBuffs({ buff(case[3], case[4]) })
+            Stubs.RunTimers()
+            T.same(seen(ns), {}, case[3] .. " for " .. case[2])
+        end
     end)
 
     it("shows nothing for a switched-off reminder of the player's own", function()

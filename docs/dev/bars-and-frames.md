@@ -106,9 +106,19 @@ own reminder whose spell is known makes the row listen: a warrior with only the 
 reminder hears no `UNIT_AURA`. An entry without a spell ID (a newer QoL's) stays saved, out of the
 row and the page. A drop is
 the cursor's `"spell"` (its base spell ID); another rank of a spell in the list, or anything else,
-does nothing and stays on the cursor. Group versions (`ns.GroupVersionNames` in
-`Data/GroupBuffs.lua`, Forever's IDs, shared with the tracked buffs) add the group spell's name to
-any reminder's set of names; Forever has only three Greater Blessings. While the list
+does nothing and stays on the cursor. Group versions and rival buffs (`ns.CountingNames` in
+`Data/GroupBuffs.lua`, Forever's IDs, shared with the tracked buffs) add their names to any
+reminder's set of names; Forever has only three Greater Blessings. Rival buffs are pairs the game
+won't keep on one character together ("A more powerful spell is already active"). The stacking rules
+are the server's and aren't in the client's DB2 tables, so the pairs are written by hand, once each,
+and the map enters them both ways. Sources: Thorns and Fire Shield is what we saw in game (cmangos:
+"damage shields never stack"; Blizzard's server goes further than vmangos there); Amplify and Dampen
+Magic, vmangos' generic no-stack rule; the scrolls and the class buffs, vmangos `spell_group` "more
+powerful" groups and cmangos-classic `SpellStacking.cpp` ("do not stack player buffs with scrolls").
+No strength comparison: a weaker rival counts too. A rival counts only for the buff it's paired with,
+not for that buff's group version. Add a pair whenever "A more powerful spell is already active" turns
+up in game. Food buffs with other names (Blessed Sunfruit, "Increased Stamina", ...) take the Well Fed
+slot (both emulators' Well Fed group); they're in the Well Fed preset's spell list, not pairs. While the list
 has entries, `SPELLS_CHANGED` refreshes the row and tells the page (`Reminders.OnChange`), so
 learning a spell shows its reminder and ungreys its line. The page's own lines are table lines made
 as the list grows and reused: each shows the entry at its place, so removing one moves the rest up.
