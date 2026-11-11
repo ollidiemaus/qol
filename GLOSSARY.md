@@ -212,7 +212,7 @@ _Avoid_: cooldown viewer, CDM, cooldown bar
 
 **Reminder**:
 An icon shown while the character lacks a buff, gone once they have it. A buff of that name counts at
-any rank and from any caster, and so does its group version. A reminder for a spell shows only on a
+any rank and from any caster, and so do its group version and its rival buffs. A reminder for a spell shows only on a
 character that knows the spell. A weapon buff's reminder (a poison, a shaman's weapon spell, a stone
 or an oil) is per hand and shows that hand's weapon.
 _Avoid_: missing buff, tracker, custom spell, alert
@@ -232,6 +232,12 @@ The buff that puts another buff on the whole group at once, such as Gift of the 
 Wild. Having it counts as having the buff.
 _Avoid_: equivalent, raid buff, greater buff
 
+**Rival buff**:
+A different buff that the game won't keep on a character alongside this one, such as Fire Shield for
+Thorns. Having it counts as having the buff, whichever of the two is stronger, and the rivalry goes
+both ways.
+_Avoid_: exclusive buff, conflicting buff, same buff, group version (that's the same buff on the whole group)
+
 **Weapon buff**:
 A temporary effect put on a weapon rather than on the character: a poison, a shaman's weapon spell
 such as Rockbiter, a sharpening stone or an oil. The game doesn't count it as a buff.
@@ -246,7 +252,8 @@ _Avoid_: raid frame (a party frame can be one too), compact frame, unit frame (t
 
 **Tracked buff**:
 A buff the player chose to show as an icon on group frames, either while the member has it (a heal
-over time) or while the member lacks it (a buff still to cast). QoL draws the icon; the game's own
+over time) or while the member lacks it (a buff still to cast; its group version or a rival buff
+counts as having it). QoL draws the icon; the game's own
 buff icons on the frame are a separate thing.
 _Avoid_: indicator, aura, reminder (that's the character's own missing buff, in the reminder row)
 
