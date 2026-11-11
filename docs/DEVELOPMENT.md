@@ -115,7 +115,13 @@ Forever beta. So:
   `PartyFrame.PartyMemberFramePool:EnumerateActive()` (a read of the pool) and
   `hooksecurefunc("CompactUnitFrame_SetUpFrame", ...)`: a hook on a global function, not on a
   frame's method, which runs after it and only notes the frame. The tracked buffs hook it the same
-  way, to note the frames their icons go on (see [`dev/group-frames.md`](dev/group-frames.md)). One
+  way, to note the frames their icons go on (see [`dev/group-frames.md`](dev/group-frames.md)), and
+  their "has it" icons are the game's aura container (`CustomAuraContainerTemplate`), on a holder of
+  ours: `SetUnit`, `SetEnabled`, `AddAuraSlot`, `SetAuraSlotEnabled` and `SetAuraSlotCandidateFilters`
+  are its own API, unprotected, and the slot button's `SetIcon`, `SetDurationCooldown` and
+  `SetApplicationCount` hand it widgets of ours, made in its `initializeFrame`. The button gets no
+  field of ours, and is touched only while buff data isn't secret, as the game denies tainted access
+  to it then. One
   Blizzard table is written to: `hash_SlashCmdList`, the chat's cache of slash commands. Whenever
   the chat parses a slash command (and once at load), `ImportAllListsToHash`
   (`Blizzard_ChatFrameBase/Shared/ChatFrameUtil.lua`) moves every new entry of `SlashCmdList` into
@@ -221,7 +227,9 @@ protected and fails on `SetAttribute` in combat; `Stubs.NewGamepadBar()` (betwee
 `Login`) makes Forever's controller bar with its `PageUnit` anchors. `Stubs.Fire` delivers an event
 to a frame registered with `RegisterUnitEvent` only when its first argument is one of that frame's
 units, as the game does, and `Stubs.Listens(event, unit)` says whether any of our frames would get
-the event for that unit, so a spec can check that other units' events never reach QoL.
+the event for that unit, so a spec can check that other units' events never reach QoL. A frame made
+as an `AuraContainer` is faked: it fills its slots from the stubbed buffs on every `UNIT_AURA` for its
+unit, and touching a slot button while `Stubs.WithholdAuras(true)` fails, as on Forever.
 
 `Stubs.Reset({ client = "classicEra" })` (or `LoadAddon` with it) makes the stubbed client Classic Era
 (1.15.9, interface 11509): the tooltip data processor (its tooltips run their scripts
