@@ -55,13 +55,25 @@ local function showItem(button, id)
     itemCooldown(button, id)
 end
 
--- name, spell, icon, usable and whether this character has it, or nil for an unknown mount.
+-- Items whose name the client hadn't loaded when asked: it was asked to load them, and
+-- GET_ITEM_INFO_RECEIVED says when (Entries.NameArrived).
+local requestedNames = {}
+
+-- Whether the item's name was one asked for, now loaded.
+function Entries.NameArrived(itemID)
+    if not requestedNames[itemID] then return false end
+    requestedNames[itemID] = nil
+    return true
+end
+
+-- name, spell, icon, usable and whether this character has it, or nil for an unknown mount. Several
+-- values, not a table: the ring's refresh asks for each mount's on every cooldown event.
 local function mount(id)
     local journal = C_MountJournal
     if not (journal and journal.GetMountInfoByID) then return nil end
     local name, spellID, icon, _, usable, _, _, _, _, hidden, collected = journal.GetMountInfoByID(id)
     if not name then return nil end
-    return { name = name, spellID = spellID, icon = icon, usable = usable, known = collected and not hidden }
+    return name, spellID, icon, usable, collected and not hidden
 end
 
 -- A toy's name and icon from the toy box, which knows them even when the item isn't loaded yet.
@@ -95,7 +107,14 @@ local KINDS = {
         known = function(id) return C_Item.GetItemCount(id) > 0 or C_Item.IsEquippedItem(id) end,
         action = function(id) return "item", "item:" .. id end,
         icon = function(id) return C_Item.GetItemIconByID(id) end,
-        name = function(id) return C_Item.GetItemNameByID(id) end,
+        name = function(id)
+            local name = C_Item.GetItemNameByID(id)
+            if name == nil and not requestedNames[id] and C_Item.RequestLoadItemDataByID then
+                requestedNames[id] = true
+                C_Item.RequestLoadItemDataByID(id)
+            end
+            return name
+        end,
         show = showItem,
         tooltip = function(tooltip, id) tooltip:SetItemByID(id) end,
         pickup = function(id) C_Item.PickupItem(id) end,
@@ -124,17 +143,17 @@ local KINDS = {
     -- again), else taking it off the ring just removes it.
     mount = {
         known = function(id)
-            local info = mount(id)
-            return info ~= nil and info.known
+            local name, _, _, _, known = mount(id)
+            return name ~= nil and known == true
         end,
-        action = function(id) return "spell", mount(id).spellID end,
-        icon = function(id) return (mount(id) or {}).icon end,
-        name = function(id) return (mount(id) or {}).name end,
+        action = function(id) return "spell", select(2, mount(id)) end,
+        icon = function(id) return select(3, mount(id)) end,
+        name = function(id) return (mount(id)) end,
         show = function(button, id)
-            local info = mount(id)
-            setUsable(button, info and info.usable)
+            local name, spellID, _, usable = mount(id)
+            setUsable(button, name and usable)
             Buttons.SetCount(button.count, "")
-            local duration = info and C_Spell.GetSpellCooldownDuration(info.spellID)
+            local duration = name and C_Spell.GetSpellCooldownDuration(spellID)
             if duration then
                 Buttons.SetCooldownDuration(button.cooldown, duration)
             else
@@ -142,17 +161,17 @@ local KINDS = {
             end
         end,
         tooltip = function(tooltip, id)
-            local info = mount(id)
-            if not info then return end
+            local name, spellID = mount(id)
+            if not name then return end
             if tooltip.SetMountBySpellID then
-                tooltip:SetMountBySpellID(info.spellID)
+                tooltip:SetMountBySpellID(spellID)
             else
-                tooltip:SetSpellByID(info.spellID)
+                tooltip:SetSpellByID(spellID)
             end
         end,
         pickup = function(id)
-            local info = mount(id)
-            if info then C_Spell.PickupSpell(info.spellID) end
+            local name, spellID = mount(id)
+            if name then C_Spell.PickupSpell(spellID) end
         end,
     },
     -- A macro looks like the spell or item it uses (#showtooltip), else just its icon.
@@ -375,8 +394,8 @@ local function mounts()
     local journal = C_MountJournal
     if not (journal and journal.GetMountIDs) then return list end
     for _, id in ipairs(journal.GetMountIDs()) do
-        local info = mount(id)
-        if info and info.known then add({ kind = "mount", id = id }) end
+        local name, _, _, _, known = mount(id)
+        if name and known then add({ kind = "mount", id = id }) end
     end
     return list
 end

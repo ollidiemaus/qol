@@ -321,3 +321,42 @@ describe("controller back buttons", function()
         end)
     end)
 end)
+
+-- The setters the back buttons and the rings share (Core/Buttons.lua).
+describe("action button setters", function()
+    -- A region that counts the calls that change it.
+    local function region()
+        local calls = { texture = 0, color = 0, cooldown = 0 }
+        return {
+            calls = calls,
+            SetTexture = function() calls.texture = calls.texture + 1 end,
+            SetVertexColor = function() calls.color = calls.color + 1 end,
+            SetCooldown = function() calls.cooldown = calls.cooldown + 1 end,
+        }
+    end
+
+    it("sets an icon's texture and tint only when each changed, the one not undoing the other's", function()
+        local ns = Stubs.LoadAddon({})
+        local icon = region()
+        for _ = 1, 3 do
+            ns.Buttons.SetIcon(icon, 134414)
+            ns.Buttons.SetUsable(icon, true, false)
+        end
+        T.eq(icon.calls.texture, 1)
+        T.eq(icon.calls.color, 1)
+        ns.Buttons.SetUsable(icon, false, true)
+        T.eq(icon.calls.color, 2, "a new tint")
+        T.eq(icon.calls.texture, 1)
+    end)
+
+    it("sets a secret cooldown every time without comparing it", function()
+        local ns = Stubs.LoadAddon({})
+        local cooldown = region()
+        ns.Buttons.SetCooldown(cooldown, 100, 30)
+        ns.Buttons.SetCooldown(cooldown, 100, 30)
+        T.eq(cooldown.calls.cooldown, 1)
+        ns.Buttons.SetCooldown(cooldown, Stubs.SECRET, Stubs.SECRET)
+        ns.Buttons.SetCooldown(cooldown, Stubs.SECRET, 30)
+        T.eq(cooldown.calls.cooldown, 3)
+    end)
+end)

@@ -104,7 +104,11 @@ settings are open, and closing our window is a plain `Hide` of a frame of ours.
   focus).
 - All frames (the window, the pages, the information page) are made on `ADDON_LOADED`, never while a
   window of the game has the controller, so SmartNavigation's `CreateFrame` hook rebuilds no window
-  for them.
+  for them. The one exception is a table line for an entry added later (a reminder or a tracked buff
+  dropped on the page): its frames are made then, while our window is open, and only out of combat,
+  because the cursor's refresh behind that hook refuses addon code in combat. An entry added in combat
+  shows its line once combat ends (`PLAYER_REGEN_ENABLED` refreshes the page). The saved entries' lines
+  are made with the page.
 
 The options are grouped by part of the game, in five groups:
 - General: Automation (merchant, quests, loot and the bags), Chat (the chat window, `/rl`), Mail

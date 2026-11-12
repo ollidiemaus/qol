@@ -22,15 +22,18 @@ Buttons.REFRESH_EVENTS = {
 -- every cooldown and usability event, many times a second in combat. A secret value can't be
 -- compared, so it is always set. Every change to these regions goes through them.
 local shown = setmetatable({}, { __mode = "k" })
+-- An icon's tint, apart from its texture in shown: both are on the same region.
+local shownTint = setmetatable({}, { __mode = "k" })
 local shownDuration = setmetatable({}, { __mode = "k" })
 
-local function differs(region, value)
+local function differs(region, value, cache)
+    cache = cache or shown
     if not ns.IsUsable(value) then
-        shown[region] = nil
+        cache[region] = nil
         return true
     end
-    if shown[region] == value then return false end
-    shown[region] = value
+    if cache[region] == value then return false end
+    cache[region] = value
     return true
 end
 
@@ -48,7 +51,7 @@ local TINTS = { usable = { 1, 1, 1 }, noMana = { 0.5, 0.5, 1 }, unusable = { 0.4
 function Buttons.SetUsable(icon, usable, noMana)
     local tint = (ns.IsUsable(usable) and usable and "usable")
         or (ns.IsUsable(noMana) and noMana and "noMana") or "unusable"
-    if differs(icon, tint) then
+    if differs(icon, tint, shownTint) then
         local color = TINTS[tint]
         icon:SetVertexColor(color[1], color[2], color[3])
     end
@@ -67,8 +70,8 @@ function Buttons.SetCooldownDuration(cooldown, duration)
 end
 
 function Buttons.SetCooldown(cooldown, start, duration)
-    if shown[cooldown] == start and shownDuration[cooldown] == duration and ns.IsUsable(start)
-        and ns.IsUsable(duration) then
+    if ns.IsUsable(start) and ns.IsUsable(duration) and shown[cooldown] == start
+        and shownDuration[cooldown] == duration then
         return
     end
     shown[cooldown] = ns.IsUsable(start) and start or nil

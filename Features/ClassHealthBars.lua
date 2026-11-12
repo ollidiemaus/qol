@@ -55,7 +55,9 @@ end
 -- Sets only what differs: on Classic Era this runs after every health change of a bar.
 local function colorBar(bar, color)
     local r, g, b, a = bar:GetStatusBarColor()
+    -- Secret: taken as the game's default for these bars (not desaturated), so it is set and later cleared.
     local desaturated = bar:IsStatusBarDesaturated()
+    if not ns.IsUsable(desaturated) then desaturated = false end
     if not originals[bar] then
         originals[bar] = { r = r, g = g, b = b, a = a, desaturated = desaturated }
     end

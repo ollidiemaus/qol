@@ -41,11 +41,12 @@ local CONFIRM_SECONDS = 3
 
 local editor, listener, picker
 -- What the editor hears while it shows; made in Create.
-local knownEvents, refreshEvents
+local knownEvents, refreshEvents, itemEvents
 
 local function setListening(on)
     knownEvents:SetOn(on)
     refreshEvents:SetOn(on)
+    itemEvents:SetOn(on)
 end
 -- The ring shown, by its place in the list; the box waiting for a key ("mouse" or "stick").
 local current = 1
@@ -494,7 +495,16 @@ function Editor:Create(parent, top, width, height)
         later("ringEditor", renderShown)
         later("ringEditorList", fillShown)
     end)
-    refreshEvents = ns.Events:NewGroup(Ring.REFRESH_EVENTS, function() later("ringEditor", renderShown) end)
+    -- Cooldowns and usability change only how the ring's entries look: their slots are redrawn, not
+    -- the page (what this character has comes with knownEvents).
+    local function refreshShown()
+        if editor:IsVisible() then Ring.Refresh(editor.art) end
+    end
+    refreshEvents = ns.Events:NewGroup(Ring.REFRESH_EVENTS, function() later("ringEditorArt", refreshShown) end)
+    -- An item's name the client hadn't loaded when the list was filled (Entries.Name asked for it).
+    itemEvents = ns.Events:NewGroup({ "GET_ITEM_INFO_RECEIVED" }, function(_, itemID)
+        if Entries.NameArrived(itemID) then later("ringEditorList", fillShown) end
+    end)
 end
 
 -- Shows the rings and what this character has as they are now: the settings window does it when it

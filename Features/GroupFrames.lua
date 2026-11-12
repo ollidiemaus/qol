@@ -38,7 +38,8 @@ local Options = ns.Options
 -- secrecy and combat events heard, and, while a "lacks it" line is on and out of combat, the
 -- members' UNIT_AURA, death (UNIT_HEALTH, redrawn only when it changes) and connection
 -- (through unit listeners). Refreshes go through one ns.Later key, at most once per drawn frame, and a
--- UNIT_AURA redraws only that unit's frames. A buff change costs QoL nothing for "has it" icons.
+-- UNIT_AURA redraws only that unit's frames, and only when it can change which buffs the unit has
+-- (ns.BuffsMayHaveChanged: not for a refreshed duration or a debuff). A buff change costs QoL nothing for "has it" icons.
 local GroupFrames = {}
 ns.GroupFrames = GroupFrames
 
@@ -529,8 +530,8 @@ local function scheduleAll()
     schedule()
 end
 
-local function onAura(_, unit)
-    if type(unit) ~= "string" then return end
+local function onAura(_, unit, updateInfo)
+    if type(unit) ~= "string" or not ns.BuffsMayHaveChanged(updateInfo) then return end
     dirty[unit] = true
     schedule()
 end

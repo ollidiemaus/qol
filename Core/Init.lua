@@ -32,6 +32,25 @@ function ns.IsUsable(value)
     return true
 end
 
+-- Whether a UNIT_AURA's updateInfo can change which buffs the unit has: a full update or none given,
+-- a buff added (or an aura we can't tell is one), or any aura removed (its kind isn't said). An
+-- update of an aura already there (a refreshed duration, a new stack count) can't.
+function ns.BuffsMayHaveChanged(updateInfo)
+    if type(updateInfo) ~= "table" then return true end
+    local full = updateInfo.isFullUpdate
+    if (issecretvalue and issecretvalue(full)) or full then return true end
+    local removed = updateInfo.removedAuraInstanceIDs
+    if removed and removed[1] ~= nil then return true end
+    local added = updateInfo.addedAuras
+    if added then
+        for _, aura in ipairs(added) do
+            local helpful = aura.isHelpful
+            if not ns.IsUsable(helpful) or helpful then return true end
+        end
+    end
+    return false
+end
+
 -- Whether the character knows a spell at any rank (the reminders' and the tracked buffs' lines): the
 -- client's answer for the spell's name is the rank it knows, taken only if it knows that spell, as the
 -- name can be an NPC's too. It asks the client each time; a caller on a busy path keeps the answer

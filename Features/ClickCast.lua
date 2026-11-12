@@ -308,10 +308,14 @@ local NAMED = { "PlayerFrame", "TargetFrame", "TargetFrameToT", "FocusFrame", "F
 -- CompactUnitFrame_SetUpFrame runs, so they're in; the enemy ones can be left out (leftToGame).
 local function usable(frame)
     if type(frame) ~= "table" or type(frame.SetAttribute) ~= "function" then return false end
-    if frame.IsForbidden and frame:IsForbidden() then return false end
+    -- A secret answer counts as forbidden: it can't be tested.
+    if frame.IsForbidden then
+        local forbidden = frame:IsForbidden()
+        if not ns.IsUsable(forbidden) or forbidden then return false end
+    end
     local name, unit = frame:GetName(), frame.unit
-    return not ((type(name) == "string" and name:find("NamePlate", 1, true))
-        or (type(unit) == "string" and unit:find("^nameplate")))
+    return not ((ns.IsUsable(name) and type(name) == "string" and name:find("NamePlate", 1, true))
+        or (ns.IsUsable(unit) and type(unit) == "string" and unit:find("^nameplate")))
 end
 
 local function add(frame)

@@ -851,6 +851,26 @@ describe("ring", function()
                 T.same(names(), { "Pull" })
             end)
 
+            it("asks the client for an item's name it hasn't loaded, and lists it by name once loaded", function()
+                start(nil, nil, function(state)
+                    state.items[HEARTHSTONE].use = 8690
+                    state.items[17067] = { use = 7777 }
+                    state.bags[0] = { size = 16, [1] = { itemID = HEARTHSTONE } }
+                    state.equipped[17] = 17067
+                end)
+                SlashCmdList.QOL("ring")
+                tab(2):Click()
+                T.same(names(), { "", "Hearthstone" }, "no name yet")
+                T.same(Stubs.state().itemRequests, { 17067 })
+                Stubs.state().items[17067].name = "Ancient Cornerstone Grimoire"
+                Stubs.Fire("GET_ITEM_INFO_RECEIVED", 2589, true)
+                Stubs.RunTimers()
+                T.same(names(), { "", "Hearthstone" }, "another item's info: nothing to redraw")
+                Stubs.Fire("GET_ITEM_INFO_RECEIVED", 17067, true)
+                Stubs.RunTimers()
+                T.same(names(), { "Ancient Cornerstone Grimoire", "Hearthstone" })
+            end)
+
             it("puts an entry on the ring with a click, checks it, and takes it off with another", function()
                 start()
                 SlashCmdList.QOL("ring")
