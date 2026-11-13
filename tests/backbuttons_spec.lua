@@ -378,6 +378,55 @@ describe("controller back buttons", function()
     end)
 
     describe("on every controller bar", function()
+        -- Starts with a key bound to each of the 16, F13 to F28, so that they all show.
+        local unbound = start
+        local function start(saved, setup) -- luacheck: ignore 431 (this section's start)
+            return unbound(saved, function(state)
+                for bar, prefix in ipairs({ "", "Left", "Right", "Bottom" }) do
+                    for index = 1, 4 do
+                        state.bindings["F" .. (8 + bar * 4 + index)] = "CLICK QoLBackButton" .. prefix .. index .. ":LeftButton"
+                    end
+                end
+                if setup then setup(state) end
+            end)
+        end
+
+        it("show only the buttons a key presses, Top's paddles counting", function()
+            unbound(on(), function(state) state.bindings["F17"] = "CLICK QoLBackButtonRight1:LeftButton" end)
+            for index = 1, 4 do T.truthy(shown("Top", index):IsVisible(), "Top's " .. index .. ", its paddle") end
+            T.truthy(shown("Right", 1):IsVisible(), "Right's L4, bound")
+            T.falsy(shown("Right", 2):IsVisible(), "Right's L5, no key")
+            T.falsy(shown("Left", 1):IsVisible(), "Left's L4, no key")
+            T.falsy(shown("Bottom", 4):IsVisible(), "Bottom's R5, no key")
+            -- A key bound later shows it, once out of combat.
+            Stubs.SetCombat(true)
+            Stubs.state().bindings["F21"] = "CLICK QoLBackButtonLeft1:LeftButton"
+            Stubs.Fire("UPDATE_BINDINGS")
+            settle()
+            T.falsy(shown("Left", 1):IsVisible(), "waits for the end of combat")
+            Stubs.SetCombat(false)
+            settle()
+            T.truthy(shown("Left", 1):IsVisible(), "bound now")
+            -- And one taken away hides it.
+            Stubs.state().bindings["F17"] = nil
+            Stubs.Fire("UPDATE_BINDINGS")
+            settle()
+            T.falsy(shown("Right", 1):IsVisible(), "unbound")
+        end)
+
+        it("show a cross's name only with one of its buttons", function()
+            unbound(on(), function(state) state.bindings["PADPADDLE2"] = "TOGGLEWORLDMAP" end)
+            T.falsy(shown("Top", 1):IsVisible(), "L4's paddle is taken")
+            local names = {}
+            for _, region in ipairs(Stubs.state().regions) do
+                if region.GetText and region:IsShown() and region:GetText() and region:GetText():find("^[LR][45]$") then
+                    names[#names + 1] = region:GetText()
+                end
+            end
+            table.sort(names)
+            T.same(names, { "L5", "R4", "R5" })
+        end)
+
         it("press each bar's slots with its own keys, every bar's shown", function()
             start(on())
             T.same(showing(), { "Top", "Left", "Right", "Bottom" })

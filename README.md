@@ -416,7 +416,9 @@ bar's other buttons. Their page is **Back buttons**, under Input.
   so 16 in all. All 16 show at the far left and right of the controller bar as a cross per back
   button (L4 upper left, L5 lower left, R4 upper right, R5 lower right), its bars where the game's
   are: Top up, Left left, Right right, Bottom down. The bar the game has in use (the one your
-  triggers hold) shows full size, the others small, as the game does with its bars.
+  triggers hold) shows full size, the others small, as the game does with its bars. Only buttons
+  with a key show (Top's also with their paddle), so a bar you haven't set up in Steam Input stays
+  out of the way.
 - **Holding a trigger:** the game can't tell an addon which trigger is held, so the back buttons
   leave the triggers alone and each bar's back buttons get keys of their own. On the Steam Deck,
   set this up in Steam Input: a layer (an action layer or mode shift) that's on while RT is held and

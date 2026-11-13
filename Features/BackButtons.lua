@@ -280,7 +280,9 @@ function BackButtons:Refresh()
     for _, bar in ipairs(BARS) do
         local group = groups[bar]
         if group.holder:IsShown() then
-            for _, button in ipairs(group.buttons) do refreshButton(button) end
+            for _, button in ipairs(group.buttons) do
+                if button:IsShown() then refreshButton(button) end
+            end
         end
     end
 end
@@ -516,17 +518,22 @@ local refreshEvents
 
 -- Out of combat: the buttons' slots, places and holders. A holder shows while the game shows
 -- something in its bar's place; in the compact layout all four do while it shows anything (only the
--- bar in use's art shows), and only the bar in use's buttons take the mouse.
+-- bar in use's art shows), and only the bar in use's buttons take the mouse. A button shows only
+-- with a key that presses it (its own, or Top's paddle), and a cross's name only with one of its.
 function BackButtons:Update()
     local on = isOn()
     if on and not root then create() end
+    local overrides = on and BackButtons.Overrides() or {}
     if root then
         local kind = on and "action" or nil
         local compact = GamepadMainActionBarFrame.useCompactLayout == true
         local found = places()
         local any = next(found) ~= nil
+        local keyed = {}
+        for _, name in pairs(overrides) do keyed[name] = true end
         place(compact)
         local inUse = barInUse()
+        local crosses = {}
         for _, bar in ipairs(BARS) do
             local group = groups[bar]
             local shown = (compact and any) or (not compact and found[bar]) or false
@@ -537,13 +544,19 @@ function BackButtons:Update()
                 setAttribute(button, "action", slot)
                 button.slot = slot
                 button:EnableMouse(not compact or bar == inUse)
+                local hasKey = keyed[button:GetName()] == true
+                if button:IsShown() ~= hasKey then button:SetShown(hasKey) end
+                crosses[index] = crosses[index] or hasKey
             end
+        end
+        for index, label in ipairs(crossLabels) do
+            label:SetShown(not compact and crosses[index] == true)
         end
         highlight()
         if root:IsShown() ~= on then root:SetShown(on) end
     end
     refreshEvents:SetOn(on)
-    bindings:Set(on and BackButtons.Overrides() or {})
+    bindings:Set(overrides)
     self:Refresh()
 end
 

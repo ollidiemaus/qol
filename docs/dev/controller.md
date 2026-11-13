@@ -103,6 +103,9 @@ pressed (`ns.Buttons.AddBackButton`).
   them all. A bar hidden as empty hides its back buttons, and a stance or vehicle bar in its place
   doesn't. A place that changes in combat waits for it to end. An empty slot does nothing: there's
   no fallback to Top.
+- Keys: a button shows only while a key presses it (a key in `Overrides()`: its own bindings, or
+  Top's paddle), and a cross's name only while one of its four does. Set with the holders, out of
+  combat, so a key bound in combat shows its button once combat ends; `UPDATE_BINDINGS` brings it.
 - Layout (points). Above Top sit the LB and RB prompts and the page tracker, and the bars interlock
   (each about 300 wide on anchors 195 apart), so the full layout puts all 16 on holders centred on
   the page unit (656 wide), past its sides, as a cross per back button: L4's centred at (-405, 50),
