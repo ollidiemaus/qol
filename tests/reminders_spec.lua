@@ -183,6 +183,17 @@ describe("reminders", function()
         T.same(seen(ns), { ICONS.wellFed })
     end)
 
+    it("reads the buffs again only for an aura event that can change which ones the player has", function()
+        local ns = start({ reminders = true, reminderWellFed = true })
+        Stubs.state().buffs = { buff("Well Fed", WELL_FED) }
+        Stubs.Fire("UNIT_AURA", "player", { isFullUpdate = false, updatedAuraInstanceIDs = { 3 } })
+        Stubs.RunTimers()
+        T.same(seen(ns), { ICONS.wellFed }, "a refreshed aura: not read again")
+        Stubs.Fire("UNIT_AURA", "player", { isFullUpdate = false, addedAuras = { { isHelpful = true } } })
+        Stubs.RunTimers()
+        T.same(seen(ns), {}, "a buff added")
+    end)
+
     it("counts any Well Fed buff, whichever food it came from", function()
         local ns = start({ reminders = true, reminderWellFed = true }, { buffs = { buff("Well Fed", WELL_FED_OTHER) } })
         T.same(seen(ns), {})
@@ -208,6 +219,23 @@ describe("reminders", function()
         Stubs.SetBuffs({ buff("Well Fed", WELL_FED) })
         Stubs.RunTimers()
         T.same(seen(ns), { ICONS.wellFed, ICONS.wellRested, ICONS.campBenefits }, "an English name isn't Satt")
+    end)
+
+    it("asks for a name the client didn't give once it loads spell data, not on every refresh", function()
+        local ns = Stubs.LoadAddon({})
+        knowSpells(ENGLISH)
+        local other = Stubs.state().gameSpells[WELL_FED_OTHER]
+        other.name = nil
+        Stubs.state().buffs = { buff("Well Fed", WELL_FED_OTHER) }
+        Stubs.Login({ reminders = true, reminderWellFed = true })
+        T.same(seen(ns), {}, "the name it gave covers this food")
+        other.name = "Satt"
+        Stubs.SetBuffs({ buff("Satt", WELL_FED_OTHER) })
+        Stubs.RunTimers()
+        T.same(seen(ns), { ICONS.wellFed }, "the names are kept, not asked again on each refresh")
+        Stubs.Fire("SPELL_DATA_LOAD_RESULT", WELL_FED_OTHER, true)
+        Stubs.RunTimers()
+        T.same(seen(ns), {}, "asked again once the client loaded spell data")
     end)
 
     it("shows nothing for a switched-off preset, nor with the Reminders switch off", function()

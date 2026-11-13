@@ -29,8 +29,9 @@ local RIVALS = {
     { { 14752 }, { 8112 } }, -- Divine Spirit: Scroll of Spirit's "Spirit"
 }
 
--- A buff's name -> the other names that count as having it, kept once the client has given every one.
-local countingNames
+-- A buff's name -> the other names that count as having it, and whether the client gave every one.
+-- Kept either way: an incomplete map is built again only after ns.RetryCountingNames.
+local countingNames, countingComplete
 
 -- The client's names for the spell IDs it has given, and whether it gave every one.
 local function spellNames(ids)
@@ -57,9 +58,9 @@ end
 
 -- The names by the buffs' names (any rank and locale goes by the same name): a single spell's group
 -- versions, and each rival pair both ways. A group version doesn't get its single spell's rivals. Also
--- whether the map is complete (the client gave every name): an incomplete one is asked again later.
+-- whether the map is complete (the client gave every name).
 function ns.CountingNames()
-    if countingNames then return countingNames, true end
+    if countingNames then return countingNames, countingComplete end
     local map, complete = {}, true
     -- Adds others to each of names, noting a side the client hasn't fully named yet.
     local function link(names, namesComplete, others, othersComplete)
@@ -77,6 +78,11 @@ function ns.CountingNames()
         link(left, leftComplete, right, rightComplete)
         link(right, rightComplete, left, leftComplete)
     end
-    if complete then countingNames = map end
+    countingNames, countingComplete = map, complete
     return map, complete
+end
+
+-- Lets an incomplete map be built again, once the client may have loaded the missing names.
+function ns.RetryCountingNames()
+    if not countingComplete then countingNames = nil end
 end

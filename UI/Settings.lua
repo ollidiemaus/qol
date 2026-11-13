@@ -311,17 +311,27 @@ local function buildCooldownManager(page)
             shown = function() return own[index] ~= nil end })
     end
 
+    -- The saved ones' lines are made now, with the page; a line for a later one is made out of combat
+    -- (CreateFrame in our open window refreshes the controller cursor, which refuses us in combat), the
+    -- rest of the list showing once combat ends.
+    local function grow()
+        if InCombatLockdown() then return end
+        for index = lines + 1, #own do ownLine(index) end
+        lines = math.max(lines, #own)
+    end
+    grow()
     local refresh = page.Refresh
     function page:Refresh()
         own = Reminders.Own()
-        for index = lines + 1, #own do ownLine(index) end
-        lines = math.max(lines, #own)
+        grow()
         refresh(self)
         move.widget:SetText(Reminders.IsUnlocked() and L.REMINDER_LOCK or L.REMINDER_UNLOCK)
     end
-    Reminders.OnChange(function()
+    local function refreshShown()
         if page.frame:IsVisible() then page:Refresh() end
-    end)
+    end
+    Reminders.OnChange(refreshShown)
+    ns.Events:On("PLAYER_REGEN_ENABLED", refreshShown)
 end
 
 -- Ring page (also /qol ring): the switch in the title bar, and below it, on a page of the spell
@@ -551,16 +561,24 @@ local function buildGroupFrames(page)
             shown = function() return lines[index] ~= nil end })
     end
 
+    -- As the reminders' lines: the saved ones' made with the page, a later one's out of combat.
+    local function grow()
+        if InCombatLockdown() then return end
+        for index = made + 1, #lines do trackedLine(index) end
+        made = math.max(made, #lines)
+    end
+    grow()
     local refresh = page.Refresh
     function page:Refresh()
         lines = GroupFrames.Lines()
-        for index = made + 1, #lines do trackedLine(index) end
-        made = math.max(made, #lines)
+        grow()
         refresh(self)
     end
-    GroupFrames.OnChange(function()
+    local function refreshShown()
         if page.frame:IsVisible() then page:Refresh() end
-    end)
+    end
+    GroupFrames.OnChange(refreshShown)
+    ns.Events:On("PLAYER_REGEN_ENABLED", refreshShown)
 end
 
 -- A hidden setting's game default as its row shows it: On or Off, or the number without the

@@ -114,13 +114,17 @@ local function nameOf(spellID)
 end
 
 -- Per reminder: the set of its buff's names, its group versions' and rivals' among them
--- (ns.CountingNames, applied to any reminder), kept once the client has given every one.
-local names = {}
+-- (ns.CountingNames, applied to any reminder), or false while the client gives none. Kept even when
+-- the client left a name out (incomplete): those are asked again on SPELL_DATA_LOAD_RESULT, not on
+-- every refresh.
+local names, incomplete = {}, {}
+local NONE = {}
+local nameEvents
 
 -- The names its buff goes by, or nil while the client gives none.
 local function namesOf(reminder)
     local set = names[reminder]
-    if set then return set end
+    if set ~= nil then return set or nil end
     set = {}
     local counting, complete = ns.CountingNames()
     local any = false
@@ -128,12 +132,17 @@ local function namesOf(reminder)
         local name = nameOf(spellID)
         if name then
             set[name], any = true, true
-            for _, other in ipairs(counting[name] or {}) do set[other] = true end
+            for _, other in ipairs(counting[name] or NONE) do set[other] = true end
         else
             complete = false
+            if C_Spell.RequestLoadSpellData then C_Spell.RequestLoadSpellData(spellID) end
         end
     end
-    if complete then names[reminder] = set end
+    names[reminder] = any and set
+    if not complete then
+        incomplete[reminder] = true
+        nameEvents:SetOn(true)
+    end
     return any and set or nil
 end
 
@@ -404,7 +413,9 @@ local function refresh()
     local reminders = not unlocked and Options:Get(SWITCH) and due() or {}
     if unlocked then
         for index = 1, PLACEHOLDERS do
-            iconAt(index).Icon:SetTexture(PLACEHOLDER_ICON)
+            local icon = iconAt(index)
+            icon.texture = PLACEHOLDER_ICON
+            icon.Icon:SetTexture(PLACEHOLDER_ICON)
         end
         count = PLACEHOLDERS
     elseif #reminders > 0 and readBuffs() then
@@ -417,7 +428,12 @@ local function refresh()
             end
             if show then
                 count = count + 1
-                iconAt(count).Icon:SetTexture(Reminders.IconOf(reminder))
+                local icon, texture = iconAt(count), Reminders.IconOf(reminder)
+                -- Set only when it changed: the row refreshes on every buff change.
+                if not ns.IsUsable(texture) or icon.texture ~= texture then
+                    icon.texture = ns.IsUsable(texture) and texture or nil
+                    icon.Icon:SetTexture(texture)
+                end
             end
         end
     end
@@ -453,6 +469,11 @@ local function schedule()
     ns.Later("reminders", refresh, true)
 end
 
+-- The player's UNIT_AURA: a refresh only when it can change which buffs the player has.
+local function onAura(_, _, updateInfo)
+    if ns.BuffsMayHaveChanged(updateInfo) then schedule() end
+end
+
 local function active()
     if not Options:Get(SWITCH) then return false end
     for _, preset in ipairs(Reminders.PRESETS) do
@@ -474,6 +495,16 @@ end
 local function changed()
     for _, fn in ipairs(listeners) do fn() end
 end
+
+-- The client loaded spell data: the names it left out are asked again. Heard only while one is out.
+nameEvents = ns.Events:NewGroup({ "SPELL_DATA_LOAD_RESULT" }, function()
+    for reminder in pairs(incomplete) do
+        names[reminder], incomplete[reminder] = nil, nil
+    end
+    ns.RetryCountingNames()
+    nameEvents:SetOn(false)
+    schedule()
+end)
 
 local unitEvents
 local events = ns.Events:NewGroup({ "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED", "PLAYER_ENTERING_WORLD" },
@@ -517,7 +548,7 @@ function update()
     end
     weaponEvents:SetOn(weaponsWatched())
     spellEvents:SetOn(#ownList() > 0)
-    if on then unitEvents:On("UNIT_AURA", schedule) else unitEvents:Off("UNIT_AURA") end
+    if on then unitEvents:On("UNIT_AURA", onAura) else unitEvents:Off("UNIT_AURA") end
     schedule()
 end
 

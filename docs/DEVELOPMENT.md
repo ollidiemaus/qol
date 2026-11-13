@@ -135,6 +135,11 @@ Forever beta. So:
   stay: the copy behind `SlashCmdList`'s metatable (nothing runs it) and
   `hash_ChatTypeInfoList["/RL"]`, which names no chat type, so `/rl` still tab-completes but does
   nothing.
+- Controller buff tooltips: `BuffFrameTooltip:HookScript("OnShow", ...)` and `SetAlpha(0)` on it
+  right there, not through `ns.Later`. `HookScript` runs after the game's own handler and replaces
+  nothing; `SetAlpha` is a widget method on a tooltip nothing else uses and that isn't protected, so it
+  works in combat, and done later the tooltip would show for a frame (see
+  [`dev/tooltips-chat-bags-mail.md`](dev/tooltips-chat-bags-mail.md)).
 - Sort on open: `hooksecurefunc("OpenAllBags", ...)` and `hooksecurefunc("OpenAllBagsMatchingContext", ...)`,
   hooks on global functions, not on a frame's methods, which run after them, set a flag of ours and
   schedule a run; and `C_Container.SortBags()` from that run, on a frame of ours (see

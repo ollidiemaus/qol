@@ -301,6 +301,30 @@ describe("Group frames: tracked buffs", function()
         T.same(seen(frame), { MARK_ICON })
     end)
 
+    it("reads a member's buffs again only for an aura event that can change which ones they have", function()
+        start(ON, { lacks(MARK_1) })
+        local frame = Stubs.NewGroupFrame("raid2")
+        Stubs.SetUnitBuffs("raid2", {})
+        Stubs.RunTimers()
+        T.same(seen(frame), { MARK_ICON })
+        Stubs.state().unitBuffs.raid2 = { buff("Mark of the Wild", MARK_1) }
+        Stubs.Fire("UNIT_AURA", "raid2", { isFullUpdate = false, updatedAuraInstanceIDs = { 7 } })
+        Stubs.Fire("UNIT_AURA", "raid2", { isFullUpdate = false, addedAuras = { { isHelpful = false } } })
+        Stubs.RunTimers()
+        T.same(seen(frame), { MARK_ICON }, "a refreshed aura or a debuff added: not read again")
+        Stubs.Fire("UNIT_AURA", "raid2", { isFullUpdate = false, addedAuras = { { isHelpful = true } } })
+        Stubs.RunTimers()
+        T.same(seen(frame), {}, "a buff added")
+        Stubs.state().unitBuffs.raid2 = {}
+        Stubs.Fire("UNIT_AURA", "raid2", { isFullUpdate = false, removedAuraInstanceIDs = { 7 } })
+        Stubs.RunTimers()
+        T.same(seen(frame), { MARK_ICON }, "an aura removed")
+        Stubs.state().unitBuffs.raid2 = { buff("Mark of the Wild", MARK_1) }
+        Stubs.Fire("UNIT_AURA", "raid2", { isFullUpdate = false, addedAuras = { { isHelpful = Stubs.SECRET } } })
+        Stubs.RunTimers()
+        T.same(seen(frame), {}, "an aura that can't be told a buff")
+    end)
+
     -- UnitInRange is always secret to an addon on Forever; the game fades the member's whole frame.
     it("shows a \"lacks it\" icon on an out-of-range member, the range being the frame's fade", function()
         start(ON, { lacks(MARK_1) })
