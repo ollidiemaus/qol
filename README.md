@@ -408,27 +408,46 @@ Only on WoW Forever, and only while its controller interface is on: with keyboar
 back buttons hide and their keys press nothing, and the buff tooltips show as usual. Turning the
 controller interface on or off switches them right away.
 
-**Back buttons:** four more buttons on the controller action bar for controllers with back buttons
-or paddles, like the Steam Deck: L4 and L5 left of the d-pad buttons, R4 and R5 right of the face
-buttons. They work on their own, without holding a trigger, and show icons, cooldowns and charges
-like the bar's other buttons.
+**Back buttons:** more buttons on the controller action bar for controllers with back buttons or
+paddles, like the Steam Deck: L4, L5, R4 and R5. They show icons, cooldowns and charges like the
+bar's other buttons. Their page is **Back buttons**, under Input.
 
-- **Binding them:** the Controller page lists the four buttons under **Keys**, each named by its slot
-  on the bar you picked (L4: Action Bar 8, button 9, and so on), with two key boxes like the game's
-  Key Bindings: click a box, then press the back button (or the key). Escape or another click on
+- **Four bars:** each back button has a button on every controller bar, each with a key of its own,
+  so 16 in all. All 16 show at the far left and right of the controller bar as a cross per back
+  button (L4 upper left, L5 lower left, R4 upper right, R5 lower right), its bars where the game's
+  are: Top up, Left left, Right right, Bottom down. The bar the game has in use (the one your
+  triggers hold) shows full size, the others small, as the game does with its bars. Only buttons
+  with a key show (Top's also with their paddle), so a bar you haven't set up in Steam Input stays
+  out of the way.
+- **Holding a trigger:** the game can't tell an addon which trigger is held, so the back buttons
+  leave the triggers alone and each bar's back buttons get keys of their own. On the Steam Deck,
+  set this up in Steam Input: a layer (an action layer or mode shift) that's on while RT is held and
+  sends other keys for L4, L5, R4 and R5, one for LT, one for both; then bind those keys to the
+  Right, Left and Bottom bars' back buttons. Without such a layer, only Top's work.
+- **Compact layout:** the game shows only one bar there, so only the back buttons of the bar in use
+  show, beside it. With **Press a trigger to keep its bar on** the game keeps Top in use, so Top's
+  show there, though every key still presses its own bar's.
+- An empty back button does nothing when pressed; it doesn't fall back to Top's. A bar's back
+  buttons hide with that bar (hidden as empty, or the special page) but stay while a stance or
+  vehicle bar sits in its place. They keep the same actions on every controller page.
+- **Binding them:** the Back buttons page lists the 16 keys, each named by its bar and its slot (L4:
+  Action Bar 8, button 9; L4, Right bar: Action Bar 6, button 9, and so on), with two key boxes like the game's
+  Key Bindings: click a box, then press the back button (or the key; with Steam Input's trigger
+  layer, hold the trigger too). Escape or another click on
   the box cancels, a right-click clears a key. The same bindings are under Esc > Options > Key
   Bindings > AddOns > Quality of Life. On the Steam Deck the game doesn't see the back buttons by
-  themselves: give them keys in Steam Input first (keys you don't use otherwise, like F13 to F16,
+  themselves: give them keys in Steam Input first (keys you don't use otherwise, like F13 to F24,
   or numpad keys), then bind those here. A controller whose paddles the game sees directly needs
-  nothing: a back button with no key of its own uses its paddle, as long as nothing else is bound
-  to it.
+  nothing for Top's: a Top back button with no key of its own uses its paddle, as long as nothing
+  else is bound to it.
 - **Putting spells on them:** drag a spell onto one, as onto any action button (out of combat; with
-  the action bars locked, hold Shift). Each back button is one of the last four buttons of Action Bar
-  8 (or 6 or 7, picked under **Slots**), so what you put there shows on the back button too. Pick a
-  bar you don't use otherwise.
+  the action bars locked, hold Shift). Each controller bar's back buttons are the last four buttons
+  of a standard action bar, picked for each bar on the page (Action Bars 2 to 8; Top 8, Left 7,
+  Right 6 and Bottom 5 at first), so what you put there shows on the back button too. Pick bars you
+  don't use otherwise.
 
-The buttons show and hide with the controller action bar, follow it when you move or scale it in
-Edit Mode, and keep their place in its compact layout.
+The buttons show and hide with the controller action bar and follow their bars when you move or
+scale it in Edit Mode.
 
 **Bars that follow the stance:** the game's Stance bar setting changes one controller bar when you
 enter a stance. Tick the **Top**, **Left**, **Right** or **Bottom** bar here and that bar changes
@@ -464,8 +483,8 @@ Right bar, and both on is the Bottom bar, also when you press them together.
   A and with it jumping and interacting. Untick it to keep the bar on.
 - While a bar is on, a warm glow, the marker, shows behind it, so you can see what your
   buttons do. It shows during a hold as well.
-- Only the eight buttons of the bar change: LB, RB, the sticks, the back buttons and the rings stay
-  as they are, and holding LB or RB for targeting works with a bar on.
+- Only the eight buttons of the bar change: LB, RB, the sticks, the back buttons (they have a key
+  per bar) and the rings stay as they are, and holding LB or RB for targeting works with a bar on.
 - A possess, vehicle or override bar turns the bar off, in combat too, and it stays off: a press
   while one is up turns nothing on. The game's
   windows keep their keys while a bar is on; it's still on when you close them. Switching to
@@ -575,7 +594,7 @@ in English and German; point at it for the whole story. With a controller, the
 arrows next to a viewport margin move it one pixel per press. In Forever's controller interface a
 dropdown doesn't open its list: each press (or click) switches it to the next choice, as the game
 froze when its options closed after one of these lists had been opened there. Changes apply right
-away, key bindings set on the Controller page too; the few that touch protected parts of the
+away, key bindings set on the Back buttons page too; the few that touch protected parts of the
 interface (action bars, key bindings, viewport, system bar) wait until you leave combat. In
 Forever's controller interface the back buttons and the rings also wait until the game's options
 and menu are closed (a second at most).

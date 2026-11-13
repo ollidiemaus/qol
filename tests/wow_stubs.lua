@@ -12,6 +12,8 @@ Stubs.SECRET = setmetatable({}, { __tostring = function() return "<SECRET>" end 
 
 local state
 Stubs.state = function() return state end
+-- A SecureHandlerAttributeTemplate frame's _onattributechanged snippet; defined with the snippets.
+local runAttributeHandler
 
 local function noop() end
 
@@ -296,7 +298,11 @@ local function newRegion(kind, parent, template)
     function region:UnregisterEvent(event) self.events[event] = nil end
     function region:SetScript(script, fn) self.scripts[script] = fn end
     function region:GetScript(script) return self.scripts[script] end
-    function region:HookScript(script, fn) self.hooks[script] = fn end
+    -- Hooks run in the order they were made, as in the game.
+    function region:HookScript(script, fn)
+        local before = self.hooks[script]
+        self.hooks[script] = before and function(...) before(...) fn(...) end or fn
+    end
     -- Runs a script the way the game does: the handler, then the hooks.
     function region:RunScript(script, ...)
         if self.scripts[script] then self.scripts[script](self, ...) end
@@ -568,7 +574,9 @@ local function makeSecure(frame)
     function frame:SetAttribute(attribute, value)
         if state.combat then error("ADDON_ACTION_BLOCKED: SetAttribute on a protected frame in combat") end
         self.attributes[attribute] = value
+        runAttributeHandler(self, attribute, value)
         if self.scripts.OnAttributeChanged then self.scripts.OnAttributeChanged(self, attribute, value) end
+        if self.hooks.OnAttributeChanged then self.hooks.OnAttributeChanged(self, attribute, value) end
     end
     function frame:GetAttribute(attribute) return self.attributes[attribute] end
     function frame:RegisterForClicks(...) self.clicks = { ... } end
@@ -2354,9 +2362,11 @@ local ADDON_GLOBALS = {
 }
 for index = 1, 5 do ADDON_GLOBALS[#ADDON_GLOBALS + 1] = "ArenaEnemyMatchFrame" .. index end
 for index = 1, 8 do ADDON_GLOBALS[#ADDON_GLOBALS + 1] = "QoLTriggerToggleRelay" .. index end
-for index = 1, 4 do
-    ADDON_GLOBALS[#ADDON_GLOBALS + 1] = "QoLBackButton" .. index
-    ADDON_GLOBALS[#ADDON_GLOBALS + 1] = "BINDING_NAME_CLICK QoLBackButton" .. index .. ":LeftButton"
+for _, bar in ipairs({ "", "Left", "Right", "Bottom" }) do
+    for index = 1, 4 do
+        ADDON_GLOBALS[#ADDON_GLOBALS + 1] = "QoLBackButton" .. bar .. index
+        ADDON_GLOBALS[#ADDON_GLOBALS + 1] = "BINDING_NAME_CLICK QoLBackButton" .. bar .. index .. ":LeftButton"
+    end
 end
 
 -- The game sliders as Forever's probe measured them (2026-11-05): what each step sets, from step 1.
@@ -2710,12 +2720,19 @@ local BAR_ORDER = { "topBar", "leftBar", "rightBar", "bottomBar" }
 -- The bars that take a place over those, hidden until the game shows them: the possess and stance
 -- bars over the bar their settings name, the other three over Top (LB or RB held).
 local OVERRIDE_BARS = { "possessBar", "stanceBar", "friendlyTargetingBar", "hostileTargetingBar", "shortcutsBar" }
+-- Each pageable bar sits on an anchor of its own (TopCenteredAnchor.Bar and so on), as in
+-- ActionBarTemplates.xml; the override bars start on Top's.
+local ANCHORS = { topBar = "TopCenteredAnchor", leftBar = "LeftCenteredAnchor", rightBar = "RightCenteredAnchor",
+    bottomBar = "BottomCenteredAnchor" }
 local function newPageUnit(parent, prefix)
     local unit = _G.CreateFrame("Frame", nil, parent)
     unit.actionBars = {}
     unit.page = 1
+    for _, key in ipairs(BAR_ORDER) do
+        unit[ANCHORS[key]] = _G.CreateFrame("Frame", nil, unit)
+    end
     local function newBar(key, slotOf)
-        local actionBar = _G.CreateFrame("Frame", nil, unit)
+        local actionBar = _G.CreateFrame("Frame", nil, unit[ANCHORS[key] or "TopCenteredAnchor"])
         actionBar.actionButtons = {}
         for index = 1, 8 do
             actionBar.actionButtons[index] = newBarButton(actionBar, slotOf(index), prefix .. key .. "Button" .. index)
@@ -2729,6 +2746,17 @@ local function newPageUnit(parent, prefix)
     for _, key in ipairs(OVERRIDE_BARS) do
         newBar(key, function() return 0 end):Hide()
     end
+    -- CallbackRegistryMixin, for ACTIVE_ACTION_BAR_UPDATED_EVENT, and the active bar (Top at first).
+    unit.callbacks = {}
+    unit.activeBar = unit.actionBars.topBar
+    function unit:RegisterCallback(event, fn, owner)
+        self.callbacks[event] = self.callbacks[event] or {}
+        self.callbacks[event][owner] = fn
+    end
+    function unit:TriggerEvent(event, ...)
+        for owner, fn in pairs(self.callbacks[event] or {}) do fn(owner, ...) end
+    end
+    function unit:GetActiveBar() return self.activeBar end
     return unit
 end
 
@@ -2774,9 +2802,7 @@ end
 function Stubs.NewGamepadBar()
     local bar = _G.CreateFrame("Frame", "GamepadMainActionBarFrame", _G.UIParent)
     bar.PageUnit = newPageUnit(bar, "GamepadMain")
-    bar.PageUnit.LeftCenteredAnchor = _G.CreateFrame("Frame", nil, bar.PageUnit)
-    bar.PageUnit.RightCenteredAnchor = _G.CreateFrame("Frame", nil, bar.PageUnit)
-    bar.PageUnit.BottomCenteredAnchor = _G.CreateFrame("Frame", nil, bar.PageUnit)
+    bar.useCompactLayout = false
     -- The game's editor is a window with a page unit of its own.
     local editor = _G.CreateFrame("Frame", "GamepadActionBarEditFrame", _G.UIParent)
     editor:Hide()
@@ -2816,6 +2842,7 @@ local runSnippet, runBody
 function fireAttribute(region, name, value)
     local wrap = region.wraps and region.wraps.OnAttributeChanged
     if wrap and wrap.pre then runBody(wrap.header, region, "self, name, value", wrap.pre, name, value) end
+    runAttributeHandler(region, name, value)
     local script, hook = region.scripts.OnAttributeChanged, region.hooks.OnAttributeChanged
     if script or hook then
         local depth = state.restricted
@@ -2945,6 +2972,15 @@ function runSnippet(header, frame, body, ...)
     return runBody(header, frame, "self, button, down", body, ...)
 end
 
+-- SecureHandlerAttributeTemplate: an attribute set, by insecure code out of combat or by a snippet in
+-- combat too, runs the frame's _onattributechanged in secure code (not for the snippet attributes).
+function runAttributeHandler(region, name, value)
+    local body = region.attributes and region.attributes._onattributechanged
+    if not body or name:sub(1, 1) == "_" then return end
+    if not tostring(region.template or ""):find("SecureHandlerAttributeTemplate") then return end
+    runBody(region, region, "self, name, value", body, name, value)
+end
+
 function Stubs.Handle(region) return frameHandle(region) end
 
 -- What a state driver's conditions give now, in the game's order: [bonusbar:N], or a word from
@@ -2994,8 +3030,56 @@ function Stubs.SetMacroCondition(condition, holds)
 end
 
 -- The game shows or hides one of OVERRIDE_BARS ("friendlyTargetingBar"...): LB or RB is held, say.
+-- The frames on it get their OnShow and OnHide, as the game's would ("leftBar" hidden: empty, with
+-- the game's setting to hide empty bars).
 function Stubs.ShowGameBar(key, shown)
-    _G.GamepadMainActionBarFrame.PageUnit.actionBars[key]:SetShown(shown)
+    setShownSecurely(_G.GamepadMainActionBarFrame.PageUnit.actionBars[key], shown)
+end
+
+-- The game's compact layout, set in Edit Mode (out of combat): every anchor on Bottom's, and only
+-- the game's active bar shown, which stays Top (the trigger toggle drives the bars). false: the full
+-- layout, all four shown.
+function Stubs.SetCompactLayout(on)
+    local frame = _G.GamepadMainActionBarFrame
+    frame.useCompactLayout = on
+    for _, key in ipairs(BAR_ORDER) do
+        setShownSecurely(frame.PageUnit.actionBars[key], not on or key == "topBar")
+    end
+end
+
+-- The game picks its active bar ("topBar", "leftBar"...) by the triggers held, in combat too, as
+-- GamepadActionBarPageUnitMixin:SetActiveActionBar does: in the compact layout only that bar shows.
+function Stubs.SetActiveBar(key)
+    local unit = _G.GamepadMainActionBarFrame.PageUnit
+    unit.activeBar = unit.actionBars[key]
+    if _G.GamepadMainActionBarFrame.useCompactLayout then
+        for _, other in ipairs(BAR_ORDER) do setShownSecurely(unit.actionBars[other], other == key) end
+    end
+    unit:TriggerEvent("ACTIVE_ACTION_BAR_UPDATED_EVENT")
+end
+
+-- The stance or possess bar ("stanceBar", "possessBar") takes a bar's place ("leftBar"...), as
+-- GamepadOverrideBarMixin does: put on that bar's anchor, which it hides. nil gives it back.
+function Stubs.OverrideGameBar(key, place)
+    local unit = _G.GamepadMainActionBarFrame.PageUnit
+    local override = unit.actionBars[key]
+    if override.overriding then setShownSecurely(unit.actionBars[override.overriding], true) end
+    override.overriding = place
+    if place then
+        override:SetParent(unit[ANCHORS[place]])
+        setShownSecurely(unit.actionBars[place], false)
+    end
+    setShownSecurely(override, place ~= nil)
+end
+
+-- The special page, with the possess bar's setting on SpecialPageTopBar: the four bars hide and the
+-- possess bar shows on Top's anchor. false: back to page 1.
+function Stubs.ShowSpecialPage(on)
+    local unit = _G.GamepadMainActionBarFrame.PageUnit
+    state.cvars.GamepadPossessBarOverride = tostring(_G.Enum.GamepadPossessBarOverride.SpecialPageTopBar)
+    for _, key in ipairs(BAR_ORDER) do setShownSecurely(unit.actionBars[key], not on) end
+    unit.actionBars.possessBar:SetParent(unit.TopCenteredAnchor)
+    setShownSecurely(unit.actionBars.possessBar, on)
 end
 
 -- A snippet run on a frame's handle (SecureHandlerExecute), as a secure header's own code runs.

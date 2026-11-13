@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: superseded by ADR 0007 (each bar's back buttons get keys of their own, through Steam Input)
 ---
 
 # Back buttons follow the triggers only through the trigger toggle

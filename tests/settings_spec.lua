@@ -5,7 +5,7 @@ local describe, it = T.describe, T.it
 -- The addon loaded last, for show.
 local loaded
 
--- forever: with Forever's controller action bar, which brings the Controller page, and the game's
+-- forever: with Forever's controller action bar, which brings the Controller and Back buttons pages, and the game's
 -- Cooldown Manager, which brings the Cooldown Manager page.
 local function start(savedOptions, forever)
     local ns = Stubs.LoadAddon()
@@ -33,12 +33,13 @@ local function control(ns, key)
     return nil
 end
 
--- The key binding row of back button index on the Controller page.
-local function keyRow(ns, index)
-    for _, c in ipairs(pages(ns).controller.controls) do
-        if c.command == "CLICK QoLBackButton" .. index .. ":LeftButton" then return c end
+-- The key binding row of back button index on a bar (Top without one) on the Back buttons page.
+local function keyRow(ns, index, bar)
+    local name = "QoLBackButton" .. (bar or "") .. index
+    for _, c in ipairs(pages(ns).backButtons.controls) do
+        if c.command == "CLICK " .. name .. ":LeftButton" then return c end
     end
-    error("no key binding row for back button " .. index)
+    error("no key binding row for " .. name)
 end
 
 -- The frame that takes the keyboard while a key binding button waits for a key: above the window,
@@ -295,21 +296,26 @@ describe("settings pages", function()
         T.falsy(QoLSettings:IsShown(), "closed")
     end)
 
-    it("adds a Controller page on Forever, for the controller action bar", function()
+    it("adds Controller and Back buttons pages on Forever, for the controller action bar", function()
         local ns = start(nil, true)
         local names = listed(ns)
-        T.eq(#names, #LISTED + 2)
-        T.same({ names[16], names[17], names[18], names[19] },{ "Ring", "Click casting", "Controller", "[System]" },
-            "under Input")
-        T.same(headers(pages(ns).controller, "left"), { "Back buttons", "Triggers" })
+        T.eq(#names, #LISTED + 3)
+        T.same({ names[16], names[17], names[18], names[19], names[20] },
+            { "Ring", "Click casting", "Controller", "Back buttons", "[System]" }, "under Input")
+        T.same(headers(pages(ns).controller, "left"), { "Triggers" })
         T.same(headers(pages(ns).controller, "right"), { "Buffs", "Bars that follow the stance" })
-        T.same(headers(pages(ns).controller, "wide"), { "Keys" })
+        T.same(headers(pages(ns).backButtons, "wide"), {})
+        T.eq(control(ns, "controllerBackButtons").page, pages(ns).backButtons)
         T.truthy(control(ns, "hideBuffTooltips"))
-        local c = control(ns, "controllerBackButtonsBar")
-        T.same(values(c), { 6, 7, 8 })
-        T.falsy(c.enabled(), "the bar waits for the back buttons")
+        local top = control(ns, "controllerBackButtonsBarTop")
+        T.same(values(top), { 2, 3, 4, 5, 6, 7, 8 })
+        T.falsy(top.enabled(), "the bar waits for the back buttons")
+        local right = control(ns, "controllerBackButtonsBarRight")
+        T.same(values(right), { 2, 3, 4, 5, 6, 7, 8 })
         ns.Options:Set("controllerBackButtons", true)
-        T.truthy(c.enabled(), "enabled with the back buttons")
+        T.truthy(top.enabled(), "enabled with the back buttons")
+        T.truthy(right.enabled(), "the other bars too, without the trigger toggle")
+        for _, bar in ipairs({ "Left", "Bottom" }) do T.truthy(control(ns, "controllerBackButtonsBar" .. bar), bar) end
     end)
 
     it("adds a Cooldown Manager page on Forever, in Display after Action Bars", function()
@@ -848,18 +854,24 @@ describe("settings pages", function()
         T.truthy(c.enabled(), "enabled with the trigger toggle")
     end)
 
-    it("names each back button's keys by its slot on the chosen bar", function()
+    it("names each back button's keys by its slot on the Top bar's action bar", function()
         local ns = start(nil, true)
-        local page = pages(ns).controller
+        local page = pages(ns).backButtons
         show(page)
         T.eq(keyRow(ns, 1).text.text, "L4: Action Bar 8, button 9")
         T.eq(keyRow(ns, 4).text.text, "R5: Action Bar 8, button 12")
         ns.Options:Set("controllerBackButtons", true)
-        ns.Options:Set("controllerBackButtonsBar", 6)
+        ns.Options:Set("controllerBackButtonsBarLeft", 2)
+        T.eq(keyRow(ns, 1).text.text, "L4: Action Bar 8, button 9", "another bar's doesn't change it")
+        ns.Options:Set("controllerBackButtonsBarTop", 6)
         T.eq(keyRow(ns, 1).text.text, "L4: Action Bar 6, button 9")
         T.eq(keyRow(ns, 3).text.text, "R4: Action Bar 6, button 11")
         keyRow(ns, 1).row:RunScript("OnEnter")
         T.eq(GameTooltip.lines[1].text, "Back button L4 (upper left)")
+        T.eq(keyRow(ns, 1, "Left").text.text, "L4, Left bar: Action Bar 2, button 9")
+        T.eq(keyRow(ns, 4, "Bottom").text.text, "R5, Bottom bar: Action Bar 5, button 12")
+        keyRow(ns, 2, "Right").row:RunScript("OnEnter")
+        T.eq(GameTooltip.lines[1].text, "Back button L5 (lower left), Right bar")
     end)
 
     it("puts each page's sections in two columns", function()
@@ -1101,24 +1113,24 @@ describe("settings pages", function()
     it("steps a dropdown to its next choice in the controller interface, without the game's menu", function()
         local ns = start(nil, true)
         Stubs.SetControllerUI(true)
-        local c, page = control(ns, "controllerBackButtonsBar")
+        local c, page = control(ns, "controllerBackButtonsBarTop")
         show(page)
         T.eq(c.widget.text, "Action Bar 8, buttons 9-12")
         c.widget:OpenMenu()
-        T.eq(ns.Options:Get("controllerBackButtonsBar"), 8, "greyed out while the back buttons are off")
+        T.eq(ns.Options:Get("controllerBackButtonsBarTop"), 8, "greyed out while the back buttons are off")
         ns.Options:Set("controllerBackButtons", true)
         c.widget:OpenMenu()
-        T.eq(ns.Options:Get("controllerBackButtonsBar"), 6, "back to the first after the last")
-        T.eq(c.widget.text, "Action Bar 6, buttons 9-12")
+        T.eq(ns.Options:Get("controllerBackButtonsBarTop"), 2, "back to the first after the last")
+        T.eq(c.widget.text, "Action Bar 2, buttons 9-12")
         c.widget:OpenMenu()
-        T.eq(ns.Options:Get("controllerBackButtonsBar"), 7)
+        T.eq(ns.Options:Get("controllerBackButtonsBarTop"), 3)
         T.eq(c.widget.menusOpened, nil, "no menu opened")
     end)
 
-    it("binds a back button's key from the Controller page, as in Key Bindings", function()
+    it("binds a back button's key from the Back buttons page, as in Key Bindings", function()
         local ns = start({ controllerBackButtons = true }, true)
         Stubs.SetControllerUI(true)
-        local page = pages(ns).controller
+        local page = pages(ns).backButtons
         show(page)
         local row = keyRow(ns, 1)
         local first, second = row.buttons[1], row.buttons[2]
@@ -1161,7 +1173,7 @@ describe("settings pages", function()
 
     it("stops waiting for a key on Escape, a second click, leaving the page and combat", function()
         local ns = start({ controllerBackButtons = true }, true)
-        local page = pages(ns).controller
+        local page = pages(ns).backButtons
         show(page)
         local button = keyRow(ns, 2).buttons[1]
         local hint = "Click a box, then press the key. A right-click clears a key."
@@ -1193,7 +1205,7 @@ describe("settings pages", function()
 
     it("greys out the back buttons' keys while the back buttons are off", function()
         local ns = start(nil, true)
-        local page = pages(ns).controller
+        local page = pages(ns).backButtons
         show(page)
         local row = keyRow(ns, 1)
         T.falsy(row.buttons[1]:IsEnabled())

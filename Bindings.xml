@@ -4,4 +4,16 @@
 	<Binding name="CLICK QoLBackButton2:LeftButton" category="ADDONS"/>
 	<Binding name="CLICK QoLBackButton3:LeftButton" category="ADDONS"/>
 	<Binding name="CLICK QoLBackButton4:LeftButton" category="ADDONS"/>
+	<Binding name="CLICK QoLBackButtonLeft1:LeftButton" category="ADDONS"/>
+	<Binding name="CLICK QoLBackButtonLeft2:LeftButton" category="ADDONS"/>
+	<Binding name="CLICK QoLBackButtonLeft3:LeftButton" category="ADDONS"/>
+	<Binding name="CLICK QoLBackButtonLeft4:LeftButton" category="ADDONS"/>
+	<Binding name="CLICK QoLBackButtonRight1:LeftButton" category="ADDONS"/>
+	<Binding name="CLICK QoLBackButtonRight2:LeftButton" category="ADDONS"/>
+	<Binding name="CLICK QoLBackButtonRight3:LeftButton" category="ADDONS"/>
+	<Binding name="CLICK QoLBackButtonRight4:LeftButton" category="ADDONS"/>
+	<Binding name="CLICK QoLBackButtonBottom1:LeftButton" category="ADDONS"/>
+	<Binding name="CLICK QoLBackButtonBottom2:LeftButton" category="ADDONS"/>
+	<Binding name="CLICK QoLBackButtonBottom3:LeftButton" category="ADDONS"/>
+	<Binding name="CLICK QoLBackButtonBottom4:LeftButton" category="ADDONS"/>
 </Bindings>
