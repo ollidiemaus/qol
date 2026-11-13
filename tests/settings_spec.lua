@@ -336,7 +336,7 @@ describe("settings pages", function()
         local ns = Stubs.LoadAddon()
         Stubs.NewCooldownManager()
         Stubs.state().gameSpells[19705] = { name = "Well Fed", texture = 136000 }
-        Stubs.state().gameSpells[1225478] = { name = "Well Rested", texture = 136001 }
+        Stubs.state().gameSpells[429959] = { name = "Well-Rested", texture = 136001 }
         Stubs.state().gameSpells[1229741] = { name = "Camp Benefits", texture = 136002 }
         Stubs.state().items[2131] = { texture = 135274, classID = 2, subclassID = 7 }
         Stubs.state().equipped[16] = 2131
@@ -349,7 +349,7 @@ describe("settings pages", function()
         T.eq(switch.kind, "checkbox")
         T.eq(switch.text:GetText(), "Show reminders")
         T.falsy(switch.get(), "off by default")
-        T.same(tableRows(page), { "Reminder | On | ", "Well Fed | checkbox | -", "Well Rested | checkbox | -",
+        T.same(tableRows(page), { "Reminder | On | ", "Well Fed | checkbox | -", "Well-Rested | checkbox | -",
             "Camp Benefits | checkbox | -", "Main Hand Weapon Buff | checkbox | -",
             "Off Hand Weapon Buff | checkbox | -", "Drag a spell here from your spellbook | - | -" })
         show(page)
@@ -376,7 +376,7 @@ describe("settings pages", function()
         end
         T.same(seen, { "While resting", "In combat", "While mounted", "While dead or on a flight path (on)",
             "Experience reminders at maximum level (on)" })
-        T.truthy(control(ns, "reminderHideMaxLevel").tooltip:find("Well Rested", 1, true))
+        T.truthy(control(ns, "reminderHideMaxLevel").tooltip:find("Well-Rested", 1, true))
     end)
 
     -- The Cooldown Manager page with the presets' and Thorns' and Mark of the Wild's spell data, for
@@ -387,7 +387,7 @@ describe("settings pages", function()
         Stubs.NewCooldownManager()
         local state = Stubs.state()
         state.gameSpells[19705] = { name = "Well Fed", texture = 136000 }
-        state.gameSpells[1225478] = { name = "Well Rested", texture = 136001 }
+        state.gameSpells[429959] = { name = "Well-Rested", texture = 136001 }
         state.gameSpells[1229741] = { name = "Camp Benefits", texture = 136002 }
         state.gameSpells[THORNS_3] = { name = "Thorns", texture = 136104 }
         state.gameSpells[MARK] = { name = "Mark of the Wild", texture = 136078 }
@@ -412,7 +412,7 @@ describe("settings pages", function()
         return nil
     end
 
-    local PRESET_ROWS = { "Reminder | On | ", "Well Fed | checkbox | -", "Well Rested | checkbox | -",
+    local PRESET_ROWS = { "Reminder | On | ", "Well Fed | checkbox | -", "Well-Rested | checkbox | -",
         "Camp Benefits | checkbox | -", "Main Hand Weapon Buff | checkbox | -", "Off Hand Weapon Buff | checkbox | -" }
     local DROP_ROW = "Drag a spell here from your spellbook | - | -"
 
@@ -836,7 +836,7 @@ describe("settings pages", function()
         T.truthy(c.tooltip:find("Verfolgte Stärkungseffekte", 1, true))
         T.eq(control(ns, "reminders").text:GetText(), "Erinnerungen anzeigen")
         T.same(tableRows(pages(ns).cooldownManager), { "Erinnerung | An | ", "Satt | checkbox | -",
-            "Gut ausgeruht | checkbox | -", "Lagervorteile | checkbox | -", "Waffenbuff Waffenhand | checkbox | -",
+            "Gut erholt | checkbox | -", "Lagervorteile | checkbox | -", "Waffenbuff Waffenhand | checkbox | -",
             "Waffenbuff Schildhand | checkbox | -",
             "Zieht einen Zauber aus Eurem Zauberbuch hierher | - | -" }, "without the client's names, the presets' own")
         local drop = pages(ns).cooldownManager.tables[1].lines[6]
