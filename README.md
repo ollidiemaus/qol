@@ -125,7 +125,9 @@ element back where the game has it.
 ### World map
 
 - **Dungeon and raid entrances:** marked on the zone and continent maps. Point at one to see its
-  name. Blackrock Mountain's dungeons show on both Searing Gorge and the Burning Steppes.
+  name. Blackrock Mountain's dungeons show on both Searing Gorge and the Burning Steppes. Forever's
+  new dungeons are there too, from the Ruins of Lordaeron and the Hall of Thanes to the Drowned City
+  and the Shaper's Terrace.
 - **Boats, zeppelins and portals:** the harbors and zeppelin towers, the portal between Darnassus
   and Rut'theran Village and the Deeprun Tram (zeppelins and the tram get icons of their own in the
   style of the boat's). Point at one to see where it goes; click it and the
@@ -134,7 +136,7 @@ element back where the game has it.
 
 The places come from Forever's own game data, and Classic Era has the same zone maps, so these
 options show on Forever and Classic Era. On Classic Era the pins follow its world: Forever's new
-routes aren't there, the boat from Menethil Harbor goes straight to Auberdine, and boats get a ship
+dungeons and routes aren't there, the boat from Menethil Harbor goes straight to Auberdine, and boats get a ship
 icon (Classic Era has no ferry icon). On retail, the default map marks dungeon entrances itself.
 
 ### Unit frames

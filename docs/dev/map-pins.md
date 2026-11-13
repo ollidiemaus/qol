@@ -12,12 +12,17 @@ touched.
 Classic Era (1.15) has the same UiMap IDs for its zones, so the pins show there too, with a path of
 their own for the places where its world differs from Forever's. `MapPins.World()` tells the two
 apart by asking for Forever's Zephras Isle map (2521), not the build: a pin marked `world =
-"forever"` (the Southshore stop, Stormwind Harbor, the Riverglades boat, the Zephras Isle airships)
-is left out on Classic Era, and one marked `world = "classicEra"` (its direct Menethil Harbor–Auberdine
-boat) on Forever. Classic Era's Stormwind City and Eastern Plaguelands maps cover another part of
+"forever"` (the Southshore stop, Stormwind Harbor, the Riverglades boat, the Zephras Isle airships,
+Forever's own dungeons) is left out on Classic Era, and one marked `world = "classicEra"` (its
+direct Menethil Harbor–Auberdine boat) on Forever. Classic Era's Stormwind City and Eastern Plaguelands maps cover another part of
 the world than Forever's (Forever's Stormwind takes in the harbor), so the Stockade, the Deeprun
 Tram, Stratholme and Naxxramas carry a `classicEra = { x, y }` place, converted through both
 clients' zone rects; the continent pins follow from it, since `GetMapRectOnMap` gives Classic
 Era's own rects. Classic Era has no `flightmasterferry` atlas, so the boat style names an
 `orAtlas`, the garrison's `Ships_CargoShip-Map`, used where `C_Texture.GetAtlasInfo` doesn't know
 the first.
+
+Forever's own dungeons have no entrance in the client's tables: Map.db2 has no corpse position for
+them and no area trigger leads in. Their places are OpenMap's (v0.8.7, `Data/Forever/Places.lua`,
+MIT), set by hand on the zone maps where players found the entrances. When a new build gives them a
+corpse position, take that instead, as for the old dungeons.
