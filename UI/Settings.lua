@@ -362,26 +362,8 @@ local function buildClickCast(page)
     end
 end
 
--- Controller page: the back buttons with the action bar whose slots each controller bar's use and the
--- trigger toggle, next to the buff tooltips and the bars that follow the stance, then the back
--- buttons' keys across the page (as in Key Bindings > AddOns), each named by its slot on Top's bar.
+-- Controller page: the trigger toggle, next to the buff tooltips and the bars that follow the stance.
 local function buildController(page)
-    local BackButtons = ns.BackButtons
-    local enabled = is("controllerBackButtons")
-    page:Header("left", L.SECTION_BACK_BUTTONS)
-    page:Checkbox("left", "controllerBackButtons", L.BACK_BUTTONS, L.BACK_BUTTONS_TIP)
-    local bars = {}
-    for bar = 2, 8 do
-        bars[#bars + 1] = { value = bar, label = L.BACK_BUTTONS_BAR_CHOICE:format(bar) }
-    end
-    -- One per controller bar.
-    for _, bar in ipairs(BackButtons.BARS) do
-        local top = bar == "top"
-        page:Dropdown("left", BackButtons.BarOption(bar),
-            L.BACK_BUTTONS_BAR:format(L["CONTROLLER_BAR_" .. bar:upper()]), bars,
-            top and L.BACK_BUTTONS_BAR_TOP_TIP or L.BACK_BUTTONS_BAR_TIP,
-            { indent = true, enabled = enabled })
-    end
     page:Header("left", L.SECTION_TRIGGER_TOGGLE)
     page:Checkbox("left", "controllerTriggerToggle", L.TRIGGER_TOGGLE, L.TRIGGER_TOGGLE_TIP)
     page:Checkbox("left", "controllerTriggerToggleTopAfterCombat", L.TRIGGER_TOGGLE_TOP, L.TRIGGER_TOGGLE_TOP_TIP,
@@ -411,15 +393,43 @@ local function buildController(page)
     function FollowingBars.onSpaceChanged()
         ns.Later("followingBarsRefresh", refreshShown, true)
     end
+end
 
-    page:Header("wide", L.SECTION_KEYS)
-    for index, info in ipairs(BackButtons.BUTTONS) do
-        local function label()
-            return L.BACK_BUTTON_KEY:format(info.label, Options:Get(BackButtons.BarOption("top")),
-                BackButtons.BarButton(index))
+-- Back buttons page: the switch, beside it the action bar whose slots each controller bar's use, then
+-- the 16 keys across the page (as in Key Bindings > AddOns), each named by its bar and slot. No
+-- section titles: the page is as high as one can be with them.
+local function buildBackButtons(page)
+    local BackButtons = ns.BackButtons
+    local enabled = is("controllerBackButtons")
+    page:Checkbox("left", "controllerBackButtons", L.BACK_BUTTONS, L.BACK_BUTTONS_TIP)
+    local bars = {}
+    for bar = 2, 8 do
+        bars[#bars + 1] = { value = bar, label = L.BACK_BUTTONS_BAR_CHOICE:format(bar) }
+    end
+    -- One per controller bar.
+    for _, bar in ipairs(BackButtons.BARS) do
+        local top = bar == "top"
+        page:Dropdown("right", BackButtons.BarOption(bar),
+            L.BACK_BUTTONS_BAR:format(L["CONTROLLER_BAR_" .. bar:upper()]), bars,
+            top and L.BACK_BUTTONS_BAR_TOP_TIP or L.BACK_BUTTONS_BAR_TIP, { enabled = enabled })
+    end
+
+    -- Each bar's four, Top's first; each named by its slot.
+    for _, bar in ipairs(BackButtons.BARS) do
+        local barName = L["CONTROLLER_BAR_" .. bar:upper()]
+        for index, info in ipairs(BackButtons.BUTTONS) do
+            local short, title = info.label, L["BACK_BUTTON_" .. info.label]
+            if bar ~= "top" then
+                short, title = L.BACK_BUTTON_ON_BAR:format(short, barName), L.BACK_BUTTON_ON_BAR:format(title, barName)
+            end
+            local function label()
+                return L.BACK_BUTTON_KEY:format(short, Options:Get(BackButtons.BarOption(bar)),
+                    BackButtons.BarButton(index))
+            end
+            page:Binding("wide", BackButtons.Command(bar, index), label,
+                bar == "top" and L.BACK_BUTTON_KEY_TIP or L.BACK_BUTTON_BAR_KEY_TIP,
+                { title = title, enabled = enabled })
         end
-        page:Binding("wide", BackButtons.Command(index), label, L.BACK_BUTTON_KEY_TIP,
-            { title = L["BACK_BUTTON_" .. info.label], enabled = enabled })
     end
     page:Note("wide", L.BINDING_HINT)
 end
@@ -681,6 +691,8 @@ local GROUPS = {
         { key = "clickCast", title = L.CATEGORY_CLICK_CAST, build = buildClickCast, defaults = false },
         -- Only Forever has the controller action bar; on retail there's nothing for it to change.
         { key = "controller", title = L.CATEGORY_CONTROLLER, build = buildController,
+            available = function() return GamepadMainActionBarFrame ~= nil end },
+        { key = "backButtons", title = L.SECTION_BACK_BUTTONS, build = buildBackButtons,
             available = function() return GamepadMainActionBarFrame ~= nil end },
     } },
     { title = L.GROUP_SYSTEM, pages = {

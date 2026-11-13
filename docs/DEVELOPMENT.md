@@ -209,7 +209,7 @@ Each file holds the design notes of one part of the addon. Read the one for the 
 - [`dev/group-frames.md`](dev/group-frames.md): the Group Frames page: tracked buffs, hiding the raid manager, the game's buffs checkbox
 - [`dev/tooltips-chat-bags-mail.md`](dev/tooltips-chat-bags-mail.md): the combat log, the vendor price line and tooltip IDs, the buff tooltips, chat class colors, faster auto loot, Sort on open, the mail bookmarks
 - [`dev/minimap.md`](dev/minimap.md): the square minimap and its border, button positions, class colors and font sizes, the FPS and ping text
-- [`dev/controller.md`](dev/controller.md): bar paging, the back buttons and their bindings, following bars, the trigger toggle, the Controller page
+- [`dev/controller.md`](dev/controller.md): bar paging, the back buttons and their bindings, following bars, the trigger toggle, the Controller and Back buttons pages
 - [`dev/rings.md`](dev/rings.md): the rings: secure choice, saved data, the Ring page and its editor, the textures
 - [`dev/click-casting.md`](dev/click-casting.md): click casting: its engine, the unit frames it wraps, the Click casting page
 - [`dev/settings-window.md`](dev/settings-window.md): the settings window, page groups and layout, `UI/SettingsPage.lua` rows, the freezes from when the pages were in the game's settings

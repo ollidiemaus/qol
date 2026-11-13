@@ -2362,9 +2362,11 @@ local ADDON_GLOBALS = {
 }
 for index = 1, 5 do ADDON_GLOBALS[#ADDON_GLOBALS + 1] = "ArenaEnemyMatchFrame" .. index end
 for index = 1, 8 do ADDON_GLOBALS[#ADDON_GLOBALS + 1] = "QoLTriggerToggleRelay" .. index end
-for index = 1, 4 do
-    ADDON_GLOBALS[#ADDON_GLOBALS + 1] = "QoLBackButton" .. index
-    ADDON_GLOBALS[#ADDON_GLOBALS + 1] = "BINDING_NAME_CLICK QoLBackButton" .. index .. ":LeftButton"
+for _, bar in ipairs({ "", "Left", "Right", "Bottom" }) do
+    for index = 1, 4 do
+        ADDON_GLOBALS[#ADDON_GLOBALS + 1] = "QoLBackButton" .. bar .. index
+        ADDON_GLOBALS[#ADDON_GLOBALS + 1] = "BINDING_NAME_CLICK QoLBackButton" .. bar .. index .. ":LeftButton"
+    end
 end
 
 -- The game sliders as Forever's probe measured them (2026-11-05): what each step sets, from step 1.
@@ -2744,6 +2746,17 @@ local function newPageUnit(parent, prefix)
     for _, key in ipairs(OVERRIDE_BARS) do
         newBar(key, function() return 0 end):Hide()
     end
+    -- CallbackRegistryMixin, for ACTIVE_ACTION_BAR_UPDATED_EVENT, and the active bar (Top at first).
+    unit.callbacks = {}
+    unit.activeBar = unit.actionBars.topBar
+    function unit:RegisterCallback(event, fn, owner)
+        self.callbacks[event] = self.callbacks[event] or {}
+        self.callbacks[event][owner] = fn
+    end
+    function unit:TriggerEvent(event, ...)
+        for owner, fn in pairs(self.callbacks[event] or {}) do fn(owner, ...) end
+    end
+    function unit:GetActiveBar() return self.activeBar end
     return unit
 end
 
@@ -3032,6 +3045,17 @@ function Stubs.SetCompactLayout(on)
     for _, key in ipairs(BAR_ORDER) do
         setShownSecurely(frame.PageUnit.actionBars[key], not on or key == "topBar")
     end
+end
+
+-- The game picks its active bar ("topBar", "leftBar"...) by the triggers held, in combat too, as
+-- GamepadActionBarPageUnitMixin:SetActiveActionBar does: in the compact layout only that bar shows.
+function Stubs.SetActiveBar(key)
+    local unit = _G.GamepadMainActionBarFrame.PageUnit
+    unit.activeBar = unit.actionBars[key]
+    if _G.GamepadMainActionBarFrame.useCompactLayout then
+        for _, other in ipairs(BAR_ORDER) do setShownSecurely(unit.actionBars[other], other == key) end
+    end
+    unit:TriggerEvent("ACTIVE_ACTION_BAR_UPDATED_EVENT")
 end
 
 -- The stance or possess bar ("stanceBar", "possessBar") takes a bar's place ("leftBar"...), as

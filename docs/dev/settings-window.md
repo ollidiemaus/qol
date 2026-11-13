@@ -68,7 +68,7 @@ settings are open, and closing our window is a plain `Hide` of a frame of ours.
     `CanGuildBankRepair` only in a button that is never shown. `Merchant:Repair` asks the same check
     before the guild bank calls, so a guild repair saved on another client pays with own gold
     there. Junk selling and own gold repairs work as everywhere.
-  - The controller's buff tooltips and back buttons are on the Controller page, which only Forever
+  - The controller's buff tooltips are on the Controller page and the back buttons on their own, which only Forever
     (with `GamepadMainActionBarFrame`) lists.
 - The list is drawn as the game's (`Blizzard_CategoryList`) but with frames of ours, not its
   templates: `SettingsCategoryListButtonMixin` reads its scroll box's element data and a file local
@@ -214,7 +214,7 @@ slider's arrows (one pixel a click) and the swatch; a slider set from `Options` 
 write itself back.
 
 The game's dropdown menu froze it the same way: with the controller interface on, opening one of
-our dropdowns (the back buttons' bar on the Controller page), picking a choice and closing the
+our dropdowns (the back buttons' bar on the Back buttons page), picking a choice and closing the
 settings stopped the game. In that interface the menu (`Blizzard_Menu`) brings the same kind of
 wiring as the list's slider: `MenuProxyMixin:SetupGamepad` creates a prompted binding footer whose
 binding groups take the face buttons while it's open, and `GamepadFrameControlsManager` suspends

@@ -9,25 +9,23 @@ local L = ns.L
 -- that action bar's buttons 9 to 12. The slots are the same on every controller page.
 --
 -- The game sees a back button as whatever key the controller sends: the Steam Deck's as the keys
--- picked for them in Steam Input, controllers with paddles as PADPADDLE1 to 4. One key serves all
--- four bars, so the keys press four hidden secure buttons of ours (QoLBackButton1 to 4, the
--- commands in Bindings.xml), each of which takes the slot of the bar in use. Forever's triggers
--- aren't modifiers (ADR 0006), so the bar in use is the trigger toggle's: it sets it on our header
--- (ns.Buttons.AddBarFollower), held or switched on, in combat too, and the header puts that bar's
--- slots on the keys' buttons. Our header's "wantsbar" makes the trigger toggle take the triggers
--- while the back buttons are on, for holds only when its own option is off (ADR 0007).
+-- picked for them in Steam Input, controllers with paddles as PADPADDLE1 to 4. Secure code can't
+-- tell which trigger is held (Forever's triggers aren't modifiers, ADR 0006), so each of the 16
+-- buttons has a key of its own (the commands in Bindings.xml): Steam Input sends another key for a
+-- back button while a trigger is held (ADR 0007). Only Top's fall back to the paddle keys.
 --
--- Each bar's four shown buttons are secure action buttons too, for the mouse, on a holder of ours
--- under a frame of ours that's a child of GamepadMainActionBarFrame, so they hide, scale and fade
--- with the bar. In the full layout the holders sit on the page unit, the buttons in a cross per
--- back button at its far left and right, the bar in use's art full size and the others' small (in
--- combat too, on our regions); in the compact layout on the bar's anchor (which only Edit Mode moves, out of combat). A
--- holder shows while the game shows something in its bar's place (the bar, or the stance or possess
--- bar over it, but not the special page), and in the compact layout only the bar in use's shows. Plain
--- frames of ours on the game's bars tell us when those show or hide; nothing of the game's is written,
--- called or hooked. Creating the buttons, their attributes, the holders shown and the override
--- bindings wait for combat to end, except what the header does in combat: the keys' slots and, in
--- the compact layout, which holder shows. The art updates in combat, on regions of our own.
+-- The buttons are secure action buttons, on a holder of ours per bar under a frame of ours that's a
+-- child of GamepadMainActionBarFrame, so they hide, scale and fade with the bar. In the full layout
+-- the holders sit on the page unit, the buttons in a cross per back button at its far left and
+-- right; in the compact layout on their bar's anchor (which only Edit Mode moves, out of combat),
+-- all on the one spot. The bar in use is the game's active bar, which its own Lua picks by the
+-- triggers held: the page unit's ACTIVE_ACTION_BAR_UPDATED_EVENT says when it changes, and our art
+-- follows in combat too (the bar in use's full size, the others' small; in the compact layout only
+-- the bar in use's art shows). A holder shows while the game shows something in its bar's place
+-- (the bar, or the stance or possess bar over it, but not the special page). Plain frames of ours on
+-- the game's bars tell us when those show or hide; nothing of the game's is written, called or
+-- hooked. Creating the buttons, their attributes, the holders shown, the mouse and the override
+-- bindings wait for combat to end.
 local BackButtons = {}
 ns.BackButtons = BackButtons
 
@@ -88,13 +86,15 @@ for _, bar in ipairs(BARS) do
     end
 end
 
-function BackButtons.Name(index)
-    return "QoLBackButton" .. index
+-- A back button's button on a controller bar. Top's keep the names they had when there was only
+-- Top, so that the keys bound to them stay.
+function BackButtons.Name(bar, index)
+    return "QoLBackButton" .. (bar == "top" and "" or BAR_NAMES[bar]) .. index
 end
 
--- The binding command of a back button's key, as Bindings.xml names it.
-function BackButtons.Command(index)
-    return ns.Buttons.Command(BackButtons.Name(index))
+-- The binding command of a back button's key on a bar, as Bindings.xml names it.
+function BackButtons.Command(bar, index)
+    return ns.Buttons.Command(BackButtons.Name(bar, index))
 end
 
 -- The option with the action bar a controller bar's back buttons use.
@@ -117,8 +117,12 @@ end
 
 -- Names in the Key Bindings window.
 BINDING_HEADER_QOL = L.ADDON_TITLE
-for index, info in ipairs(BUTTONS) do
-    _G["BINDING_NAME_" .. BackButtons.Command(index)] = L["BACK_BUTTON_" .. info.label]
+for _, bar in ipairs(BARS) do
+    for index, info in ipairs(BUTTONS) do
+        local name = L["BACK_BUTTON_" .. info.label]
+        if bar ~= "top" then name = L.BACK_BUTTON_ON_BAR:format(name, L["CONTROLLER_BAR_" .. bar:upper()]) end
+        _G["BINDING_NAME_" .. BackButtons.Command(bar, index)] = name
+    end
 end
 
 -- Only in the controller interface: with keyboard and mouse the buttons hide, their keys press
@@ -127,48 +131,25 @@ local function isOn()
     return Options:Get(KEY) == true and GamepadMainActionBarFrame ~= nil and ns.IsControllerUI()
 end
 
-local header, root
--- By bar: the holder and its four shown buttons.
+local root
+-- By bar: the holder and its four buttons.
 local groups = {}
 -- By back button: its name in the middle of its cross (the full layout).
 local crossLabels = {}
 -- The compact layout, as the last update found it.
 local compactLayout = false
--- The keys' hidden buttons.
-local keys = {}
 
----------------------------------------------------------------------------------------------------
--- Secure part
----------------------------------------------------------------------------------------------------
-
--- The bar in use (held or switched on, Top with no trigger) gives the keys' buttons their slots.
--- Then the holders: in the compact layout the bar in use's, beside the one bar the game shows there
--- (on Top's anchor), while something is in Top's place; in the full layout every bar's with
--- something in its place.
--- Attribute names are lower case: the game lowers them.
-local REFRESH = [[
-    local bar = self:GetAttribute("bar") or "top"
-    for index = 1, 4 do
-        self:GetFrameRef("key-" .. index):SetAttribute("action", self:GetAttribute("slot-" .. bar .. "-" .. index))
+-- The bar in use: the place of the game's active bar (the bar its triggers picked, or the stance or
+-- possess bar over it). Read from the game's frames, never written.
+local function barInUse()
+    local pageUnit = GamepadMainActionBarFrame.PageUnit
+    local active = pageUnit and pageUnit.GetActiveBar and pageUnit:GetActiveBar()
+    local parent = active and active:GetParent()
+    for _, bar in ipairs(BARS) do
+        if parent and pageUnit[ANCHORS[bar]] == parent then return bar end
     end
-    local compact = self:GetAttribute("compact")
-    for index = 1, 4 do
-        local name = self:GetAttribute("name-" .. index)
-        local shown
-        if compact then
-            shown = name == bar and self:GetAttribute("place-top")
-        else
-            shown = self:GetAttribute("place-" .. name)
-        end
-        local holder = self:GetFrameRef("holder-" .. name)
-        if shown then holder:Show() else holder:Hide() end
-    end
-]]
-
--- The trigger toggle sets "bar" as it changes, in combat too.
-local ON_ATTRIBUTE = [[
-    if name == "bar" then self:RunAttribute("refresh") end
-]]
+    return "top"
+end
 
 ---------------------------------------------------------------------------------------------------
 -- Look
@@ -190,17 +171,22 @@ local function setPressed(button, down)
     button.pushedRim:SetShown(down)
 end
 
--- The bar in use's buttons at full size, the others small; in the compact layout only the bar in
--- use's show, at full size.
+-- The bar in use's buttons at full size, the others small. In the compact layout every bar's sit in
+-- the same spots and only the bar in use's art shows, at full size: the buttons are protected and
+-- can't show or hide in combat, their art can.
 local function highlight()
-    local inUse = header:GetAttribute("bar") or "top"
+    if not root then return end
+    local inUse = barInUse()
     for bar, group in pairs(groups) do
-        local size = (compactLayout or bar == inUse) and SIZE or SMALL
+        local current = bar == inUse
+        local size = (compactLayout or current) and SIZE or SMALL
+        local alpha = (current or not compactLayout) and 1 or 0
         for _, button in ipairs(group.buttons) do
             if button.size ~= size then
                 button.size = size
                 sizeVisual(button)
             end
+            button.visual:SetAlpha(alpha)
         end
     end
 end
@@ -352,28 +338,9 @@ local function onMouseUp(button)
     setPressed(button, false)
 end
 
--- The bar a key acts on now, as the header has it.
-local function barInUse()
-    return header:GetAttribute("bar") or "top"
-end
-
--- A key looks pressed on the button of the bar it acted on.
-local function onKeyPostClick(key, _, down)
-    if key.shownPressed then
-        setPressed(key.shownPressed, false)
-        key.shownPressed = nil
-    end
-    if down then
-        local group = groups[barInUse()]
-        key.shownPressed = group and group.buttons[key.index]
-        if key.shownPressed then setPressed(key.shownPressed, true) end
-    end
-end
-
-local function newShownButton(bar, index, holder)
+local function newButton(bar, index, holder)
     local info = BUTTONS[index]
-    local button = CreateFrame("Button", "QoLBackButton" .. BAR_NAMES[bar] .. index, holder,
-        "SecureActionButtonTemplate")
+    local button = CreateFrame("Button", BackButtons.Name(bar, index), holder, "SecureActionButtonTemplate")
     button.info, button.index, button.bar, button.size = info, index, bar, SIZE
     button:SetSize(SIZE, SIZE)
     button:SetAttribute("type", "action")
@@ -389,17 +356,15 @@ local function newShownButton(bar, index, holder)
     return button
 end
 
-local function newKey(index)
-    local key = CreateFrame("Button", BackButtons.Name(index), nil, "SecureActionButtonTemplate")
-    key:Hide()
-    key.index = index
-    key:RegisterForClicks("AnyDown", "AnyUp")
-    key:SetScript("PostClick", onKeyPostClick)
-    return key
-end
-
 -- Defined at Init: the next update, once out of combat.
 local schedule, scheduleRefresh
+
+-- The game changed its active bar (a trigger held or let go): the art follows a frame later, in
+-- combat too; in the compact layout the mouse follows once out of combat.
+local function scheduleHighlight()
+    ns.Later("backButtonsHighlight", highlight, true)
+    if compactLayout then schedule() end
+end
 
 local function create()
     local frame = GamepadMainActionBarFrame
@@ -407,34 +372,24 @@ local function create()
     root = CreateFrame("Frame", nil, frame)
     root:SetAllPoints()
     root:Hide()
-    header = CreateFrame("Frame", "QoLBackButtons", UIParent, "SecureHandlerAttributeTemplate")
-    header:SetAttribute("refresh", REFRESH)
-    for index, bar in ipairs(BARS) do
-        header:SetAttribute("name-" .. index, bar)
+    for _, bar in ipairs(BARS) do
         local holder = CreateFrame("Frame", nil, root)
         holder:SetSize(1, 1)
         holder:Hide()
         holder:SetScript("OnShow", scheduleRefresh)
         local group = { holder = holder, buttons = {} }
-        for button = 1, #BUTTONS do
-            group.buttons[button] = newShownButton(bar, button, holder)
+        for index = 1, #BUTTONS do
+            group.buttons[index] = newButton(bar, index, holder)
+            ns.Buttons.AddBackButton(group.buttons[index])
         end
         groups[bar] = group
-        SecureHandlerSetFrameRef(header, "holder-" .. bar, holder)
     end
     for index = 1, #BUTTONS do
-        keys[index] = newKey(index)
-        SecureHandlerSetFrameRef(header, "key-" .. index, keys[index])
         local label = root:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
         label:SetText(BUTTONS[index].label)
         label:Hide()
         crossLabels[index] = label
     end
-    header:SetAttribute("_onattributechanged", ON_ATTRIBUTE)
-    -- After the secure handler, also in combat: the bar in use's buttons grow.
-    header:HookScript("OnAttributeChanged", function(_, name)
-        if name == "bar" then highlight() end
-    end)
     -- Plain frames of ours on the game's bars: their OnShow and OnHide say a bar's place changed.
     local bars = pageUnit and pageUnit.actionBars or {}
     for _, key in ipairs(PLACE_BARS) do
@@ -444,8 +399,10 @@ local function create()
             watcher:SetScript("OnHide", schedule)
         end
     end
-    for _, key in ipairs(keys) do ns.Buttons.AddBackButton(key) end
-    ns.Buttons.AddBarFollower(header)
+    -- The game's callback registry calls through securecallfunction, so our callback can't taint it.
+    if pageUnit and pageUnit.RegisterCallback then
+        pageUnit:RegisterCallback("ACTIVE_ACTION_BAR_UPDATED_EVENT", scheduleHighlight, BackButtons)
+    end
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -461,20 +418,22 @@ local function gamepadBinding(key)
     if ok and type(action) == "string" and action ~= "" then return action end
 end
 
--- The button each key presses: the keys bound to it in Key Bindings, or with none its paddle key,
--- while nothing is bound to that.
+-- The button each key presses: the keys bound to it in Key Bindings, or with none for Top's its
+-- paddle key, while nothing is bound to that.
 function BackButtons.Overrides()
     local overrides = {}
-    for index, info in ipairs(BUTTONS) do
-        local bound = { GetBindingKey(BackButtons.Command(index)) }
-        if #bound == 0 then
-            local action = GetBindingAction(info.paddle)
-            if (action == nil or action == "") and not gamepadBinding(info.paddle) then
-                bound[1] = info.paddle
+    for _, bar in ipairs(BARS) do
+        for index, info in ipairs(BUTTONS) do
+            local bound = { GetBindingKey(BackButtons.Command(bar, index)) }
+            if #bound == 0 and bar == "top" then
+                local action = GetBindingAction(info.paddle)
+                if (action == nil or action == "") and not gamepadBinding(info.paddle) then
+                    bound[1] = info.paddle
+                end
             end
-        end
-        for _, key in ipairs(bound) do
-            overrides[key] = BackButtons.Name(index)
+            for _, key in ipairs(bound) do
+                overrides[key] = BackButtons.Name(bar, index)
+            end
         end
     end
     return overrides
@@ -555,30 +514,33 @@ end
 -- The refresh events, heard while the buttons show; made at Init.
 local refreshEvents
 
+-- Out of combat: the buttons' slots, places and holders. A holder shows while the game shows
+-- something in its bar's place; in the compact layout all four do while it shows anything (only the
+-- bar in use's art shows), and only the bar in use's buttons take the mouse.
 function BackButtons:Update()
     local on = isOn()
-    if on and not header then create() end
-    if header then
+    if on and not root then create() end
+    if root then
         local kind = on and "action" or nil
-        for index, key in ipairs(keys) do
-            setAttribute(key, "type", kind)
-            for _, bar in ipairs(BARS) do
-                local slot = BackButtons.Slot(actionBar(bar), index)
-                setAttribute(header, "slot-" .. bar .. "-" .. index, slot)
-                local button = groups[bar].buttons[index]
-                setAttribute(button, "action", slot)
-                button.slot = slot
-            end
-        end
         local compact = GamepadMainActionBarFrame.useCompactLayout == true
         local found = places()
-        setAttribute(header, "compact", compact or nil)
-        for _, bar in ipairs(BARS) do setAttribute(header, "place-" .. bar, found[bar] or nil) end
+        local any = next(found) ~= nil
         place(compact)
+        local inUse = barInUse()
+        for _, bar in ipairs(BARS) do
+            local group = groups[bar]
+            local shown = (compact and any) or (not compact and found[bar]) or false
+            if group.holder:IsShown() ~= shown then group.holder:SetShown(shown) end
+            for index, button in ipairs(group.buttons) do
+                local slot = BackButtons.Slot(actionBar(bar), index)
+                setAttribute(button, "type", kind)
+                setAttribute(button, "action", slot)
+                button.slot = slot
+                button:EnableMouse(not compact or bar == inUse)
+            end
+        end
         highlight()
-        SecureHandlerExecute(header, [[ self:RunAttribute("refresh") ]])
         if root:IsShown() ~= on then root:SetShown(on) end
-        setAttribute(header, "wantsbar", on or nil)
     end
     refreshEvents:SetOn(on)
     bindings:Set(on and BackButtons.Overrides() or {})
@@ -614,12 +576,12 @@ function BackButtons:Init()
         if isOn() or bindings:Any() then schedule() end
     end)
     ns.OnControllerUIChange(function()
-        if isOn() or header then schedule() end
+        if isOn() or root then schedule() end
     end)
     -- The compact layout is set in Edit Mode.
     if EventRegistry and EventRegistry.RegisterCallback then
         EventRegistry:RegisterCallback("EditMode.Exit", function()
-            if header then schedule() end
+            if root then schedule() end
         end, BackButtons)
     end
     if isOn() then schedule() end

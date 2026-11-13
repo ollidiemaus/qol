@@ -14,7 +14,7 @@ Things only the real client can confirm:
   options on: open the settings with `/qol` and from the information page's button (it opens once
   the game's options and menu are closed, and says so), and check that the controller cursor reaches
   the list and the pages. Look at every page (Viewport included: step a margin with its
-  arrows, open the color picker; on the Controller page turn on the back buttons, press the bar
+  arrows, open the color picker; on the Back buttons page turn on the back buttons, press the bar
   dropdown a few times, with A and with the touch screen, and bind a back button's key: A on a key
   box, then the back button), go to another page, and close the window with its X. The dropdowns step through their choices without opening a list.
   The game must not freeze, also when opening and closing the game's options and menu afterwards, and the viewport stays. The back buttons take the new bar within a second. A back button's key still works after a `/reload` (saved right away). The game's own controller action
@@ -147,10 +147,10 @@ Things only the real client can confirm:
   way to the keyboard doesn't wait for the options). Shift while it's off: nothing errors. Log in with keyboard and mouse in a form, turn the
   controller interface on: the bars follow. Try the switch on page 2 too, and in combat if the game
   lets you.
-- Controller back buttons (Options > Controller), on a Steam Deck with F13 to F16 (or other free
+- Controller back buttons (Options > Back buttons), on a Steam Deck with F13 to F16 (or other free
   keys) given to L4, L5, R4 and R5 in Steam Input, bound under Key Bindings > AddOns > Quality of
   Life:
-  - The keys press the buttons in the controller interface, alone and with LT, RT or both held, and
+  - The keys press the buttons in the controller interface, and
     the button looks pressed while held. If they don't, the saved bindings or the overrides don't
     reach the controller interface; that's the first thing to find out. Does the client see F13
     and up from Steam Input at all (try binding them to something else)?
@@ -166,17 +166,17 @@ Things only the real client can confirm:
     (Shift) and unlocked; the tooltip.
   - The keys still work after opening and closing a gamepad window (bags, map, the settings), and
     no "tainted by" error shows up in combat afterwards.
-  - On every bar, with the trigger toggle off: all 16 show as four crosses at the far left and
-    right (L4 upper left, L5 lower left, R4 upper right, R5 lower right), clear of the bars, the
-    LB and RB prompts and the screen edge, at several Edit Mode sizes, and the full-size art of
-    the bar in use doesn't touch its neighbours. Holding a trigger grows its bar's four, in
-    combat too. RT held with L4 casts L4 on the Right bar, RT
-    held with A presses the Right bar's A, and a tap of RT switches nothing on. Turning the back
-    buttons off gives the triggers back to the game (its own trigger icons light up again).
-  - With the trigger toggle on too: with Right switched on L4 alone casts Right's L4, LT held then
-    adds Bottom; an empty one does nothing. The crosses aren't under the marker.
+  - On every bar: a Steam Input layer on RT (and LT, and both) sending other keys for L4 to R5,
+    bound on the Back buttons page (pressing the trigger and the back button there). RT held with
+    L4 casts the Right bar's L4, and RT still pages the game's bar (its own trigger icons light).
+    All 16 show as four crosses at the far left and right (L4 upper left, L5 lower left, R4 upper
+    right, R5 lower right), clear of the bars, the LB and RB prompts and the screen edge, at several
+    Edit Mode sizes, and the full-size art of the bar in use doesn't touch its neighbours. Holding
+    a trigger grows its bar's four, in combat too.
+  - With the trigger toggle on too: every key still presses its own bar's; the art stays on Top's
+    (the game's active bar). An empty one does nothing. The crosses aren't under the marker.
   - The compact layout: only the bar in use's four show beside the one bar, and they switch with a
-    held trigger (and a bar switched on), in combat too.
+    held trigger, in combat too; a click reaches the bar in use's out of combat.
   - A warrior in a stance with the game's Stance bar on Top: Top's back buttons stay, with their own
     actions. Same in a vehicle. The special page hides them all; an empty bar hidden by the game's
     setting hides its four.
