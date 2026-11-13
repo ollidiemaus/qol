@@ -8,8 +8,8 @@ local _, ns = ...
 --   * Boats, zeppelins, portals and the tram list where they go (to): an area (the stop's name) and
 --     the map a click opens. A line with several stops lists the next one first.
 --
--- Positions are Forever's own (build 1.60.1.70630, read through wago.tools and placed on the zone
--- maps with UiMapAssignment):
+-- Positions are Forever's own (build 1.60.1.70630, unchanged in 1.60.1.70888, read through
+-- wago.tools and placed on the zone maps with UiMapAssignment):
 --   * instance portals: Map.db2's corpse position of each instance, which retail's encounter journal
 --     also uses for its entrance pins. Naxxramas, floating above Plaguewood, has none; its position
 --     is the necropolis' TaxiNode;
@@ -18,10 +18,12 @@ local _, ns = ...
 --     Southshore, the boat between Tanaris and the Riverglades and the airships to Zephras Isle;
 --   * the portal between Darnassus and Rut'theran Village and the Deeprun Tram: their area triggers
 --     (AreaTrigger.db2), with AzerothCore's teleport table saying which is which.
--- Forever's new dungeons aren't here: the client has no position for their entrances.
+-- Forever's new dungeons have no position in the client (no corpse position, no area trigger), so
+-- theirs are where players find the entrances, as OpenMap (v0.8.7, MIT) has them on the zone maps.
+-- They're world = "forever". Its list has no entrance yet for the others Map.db2 names.
 --
 -- The same pins serve Classic Era (1.15), whose world differs in a few places:
---   * world = "forever": a route only Forever has; world = "classicEra": one only Classic Era has
+--   * world = "forever": a route or dungeon only Forever has; world = "classicEra": one only Classic Era has
 --     (its direct boat between Menethil Harbor and Auberdine, from the docks Forever's route uses);
 --   * classicEra = { x, y }: the place on Classic Era's zone map, where it covers another part of the
 --     world than Forever's (Stormwind City, the Eastern Plaguelands). Converted from Forever's place
@@ -50,6 +52,18 @@ ns.MapPinData = {
     { type = "dungeon", map = 1422, x = 69.1, y = 73.0, areas = { 2057 } }, -- Scholomance, Western Plaguelands
     -- Stratholme, Eastern Plaguelands
     { type = "dungeon", map = 1423, x = 26.1, y = 10.4, areas = { 2017 }, classicEra = { x = 30.8, y = 15.7 } },
+    -- Forever's own dungeons: placed by hand, from OpenMap (v0.8.7, Data/Forever/Places.lua)
+    { type = "dungeon", map = 1458, x = 72.5, y = 11.4, areas = { 16611 }, world = "forever" }, -- Ruins of Lordaeron, Undercity
+    { type = "dungeon", map = 1455, x = 27.7, y = 47.9, areas = { 16919 }, world = "forever" }, -- The Hall of Thanes, Ironforge
+    { type = "dungeon", map = 1437, x = 47.8, y = 56.2, areas = { 16732 }, world = "forever" }, -- Excavation Site: Wetlands
+    -- City of Dalaran, Alterac Mountains
+    { type = "dungeon", map = 1416, x = 8.5, y = 59.3, areas = { 16544 }, world = "forever" },
+    { type = "dungeon", map = 1434, x = 21.3, y = 27.8, areas = { 16550 }, world = "forever" }, -- The Drowned City, Stranglethorn
+    { type = "dungeon", map = 2548, x = 37.5, y = 37.3, areas = { 16842 }, world = "forever" }, -- Krol'dok Stronghold, Riverglades
+    { type = "dungeon", map = 1445, x = 75.3, y = 14.1, areas = { 16620 }, world = "forever" }, -- Alcaz Prison, Dustwallow Marsh
+    { type = "dungeon", map = 1447, x = 38.6, y = 33.2, areas = { 16554 }, world = "forever" }, -- Blackmaw Hold, Azshara
+    -- The Shaper's Terrace, Un'Goro Crater
+    { type = "dungeon", map = 1449, x = 48.1, y = 6.1, areas = { 16667 }, world = "forever" },
 
     -- Raids
     -- Molten Core, Burning Steppes and Searing Gorge
