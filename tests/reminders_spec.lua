@@ -3,7 +3,7 @@ local Stubs = require("wow_stubs")
 local describe, it = T.describe, T.it
 
 -- Forever's spells for the presets, as its client names them in English, and a made-up icon each.
-local WELL_FED, WELL_FED_OTHER, WELL_RESTED, CAMP = 19705, 1248406, 1225478, 1229741
+local WELL_FED, WELL_FED_OTHER, WELL_RESTED, CAMP = 19705, 1248406, 429959, 1229741
 local SUNFRUIT, STAMINA_FOOD = 18125, 18191
 local ICONS = { wellFed = 136000, wellRested = 136001, campBenefits = 136002 }
 
@@ -21,7 +21,7 @@ end
 -- The placeholder icon of the row while it's unlocked: the game's question mark.
 local QUESTION_MARK = 134400
 
-local ENGLISH = { wellFed = "Well Fed", wellRested = "Well Rested", campBenefits = "Camp Benefits" }
+local ENGLISH = { wellFed = "Well Fed", wellRested = "Well-Rested", campBenefits = "Camp Benefits" }
 
 -- Loads the addon on Forever with the presets' spell data and logs in.
 local function start(savedOptions, options)
@@ -211,7 +211,7 @@ describe("reminders", function()
     end)
 
     it("goes by the client's names, in any language", function()
-        local names = { wellFed = "Satt", wellRested = "Gut ausgeruht", campBenefits = "Lagervorteile" }
+        local names = { wellFed = "Satt", wellRested = "Gut erholt", campBenefits = "Lagervorteile" }
         local ns = start({ reminders = true, reminderWellFed = true, reminderWellRested = true,
             reminderCampBenefits = true }, { locale = "deDE", names = names,
             buffs = { buff("Satt", WELL_FED_OTHER), buff("Lagervorteile", CAMP) } })
@@ -291,11 +291,11 @@ describe("reminders", function()
             reminderCampBenefits = true })
         T.same(seen(ns), { ICONS.wellFed, ICONS.wellRested, ICONS.campBenefits })
         T.same(offsets(ns), { -44, 0, 44 })
-        Stubs.SetBuffs({ buff("Well Rested", WELL_RESTED) })
+        Stubs.SetBuffs({ buff("Well-Rested", WELL_RESTED) })
         Stubs.RunTimers()
         T.same(seen(ns), { ICONS.wellFed, ICONS.campBenefits })
         T.same(offsets(ns), { -22, 22 })
-        Stubs.SetBuffs({ buff("Well Rested", WELL_RESTED), buff("Camp Benefits", CAMP) })
+        Stubs.SetBuffs({ buff("Well-Rested", WELL_RESTED), buff("Camp Benefits", CAMP) })
         Stubs.RunTimers()
         T.same(offsets(ns), { 0 })
     end)
@@ -394,7 +394,7 @@ describe("reminders", function()
         T.falsy(Stubs.Listens("UNIT_AURA", "player"))
     end)
 
-    it("marks Well Rested as being about experience", function()
+    it("marks Well-Rested as being about experience", function()
         local ns = start()
         local marked = {}
         for _, preset in ipairs(ns.Reminders.PRESETS) do

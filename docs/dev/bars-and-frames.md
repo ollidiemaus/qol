@@ -60,8 +60,8 @@ true)`, which also folds a burst of `UNIT_AURA` into one pass per frame. An icon
 `CooldownViewerBuffIconItemTemplate` (40 by 40, the `UI-HUD-CoolDownManager-Mask` mask, the
 `IconOverlay` atlas 8 and 7 past the edges), and the overlay hides with the page's border option.
 A preset's buff counts when a buff on the player has one of the names `C_Spell.GetSpellName` gives
-for the preset's spell IDs (Forever's Spell table: Well Fed is thirty spells of one name, Well
-Rested 1225478, Camp Benefits 1229741), so food, rank and locale don't matter. The names are cached
+for the preset's spell IDs (Forever's Spell table: Well Fed is thirty spells of one name, Well-
+Rested 429959 from the Cozy Sleeping Bag, not 1225478 Well Rested, Camp Benefits 1229741), so food, rank and locale don't matter. The names are cached
 once the client has given them all. Forever withholds buff data in combat, and reading it there is
 an error for tainted code rather than a secret value (see `forever-notes.md`), so a refresh asks
 `C_Secrets.ShouldAurasBeSecret()` first and then checks each aura and name with `issecretvalue`;

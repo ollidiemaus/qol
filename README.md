@@ -260,7 +260,7 @@ reminders** and pick the presets you want in the table below it (all off by defa
 
 - **Well Fed**, from any food or drink that makes you Well Fed, or that takes its place under a name
   of its own (Blessed Sunfruit, Alterac Spring Water, Dragonbreath Chili, "Increased Stamina", ...).
-- **Well Rested**, the buff that makes your rested experience build up faster.
+- **Well-Rested**, the bonus to experience gains from resting in a Cozy Sleeping Bag.
 - **Camp Benefits**, the bonuses from the items set up at a camp.
 - **Main Hand Weapon Buff** and **Off Hand Weapon Buff**, one per hand: shows while that hand's
   weapon has no weapon buff (a poison, a shaman's weapon spell such as Rockbiter Weapon, a sharpening
@@ -300,7 +300,7 @@ On the right, the **Hide reminders** boxes say when the reminders stay away:
   lets addons see your buffs; for now WoW Forever hides them in every fight anyway.
 - **While mounted** (off).
 - **While dead or on a flight path** (on), when you can't put a buff up anyway.
-- **Experience reminders at maximum level** (on): only Well Rested, once your character can't gain
+- **Experience reminders at maximum level** (on): only Well-Rested, once your character can't gain
   experience any more. The other reminders still show.
 
 They come back as soon as the condition ends.

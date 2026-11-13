@@ -52,8 +52,8 @@ Reminders.PRESETS = {
         -- Sunfruit Juice, Alterac Spring Water, Dragonbreath Chili, Increased Stamina, Agility and
         -- Intellect, Mana and Health Regeneration.
         18125, 18141, 23697, 15852, 18191, 18192, 22730, 18194, 18222 } },
-    -- Rested experience accumulates faster.
-    { key = "reminderWellRested", text = "REMINDER_WELL_RESTED", spells = { 1225478 }, experience = true },
+    -- Experience gains increased, from resting in a sleeping bag (Cozy Sleeping Bag, item 211527).
+    { key = "reminderWellRested", text = "REMINDER_WELL_RESTED", spells = { 429959 }, experience = true },
     -- The camp's bonuses, from the items set up at a camp.
     { key = "reminderCampBenefits", text = "REMINDER_CAMP_BENEFITS", spells = { 1229741 } },
     -- Weapon buffs (poisons, a shaman's weapon spells, sharpening stones, oils), one per hand, read
