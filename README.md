@@ -412,11 +412,13 @@ controller interface on or off switches them right away.
 paddles, like the Steam Deck: L4, L5, R4 and R5. They show icons, cooldowns and charges like the
 bar's other buttons.
 
-- **Four bars:** with **Press a trigger to keep its bar on** turned on, each back button has an action on
-  every controller bar, like A does: L4 alone is L4 on the Top bar, RT with L4 is L4 on the Right
-  bar, LT and RT with L4 is L4 on the Bottom bar. A bar switched on counts like a held trigger. Each
-  bar's four show beside it: Top's in a row above it, Bottom's in a row below it, Left's left of it
-  and Right's right of it. Without the trigger toggle they act on Top only, and only Top's show.
+- **Four bars:** each back button has an action on every controller bar, like A does: L4 alone is L4
+  on the Top bar, RT held with L4 is L4 on the Right bar, LT and RT with L4 is L4 on the Bottom bar.
+  All 16 show in a grid at the far left and right of the controller bar, a row per bar: Top, Left,
+  Right and Bottom from the top, L4 and R4 on the outside. While the back buttons are on, the
+  triggers go through QoL even with **Press a trigger to keep its bar on** turned off (a held trigger
+  then works as before, a tap switches nothing on); with it on, a bar switched on counts like a held
+  trigger.
 - **Compact layout:** the game shows only one bar there, so only the back buttons of the bar a press
   goes to show, beside it, even when the game shows Top's buttons.
 - An empty back button does nothing when pressed; it doesn't fall back to Top's. A bar's back

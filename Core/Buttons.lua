@@ -131,7 +131,8 @@ end
 -- The other way round: secure frames that want the controller bar in use ("left", "right",
 -- "bottom" or nil for Top) set as their "bar" attribute, by whoever keeps it (the trigger toggle's
 -- header), in combat too. fn gets each one, now and as it's made, out of combat. A follower that
--- shows something beside the bars says so with its "beside" attribute (the marker grows to cover it).
+-- wants the triggers' bars without the trigger toggle says so with its "wantsbar" attribute: the
+-- keeper then takes the triggers for holds only.
 local barFollowers, barFollowerWatchers = {}, {}
 
 function Buttons.AddBarFollower(frame)

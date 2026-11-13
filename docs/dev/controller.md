@@ -83,7 +83,11 @@ rebuilds no window for them.
 Each back button has an action on each controller bar: RT with L4 is L4 on the Right bar. The game
 picks a bar by the triggers' key-down state in its own Lua, which secure code can't read, so the bar
 in use is the trigger toggle's (ADR 0006): held or on, a bar on counting like a held trigger and a
-hold adding to it as for the bar keys. Without the trigger toggle that's Top, and only Top's show.
+hold adding to it as for the bar keys. While the back buttons are on, the toggle's header owns the
+triggers even with its option off, for holds only (ADR 0007): the back buttons' header sets
+`wantsbar`, the toggle hooks its `OnAttributeChanged` and updates out of combat, and with its
+`toggle` attribute unset `TRIGGER` marks every press used as it goes down, so a release never
+switches a bar on.
 
 - The hand-off: `ns.Buttons.AddBarFollower(frame)` and `WatchBarFollowers(fn)`. The back buttons'
   header `QoLBackButtons` is a follower; the toggle sets a frame ref to it out of combat, and its
@@ -102,19 +106,22 @@ hold adding to it as for the bar keys. Without the trigger toggle that's Top, an
   page hides them all. A bar hidden as empty hides its back buttons, and a stance or vehicle bar in
   its place doesn't. The compact layout follows Top's place, the one bar the game shows there. A
   place that changes in combat waits for it to end.
-- Layout, from the holder on the bar's anchor (points): the full layout puts each bar's on its outer
-  side, Top's in a row above (x -114, -70, 70, 114 at y 85), Bottom's in a row below (y -85),
-  Left's in a column on its left (x -182 at y 66, 22, -22, -66) and Right's on its right (x 182).
-  The compact layout shows only the bar in use's, beside the one bar the game shows (L4 and L5 at
-  x -182, R4 and R5 at 182, y 26 and -26), in combat too through the header.
-- The marker grows from 160 to 224 points high while a follower's `beside` attribute is set (the
-  back buttons on), to cover the columns beside Left and Right.
+- Layout (points). Above Top sit the LB and RB prompts and the page tracker, and the bars interlock
+  (each about 300 wide on anchors 195 apart), so the full layout puts all 16 on holders centred on
+  the page unit (656 wide), in a grid past its sides: a row per bar, Top at y 66, Left 22, Right
+  -22, Bottom -66; L4 at x -421 and L5 at -377, R4 at 421 and R5 at 377, each name on its button.
+  The compact layout re-anchors the holders to their bar's anchor and shows only the bar in use's,
+  beside the one bar the game shows (L4 and L5 at x -182, R4 and R5 at 182, y 26 and -26), in combat
+  too through the header.
+- The marker stays 512 by 160 on the bar's anchor; it covers Left's and Right's rows but not
+  Bottom's.
 
 To check in game (not answerable from the source or the stubs):
 
-- Spacing: the columns beside Left and Right and the rows above Top and below Bottom don't overlap a
-  neighbouring bar or the screen edge, at the default scale and in Edit Mode.
-- The compact layout: the back buttons beside the one bar follow the bar on, in combat too.
+- Spacing: the grid clears the bars, the LB and RB prompts and the screen edge, at the default
+  scale and in Edit Mode.
+- Holds without the toggle: the game's own trigger icons no longer light, our marker does.
+- The compact layout: the back buttons beside the one bar follow the held bar, in combat too.
 - A stance bar in Top's place (a warrior's): Top's back buttons stay with their own actions.
 - Presses in combat on each bar, held and on, and that the game does nothing of its own with a
   trigger held while a paddle key goes down.

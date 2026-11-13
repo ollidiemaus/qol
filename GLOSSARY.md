@@ -174,7 +174,7 @@ One of the four bars on a page of the controller interface: Top (no trigger), Le
 _Avoid_: gamepad bar, trigger bar
 
 **Back button**:
-L4, L5, R4 or R5: an extra button of ours on the controller bar, for a controller's paddles. It has an action on each controller bar, so RT with L4 is "L4 on the Right bar", shown beside that bar.
+L4, L5, R4 or R5: an extra button of ours on the controller bar, for a controller's paddles. It has an action on each controller bar, so RT with L4 is "L4 on the Right bar", shown in that bar's row at the far left and right of the controller bar.
 _Avoid_: paddle (that's the controller's own button), modifier slot, layer
 
 **Stance**:

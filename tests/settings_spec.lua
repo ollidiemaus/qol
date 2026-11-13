@@ -312,9 +312,7 @@ describe("settings pages", function()
         T.same(values(right), { 2, 3, 4, 5, 6, 7, 8 })
         ns.Options:Set("controllerBackButtons", true)
         T.truthy(top.enabled(), "enabled with the back buttons")
-        T.falsy(right.enabled(), "the other bars wait for the trigger toggle too")
-        ns.Options:Set("controllerTriggerToggle", true)
-        T.truthy(right.enabled(), "enabled with the trigger toggle")
+        T.truthy(right.enabled(), "the other bars too, without the trigger toggle")
         for _, bar in ipairs({ "Left", "Bottom" }) do T.truthy(control(ns, "controllerBackButtonsBar" .. bar), bar) end
     end)
 

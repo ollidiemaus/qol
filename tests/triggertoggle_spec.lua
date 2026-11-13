@@ -275,25 +275,48 @@ describe("trigger toggle", function()
         T.eq(marked(bar), nil)
     end)
 
-    it("makes the marker taller while back buttons show beside the bars", function()
-        local function height()
-            for _, region in ipairs(Stubs.state().regions) do
-                if region.atlas == "gamepad-actionbar-fx-trigger-behind" and region:IsVisible() then
-                    local _, h = region:GetSize()
-                    return h
-                end
-            end
+    describe("off, with the back buttons on", function()
+        local function backButtons()
+            local ns, bar = start({ controllerBackButtons = true })
+            settle()
+            return ns, bar
         end
-        local ns, bar = start(on())
-        tap(LT)
-        T.eq(height(), 160)
-        ns.Options:Set("controllerBackButtons", true)
-        settle()
-        T.eq(marked(bar), "left")
-        T.eq(height(), 224, "covering the bar's back buttons")
-        ns.Options:Set("controllerBackButtons", false)
-        settle()
-        T.eq(height(), 160)
+
+        it("lets a held trigger's bar keys reach that bar", function()
+            local _, bar = backButtons()
+            T.eq(reached(A), nil, "no trigger held: the game's own binding")
+            down(LT)
+            T.eq(marked(bar), "left")
+            T.eq(reached(A), gameButton(bar, "left", 8))
+            up(LT)
+            T.eq(reached(A), nil)
+            T.eq(marked(bar), nil)
+        end)
+
+        it("switches nothing on with a tap", function()
+            local _, bar = backButtons()
+            tap(RT)
+            T.eq(marked(bar), nil)
+            T.eq(reached(A), nil)
+        end)
+
+        it("gives the triggers back when the back buttons go off", function()
+            local ns = backButtons()
+            T.truthy(Stubs.state().overrides[LT])
+            ns.Options:Set("controllerBackButtons", false)
+            settle()
+            settle()
+            T.eq(Stubs.state().overrides[LT], nil)
+        end)
+
+        it("latches again once the toggle is turned on", function()
+            local ns, bar = backButtons()
+            ns.Options:Set("controllerTriggerToggle", true)
+            settle()
+            tap(RT)
+            T.eq(marked(bar), "right")
+            T.eq(reached(A), gameButton(bar, "right", 8))
+        end)
     end)
 
     describe("after combat", function()

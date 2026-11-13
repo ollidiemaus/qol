@@ -14,12 +14,13 @@ local L = ns.L
 -- commands in Bindings.xml), each of which takes the slot of the bar in use. Forever's triggers
 -- aren't modifiers (ADR 0006), so the bar in use is the trigger toggle's: it sets it on our header
 -- (ns.Buttons.AddBarFollower), held or switched on, in combat too, and the header puts that bar's
--- slots on the keys' buttons. Without the trigger toggle that's Top, and only Top's show.
+-- slots on the keys' buttons. Our header's "wantsbar" makes the trigger toggle take the triggers
+-- while the back buttons are on, for holds only when its own option is off (ADR 0007).
 --
 -- Each bar's four shown buttons are secure action buttons too, for the mouse, on a holder of ours
--- anchored to the bar's anchor on the page unit (which only Edit Mode moves, out of combat), under a
--- frame of ours that's a child of GamepadMainActionBarFrame, so they hide, scale and fade with the
--- bar. In the full layout they sit on the bar's outer side, in the compact layout beside it. A
+-- under a frame of ours that's a child of GamepadMainActionBarFrame, so they hide, scale and fade
+-- with the bar. In the full layout the holders sit on the page unit, in a grid at its far left and
+-- right; in the compact layout on the bar's anchor (which only Edit Mode moves, out of combat). A
 -- holder shows while the game shows something in its bar's place (the bar, or the stance or possess
 -- bar over it, but not the special page), and in the compact layout only the bar in use's shows. Plain
 -- frames of ours on the game's bars tell us when those show or hide; nothing of the game's is written,
@@ -30,8 +31,6 @@ local BackButtons = {}
 ns.BackButtons = BackButtons
 
 local KEY = "controllerBackButtons"
--- Only read: with it off, the back buttons act on Top only.
-local TOGGLE_KEY = "controllerTriggerToggle"
 -- The controller bars, by the names the trigger toggle gives the bar in use (none is Top).
 local BARS = { "top", "left", "right", "bottom" }
 BackButtons.BARS = BARS
@@ -60,23 +59,26 @@ BackButtons.BUTTONS = {
 }
 local BUTTONS = BackButtons.BUTTONS
 
--- Where each button sits from its bar's anchor, and the side its name goes. The full layout's bars
--- interlock, so each bar's go on its free outer side: a row above Top and below Bottom, a column left
--- of Left and right of Right. The compact layout shows one bar: L4 and L5 left of it, R4 and R5
+-- Where each button sits, and where its name goes. Above Top and below Bottom are the game's LB and
+-- RB prompts and page tracker, and the bars interlock, so the full layout puts all 16 at the far
+-- left and right of the page unit, from its centre, where the four sat before there were 16: a row
+-- per bar, top to bottom Top, Left, Right, Bottom; L4 and R4 outside, L5 and R5 inside, their names
+-- on them. The compact layout shows one bar's, from its anchor: L4 and L5 left of it, R4 and R5
 -- right. docs/dev/controller.md has the numbers.
-local ROW_X, ROW_Y = { -114, -70, 70, 114 }, 85
-local COLUMN_X, COLUMN_Y = 182, { 66, 22, -22, -66 }
+local COLUMN_X, COMPACT_Y = 182, 26
+local GRID_X = { 421, 377 }
+local GRID_Y = { top = 66, left = 22, right = -22, bottom = -66 }
 local LAYOUTS = { full = {}, compact = {} }
 for index, info in ipairs(BUTTONS) do
-    LAYOUTS.compact[index] = { x = info.side * COLUMN_X, y = index % 2 == 1 and 26 or -26,
+    LAYOUTS.compact[index] = { x = info.side * COLUMN_X, y = index % 2 == 1 and COMPACT_Y or -COMPACT_Y,
         label = info.side < 0 and "LEFT" or "RIGHT" }
 end
-LAYOUTS.full.top, LAYOUTS.full.bottom, LAYOUTS.full.left, LAYOUTS.full.right = {}, {}, {}, {}
-for index = 1, #BUTTONS do
-    LAYOUTS.full.top[index] = { x = ROW_X[index], y = ROW_Y, label = "TOP" }
-    LAYOUTS.full.bottom[index] = { x = ROW_X[index], y = -ROW_Y, label = "BOTTOM" }
-    LAYOUTS.full.left[index] = { x = -COLUMN_X, y = COLUMN_Y[index], label = "LEFT" }
-    LAYOUTS.full.right[index] = { x = COLUMN_X, y = COLUMN_Y[index], label = "RIGHT" }
+for _, bar in ipairs(BARS) do
+    LAYOUTS.full[bar] = {}
+    for index, info in ipairs(BUTTONS) do
+        LAYOUTS.full[bar][index] = { x = info.side * GRID_X[index % 2 == 1 and 1 or 2], y = GRID_Y[bar],
+            label = "INSIDE" }
+    end
 end
 
 function BackButtons.Name(index)
@@ -128,14 +130,13 @@ local keys = {}
 -- Secure part
 ---------------------------------------------------------------------------------------------------
 
--- The bar in use (the trigger toggle's, or Top without it) gives the keys' buttons their slots.
+-- The bar in use (held or switched on, Top with no trigger) gives the keys' buttons their slots.
 -- Then the holders: in the compact layout the bar in use's, beside the one bar the game shows there
 -- (on Top's anchor), while something is in Top's place; in the full layout every bar's with
--- something in its place, but only Top's without the trigger toggle.
+-- something in its place.
 -- Attribute names are lower case: the game lowers them.
 local REFRESH = [[
-    local trigger = self:GetAttribute("trigger")
-    local bar = trigger and self:GetAttribute("bar") or "top"
+    local bar = self:GetAttribute("bar") or "top"
     for index = 1, 4 do
         self:GetFrameRef("key-" .. index):SetAttribute("action", self:GetAttribute("slot-" .. bar .. "-" .. index))
     end
@@ -146,7 +147,7 @@ local REFRESH = [[
         if compact then
             shown = name == bar and self:GetAttribute("place-top")
         else
-            shown = (trigger or name == "top") and self:GetAttribute("place-" .. name)
+            shown = self:GetAttribute("place-" .. name)
         end
         local holder = self:GetFrameRef("holder-" .. name)
         if shown then holder:Show() else holder:Hide() end
@@ -172,16 +173,20 @@ local function setPressed(button, down)
     button.pushedRim:SetShown(down)
 end
 
-local OPPOSITE = { LEFT = "RIGHT", RIGHT = "LEFT", TOP = "BOTTOM", BOTTOM = "TOP" }
-local NUDGE = { LEFT = { -2, 0 }, RIGHT = { 2, 0 }, TOP = { 0, 2 }, BOTTOM = { 0, -2 } }
+-- The button's name beside it, on its outer side, or on it at the top (INSIDE), where the grid
+-- leaves no room beside it.
+local LABEL_POINTS = {
+    LEFT = { "RIGHT", "LEFT", -2, 0 },
+    RIGHT = { "LEFT", "RIGHT", 2, 0 },
+    INSIDE = { "TOP", "TOP", 0, -1 },
+}
 
--- The button's name on its outer side.
 local function placeLabel(button, side)
     if button.labelSide == side then return end
     button.labelSide = side
-    local nudge = NUDGE[side]
+    local point = LABEL_POINTS[side]
     button.label:ClearAllPoints()
-    button.label:SetPoint(OPPOSITE[side], button, side, nudge[1], nudge[2])
+    button.label:SetPoint(point[1], button, point[2], point[3], point[4])
 end
 
 -- The controller bar's round button, on regions of our own: drop shadow, dark empty slot, round
@@ -316,7 +321,7 @@ end
 
 -- The bar a key acts on now, as the header has it.
 local function barInUse()
-    return header:GetAttribute("trigger") and header:GetAttribute("bar") or "top"
+    return header:GetAttribute("bar") or "top"
 end
 
 -- A key looks pressed on the button of the bar it acted on.
@@ -375,7 +380,6 @@ local function create()
         header:SetAttribute("name-" .. index, bar)
         local holder = CreateFrame("Frame", nil, root)
         holder:SetSize(1, 1)
-        holder:SetPoint("CENTER", pageUnit and pageUnit[ANCHORS[bar]] or root, "CENTER", 0, 0)
         holder:Hide()
         holder:SetScript("OnShow", scheduleRefresh)
         local group = { holder = holder, buttons = {} }
@@ -473,9 +477,18 @@ local function setAttribute(frame, name, value)
     if frame:GetAttribute(name) ~= value then frame:SetAttribute(name, value) end
 end
 
--- Each bar's buttons where its layout puts them.
+-- Each bar's buttons where its layout puts them: in the compact layout from the bar's anchor, in
+-- the full layout from the page unit's centre.
 local function place(compact)
+    local pageUnit = GamepadMainActionBarFrame.PageUnit
     for _, bar in ipairs(BARS) do
+        local holder = groups[bar].holder
+        local anchor = pageUnit and (compact and pageUnit[ANCHORS[bar]] or pageUnit) or root
+        if holder.anchor ~= anchor then
+            holder.anchor = anchor
+            holder:ClearAllPoints()
+            holder:SetPoint("CENTER", anchor, "CENTER", 0, 0)
+        end
         local layout = compact and LAYOUTS.compact or LAYOUTS.full[bar]
         for index, button in ipairs(groups[bar].buttons) do
             local spot = layout[index]
@@ -509,13 +522,12 @@ function BackButtons:Update()
         end
         local compact = GamepadMainActionBarFrame.useCompactLayout == true
         local found = places()
-        setAttribute(header, "trigger", Options:Get(TOGGLE_KEY) == true or nil)
         setAttribute(header, "compact", compact or nil)
         for _, bar in ipairs(BARS) do setAttribute(header, "place-" .. bar, found[bar] or nil) end
         place(compact)
         SecureHandlerExecute(header, [[ self:RunAttribute("refresh") ]])
         if root:IsShown() ~= on then root:SetShown(on) end
-        setAttribute(header, "beside", on or nil)
+        setAttribute(header, "wantsbar", on or nil)
     end
     refreshEvents:SetOn(on)
     bindings:Set(on and BackButtons.Overrides() or {})
@@ -542,7 +554,7 @@ end
 function BackButtons:Init()
     if not GamepadMainActionBarFrame then return end
     refreshEvents = ns.Events:NewGroup(ns.Buttons.REFRESH_EVENTS, scheduleRefresh)
-    local watched = { KEY, TOGGLE_KEY }
+    local watched = { KEY }
     for _, bar in ipairs(BARS) do watched[#watched + 1] = BackButtons.BarOption(bar) end
     Options:Watch(watched, schedule)
     -- The player changed a binding, or another addon its overrides (setting ours fires this too;

@@ -2,10 +2,13 @@ local T = require("testlib")
 local Stubs = require("wow_stubs")
 local describe, it = T.describe, T.it
 
--- The next frames, and the check for the controller's windows that lets the buttons' changes go.
+-- The next frames, and the check for the controller's windows that lets the buttons' changes go;
+-- twice, for the trigger toggle's update the back buttons' asks for.
 local function settle()
-    Stubs.RunTimers()
-    Stubs.AdvanceTime()
+    for _ = 1, 2 do
+        Stubs.RunTimers()
+        Stubs.AdvanceTime()
+    end
 end
 
 -- Forever, with its controller action bar and the controller interface on.
@@ -350,10 +353,32 @@ describe("controller back buttons", function()
     end)
 
     describe("on every controller bar", function()
-        it("act on Top only, with only Top's shown, while the trigger toggle is off", function()
+        it("act on a held trigger's bar without the trigger toggle, every bar's shown", function()
             start(on())
-            T.same(showing(), { "Top" })
+            T.same(showing(), { "Top", "Left", "Right", "Bottom" })
             T.eq(press(1), TOP + 1)
+            Stubs.PressOverride(RT, true)
+            T.eq(press(1), RIGHT + 1, "RT with L4 is L4 on the Right bar")
+            Stubs.PressOverride(LT, true)
+            T.eq(press(2), BOTTOM + 2, "both held: Bottom")
+            Stubs.PressOverride(RT, false)
+            T.eq(press(3), BOTTOM + 3, "Bottom until both are let go")
+            Stubs.PressOverride(LT, false)
+            T.eq(press(1), TOP + 1, "let go: Top")
+            Stubs.PressOverride(LT, true)
+            T.eq(press(3), LEFT + 3)
+            Stubs.PressOverride(LT, false)
+            tap(RT)
+            T.eq(press(1), TOP + 1, "a tap switches nothing on without the toggle")
+        end)
+
+        it("work while held in combat without the trigger toggle", function()
+            start(on())
+            Stubs.SetCombat(true)
+            Stubs.PressOverride(LT, true)
+            T.eq(press(4), LEFT + 4)
+            Stubs.PressOverride(LT, false)
+            T.eq(press(4), TOP + 4)
         end)
 
         it("act on the bar on, which the trigger toggle switches", function()
@@ -398,14 +423,22 @@ describe("controller back buttons", function()
             T.eq(press(1), TOP + 1)
         end)
 
-        it("go back to Top and hide the other bars' when the trigger toggle is turned off", function()
+        it("go back to Top, holds still working, when the trigger toggle is turned off", function()
             local ns = start(withToggle())
             tap(RT)
             set(ns, "controllerTriggerToggle", false)
-            T.same(showing(), { "Top" })
-            T.eq(press(1), TOP + 1)
-            set(ns, "controllerTriggerToggle", true)
             T.same(showing(), { "Top", "Left", "Right", "Bottom" })
+            T.eq(press(1), TOP + 1)
+            Stubs.PressOverride(RT, true)
+            T.eq(press(1), RIGHT + 1)
+            Stubs.PressOverride(RT, false)
+        end)
+
+        it("give the triggers back when they're turned off", function()
+            local ns = start(on())
+            T.truthy(override(RT), "the triggers are ours while the back buttons are on")
+            set(ns, "controllerBackButtons", false)
+            T.eq(override(RT), nil)
         end)
 
         it("take each bar's slots from the action bar picked for it", function()
@@ -451,24 +484,20 @@ describe("controller back buttons", function()
             T.falsy(shown("Top", 3).icon:IsShown(), "Top's own is empty")
         end)
 
-        it("sit on the outer side of their bar in the full layout", function()
-            local _, bar = start(withToggle())
-            local unit = bar.PageUnit
-            local anchors = { Top = unit.TopCenteredAnchor, Left = unit.LeftCenteredAnchor,
-                Right = unit.RightCenteredAnchor, Bottom = unit.BottomCenteredAnchor }
-            for name, anchor in pairs(anchors) do
-                T.same({ shown(name, 1):GetParent():GetPoint() }, { "CENTER", anchor, "CENTER", 0, 0 }, name)
+        it("sit in a grid at the far left and right in the full layout, a row per bar", function()
+            local _, bar = start(on())
+            for _, name in ipairs(BARS) do
+                T.same({ shown(name, 1):GetParent():GetPoint() }, { "CENTER", bar.PageUnit, "CENTER", 0, 0 }, name)
             end
             local function at(name, index)
                 local point = { shown(name, index):GetPoint() }
                 return { point[4], point[5] }
             end
             T.same({ at("Top", 1), at("Top", 2), at("Top", 3), at("Top", 4) },
-                { { -114, 85 }, { -70, 85 }, { 70, 85 }, { 114, 85 } }, "a row above Top")
-            T.same({ at("Bottom", 1), at("Bottom", 4) }, { { -114, -85 }, { 114, -85 } }, "a row below Bottom")
-            T.same({ at("Left", 1), at("Left", 2), at("Left", 3), at("Left", 4) },
-                { { -182, 66 }, { -182, 22 }, { -182, -22 }, { -182, -66 } }, "a column left of Left")
-            T.same({ at("Right", 1), at("Right", 4) }, { { 182, 66 }, { 182, -66 } }, "a column right of Right")
+                { { -421, 66 }, { -377, 66 }, { 421, 66 }, { 377, 66 } }, "L4 and R4 outside, L5 and R5 inside")
+            T.same({ at("Left", 1), at("Right", 1), at("Bottom", 1) }, { { -421, 22 }, { -421, -22 }, { -421, -66 } },
+                "Top, Left, Right, Bottom from the top")
+            T.same({ shown("Top", 1).label:GetPoint() }, { "TOP", shown("Top", 1), "TOP", 0, -1 }, "the name on it")
             -- They show, hide and scale with the controller bar.
             bar:Hide()
             T.same(showing(), {})
@@ -567,7 +596,7 @@ describe("controller back buttons", function()
                 settle()
                 T.same(showing(), { "Top", "Left", "Right", "Bottom" })
                 local point = { shown("Top", 1):GetPoint() }
-                T.same({ point[4], point[5] }, { -114, 85 })
+                T.same({ point[4], point[5] }, { -421, 66 })
             end)
 
             it("hide on the special page", function()

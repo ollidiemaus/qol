@@ -166,13 +166,15 @@ Things only the real client can confirm:
     (Shift) and unlocked; the tooltip.
   - The keys still work after opening and closing a gamepad window (bags, map, the settings), and
     no "tainted by" error shows up in combat afterwards.
-  - On every bar, with the trigger toggle on: each bar's four show on its outer side (Top's above,
-    Bottom's below, Left's and Right's beside them) and clear of the neighbouring bar and the screen
-    edge, at several Edit Mode sizes. RT with L4 casts L4 on the Right bar; with Right switched on L4
-    alone does too, LT held then adds Bottom; an empty one does nothing. The marker covers the bar's
-    back buttons. With the toggle off only Top's show.
-  - The compact layout with the toggle on: only the bar on's four show beside the one bar, and they
-    switch with the bar, in combat too.
+  - On every bar, with the trigger toggle off: all 16 show in a grid at the far left and right, a
+    row per bar (Top, Left, Right, Bottom from the top), clear of the bars, the LB and RB prompts
+    and the screen edge, at several Edit Mode sizes. RT held with L4 casts L4 on the Right bar, RT
+    held with A presses the Right bar's A, and a tap of RT switches nothing on. Turning the back
+    buttons off gives the triggers back to the game (its own trigger icons light up again).
+  - With the trigger toggle on too: with Right switched on L4 alone casts Right's L4, LT held then
+    adds Bottom; an empty one does nothing. Bottom's row isn't under the marker.
+  - The compact layout: only the bar in use's four show beside the one bar, and they switch with a
+    held trigger (and a bar switched on), in combat too.
   - A warrior in a stance with the game's Stance bar on Top: Top's back buttons stay, with their own
     actions. Same in a vehicle. The special page hides them all; an empty bar hidden by the game's
     setting hides its four.

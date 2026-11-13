@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: superseded by ADR 0007 (the hold-only mode below is now built)
 ---
 
 # Back buttons follow the triggers only through the trigger toggle

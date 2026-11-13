@@ -374,14 +374,13 @@ local function buildController(page)
     for bar = 2, 8 do
         bars[#bars + 1] = { value = bar, label = L.BACK_BUTTONS_BAR_CHOICE:format(bar) }
     end
-    -- One per controller bar; the other bars' only act with the trigger toggle on.
-    local withToggle = function() return enabled() and Options:Get("controllerTriggerToggle") == true end
+    -- One per controller bar.
     for _, bar in ipairs(BackButtons.BARS) do
         local top = bar == "top"
         page:Dropdown("left", BackButtons.BarOption(bar),
             L.BACK_BUTTONS_BAR:format(L["CONTROLLER_BAR_" .. bar:upper()]), bars,
             top and L.BACK_BUTTONS_BAR_TOP_TIP or L.BACK_BUTTONS_BAR_TIP,
-            { indent = true, enabled = top and enabled or withToggle })
+            { indent = true, enabled = enabled })
     end
     page:Header("left", L.SECTION_TRIGGER_TOGGLE)
     page:Checkbox("left", "controllerTriggerToggle", L.TRIGGER_TOGGLE, L.TRIGGER_TOGGLE_TIP)

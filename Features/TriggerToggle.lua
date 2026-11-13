@@ -14,6 +14,9 @@ local Options = ns.Options
 -- Our overrides are plain ones, so that the priority overrides of the game's windows win over them
 -- on their own, also in combat, when they can't be taken away. Easy Controller's Toggle.lua (MIT) is
 -- the model for the snippets. docs/dev/controller.md has the rest.
+--
+-- With the option off, the triggers are still ours while a follower wants the bar in use (its
+-- "wantsbar": the back buttons, while on), for holds only: a press never switches a bar on (ADR 0007).
 local TriggerToggle = {}
 ns.TriggerToggle = TriggerToggle
 
@@ -41,10 +44,7 @@ local RELAY_PREFIX = TRIGGER_PREFIX .. "Relay"
 -- own bar focus (BackgroundFocus) is black, so it only dims what's behind it and can't be seen on a
 -- dark scene. Below the bars, which are on levels 4 and 5 of the LOW strata (ActionBar.lua).
 local MARKER_ATLAS = "gamepad-actionbar-fx-trigger-behind"
--- Taller while a frame that follows the bar shows something beside the bars (its "beside"
--- attribute: the back buttons, 66 points above and below a bar's centre plus half a button).
 local MARKER_WIDTH, MARKER_HEIGHT, MARKER_ALPHA = 512, 160, 0.7
-local MARKER_HEIGHT_FOLLOWERS = 224
 local MARKER_LEVEL = 3
 
 -- The bar in use, held or switched on, into the keys' bindings and to the frames that follow it (the
@@ -79,13 +79,13 @@ local MARK_USED = [[
 -- Going down, a trigger's bar is held. Let go unused, it flips its own switch. Both pressed together
 -- flip Bottom once, when both are let go. A release we didn't see the press of isn't one (the key
 -- went down in a window). A press under a possess or vehicle bar never counts as a press, so that the
--- bar stays off.
+-- bar stays off, and neither does one without the option (holds only, for a follower).
 local TRIGGER = [[
     local t = self:GetAttribute("trigger")
     local other = t == "LT" and "RT" or "LT"
     if down then
         owner:SetAttribute("held-" .. t, true)
-        owner:SetAttribute("used-" .. t, owner:GetAttribute("possess"))
+        owner:SetAttribute("used-" .. t, owner:GetAttribute("possess") or not owner:GetAttribute("toggle"))
         if owner:GetAttribute("held-" .. other) then owner:SetAttribute("both", true) end
     elseif owner:GetAttribute("held-" .. t) then
         owner:SetAttribute("held-" .. t, nil)
@@ -174,9 +174,25 @@ for trigger, key in pairs(TRIGGERS) do
     end
 end
 
--- Only in the controller interface: with keyboard and mouse nothing is bound.
+-- The frames that follow the bar in use (ns.Buttons.WatchBarFollowers), in the order they came.
+local followerFrames = {}
+
+-- A follower that wants the bar in use (its "wantsbar" attribute: the back buttons, while on).
+local function followerWants()
+    for _, frame in ipairs(followerFrames) do
+        if frame:GetAttribute("wantsbar") then return true end
+    end
+    return false
+end
+
+local function toggleOn()
+    return Options:Get(KEY) == true
+end
+
+-- With the option, or for a follower with holds only. Only in the controller interface: with
+-- keyboard and mouse nothing is bound.
 local function isOn()
-    return Options:Get(KEY) == true and ns.IsControllerUI()
+    return (toggleOn() or followerWants()) and ns.IsControllerUI()
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -184,17 +200,10 @@ end
 ---------------------------------------------------------------------------------------------------
 
 -- Hidden while a game window has the controller. Frames of ours, so in combat too.
-local followerFrames = {}
-
 local function refreshMarker()
     if not header then return end
     local bar = not ns.ControllerWindowOpen() and header:GetAttribute("bar")
-    local height = MARKER_HEIGHT
-    for _, frame in ipairs(followerFrames) do
-        if frame:GetAttribute("beside") then height = MARKER_HEIGHT_FOLLOWERS end
-    end
     for name, texture in pairs(marker) do
-        texture:SetHeight(height)
         texture:SetShown(name == bar)
     end
 end
@@ -282,6 +291,13 @@ local function createMarker(pageUnit)
     end
 end
 
+-- A follower gets the bar in use from the header's APPLY, through a frame ref (out of combat).
+local function linkFollower(index, frame)
+    SecureHandlerSetFrameRef(header, "follower-" .. index, frame)
+    header:SetAttribute("followercount", index)
+    frame:SetAttribute("bar", header:GetAttribute("bar"))
+end
+
 local function create()
     local pageUnit = GamepadMainActionBarFrame.PageUnit
     header = CreateFrame("Frame", TRIGGER_PREFIX, UIParent, "SecureHandlerStateTemplate")
@@ -300,18 +316,7 @@ local function create()
     ns.Buttons.WatchBackButtons(function(button)
         SecureHandlerWrapScript(button, "OnClick", header, BACK_BUTTON)
     end)
-    local followers = 0
-    ns.Buttons.WatchBarFollowers(function(frame)
-        followers = followers + 1
-        SecureHandlerSetFrameRef(header, "follower-" .. followers, frame)
-        header:SetAttribute("followercount", followers)
-        frame:SetAttribute("bar", header:GetAttribute("bar"))
-        followerFrames[followers] = frame
-        frame:HookScript("OnAttributeChanged", function(_, name)
-            if name == "beside" then refreshMarker() end
-        end)
-        refreshMarker()
-    end)
+    for index, frame in ipairs(followerFrames) do linkFollower(index, frame) end
     RegisterStateDriver(header, "possess", POSSESS_DRIVER)
 end
 
@@ -336,14 +341,15 @@ end
 
 -- Out of combat and away from the game's controller windows.
 local function update()
-    local on = isOn()
-    if not header then
+    local on = isOn()    if not header then
         if not on then return end
         create()
     end
     header:SetAttribute("stancebar", on and onAnyPage(ns.GamepadStanceBar) or nil)
     header:SetAttribute("possessbar", on and onAnyPage(ns.GamepadPossessBar) or nil)
-    if not on then allOff() end
+    local toggle = on and toggleOn()
+    header:SetAttribute("toggle", toggle or nil)
+    if not toggle then allOff() end
     SecureHandlerExecute(header, LET_GO)
     bindings:Set(on and triggerKeys or {})
     refreshMarker()
@@ -354,7 +360,7 @@ local function schedule()
 end
 
 local function goToTop()
-    if header and isOn() and Options:Get(TOP_AFTER_COMBAT_KEY) then allOff() end
+    if header and isOn() and toggleOn() and Options:Get(TOP_AFTER_COMBAT_KEY) then allOff() end
 end
 
 -- A window took or gave back the controller. The manager says so as it changes, so a frame later.
@@ -368,6 +374,15 @@ function TriggerToggle:Init()
     if not GamepadMainActionBarFrame then return end
     Options:Watch({ KEY }, schedule)
     ns.OnControllerUIChange(schedule)
+    -- A follower that comes or starts or stops wanting the bar: the triggers follow (out of combat).
+    ns.Buttons.WatchBarFollowers(function(frame)
+        followerFrames[#followerFrames + 1] = frame
+        if header then linkFollower(#followerFrames, frame) end
+        frame:HookScript("OnAttributeChanged", function(_, name)
+            if name == "wantsbar" then schedule() end
+        end)
+        schedule()
+    end)
     local function onBarSetting()
         if header then schedule() end
     end
