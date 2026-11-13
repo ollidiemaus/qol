@@ -12,7 +12,7 @@ So while the back buttons are on, the trigger toggle's secure header owns the tr
 its own option off, in a hold-only mode: a press counts as used the moment it goes down, so letting
 go never switches a bar on. Everything else is the toggle's machinery as it stands: the relays press
 the held bar's game buttons (the game no longer sees the triggers), the marker shows the held bar,
-and LT and RT together mean Bottom until both are let go. The back buttons' header says it wants
+and LT and RT held mean Bottom; letting one go gives the other's bar. The back buttons' header says it wants
 this with a `wantsbar` attribute; the toggle watches it out of combat. All 16 back buttons show in
 the full layout, a row per bar at the far left and right of the page unit, clear of the game's LB and
 RB prompts and of the interlocking bars.

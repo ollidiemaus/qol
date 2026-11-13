@@ -48,12 +48,12 @@ local MARKER_WIDTH, MARKER_HEIGHT, MARKER_ALPHA = 512, 160, 0.7
 local MARKER_LEVEL = 3
 
 -- The bar in use, held or switched on, into the keys' bindings and to the frames that follow it (the
--- back buttons' header). Both triggers pressed together mean Bottom until both are let go. Between
--- bars the bindings stay: the relays read the bar on the press.
+-- back buttons' header). It follows the triggers held: with both held, letting one go gives the
+-- other's bar (both pressed together still switch Bottom on only once both are let go, in TRIGGER).
+-- Between bars the bindings stay: the relays read the bar on the press.
 local APPLY = [[
-    local both = self:GetAttribute("both")
-    local lt = self:GetAttribute("on-LT") or self:GetAttribute("held-LT") or both
-    local rt = self:GetAttribute("on-RT") or self:GetAttribute("held-RT") or both
+    local lt = self:GetAttribute("on-LT") or self:GetAttribute("held-LT")
+    local rt = self:GetAttribute("on-RT") or self:GetAttribute("held-RT")
     local bar = lt and rt and "bottom" or lt and "left" or rt and "right" or nil
     local was = self:GetAttribute("bar")
     if bar == was then return end
