@@ -68,7 +68,9 @@ local BUTTONS = BackButtons.BUTTONS
 -- right, Bottom (LT and RT) down. The compact layout shows one bar's, from its anchor: L4 and L5
 -- left of it, R4 and R5 right, their names beside them. docs/dev/controller.md has the numbers.
 local COLUMN_X, COMPACT_Y = 182, 26
-local CROSS_X, CROSS_Y = 405, 50
+-- The crosses' middles: CROSS_X out from the centre, CROSS_Y above and below a line CROSS_DOWN
+-- under it (the bars' cross sits low on the page unit).
+local CROSS_X, CROSS_Y, CROSS_DOWN = 365, 50, 20
 local ARMS = { top = { 0, 27 }, left = { -31, 0 }, right = { 31, 0 }, bottom = { 0, -27 } }
 local LAYOUTS = { full = {}, compact = {} }
 -- By back button: the middle of its cross in the full layout.
@@ -76,7 +78,7 @@ local CROSSES = {}
 for index, info in ipairs(BUTTONS) do
     LAYOUTS.compact[index] = { x = info.side * COLUMN_X, y = index % 2 == 1 and COMPACT_Y or -COMPACT_Y,
         label = info.side < 0 and "LEFT" or "RIGHT" }
-    CROSSES[index] = { x = info.side * CROSS_X, y = index % 2 == 1 and CROSS_Y or -CROSS_Y }
+    CROSSES[index] = { x = info.side * CROSS_X, y = (index % 2 == 1 and CROSS_Y or -CROSS_Y) - CROSS_DOWN }
 end
 for _, bar in ipairs(BARS) do
     LAYOUTS.full[bar] = {}

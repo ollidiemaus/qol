@@ -108,8 +108,8 @@ pressed (`ns.Buttons.AddBackButton`).
   combat, so a key bound in combat shows its button once combat ends; `UPDATE_BINDINGS` brings it.
 - Layout (points). Above Top sit the LB and RB prompts and the page tracker, and the bars interlock
   (each about 300 wide on anchors 195 apart), so the full layout puts all 16 on holders centred on
-  the page unit (656 wide), past its sides, as a cross per back button: L4's centred at (-405, 50),
-  L5's at (-405, -50), R4's at (405, 50), R5's at (405, -50), its name there. In a cross a bar sits
+  the page unit (656 wide), past its sides, as a cross per back button: L4's centred at (-365, 30),
+  L5's at (-365, -70), R4's at (365, 30), R5's at (365, -70), its name there. In a cross a bar sits
   where the game's cross of bars has it: Top at (0, 27), Left (-31, 0), Right (31, 0), Bottom
   (0, -27). There the buttons are 30 square, so their click areas don't overlap; the art is 38 for
   the bar in use and 30 for the others (the game's expanded and collapsed sizes). The art is a frame

@@ -523,8 +523,8 @@ describe("controller back buttons", function()
                 return { point[4], point[5] }
             end
             T.same({ at("Top", 1), at("Left", 1), at("Right", 1), at("Bottom", 1) },
-                { { -405, 77 }, { -436, 50 }, { -374, 50 }, { -405, 23 } }, "L4's cross, upper left, bars as the game's")
-            T.same({ at("Top", 2), at("Top", 3), at("Top", 4) }, { { -405, -23 }, { 405, 77 }, { 405, -23 } },
+                { { -365, 57 }, { -396, 30 }, { -334, 30 }, { -365, 3 } }, "L4's cross, upper left, bars as the game's")
+            T.same({ at("Top", 2), at("Top", 3), at("Top", 4) }, { { -365, -43 }, { 365, 57 }, { 365, -43 } },
                 "L5 lower left, R4 upper right, R5 lower right")
             T.falsy(shown("Top", 1).label:IsShown(), "no name on a button")
             local names = {}
@@ -534,7 +534,7 @@ describe("controller back buttons", function()
                     names[#names + 1] = { point[2], point[4], point[5] }
                 end
             end
-            T.same(names, { { bar.PageUnit, -405, 50 } }, "the name in the cross's middle")
+            T.same(names, { { bar.PageUnit, -365, 30 } }, "the name in the cross's middle")
             -- They show, hide and scale with the controller bar.
             bar:Hide()
             T.same(showing(), {})
@@ -633,7 +633,7 @@ describe("controller back buttons", function()
                 settle()
                 T.same(showing(), { "Top", "Left", "Right", "Bottom" })
                 local point = { shown("Top", 1):GetPoint() }
-                T.same({ point[4], point[5] }, { -405, 77 })
+                T.same({ point[4], point[5] }, { -365, 57 })
             end)
 
             it("hide on the special page", function()
