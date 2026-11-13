@@ -40,13 +40,16 @@ whole account; missing until the first one is added, so it needs no migration), 
 tracked buffs on the group frames, `{ spell, kind, on }` in the order added, for the whole account;
 missing until the first one is added, so it needs no migration), `probe` (the last `/qol probe`
 report, which nothing reads; missing until it first runs, so it needs no migration), and
-`version`, the layout's version (`Core/SavedData.lua`, now 3). On `ADDON_LOADED`, before anything
+`version`, the layout's version (`Core/SavedData.lua`, now 4). On `ADDON_LOADED`, before anything
 reads the file, `SavedData:Migrate` runs `MIGRATIONS[n]` for every version from the saved one up
 to `VERSION`, one at a time, and writes each version once its migration is done. A file without a
 version is the layout from before versions, which version 1 kept, so 0 to 1 only writes the
 number. Version 2 renamed the zone text's position `above`/`below` to the minimap elements' shared
 `top`/`bottom`. Version 3 turned `hideMinimapCoords` and `hideMinimapCalendar` into the coordinates'
 and the calendar button's Position (`hidden` where they were ticked) and dropped the old keys.
+Version 4 gave each controller bar its own back buttons' action bar: `controllerBackButtonsBar`
+became Top's (`controllerBackButtonsBarTop`), and Left, Right and Bottom take the first free of 8,
+7, 6 and 5 that isn't Top's, saved only where that isn't their default.
 A change to the layout raises `VERSION` and adds the migration that turns the old layout into the
 new one. A migration that fails (an error) stops there: the error goes to the game's error handler,
 the version stays at the last one that worked, and QoL loads as usual. So a migration works out
@@ -155,6 +158,10 @@ Forever beta. So:
   with a macro of a secure button of ours, as the game's own binding presses them; nothing on them is
   written or hooked. Its marker is a frame of ours parented to `PageUnit`, which adds a child and
   touches nothing of the game's. See [`dev/controller.md`](dev/controller.md).
+- The back buttons learn when the game shows or hides a controller bar (empty bars hidden, the
+  special page, a stance or possess bar in a bar's place) from plain frames of ours parented to the
+  game's bars: their own `OnShow` and `OnHide` schedule an update. That adds a child and hooks
+  nothing; the bars are read only (`IsShown`, `GetParent`). See [`dev/controller.md`](dev/controller.md).
 - Hiding the Cooldown Manager's icon borders: `hooksecurefunc(row, "RefreshLayout", ...)` on each of
   the game's four rows, the only hook on a Blizzard frame's method, and only once the option is on.
   Nothing else tells when a row built new icons. It runs after the rebuild and only asks `ns.Later`

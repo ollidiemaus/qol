@@ -15,7 +15,7 @@ local function start(savedOptions, setup)
     Stubs.SetControllerUI(true)
     if setup then setup(Stubs.state()) end
     Stubs.Login(savedOptions)
-    Stubs.AdvanceTime()
+    settle()
     return ns, bar
 end
 
@@ -38,6 +38,34 @@ end
 
 -- Saved options with the back buttons on (a new table each time: the options are saved into it).
 local function on() return { controllerBackButtons = true } end
+-- And the trigger toggle, which gives them the other three bars.
+local function withToggle() return { controllerBackButtons = true, controllerTriggerToggle = true } end
+
+-- The button shown for a back button (1 L4, 2 L5, 3 R4, 4 R5) on a controller bar.
+local BARS = { "Top", "Left", "Right", "Bottom" }
+local function shown(bar, index) return _G["QoLBackButton" .. bar .. index] end
+
+-- The controller bars whose back buttons show.
+local function showing()
+    local list = {}
+    for _, bar in ipairs(BARS) do
+        if shown(bar, 1):IsVisible() then list[#list + 1] = bar end
+    end
+    return list
+end
+
+-- The slot a back button's key used, pressed and let go.
+local function press(index)
+    Stubs.PressKey(_G["QoLBackButton" .. index])
+    local used = Stubs.state().usedActions
+    return used[#used]
+end
+
+local LT, RT = "PADLTRIGGER", "PADRTRIGGER"
+local function tap(key) Stubs.PressOverride(key) end
+
+-- The default slots: buttons 9 to 12 of Action Bar 8 (Top), 7 (Left), 6 (Right) and 5 (Bottom).
+local TOP, LEFT, RIGHT, BOTTOM = 176, 164, 152, 44
 
 describe("controller back buttons", function()
     it("are off by default and make nothing", function()
@@ -65,12 +93,15 @@ describe("controller back buttons", function()
         end
     end)
 
-    it("are secure action buttons for buttons 9 to 12 of Action Bar 8", function()
+    it("press buttons 9 to 12 of Action Bar 8 with their keys, shown beside Top", function()
         start(on())
         for index = 1, 4 do
-            local button = _G["QoLBackButton" .. index]
+            local key = _G["QoLBackButton" .. index]
+            T.truthy(key:IsProtected(), "the key's button is a secure one")
+            T.eq(press(index), TOP + index)
+            local button = shown("Top", index)
             T.eq(button:GetAttribute("type"), "action")
-            T.eq(button:GetAttribute("action"), 176 + index)
+            T.eq(button:GetAttribute("action"), TOP + index)
             T.truthy(button:IsProtected(), "protected")
             T.truthy(button:IsVisible(), "shown")
         end
@@ -78,36 +109,21 @@ describe("controller back buttons", function()
 
     it("take the slots of the bar picked", function()
         local ns = start(on())
-        set(ns, "controllerBackButtonsBar", 6)
-        T.eq(QoLBackButton1:GetAttribute("action"), 153)
-        T.eq(QoLBackButton4:GetAttribute("action"), 156)
-        set(ns, "controllerBackButtonsBar", 7)
-        T.eq(QoLBackButton1:GetAttribute("action"), 165)
-    end)
-
-    it("sit outside the d-pad and face buttons of the bar, two on each side", function()
-        local _, bar = start(on())
-        local left, right = bar.PageUnit.LeftCenteredAnchor, bar.PageUnit.RightCenteredAnchor
-        local function point(button) return { button:GetPoint() } end
-        T.same(point(QoLBackButton1), { "CENTER", left, "CENTER", -182, 26 })
-        T.same(point(QoLBackButton2), { "CENTER", left, "CENTER", -182, -26 })
-        T.same(point(QoLBackButton3), { "CENTER", right, "CENTER", 182, 26 })
-        T.same(point(QoLBackButton4), { "CENTER", right, "CENTER", 182, -26 })
-        -- A frame of ours below the bar holds them, so they show, hide and scale with it.
-        local holder = QoLBackButton1:GetParent()
-        T.eq(holder:GetParent(), bar)
-        bar:Hide()
-        T.falsy(QoLBackButton1:IsVisible(), "hidden with the bar")
+        set(ns, "controllerBackButtonsBarTop", 6)
+        T.eq(press(1), 153)
+        T.eq(shown("Top", 4):GetAttribute("action"), 156)
+        set(ns, "controllerBackButtonsBarTop", 2)
+        T.eq(press(1), 69, "Action Bar 2 is page 6")
     end)
 
     it("hide and stop acting when turned off, and come back", function()
         local ns = start(on())
         set(ns, "controllerBackButtons", false)
-        T.falsy(QoLBackButton1:IsVisible(), "hidden")
+        T.falsy(shown("Top", 1):IsVisible(), "hidden")
         T.eq(QoLBackButton1:GetAttribute("type"), nil)
         T.eq(next(Stubs.state().overrides), nil)
         set(ns, "controllerBackButtons", true)
-        T.truthy(QoLBackButton1:IsVisible(), "shown")
+        T.truthy(shown("Top", 1):IsVisible(), "shown")
         T.eq(QoLBackButton1:GetAttribute("type"), "action")
     end)
 
@@ -137,11 +153,11 @@ describe("controller back buttons", function()
     it("hide and stop acting when the controller interface is turned off, and come back", function()
         start(on(), function(state) state.bindings["F13"] = "CLICK QoLBackButton1:LeftButton" end)
         switch(false)
-        T.falsy(QoLBackButton1:IsVisible(), "hidden")
+        T.falsy(shown("Top", 1):IsVisible(), "hidden")
         T.eq(QoLBackButton1:GetAttribute("type"), nil)
         T.eq(next(Stubs.state().overrides), nil)
         switch(true)
-        T.truthy(QoLBackButton1:IsVisible(), "shown")
+        T.truthy(shown("Top", 1):IsVisible(), "shown")
         T.eq(QoLBackButton1:GetAttribute("type"), "action")
         T.eq(override("F13"), "CLICK QoLBackButton1:LeftButton")
     end)
@@ -201,23 +217,23 @@ describe("controller back buttons", function()
             local settings = CreateFrame("Frame", nil, UIParent)
             settings:Show()
             Stubs.SetControllerWindow(settings)
-            set(ns, "controllerBackButtonsBar", 6)
+            set(ns, "controllerBackButtonsBarTop", 6)
             Stubs.state().bindings["F16"] = "CLICK QoLBackButton4:LeftButton"
             Stubs.Fire("UPDATE_BINDINGS")
             Stubs.RunTimers()
             Stubs.AdvanceTime()
-            T.eq(QoLBackButton1:GetAttribute("action"), 177)
+            T.eq(shown("Top", 1):GetAttribute("action"), 177)
             T.eq(override("F16"), nil)
             -- Closing the settings saves the bindings, which fires UPDATE_BINDINGS; nothing runs then.
             settings:Hide()
             Stubs.SetControllerWindow(nil)
             Stubs.Fire("UPDATE_BINDINGS")
             Stubs.RunTimers()
-            T.eq(QoLBackButton1:GetAttribute("action"), 177)
+            T.eq(shown("Top", 1):GetAttribute("action"), 177)
             Stubs.AdvanceTime()
-            T.eq(QoLBackButton1:GetAttribute("action"), 177)
+            T.eq(shown("Top", 1):GetAttribute("action"), 177)
             Stubs.AdvanceTime()
-            T.eq(QoLBackButton1:GetAttribute("action"), 153)
+            T.eq(shown("Top", 1):GetAttribute("action"), 153)
             T.eq(override("F16"), "CLICK QoLBackButton4:LeftButton")
         end)
     end)
@@ -229,15 +245,16 @@ describe("controller back buttons", function()
                 state.actions[178] = { texture = 135808, usable = false, noMana = true }
                 state.actions[179] = { texture = 132222, usable = false, current = true }
             end)
-            T.eq(QoLBackButton1.icon.texture, 136048)
-            T.truthy(QoLBackButton1.icon:IsShown(), "icon shown")
-            T.same(QoLBackButton1.icon.vertexColor, { 1, 1, 1 })
-            T.eq(QoLBackButton1.count:GetText(), "3")
-            T.same(QoLBackButton1.cooldown.duration, { seconds = 8 })
-            T.same(QoLBackButton2.icon.vertexColor, { 0.5, 0.5, 1 })
-            T.same(QoLBackButton3.icon.vertexColor, { 0.4, 0.4, 0.4 })
-            T.truthy(QoLBackButton3.selectedRim:IsShown(), "current action")
-            T.falsy(QoLBackButton4.icon:IsShown(), "empty slot")
+            local l4, l5, r4, r5 = shown("Top", 1), shown("Top", 2), shown("Top", 3), shown("Top", 4)
+            T.eq(l4.icon.texture, 136048)
+            T.truthy(l4.icon:IsShown(), "icon shown")
+            T.same(l4.icon.vertexColor, { 1, 1, 1 })
+            T.eq(l4.count:GetText(), "3")
+            T.same(l4.cooldown.duration, { seconds = 8 })
+            T.same(l5.icon.vertexColor, { 0.5, 0.5, 1 })
+            T.same(r4.icon.vertexColor, { 0.4, 0.4, 0.4 })
+            T.truthy(r4.selectedRim:IsShown(), "current action")
+            T.falsy(r5.icon:IsShown(), "empty slot")
         end)
 
         it("updates in combat when the slot changes", function()
@@ -246,7 +263,7 @@ describe("controller back buttons", function()
             Stubs.state().actions[180] = { texture = 136048 }
             Stubs.Fire("ACTIONBAR_SLOT_CHANGED", 180)
             Stubs.RunTimers()
-            T.eq(QoLBackButton4.icon.texture, 136048)
+            T.eq(shown("Top", 4).icon.texture, 136048)
         end)
 
         it("hears the cooldowns only while the buttons show", function()
@@ -260,7 +277,7 @@ describe("controller back buttons", function()
             start(on(), function(state)
                 state.actions[177] = { texture = 136048, count = "3" }
             end)
-            local count = QoLBackButton1.count
+            local count = shown("Top", 1).count
             local textSets = count.textSets
             Stubs.Fire("SPELL_UPDATE_COOLDOWN")
             Stubs.RunTimers()
@@ -274,12 +291,23 @@ describe("controller back buttons", function()
 
         it("looks pressed while its key is down", function()
             start(on())
+            local button = shown("Top", 1)
+            Stubs.SecureClick(QoLBackButton1, true)
             QoLBackButton1:RunScript("PostClick", "LeftButton", true)
-            T.truthy(QoLBackButton1.pushedRim:IsShown(), "pressed rim")
-            T.eq(QoLBackButton1.visual:GetWidth(), 34)
+            T.truthy(button.pushedRim:IsShown(), "pressed rim")
+            T.eq(button.visual:GetWidth(), 34)
             QoLBackButton1:RunScript("PostClick", "LeftButton", false)
-            T.falsy(QoLBackButton1.pushedRim:IsShown(), "released")
-            T.eq(QoLBackButton1.visual:GetWidth(), 38)
+            T.falsy(button.pushedRim:IsShown(), "released")
+            T.eq(button.visual:GetWidth(), 38)
+        end)
+
+        it("looks pressed while clicked with the mouse", function()
+            start(on())
+            local button = shown("Top", 2)
+            button:RunScript("PostClick", "LeftButton", true)
+            T.truthy(button.pushedRim:IsShown(), "pressed rim")
+            button:RunScript("OnMouseUp")
+            T.falsy(button.pushedRim:IsShown(), "let go")
         end)
     end)
 
@@ -287,37 +315,278 @@ describe("controller back buttons", function()
         it("are picked up by dragging, with the bars unlocked or the pick up modifier held", function()
             start(on(), function(state) state.actions[177] = { texture = 136048 } end)
             Stubs.InstallSettings()
-            QoLBackButton1:RunScript("OnDragStart")
+            shown("Top", 1):RunScript("OnDragStart")
             T.eq(Stubs.state().cursor, 177)
 
             Stubs.state().cursor = nil
             Stubs.state().settingValues.lockActionBars = true
-            QoLBackButton1:RunScript("OnDragStart")
+            shown("Top", 1):RunScript("OnDragStart")
             T.eq(Stubs.state().cursor, nil)
             Stubs.state().modifiedClicks.PICKUPACTION = true
-            QoLBackButton1:RunScript("OnDragStart")
+            shown("Top", 1):RunScript("OnDragStart")
             T.eq(Stubs.state().cursor, 177)
         end)
 
         it("are placed by dropping them on a button, not in combat", function()
             start(on())
-            QoLBackButton2:RunScript("OnReceiveDrag")
+            shown("Top", 2):RunScript("OnReceiveDrag")
             T.same(Stubs.state().placed, { 178 })
             Stubs.SetCombat(true)
-            QoLBackButton2:RunScript("OnReceiveDrag")
+            shown("Top", 2):RunScript("OnReceiveDrag")
             T.same(Stubs.state().placed, { 178 })
         end)
 
         it("show in the tooltip, or where to put one", function()
             start(on(), function(state) state.actions[177] = { texture = 136048 } end)
-            QoLBackButton1:RunScript("OnEnter")
+            shown("Top", 1):RunScript("OnEnter")
             T.eq(GameTooltip.action, 177)
             T.truthy(GameTooltip.shown, "shown")
-            QoLBackButton2:RunScript("OnEnter")
+            shown("Top", 2):RunScript("OnEnter")
             T.eq(GameTooltip.lines[1].text, "Back button L5 (lower left)")
             T.eq(GameTooltip.lines[2].text, "Empty. Drag a spell here, or onto Action Bar 8, button 10.")
-            QoLBackButton2:RunScript("OnLeave")
+            shown("Top", 2):RunScript("OnLeave")
             T.falsy(GameTooltip.shown, "hidden")
+        end)
+    end)
+
+    describe("on every controller bar", function()
+        it("act on Top only, with only Top's shown, while the trigger toggle is off", function()
+            start(on())
+            T.same(showing(), { "Top" })
+            T.eq(press(1), TOP + 1)
+        end)
+
+        it("act on the bar on, which the trigger toggle switches", function()
+            start(withToggle())
+            T.same(showing(), { "Top", "Left", "Right", "Bottom" })
+            tap(RT)
+            T.eq(press(1), RIGHT + 1, "L4 on the Right bar")
+            T.eq(press(4), RIGHT + 4)
+            tap(LT)
+            T.eq(press(2), BOTTOM + 2, "LT and RT on: Bottom")
+            tap(RT)
+            T.eq(press(3), LEFT + 3)
+            tap(LT)
+            T.eq(press(1), TOP + 1, "nothing on: Top")
+        end)
+
+        it("act on a trigger's bar while it's held, a hold adding to the bar on as for the bar keys", function()
+            start(withToggle())
+            Stubs.PressOverride(LT, true)
+            T.eq(press(1), LEFT + 1)
+            Stubs.PressOverride(LT, false)
+            T.eq(press(1), TOP + 1, "the hold used, so nothing switched on")
+            tap(RT)
+            Stubs.PressOverride(LT, true)
+            T.eq(press(1), BOTTOM + 1)
+            Stubs.PressOverride(LT, false)
+            T.eq(press(1), RIGHT + 1)
+        end)
+
+        it("press an empty slot of the bar's own, with nothing taken from Top", function()
+            start(withToggle(), function(state) state.actions[TOP + 1] = { texture = 136048 } end)
+            tap(RT)
+            T.eq(press(1), RIGHT + 1)
+        end)
+
+        it("work in combat", function()
+            start(withToggle())
+            Stubs.SetCombat(true)
+            tap(RT)
+            T.eq(press(1), RIGHT + 1)
+            tap(RT)
+            T.eq(press(1), TOP + 1)
+        end)
+
+        it("go back to Top and hide the other bars' when the trigger toggle is turned off", function()
+            local ns = start(withToggle())
+            tap(RT)
+            set(ns, "controllerTriggerToggle", false)
+            T.same(showing(), { "Top" })
+            T.eq(press(1), TOP + 1)
+            set(ns, "controllerTriggerToggle", true)
+            T.same(showing(), { "Top", "Left", "Right", "Bottom" })
+        end)
+
+        it("take each bar's slots from the action bar picked for it", function()
+            local ns = start(withToggle())
+            set(ns, "controllerBackButtonsBarRight", 3)
+            T.eq(shown("Right", 1):GetAttribute("action"), 57, "Action Bar 3 is page 5")
+            tap(RT)
+            T.eq(press(1), 57)
+        end)
+
+        it("keep the same slots on every page", function()
+            local _, bar = start(withToggle())
+            Stubs.FlipPage(bar, 2)
+            tap(RT)
+            T.eq(press(1), RIGHT + 1)
+            T.eq(shown("Right", 1):GetAttribute("action"), RIGHT + 1)
+        end)
+
+        it("look pressed on the bar the key acted on", function()
+            start(withToggle())
+            tap(RT)
+            Stubs.SecureClick(QoLBackButton1, true)
+            QoLBackButton1:RunScript("PostClick", "LeftButton", true)
+            T.truthy(shown("Right", 1).pushedRim:IsShown(), "Right's L4")
+            T.falsy(shown("Top", 1).pushedRim:IsShown(), "not Top's")
+            QoLBackButton1:RunScript("PostClick", "LeftButton", false)
+            T.falsy(shown("Right", 1).pushedRim:IsShown(), "let go")
+        end)
+
+        it("take spells dropped on them, and name their own slot when empty", function()
+            start(withToggle())
+            local button = shown("Right", 1)
+            button:RunScript("OnReceiveDrag")
+            T.same(Stubs.state().placed, { RIGHT + 1 })
+            button:RunScript("OnEnter")
+            T.eq(GameTooltip.lines[1].text, "Back button L4 (upper left), Right bar")
+            T.eq(GameTooltip.lines[2].text, "Empty. Drag a spell here, or onto Action Bar 6, button 9.")
+        end)
+
+        it("show each icon from its own slot", function()
+            start(withToggle(), function(state) state.actions[BOTTOM + 3] = { texture = 132222 } end)
+            T.eq(shown("Bottom", 3).icon.texture, 132222)
+            T.falsy(shown("Top", 3).icon:IsShown(), "Top's own is empty")
+        end)
+
+        it("sit on the outer side of their bar in the full layout", function()
+            local _, bar = start(withToggle())
+            local unit = bar.PageUnit
+            local anchors = { Top = unit.TopCenteredAnchor, Left = unit.LeftCenteredAnchor,
+                Right = unit.RightCenteredAnchor, Bottom = unit.BottomCenteredAnchor }
+            for name, anchor in pairs(anchors) do
+                T.same({ shown(name, 1):GetParent():GetPoint() }, { "CENTER", anchor, "CENTER", 0, 0 }, name)
+            end
+            local function at(name, index)
+                local point = { shown(name, index):GetPoint() }
+                return { point[4], point[5] }
+            end
+            T.same({ at("Top", 1), at("Top", 2), at("Top", 3), at("Top", 4) },
+                { { -114, 85 }, { -70, 85 }, { 70, 85 }, { 114, 85 } }, "a row above Top")
+            T.same({ at("Bottom", 1), at("Bottom", 4) }, { { -114, -85 }, { 114, -85 } }, "a row below Bottom")
+            T.same({ at("Left", 1), at("Left", 2), at("Left", 3), at("Left", 4) },
+                { { -182, 66 }, { -182, 22 }, { -182, -22 }, { -182, -66 } }, "a column left of Left")
+            T.same({ at("Right", 1), at("Right", 4) }, { { 182, 66 }, { 182, -66 } }, "a column right of Right")
+            -- They show, hide and scale with the controller bar.
+            bar:Hide()
+            T.same(showing(), {})
+        end)
+
+        it("hide with a bar the game hides, as an empty one", function()
+            start(withToggle())
+            Stubs.ShowGameBar("leftBar", false)
+            settle()
+            T.same(showing(), { "Top", "Right", "Bottom" })
+            Stubs.ShowGameBar("leftBar", true)
+            settle()
+            T.same(showing(), { "Top", "Left", "Right", "Bottom" })
+        end)
+
+        it("hide on the special page", function()
+            start(withToggle())
+            Stubs.ShowSpecialPage(true)
+            settle()
+            T.same(showing(), {})
+            Stubs.ShowSpecialPage(false)
+            settle()
+            T.same(showing(), { "Top", "Left", "Right", "Bottom" })
+        end)
+
+        it("stay with their own actions under a stance or possess bar in the bar's place", function()
+            start(withToggle())
+            Stubs.OverrideGameBar("stanceBar", "leftBar")
+            settle()
+            T.same(showing(), { "Top", "Left", "Right", "Bottom" })
+            tap(LT)
+            T.eq(press(1), LEFT + 1)
+            Stubs.OverrideGameBar("stanceBar", nil)
+            Stubs.state().cvars.GamepadPossessBarOverride = tostring(Enum.GamepadPossessBarOverride.Page1RightBar)
+            Stubs.OverrideGameBar("possessBar", "rightBar")
+            settle()
+            T.same(showing(), { "Top", "Left", "Right", "Bottom" })
+        end)
+
+        it("wait for the end of combat to show or hide with a bar", function()
+            start(withToggle())
+            Stubs.SetCombat(true)
+            Stubs.ShowGameBar("leftBar", false)
+            settle()
+            T.same(showing(), { "Top", "Left", "Right", "Bottom" })
+            Stubs.SetCombat(false)
+            settle()
+            T.same(showing(), { "Top", "Right", "Bottom" })
+        end)
+
+        describe("in the compact layout", function()
+            local function compact(saved)
+                local ns, bar = start(saved)
+                Stubs.SetCompactLayout(true)
+                settle()
+                return ns, bar
+            end
+
+            it("show only the bar the press goes to, beside it", function()
+                local _, bar = compact(withToggle())
+                T.same(showing(), { "Top" })
+                local holder = shown("Top", 1):GetParent()
+                T.same({ holder:GetPoint() }, { "CENTER", bar.PageUnit.TopCenteredAnchor, "CENTER", 0, 0 })
+                local function at(index)
+                    local point = { shown("Top", index):GetPoint() }
+                    return { point[4], point[5] }
+                end
+                T.same({ at(1), at(2), at(3), at(4) }, { { -182, 26 }, { -182, -26 }, { 182, 26 }, { 182, -26 } })
+                tap(RT)
+                T.same(showing(), { "Right" }, "the bar on, while the game shows Top's eight")
+                T.eq(press(1), RIGHT + 1)
+                local point = { shown("Right", 1):GetPoint() }
+                T.same({ point[4], point[5] }, { -182, 26 })
+            end)
+
+            it("follow the bar on in combat", function()
+                compact(withToggle())
+                Stubs.SetCombat(true)
+                tap(LT)
+                T.same(showing(), { "Left" })
+                Stubs.PressOverride(RT, true)
+                T.same(showing(), { "Bottom" }, "a hold too")
+                T.eq(press(1), BOTTOM + 1, "used, so letting go switches nothing on")
+                Stubs.PressOverride(RT, false)
+                T.same(showing(), { "Left" })
+            end)
+
+            it("show Top's with the trigger toggle off", function()
+                compact(on())
+                T.same(showing(), { "Top" })
+            end)
+
+            it("go back to the full layout", function()
+                compact(withToggle())
+                Stubs.SetCompactLayout(false)
+                settle()
+                T.same(showing(), { "Top", "Left", "Right", "Bottom" })
+                local point = { shown("Top", 1):GetPoint() }
+                T.same({ point[4], point[5] }, { -114, 85 })
+            end)
+
+            it("hide on the special page", function()
+                compact(withToggle())
+                Stubs.ShowSpecialPage(true)
+                settle()
+                T.same(showing(), {})
+            end)
+
+            it("hide with the one bar the game shows, hidden as empty", function()
+                compact(withToggle())
+                tap(RT)
+                Stubs.ShowGameBar("topBar", false)
+                settle()
+                T.same(showing(), {})
+                Stubs.ShowGameBar("topBar", true)
+                settle()
+                T.same(showing(), { "Right" })
+            end)
         end)
     end)
 end)

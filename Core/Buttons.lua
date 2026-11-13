@@ -128,6 +128,22 @@ function Buttons.WatchBackButtons(fn)
     backButtonWatchers[#backButtonWatchers + 1] = fn
 end
 
+-- The other way round: secure frames that want the controller bar in use ("left", "right",
+-- "bottom" or nil for Top) set as their "bar" attribute, by whoever keeps it (the trigger toggle's
+-- header), in combat too. fn gets each one, now and as it's made, out of combat. A follower that
+-- shows something beside the bars says so with its "beside" attribute (the marker grows to cover it).
+local barFollowers, barFollowerWatchers = {}, {}
+
+function Buttons.AddBarFollower(frame)
+    barFollowers[#barFollowers + 1] = frame
+    for _, fn in ipairs(barFollowerWatchers) do fn(frame) end
+end
+
+function Buttons.WatchBarFollowers(fn)
+    for _, frame in ipairs(barFollowers) do fn(frame) end
+    barFollowerWatchers[#barFollowerWatchers + 1] = fn
+end
+
 -- Override bindings on a frame of their own. Set takes { [key] = button name } and changes the
 -- bindings only when that differs from the ones in place (not in combat). A name may end in
 -- ":mouse button" for a click with another button than LeftButton (the rings' keys). With an

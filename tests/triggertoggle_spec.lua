@@ -233,7 +233,7 @@ describe("trigger toggle", function()
         Stubs.SecureClick(QoLBackButton1, false)
         up(LT)
         T.eq(reached(A), nil, "nothing switched on")
-        T.eq(Stubs.state().usedActions[1], 177, "and the back button acted")
+        T.eq(Stubs.state().usedActions[1], 165, "and the back button acted, L4 on the Left bar")
         tap(LT)
         T.eq(reached(A), gameButton(bar, "left", 8), "a press alone still switches it")
     end)
@@ -273,6 +273,27 @@ describe("trigger toggle", function()
         T.eq(marked(bar), "left")
         bar:Hide()
         T.eq(marked(bar), nil)
+    end)
+
+    it("makes the marker taller while back buttons show beside the bars", function()
+        local function height()
+            for _, region in ipairs(Stubs.state().regions) do
+                if region.atlas == "gamepad-actionbar-fx-trigger-behind" and region:IsVisible() then
+                    local _, h = region:GetSize()
+                    return h
+                end
+            end
+        end
+        local ns, bar = start(on())
+        tap(LT)
+        T.eq(height(), 160)
+        ns.Options:Set("controllerBackButtons", true)
+        settle()
+        T.eq(marked(bar), "left")
+        T.eq(height(), 224, "covering the bar's back buttons")
+        ns.Options:Set("controllerBackButtons", false)
+        settle()
+        T.eq(height(), 160)
     end)
 
     describe("after combat", function()

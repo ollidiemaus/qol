@@ -362,20 +362,27 @@ local function buildClickCast(page)
     end
 end
 
--- Controller page: the back buttons with the bar whose slots they use and the trigger toggle, next to
--- the buff tooltips and the bars that follow the stance, then the back buttons' keys across the page
--- (as in Key Bindings > AddOns), each named by its slot on that bar.
+-- Controller page: the back buttons with the action bar whose slots each controller bar's use and the
+-- trigger toggle, next to the buff tooltips and the bars that follow the stance, then the back
+-- buttons' keys across the page (as in Key Bindings > AddOns), each named by its slot on Top's bar.
 local function buildController(page)
     local BackButtons = ns.BackButtons
     local enabled = is("controllerBackButtons")
     page:Header("left", L.SECTION_BACK_BUTTONS)
     page:Checkbox("left", "controllerBackButtons", L.BACK_BUTTONS, L.BACK_BUTTONS_TIP)
     local bars = {}
-    for bar = 6, 8 do
+    for bar = 2, 8 do
         bars[#bars + 1] = { value = bar, label = L.BACK_BUTTONS_BAR_CHOICE:format(bar) }
     end
-    page:Dropdown("left", "controllerBackButtonsBar", L.BACK_BUTTONS_BAR, bars, L.BACK_BUTTONS_BAR_TIP,
-        { indent = true, enabled = enabled })
+    -- One per controller bar; the other bars' only act with the trigger toggle on.
+    local withToggle = function() return enabled() and Options:Get("controllerTriggerToggle") == true end
+    for _, bar in ipairs(BackButtons.BARS) do
+        local top = bar == "top"
+        page:Dropdown("left", BackButtons.BarOption(bar),
+            L.BACK_BUTTONS_BAR:format(L["CONTROLLER_BAR_" .. bar:upper()]), bars,
+            top and L.BACK_BUTTONS_BAR_TOP_TIP or L.BACK_BUTTONS_BAR_TIP,
+            { indent = true, enabled = top and enabled or withToggle })
+    end
     page:Header("left", L.SECTION_TRIGGER_TOGGLE)
     page:Checkbox("left", "controllerTriggerToggle", L.TRIGGER_TOGGLE, L.TRIGGER_TOGGLE_TIP)
     page:Checkbox("left", "controllerTriggerToggleTopAfterCombat", L.TRIGGER_TOGGLE_TOP, L.TRIGGER_TOGGLE_TOP_TIP,
@@ -409,7 +416,7 @@ local function buildController(page)
     page:Header("wide", L.SECTION_KEYS)
     for index, info in ipairs(BackButtons.BUTTONS) do
         local function label()
-            return L.BACK_BUTTON_KEY:format(info.label, Options:Get("controllerBackButtonsBar"),
+            return L.BACK_BUTTON_KEY:format(info.label, Options:Get(BackButtons.BarOption("top")),
                 BackButtons.BarButton(index))
         end
         page:Binding("wide", BackButtons.Command(index), label, L.BACK_BUTTON_KEY_TIP,

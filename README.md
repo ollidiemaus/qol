@@ -408,13 +408,22 @@ Only on WoW Forever, and only while its controller interface is on: with keyboar
 back buttons hide and their keys press nothing, and the buff tooltips show as usual. Turning the
 controller interface on or off switches them right away.
 
-**Back buttons:** four more buttons on the controller action bar for controllers with back buttons
-or paddles, like the Steam Deck: L4 and L5 left of the d-pad buttons, R4 and R5 right of the face
-buttons. They work on their own, without holding a trigger, and show icons, cooldowns and charges
-like the bar's other buttons.
+**Back buttons:** more buttons on the controller action bar for controllers with back buttons or
+paddles, like the Steam Deck: L4, L5, R4 and R5. They show icons, cooldowns and charges like the
+bar's other buttons.
 
-- **Binding them:** the Controller page lists the four buttons under **Keys**, each named by its slot
-  on the bar you picked (L4: Action Bar 8, button 9, and so on), with two key boxes like the game's
+- **Four bars:** with **Press a trigger to keep its bar on** turned on, each back button has an action on
+  every controller bar, like A does: L4 alone is L4 on the Top bar, RT with L4 is L4 on the Right
+  bar, LT and RT with L4 is L4 on the Bottom bar. A bar switched on counts like a held trigger. Each
+  bar's four show beside it: Top's in a row above it, Bottom's in a row below it, Left's left of it
+  and Right's right of it. Without the trigger toggle they act on Top only, and only Top's show.
+- **Compact layout:** the game shows only one bar there, so only the back buttons of the bar a press
+  goes to show, beside it, even when the game shows Top's buttons.
+- An empty back button does nothing when pressed; it doesn't fall back to Top's. A bar's back
+  buttons hide with that bar (hidden as empty, or the special page) but stay while a stance or
+  vehicle bar sits in its place. They keep the same actions on every controller page.
+- **Binding them:** the Controller page lists the four keys under **Keys** (one key serves all four
+  bars), each named by its slot on the Top bar (L4: Action Bar 8, button 9, and so on), with two key boxes like the game's
   Key Bindings: click a box, then press the back button (or the key). Escape or another click on
   the box cancels, a right-click clears a key. The same bindings are under Esc > Options > Key
   Bindings > AddOns > Quality of Life. On the Steam Deck the game doesn't see the back buttons by
@@ -423,12 +432,13 @@ like the bar's other buttons.
   nothing: a back button with no key of its own uses its paddle, as long as nothing else is bound
   to it.
 - **Putting spells on them:** drag a spell onto one, as onto any action button (out of combat; with
-  the action bars locked, hold Shift). Each back button is one of the last four buttons of Action Bar
-  8 (or 6 or 7, picked under **Slots**), so what you put there shows on the back button too. Pick a
-  bar you don't use otherwise.
+  the action bars locked, hold Shift). Each controller bar's back buttons are the last four buttons
+  of a standard action bar, picked under **Slots** for each bar (Action Bars 2 to 8; Top 8, Left 7,
+  Right 6 and Bottom 5 at first), so what you put there shows on the back button too. Pick bars you
+  don't use otherwise.
 
-The buttons show and hide with the controller action bar, follow it when you move or scale it in
-Edit Mode, and keep their place in its compact layout.
+The buttons show and hide with the controller action bar and follow their bars when you move or
+scale it in Edit Mode.
 
 **Bars that follow the stance:** the game's Stance bar setting changes one controller bar when you
 enter a stance. Tick the **Top**, **Left**, **Right** or **Bottom** bar here and that bar changes
@@ -464,14 +474,15 @@ Right bar, and both on is the Bottom bar, also when you press them together.
   A and with it jumping and interacting. Untick it to keep the bar on.
 - While a bar is on, a warm glow, the marker, shows behind it, so you can see what your
   buttons do. It shows during a hold as well.
-- Only the eight buttons of the bar change: LB, RB, the sticks, the back buttons and the rings stay
-  as they are, and holding LB or RB for targeting works with a bar on.
+- The eight buttons of the bar change, and the back buttons act on the bar on (see **Back
+  buttons**). LB, RB, the sticks and the rings stay as they are, and holding LB or RB for targeting
+  works with a bar on. The marker covers the bar's back buttons too.
 - A possess, vehicle or override bar turns the bar off, in combat too, and it stays off: a press
   while one is up turns nothing on. The game's
   windows keep their keys while a bar is on; it's still on when you close them. Switching to
   keyboard and mouse turns it off.
 - The bar on follows the page and the stance, and following bars work as usual.
-- The compact layout isn't covered: it only shows the Top bar.
+- The compact layout isn't covered: it only shows the Top bar. The back buttons there show the bar on's.
 
 **Buff tooltips:** the controller interface shows the tooltip of every buff or debuff you gain or
 refresh for a few seconds. **Hide new buff tooltips** keeps those away; a buff you select or point

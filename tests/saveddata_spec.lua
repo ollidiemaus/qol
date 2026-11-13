@@ -6,14 +6,14 @@ describe("version", function()
     it("brings a saved file without a version up to date, its data unchanged", function()
         Stubs.LoadAddon()
         Stubs.Login({ hideBagsBar = true })
-        T.eq(QoLDB.version, 3)
+        T.eq(QoLDB.version, 4)
         T.eq(QoLDB.options.hideBagsBar, true)
     end)
 
     it("gives a new saved file the current version", function()
         Stubs.LoadAddon()
         Stubs.Login()
-        T.eq(QoLDB.version, 3)
+        T.eq(QoLDB.version, 4)
     end)
 
     it("leaves a file from a newer QoL at its version", function()
@@ -57,7 +57,7 @@ describe("version 2", function()
         local ns = Stubs.LoadAddon()
         _G.QoLDB = { version = 1, options = { minimapZoneText = value } }
         Stubs.Fire("ADDON_LOADED", "QoL")
-        T.eq(QoLDB.version, 3)
+        T.eq(QoLDB.version, 4)
         return ns.Options:Get("minimapZoneText")
     end
 
@@ -78,7 +78,7 @@ describe("version 2", function()
         local ns = Stubs.LoadAddon()
         _G.QoLDB = { version = 1, options = { hideBagsBar = true } }
         Stubs.Fire("ADDON_LOADED", "QoL")
-        T.eq(QoLDB.version, 3)
+        T.eq(QoLDB.version, 4)
         T.eq(QoLDB.options.minimapZoneText, nil)
         T.eq(ns.Options:Get("minimapZoneText"), "default")
     end)
@@ -86,7 +86,7 @@ describe("version 2", function()
     it("migrates a file from before versions too", function()
         Stubs.LoadAddon()
         Stubs.Login({ minimapZoneText = "below" })
-        T.eq(QoLDB.version, 3)
+        T.eq(QoLDB.version, 4)
         T.eq(QoLDB.options.minimapZoneText, "bottom")
     end)
 end)
@@ -96,7 +96,7 @@ describe("version 3", function()
         local ns = Stubs.LoadAddon()
         _G.QoLDB = { version = 2, options = options }
         Stubs.Fire("ADDON_LOADED", "QoL")
-        T.eq(QoLDB.version, 3)
+        T.eq(QoLDB.version, 4)
         return ns
     end
 
@@ -134,9 +134,44 @@ describe("version 3", function()
     it("migrates a file from before versions too", function()
         Stubs.LoadAddon()
         Stubs.Login({ minimapZoneText = "below", hideMinimapCoords = true, hideMinimapCalendar = true })
-        T.eq(QoLDB.version, 3)
+        T.eq(QoLDB.version, 4)
         T.eq(QoLDB.options.minimapZoneText, "bottom")
         T.eq(QoLDB.options.minimapCoords, "hidden")
         T.eq(QoLDB.options.minimapCalendar, "hidden")
+    end)
+end)
+
+describe("version 4", function()
+    local function migrated(options)
+        local ns = Stubs.LoadAddon()
+        _G.QoLDB = { version = 3, options = options }
+        Stubs.Fire("ADDON_LOADED", "QoL")
+        T.eq(QoLDB.version, 4)
+        return ns
+    end
+
+    local function bars(ns)
+        local found = {}
+        for _, bar in ipairs({ "Top", "Left", "Right", "Bottom" }) do
+            found[#found + 1] = ns.Options:Get("controllerBackButtonsBar" .. bar)
+        end
+        return found
+    end
+
+    it("keeps the back buttons' action bar as the Top bar's", function()
+        local ns = migrated({ controllerBackButtonsBar = 3 })
+        T.eq(ns.Options:Get("controllerBackButtonsBarTop"), 3)
+        T.eq(QoLDB.options.controllerBackButtonsBar, nil, "the old option is gone")
+    end)
+
+    it("gives the other bars the first free of 8, 7, 6 and 5", function()
+        T.same(bars(migrated({ controllerBackButtonsBar = 3 })), { 3, 8, 7, 6 })
+        T.same(bars(migrated({ controllerBackButtonsBar = 7 })), { 7, 8, 6, 5 })
+        T.same(bars(migrated({ controllerBackButtonsBar = 8 })), { 8, 7, 6, 5 })
+    end)
+
+    it("leaves a file that never chose a bar on the defaults", function()
+        T.same(bars(migrated({ hideBagsBar = true })), { 8, 7, 6, 5 })
+        T.eq(QoLDB.options.controllerBackButtonsBarLeft, nil)
     end)
 end)

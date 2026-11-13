@@ -8,17 +8,22 @@ addon's override counts), which is how the game treats a modified key without a 
 The saved bindings are never changed. Our own overrides fire `UPDATE_BINDINGS` too; the update then
 finds nothing to change.
 
-The controller back buttons are four `SecureActionButtonTemplate` buttons of ours (`QoLBackButton1`
-to `4`, `type` "action") on the last four slots of Action Bar 6, 7 or 8 (slots 153-156, 165-168,
-177-180), so the controller bar's own slots and its paging are left alone and a spell can also be
-put there from the standard bar. They hang off a plain frame of ours whose parent is
+The controller back buttons are 16 `SecureActionButtonTemplate` buttons of ours, four per controller
+bar (`QoLBackButtonTop1` to `4`, `...Left`, `...Right`, `...Bottom`, `type` "action"), each bar's on
+the last four slots of an action bar from 2 to 8 picked for it (Action Bar 8 is slots 177-180, 7 is
+165-168, 6 is 153-156, and so on by the page of `MultiActionBars.lua`), so the controller bar's own
+slots and its paging are left alone and a spell can also be put there from the standard bar. The
+same 16 slots serve every controller page. The keys are four hidden parentless secure buttons
+(`QoLBackButton1` to `4`); see "Back buttons on every bar" below for how a press finds its bar. The
+shown buttons hang off a plain frame of ours whose parent is
 `GamepadMainActionBarFrame` (Blizzard_GamepadActionBars, loaded with the game on Forever, so it
 exists at our `ADDON_LOADED`): they show, hide, scale and fade with the bar and nothing is hooked or
-written on it. Their anchors are the bar's `PageUnit.LeftCenteredAnchor` and `RightCenteredAnchor`
-(the d-pad and face button groups), which only Edit Mode moves, out of combat, and which the compact
-layout moves too. A secure button makes its parents protected, so the holder is created, shown and
-hidden through `ns.LaterOutsideWindows` (out of combat and away from the game's controller windows),
-like the `type` and `action` attributes, which are set only when they change. The art is drawn on
+written on it. Each bar's four sit on a holder anchored to that bar's centred anchor
+(`PageUnit.TopCenteredAnchor` and the Left, Right and Bottom ones), which only Edit Mode moves, out
+of combat, and which the compact layout moves too. A secure button makes its parents protected, so
+the holders are created and placed through `ns.LaterOutsideWindows` (out of combat and away from the
+game's controller windows), like the `type` and `action` attributes, which are set only when they
+change; in combat only the secure header shows and hides them. The art is drawn on
 regions of our own, copied from the bar's buttons
 (`gamepad-actionbar-circleslot-*` atlases, `CircleMask`, the round portrait mask for the empty slot
 and the cooldown swipe) and updated in combat (`ns.Later(..., true)`): icon, usability color, count
@@ -38,9 +43,10 @@ an override binding on a frame of ours (`SetOverrideBindingClick`, not priority:
 windows set priority overrides of their own and win while they're open). A button with no key gets
 its paddle key (`PADPADDLE1` to `4`, SDL numbering: 2 and 4 left, 1 and 3 right) when the paddle has
 neither a saved binding nor one in the controller set (`C_KeyBindings.GetBindingByKey(key,
-Enum.BindingContext.GamepadModeInGameCore)`, in a `pcall`). A trigger held while a back button
-sends its key makes it a modified key; with nothing bound to that, the game uses the key without
-modifiers, so no modifier variants are needed. As with bar paging, the overrides fire
+Enum.BindingContext.GamepadModeInGameCore)`, in a `pcall`). Forever's triggers are no modifiers:
+they are plain keys bound to `GAMEPADLEFTMOD` and `GAMEPADRIGHTMOD`, and the game picks a bar in its
+own Lua by their key-down state (ADR 0006). A back button's key comes without a modifier whatever
+trigger is held, so no modifier variants are needed. As with bar paging, the overrides fire
 `UPDATE_BINDINGS` and the next update finds nothing to change; they wait for the end of combat
 and, in the controller interface, until no window of the game has the controller.
 Steam Input on the Steam Deck sends keyboard keys for the back buttons, which is why a key binding,
@@ -51,8 +57,8 @@ there's nothing for it to change.
 
 The Controller page also has the back buttons' key bindings (`Page:Binding`, rows across the page):
 the same `CLICK QoLBackButtonN:LeftButton` commands as Key Bindings > AddOns, each row named by its
-slot on the chosen bar (the label is a function, asked again on each refresh, so it follows the
-Slots dropdown). Each row has two buttons from the
+slot on Top's action bar, since one key serves all four bars (the label is a function, asked again
+on each refresh, so it follows Top's Slots dropdown). Each row has two buttons from the
 game's own `KeyBindingFrameBindingButtonTemplate` and works like a row of the game's Key Bindings,
 with code of our own rather than the game's `KeybindListener` (a Blizzard frame: starting it writes
 its fields, which the [rules for Blizzard frames](../DEVELOPMENT.md#rules-for-touching-blizzard-frames) forbid): a click on a button shows a parentless frame of ours at
@@ -71,6 +77,47 @@ fires `UPDATE_BINDINGS`, and the back buttons' override bindings follow from the
 `ns.LaterOutsideWindows`. All frames (the buttons and the listener) are created when the pages are
 built at login, not while a controller window is open, so SmartNavigation's `CreateFrame` hook
 rebuilds no window for them.
+
+## Back buttons on every bar
+
+Each back button has an action on each controller bar: RT with L4 is L4 on the Right bar. The game
+picks a bar by the triggers' key-down state in its own Lua, which secure code can't read, so the bar
+in use is the trigger toggle's (ADR 0006): held or on, a bar on counting like a held trigger and a
+hold adding to it as for the bar keys. Without the trigger toggle that's Top, and only Top's show.
+
+- The hand-off: `ns.Buttons.AddBarFollower(frame)` and `WatchBarFollowers(fn)`. The back buttons'
+  header `QoLBackButtons` is a follower; the toggle sets a frame ref to it out of combat, and its
+  `APPLY` snippet sets the follower's `bar` attribute ("left", "right", "bottom" or nil) with its
+  own, in combat too. Neither feature names the other.
+- The header is a `SecureHandlerAttributeTemplate`. Its `_onattributechanged` runs `refresh` on a
+  `bar` change: each key's `action` becomes the slot of that bar (`slot-<bar>-<index>`, set out of
+  combat), and the holders show or hide. A key is a hidden secure button, so the press acts on
+  whatever slot it holds, and a `PostClick` lights the shown button of the bar acted on. An empty
+  slot does nothing: there's no fallback to Top.
+- Places: plain frames of ours parented to the game's six bars (`topBar` to `bottomBar`,
+  `stanceBar`, `possessBar`) schedule an update from `OnShow` and `OnHide`, out of combat. The update
+  sets `place-<bar>` on the header when something the game shows sits on that bar's anchor (the bar,
+  or a stance or possess bar put on it, read by `GetParent`). The possess bar on the special page
+  (shown with `GamepadPossessBarOverride` on `SpecialPageTopBar`) isn't in a place, so the special
+  page hides them all. A bar hidden as empty hides its back buttons, and a stance or vehicle bar in
+  its place doesn't. The compact layout follows Top's place, the one bar the game shows there. A
+  place that changes in combat waits for it to end.
+- Layout, from the holder on the bar's anchor (points): the full layout puts each bar's on its outer
+  side, Top's in a row above (x -114, -70, 70, 114 at y 85), Bottom's in a row below (y -85),
+  Left's in a column on its left (x -182 at y 66, 22, -22, -66) and Right's on its right (x 182).
+  The compact layout shows only the bar in use's, beside the one bar the game shows (L4 and L5 at
+  x -182, R4 and R5 at 182, y 26 and -26), in combat too through the header.
+- The marker grows from 160 to 224 points high while a follower's `beside` attribute is set (the
+  back buttons on), to cover the columns beside Left and Right.
+
+To check in game (not answerable from the source or the stubs):
+
+- Spacing: the columns beside Left and Right and the rows above Top and below Bottom don't overlap a
+  neighbouring bar or the screen edge, at the default scale and in Edit Mode.
+- The compact layout: the back buttons beside the one bar follow the bar on, in combat too.
+- A stance bar in Top's place (a warrior's): Top's back buttons stay with their own actions.
+- Presses in combat on each bar, held and on, and that the game does nothing of its own with a
+  trigger held while a paddle key goes down.
 
 ## Following bars
 
@@ -246,7 +293,8 @@ What the player gets:
   our back buttons can report that they were used.
 - A second checkbox, on by default, goes back to Top when combat ends. A bar on takes A and with it
   jumping and interacting, which is why that's the default.
-- Only the eight bar keys switch. LB, RB, the sticks, back buttons and rings stay as they are.
+- The eight bar keys switch, and the back buttons follow the bar in use through the hand-off in
+  "Back buttons on every bar". LB, RB, the sticks and rings stay as they are.
 - A possess or vehicle bar switches the bar on off, in combat too, and it stays off.
 - Page and stance: the bar on follows the page, and where the game's stance bar has taken a bar the
   press goes to the stance bar's button. Following bars need nothing, as the press is on the game's

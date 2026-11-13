@@ -20,7 +20,8 @@ ns.TriggerToggle = TriggerToggle
 local KEY = "controllerTriggerToggle"
 local TOP_AFTER_COMBAT_KEY = "controllerTriggerToggleTopAfterCombat"
 
--- The game can make the triggers act as modifiers, so a key can come with any of these.
+-- Forever's triggers are no modifiers (ADR 0006), but a held Shift, Ctrl or Alt on a keyboard can
+-- come with a trigger's or a bar key's key, so each gets all of these.
 local PREFIXES = { "", "SHIFT-", "CTRL-", "ALT-", "CTRL-SHIFT-", "ALT-SHIFT-", "ALT-CTRL-", "ALT-CTRL-SHIFT-" }
 local TRIGGERS = { LT = "PADLTRIGGER", RT = "PADRTRIGGER" }
 -- The keys of a bar, by the game's button index (Blizzard_GamepadActionBars/Bindings.xml).
@@ -40,11 +41,15 @@ local RELAY_PREFIX = TRIGGER_PREFIX .. "Relay"
 -- own bar focus (BackgroundFocus) is black, so it only dims what's behind it and can't be seen on a
 -- dark scene. Below the bars, which are on levels 4 and 5 of the LOW strata (ActionBar.lua).
 local MARKER_ATLAS = "gamepad-actionbar-fx-trigger-behind"
+-- Taller while a frame that follows the bar shows something beside the bars (its "beside"
+-- attribute: the back buttons, 66 points above and below a bar's centre plus half a button).
 local MARKER_WIDTH, MARKER_HEIGHT, MARKER_ALPHA = 512, 160, 0.7
+local MARKER_HEIGHT_FOLLOWERS = 224
 local MARKER_LEVEL = 3
 
--- The bar in use, held or switched on, into the keys' bindings. Both triggers pressed together mean Bottom
--- until both are let go. Between bars the bindings stay: the relays read the bar on the press.
+-- The bar in use, held or switched on, into the keys' bindings and to the frames that follow it (the
+-- back buttons' header). Both triggers pressed together mean Bottom until both are let go. Between
+-- bars the bindings stay: the relays read the bar on the press.
 local APPLY = [[
     local both = self:GetAttribute("both")
     local lt = self:GetAttribute("on-LT") or self:GetAttribute("held-LT") or both
@@ -53,6 +58,9 @@ local APPLY = [[
     local was = self:GetAttribute("bar")
     if bar == was then return end
     self:SetAttribute("bar", bar)
+    for index = 1, self:GetAttribute("followercount") or 0 do
+        self:GetFrameRef("follower-" .. index):SetAttribute("bar", bar)
+    end
     if not bar then
         self:ClearBindings()
     elseif not was then
@@ -176,10 +184,17 @@ end
 ---------------------------------------------------------------------------------------------------
 
 -- Hidden while a game window has the controller. Frames of ours, so in combat too.
+local followerFrames = {}
+
 local function refreshMarker()
     if not header then return end
     local bar = not ns.ControllerWindowOpen() and header:GetAttribute("bar")
+    local height = MARKER_HEIGHT
+    for _, frame in ipairs(followerFrames) do
+        if frame:GetAttribute("beside") then height = MARKER_HEIGHT_FOLLOWERS end
+    end
     for name, texture in pairs(marker) do
+        texture:SetHeight(height)
         texture:SetShown(name == bar)
     end
 end
@@ -284,6 +299,18 @@ local function create()
     header:HookScript("OnAttributeChanged", onAttribute)
     ns.Buttons.WatchBackButtons(function(button)
         SecureHandlerWrapScript(button, "OnClick", header, BACK_BUTTON)
+    end)
+    local followers = 0
+    ns.Buttons.WatchBarFollowers(function(frame)
+        followers = followers + 1
+        SecureHandlerSetFrameRef(header, "follower-" .. followers, frame)
+        header:SetAttribute("followercount", followers)
+        frame:SetAttribute("bar", header:GetAttribute("bar"))
+        followerFrames[followers] = frame
+        frame:HookScript("OnAttributeChanged", function(_, name)
+            if name == "beside" then refreshMarker() end
+        end)
+        refreshMarker()
     end)
     RegisterStateDriver(header, "possess", POSSESS_DRIVER)
 end

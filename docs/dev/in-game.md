@@ -166,6 +166,21 @@ Things only the real client can confirm:
     (Shift) and unlocked; the tooltip.
   - The keys still work after opening and closing a gamepad window (bags, map, the settings), and
     no "tainted by" error shows up in combat afterwards.
+  - On every bar, with the trigger toggle on: each bar's four show on its outer side (Top's above,
+    Bottom's below, Left's and Right's beside them) and clear of the neighbouring bar and the screen
+    edge, at several Edit Mode sizes. RT with L4 casts L4 on the Right bar; with Right switched on L4
+    alone does too, LT held then adds Bottom; an empty one does nothing. The marker covers the bar's
+    back buttons. With the toggle off only Top's show.
+  - The compact layout with the toggle on: only the bar on's four show beside the one bar, and they
+    switch with the bar, in combat too.
+  - A warrior in a stance with the game's Stance bar on Top: Top's back buttons stay, with their own
+    actions. Same in a vehicle. The special page hides them all; an empty bar hidden by the game's
+    setting hides its four.
+  - Presses in combat on each bar, held and switched on, and whether the game does anything of its
+    own with a trigger held while a paddle key goes down.
+  - A vehicle or possess bar that comes up in combat: the back buttons change places only once
+    combat ends (by design); check nothing looks broken meanwhile, and that no "tainted by" error
+    names the watcher frames on the game's bars after the bars change in combat.
 - The rings (the Ring page on, rings made with `/qol ring`):
   - The Ring page: the parchment page and its top bar line up below the title (also at other UI
     scales); the tabs in the bar clear of "Ring 1 of 3" and its arrows; the smaller ring with 12
