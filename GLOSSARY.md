@@ -173,6 +173,10 @@ _Avoid_: low rank (that's any rank below the highest, kept on purpose or not), o
 One of the four bars on a page of the controller interface: Top (no trigger), Left, Right and Bottom (both triggers). Each has a D-pad half and a face button half; Top's face buttons are reserved by the game.
 _Avoid_: gamepad bar, trigger bar
 
+**Back button**:
+L4, L5, R4 or R5: an extra button of ours on the controller bar, for a controller's paddles. It has an action on each controller bar, so RT with L4 is "L4 on the Right bar", shown beside that bar.
+_Avoid_: paddle (that's the controller's own button), modifier slot, layer
+
 **Stance**:
 Anything that makes the game swap in other actions: a warrior's stance, a druid's form, stealth.
 _Avoid_: form (that's one kind of stance), bonus bar
