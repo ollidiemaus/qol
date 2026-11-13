@@ -19,6 +19,9 @@ local SPECS = {
     "settings", "classicera", "advancedsettings", "probe", "locales",
 }
 
+-- Spec names as arguments run only those: ~/.lua51/bin/lua tests/run.lua backbuttons triggertoggle
+if arg and #arg > 0 then SPECS = arg end
+
 for _, name in ipairs(SPECS) do
     T.describe(name, function()
         dofile("tests/" .. name .. "_spec.lua")

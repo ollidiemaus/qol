@@ -127,7 +127,11 @@ local DEFAULTS = {
     clickCastEnemies = false,
 
     controllerBackButtons = false,
-    controllerBackButtonsBar = 8, -- Action Bar 6, 7 or 8, whose buttons 9 to 12 the back buttons use
+    -- Per controller bar, the action bar (2 to 8) whose buttons 9 to 12 its back buttons use.
+    controllerBackButtonsBarTop = 8,
+    controllerBackButtonsBarLeft = 7,
+    controllerBackButtonsBarRight = 6,
+    controllerBackButtonsBarBottom = 5,
     controllerTriggerToggle = false,
     controllerTriggerToggleTopAfterCombat = true,
     hideBuffTooltips = false,

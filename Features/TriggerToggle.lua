@@ -20,7 +20,8 @@ ns.TriggerToggle = TriggerToggle
 local KEY = "controllerTriggerToggle"
 local TOP_AFTER_COMBAT_KEY = "controllerTriggerToggleTopAfterCombat"
 
--- The game can make the triggers act as modifiers, so a key can come with any of these.
+-- Forever's triggers are no modifiers (ADR 0006), but a held Shift, Ctrl or Alt on a keyboard can
+-- come with a trigger's or a bar key's key, so each gets all of these.
 local PREFIXES = { "", "SHIFT-", "CTRL-", "ALT-", "CTRL-SHIFT-", "ALT-SHIFT-", "ALT-CTRL-", "ALT-CTRL-SHIFT-" }
 local TRIGGERS = { LT = "PADLTRIGGER", RT = "PADRTRIGGER" }
 -- The keys of a bar, by the game's button index (Blizzard_GamepadActionBars/Bindings.xml).
@@ -43,12 +44,12 @@ local MARKER_ATLAS = "gamepad-actionbar-fx-trigger-behind"
 local MARKER_WIDTH, MARKER_HEIGHT, MARKER_ALPHA = 512, 160, 0.7
 local MARKER_LEVEL = 3
 
--- The bar in use, held or switched on, into the keys' bindings. Both triggers pressed together mean Bottom
--- until both are let go. Between bars the bindings stay: the relays read the bar on the press.
+-- The bar in use, held or switched on, into the keys' bindings. It follows the triggers held: with
+-- both held, letting one go gives the other's bar (both pressed together still switch Bottom on only
+-- once both are let go, in TRIGGER). Between bars the bindings stay: the relays read the bar on the press.
 local APPLY = [[
-    local both = self:GetAttribute("both")
-    local lt = self:GetAttribute("on-LT") or self:GetAttribute("held-LT") or both
-    local rt = self:GetAttribute("on-RT") or self:GetAttribute("held-RT") or both
+    local lt = self:GetAttribute("on-LT") or self:GetAttribute("held-LT")
+    local rt = self:GetAttribute("on-RT") or self:GetAttribute("held-RT")
     local bar = lt and rt and "bottom" or lt and "left" or rt and "right" or nil
     local was = self:GetAttribute("bar")
     if bar == was then return end
