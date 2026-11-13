@@ -487,7 +487,19 @@ describe("controller back buttons", function()
             T.falsy(shown("Top", 3).icon:IsShown(), "Top's own is empty")
         end)
 
-        it("sit in a grid at the far left and right in the full layout, a row per bar", function()
+        it("show the bar in use's at full size and the others small, in combat too", function()
+            start(on())
+            local function art(name) return (shown(name, 1).visual:GetSize()) end
+            T.same({ art("Top"), art("Left"), art("Right"), art("Bottom") }, { 38, 30, 30, 30 })
+            T.eq((shown("Top", 1):GetSize()), 30, "a button in a cross clicks as a small one")
+            Stubs.SetCombat(true)
+            Stubs.PressOverride(RT, true)
+            T.same({ art("Top"), art("Left"), art("Right"), art("Bottom") }, { 30, 30, 38, 30 })
+            Stubs.PressOverride(RT, false)
+            T.same({ art("Top"), art("Right") }, { 38, 30 })
+        end)
+
+        it("sit in a cross per back button at the far left and right in the full layout", function()
             local _, bar = start(on())
             for _, name in ipairs(BARS) do
                 T.same({ shown(name, 1):GetParent():GetPoint() }, { "CENTER", bar.PageUnit, "CENTER", 0, 0 }, name)
@@ -496,11 +508,19 @@ describe("controller back buttons", function()
                 local point = { shown(name, index):GetPoint() }
                 return { point[4], point[5] }
             end
-            T.same({ at("Top", 1), at("Top", 2), at("Top", 3), at("Top", 4) },
-                { { -421, 66 }, { -377, 66 }, { 421, 66 }, { 377, 66 } }, "L4 and R4 outside, L5 and R5 inside")
-            T.same({ at("Left", 1), at("Right", 1), at("Bottom", 1) }, { { -421, 22 }, { -421, -22 }, { -421, -66 } },
-                "Top, Left, Right, Bottom from the top")
-            T.same({ shown("Top", 1).label:GetPoint() }, { "TOP", shown("Top", 1), "TOP", 0, -1 }, "the name on it")
+            T.same({ at("Top", 1), at("Left", 1), at("Right", 1), at("Bottom", 1) },
+                { { -405, 77 }, { -436, 50 }, { -374, 50 }, { -405, 23 } }, "L4's cross, upper left, bars as the game's")
+            T.same({ at("Top", 2), at("Top", 3), at("Top", 4) }, { { -405, -23 }, { 405, 77 }, { 405, -23 } },
+                "L5 lower left, R4 upper right, R5 lower right")
+            T.falsy(shown("Top", 1).label:IsShown(), "no name on a button")
+            local names = {}
+            for _, region in ipairs(Stubs.state().regions) do
+                if region.GetText and region:IsShown() and region:GetText() == "L4" then
+                    local point = { region:GetPoint() }
+                    names[#names + 1] = { point[2], point[4], point[5] }
+                end
+            end
+            T.same(names, { { bar.PageUnit, -405, 50 } }, "the name in the cross's middle")
             -- They show, hide and scale with the controller bar.
             bar:Hide()
             T.same(showing(), {})
@@ -599,7 +619,7 @@ describe("controller back buttons", function()
                 settle()
                 T.same(showing(), { "Top", "Left", "Right", "Bottom" })
                 local point = { shown("Top", 1):GetPoint() }
-                T.same({ point[4], point[5] }, { -421, 66 })
+                T.same({ point[4], point[5] }, { -405, 77 })
             end)
 
             it("hide on the special page", function()

@@ -414,8 +414,10 @@ bar's other buttons.
 
 - **Four bars:** each back button has an action on every controller bar, like A does: L4 alone is L4
   on the Top bar, RT held with L4 is L4 on the Right bar, LT and RT with L4 is L4 on the Bottom bar.
-  All 16 show in a grid at the far left and right of the controller bar, a row per bar: Top, Left,
-  Right and Bottom from the top, L4 and R4 on the outside. While the back buttons are on, the
+  All 16 show at the far left and right of the controller bar as a cross per back button (L4 upper
+  left, L5 lower left, R4 upper right, R5 lower right), its bars where the game's are: Top up, LT
+  left, RT right, LT and RT down. The bar in use's are full size, the others small, as the game does
+  with its bars. In the compact layout only the bar in use's four show, beside the bar. While the back buttons are on, the
   triggers go through QoL even with **Press a trigger to keep its bar on** turned off (a held trigger
   then works as before, a tap switches nothing on); with it on, a bar switched on counts like a held
   trigger.

@@ -19,8 +19,9 @@ local L = ns.L
 --
 -- Each bar's four shown buttons are secure action buttons too, for the mouse, on a holder of ours
 -- under a frame of ours that's a child of GamepadMainActionBarFrame, so they hide, scale and fade
--- with the bar. In the full layout the holders sit on the page unit, in a grid at its far left and
--- right; in the compact layout on the bar's anchor (which only Edit Mode moves, out of combat). A
+-- with the bar. In the full layout the holders sit on the page unit, the buttons in a cross per
+-- back button at its far left and right, the bar in use's art full size and the others' small (in
+-- combat too, on our regions); in the compact layout on the bar's anchor (which only Edit Mode moves, out of combat). A
 -- holder shows while the game shows something in its bar's place (the bar, or the stance or possess
 -- bar over it, but not the special page), and in the compact layout only the bar in use's shows. Plain
 -- frames of ours on the game's bars tell us when those show or hide; nothing of the game's is written,
@@ -44,8 +45,10 @@ local PLACE_BARS = { "topBar", "leftBar", "rightBar", "bottomBar", "stanceBar", 
 -- buttons 9 to 12.
 local PAGES = { [2] = 6, [3] = 5, [4] = 3, [5] = 4, [6] = 13, [7] = 14, [8] = 15 }
 local FIRST = 8
--- The controller bar's round buttons at full size, and how much smaller one is while pressed.
+-- The controller bar's round buttons at full size, the size of a bar not in use (the game's
+-- collapsed and expanded sizes, ActionBarStyles.lua), and how much smaller one is while pressed.
 local SIZE = 38
+local SMALL = 30
 local PRESSED = 4
 local ROUND = "Interface\\CharacterFrame\\TempPortraitAlphaMask"
 
@@ -60,24 +63,28 @@ BackButtons.BUTTONS = {
 local BUTTONS = BackButtons.BUTTONS
 
 -- Where each button sits, and where its name goes. Above Top and below Bottom are the game's LB and
--- RB prompts and page tracker, and the bars interlock, so the full layout puts all 16 at the far
--- left and right of the page unit, from its centre, where the four sat before there were 16: a row
--- per bar, top to bottom Top, Left, Right, Bottom; L4 and R4 outside, L5 and R5 inside, their names
--- on them. The compact layout shows one bar's, from its anchor: L4 and L5 left of it, R4 and R5
--- right. docs/dev/controller.md has the numbers.
+-- RB prompts and page tracker, and the bars interlock, so the full layout puts all 16 past the far
+-- left and right of the page unit, from its centre: a cross per back button, L4's upper left, L5's
+-- lower left, R4's upper right, R5's lower right, its name in the middle. A cross holds that back
+-- button on each bar where the game's cross of bars has the bar: Top up, Left (LT) left, Right (RT)
+-- right, Bottom (LT and RT) down. The compact layout shows one bar's, from its anchor: L4 and L5
+-- left of it, R4 and R5 right, their names beside them. docs/dev/controller.md has the numbers.
 local COLUMN_X, COMPACT_Y = 182, 26
-local GRID_X = { 421, 377 }
-local GRID_Y = { top = 66, left = 22, right = -22, bottom = -66 }
+local CROSS_X, CROSS_Y = 405, 50
+local ARMS = { top = { 0, 27 }, left = { -31, 0 }, right = { 31, 0 }, bottom = { 0, -27 } }
 local LAYOUTS = { full = {}, compact = {} }
+-- By back button: the middle of its cross in the full layout.
+local CROSSES = {}
 for index, info in ipairs(BUTTONS) do
     LAYOUTS.compact[index] = { x = info.side * COLUMN_X, y = index % 2 == 1 and COMPACT_Y or -COMPACT_Y,
         label = info.side < 0 and "LEFT" or "RIGHT" }
+    CROSSES[index] = { x = info.side * CROSS_X, y = index % 2 == 1 and CROSS_Y or -CROSS_Y }
 end
 for _, bar in ipairs(BARS) do
     LAYOUTS.full[bar] = {}
-    for index, info in ipairs(BUTTONS) do
-        LAYOUTS.full[bar][index] = { x = info.side * GRID_X[index % 2 == 1 and 1 or 2], y = GRID_Y[bar],
-            label = "INSIDE" }
+    for index in ipairs(BUTTONS) do
+        local cross, arm = CROSSES[index], ARMS[bar]
+        LAYOUTS.full[bar][index] = { x = cross.x + arm[1], y = cross.y + arm[2], label = "NONE" }
     end
 end
 
@@ -123,6 +130,10 @@ end
 local header, root
 -- By bar: the holder and its four shown buttons.
 local groups = {}
+-- By back button: its name in the middle of its cross (the full layout).
+local crossLabels = {}
+-- The compact layout, as the last update found it.
+local compactLayout = false
 -- The keys' hidden buttons.
 local keys = {}
 
@@ -163,28 +174,50 @@ local ON_ATTRIBUTE = [[
 -- Look
 ---------------------------------------------------------------------------------------------------
 
+-- The art's size: full for the bar in use, small for the others (as the game's bars), and smaller
+-- while pressed. Only regions and frames of ours inside the secure button change, so in combat too.
+local function sizeVisual(button)
+    local size = button.size - (button.pressed and PRESSED or 0)
+    button.visual:SetSize(size, size)
+    button.visual:ClearAllPoints()
+    button.visual:SetPoint("CENTER", 0, button.pressed and -PRESSED / 2 or 0)
+end
+
 local function setPressed(button, down)
     if button.pressed == down then return end
     button.pressed = down
-    local size = down and SIZE - PRESSED or SIZE
-    button.visual:SetSize(size, size)
-    button.visual:ClearAllPoints()
-    button.visual:SetPoint("CENTER", 0, down and -PRESSED / 2 or 0)
+    sizeVisual(button)
     button.pushedRim:SetShown(down)
 end
 
--- The button's name beside it, on its outer side, or on it at the top (INSIDE), where the grid
--- leaves no room beside it.
+-- The bar in use's buttons at full size, the others small; in the compact layout only the bar in
+-- use's show, at full size.
+local function highlight()
+    local inUse = header:GetAttribute("bar") or "top"
+    for bar, group in pairs(groups) do
+        local size = (compactLayout or bar == inUse) and SIZE or SMALL
+        for _, button in ipairs(group.buttons) do
+            if button.size ~= size then
+                button.size = size
+                sizeVisual(button)
+            end
+        end
+    end
+end
+
+-- The button's name beside it, on its outer side (the compact layout); NONE in a cross, whose name
+-- is in its middle.
 local LABEL_POINTS = {
     LEFT = { "RIGHT", "LEFT", -2, 0 },
     RIGHT = { "LEFT", "RIGHT", 2, 0 },
-    INSIDE = { "TOP", "TOP", 0, -1 },
 }
 
 local function placeLabel(button, side)
     if button.labelSide == side then return end
     button.labelSide = side
     local point = LABEL_POINTS[side]
+    button.label:SetShown(point ~= nil)
+    if not point then return end
     button.label:ClearAllPoints()
     button.label:SetPoint(point[1], button, point[2], point[3], point[4])
 end
@@ -341,7 +374,7 @@ local function newShownButton(bar, index, holder)
     local info = BUTTONS[index]
     local button = CreateFrame("Button", "QoLBackButton" .. BAR_NAMES[bar] .. index, holder,
         "SecureActionButtonTemplate")
-    button.info, button.index, button.bar = info, index, bar
+    button.info, button.index, button.bar, button.size = info, index, bar, SIZE
     button:SetSize(SIZE, SIZE)
     button:SetAttribute("type", "action")
     button:RegisterForClicks("AnyDown", "AnyUp")
@@ -392,8 +425,16 @@ local function create()
     for index = 1, #BUTTONS do
         keys[index] = newKey(index)
         SecureHandlerSetFrameRef(header, "key-" .. index, keys[index])
+        local label = root:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        label:SetText(BUTTONS[index].label)
+        label:Hide()
+        crossLabels[index] = label
     end
     header:SetAttribute("_onattributechanged", ON_ATTRIBUTE)
+    -- After the secure handler, also in combat: the bar in use's buttons grow.
+    header:HookScript("OnAttributeChanged", function(_, name)
+        if name == "bar" then highlight() end
+    end)
     -- Plain frames of ours on the game's bars: their OnShow and OnHide say a bar's place changed.
     local bars = pageUnit and pageUnit.actionBars or {}
     for _, key in ipairs(PLACE_BARS) do
@@ -478,9 +519,17 @@ local function setAttribute(frame, name, value)
 end
 
 -- Each bar's buttons where its layout puts them: in the compact layout from the bar's anchor, in
--- the full layout from the page unit's centre.
+-- the full layout from the page unit's centre. A button in a cross is as big as a small one, so
+-- that the crosses' buttons don't overlap; its art grows past it while its bar is in use.
 local function place(compact)
     local pageUnit = GamepadMainActionBarFrame.PageUnit
+    compactLayout = compact
+    local size = compact and SIZE or SMALL
+    for index, label in ipairs(crossLabels) do
+        label:ClearAllPoints()
+        label:SetPoint("CENTER", pageUnit or root, "CENTER", CROSSES[index].x, CROSSES[index].y)
+        label:SetShown(not compact)
+    end
     for _, bar in ipairs(BARS) do
         local holder = groups[bar].holder
         local anchor = pageUnit and (compact and pageUnit[ANCHORS[bar]] or pageUnit) or root
@@ -492,6 +541,7 @@ local function place(compact)
         local layout = compact and LAYOUTS.compact or LAYOUTS.full[bar]
         for index, button in ipairs(groups[bar].buttons) do
             local spot = layout[index]
+            button:SetSize(size, size)
             if button.spot ~= spot then
                 button.spot = spot
                 button:ClearAllPoints()
@@ -525,6 +575,7 @@ function BackButtons:Update()
         setAttribute(header, "compact", compact or nil)
         for _, bar in ipairs(BARS) do setAttribute(header, "place-" .. bar, found[bar] or nil) end
         place(compact)
+        highlight()
         SecureHandlerExecute(header, [[ self:RunAttribute("refresh") ]])
         if root:IsShown() ~= on then root:SetShown(on) end
         setAttribute(header, "wantsbar", on or nil)

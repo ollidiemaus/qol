@@ -108,18 +108,21 @@ switches a bar on.
   place that changes in combat waits for it to end.
 - Layout (points). Above Top sit the LB and RB prompts and the page tracker, and the bars interlock
   (each about 300 wide on anchors 195 apart), so the full layout puts all 16 on holders centred on
-  the page unit (656 wide), in a grid past its sides: a row per bar, Top at y 66, Left 22, Right
-  -22, Bottom -66; L4 at x -421 and L5 at -377, R4 at 421 and R5 at 377, each name on its button.
-  The compact layout re-anchors the holders to their bar's anchor and shows only the bar in use's,
-  beside the one bar the game shows (L4 and L5 at x -182, R4 and R5 at 182, y 26 and -26), in combat
-  too through the header.
-- The marker stays 512 by 160 on the bar's anchor; it covers Left's and Right's rows but not
-  Bottom's.
+  the page unit (656 wide), past its sides, as a cross per back button: L4's centred at (-405, 50),
+  L5's at (-405, -50), R4's at (405, 50), R5's at (405, -50), its name there. In a cross a bar sits
+  where the game's cross of bars has it: Top at (0, 27), Left (-31, 0), Right (31, 0), Bottom
+  (0, -27). There the buttons are 30 square, so their click areas don't overlap; the art is 38 for
+  the bar in use and 30 for the others (the game's expanded and collapsed sizes). The art is a frame
+  of ours inside the secure button, resized from a hook on the header's `OnAttributeChanged` for
+  `bar`, so in combat too. The compact layout re-anchors the holders to their bar's anchor and shows
+  only the bar in use's, 38 square, beside the one bar the game shows (L4 and L5 at x -182, R4 and
+  R5 at 182, y 26 and -26), each name beside it, in combat too through the header.
+- The marker stays 512 by 160 on the bar's anchor; it doesn't reach the crosses.
 
 To check in game (not answerable from the source or the stubs):
 
-- Spacing: the grid clears the bars, the LB and RB prompts and the screen edge, at the default
-  scale and in Edit Mode.
+- Spacing: the crosses clear the bars, the LB and RB prompts and the screen edge, at the default
+  scale and in Edit Mode, and a full-size button doesn't touch its neighbours.
 - Holds without the toggle: the game's own trigger icons no longer light, our marker does.
 - The compact layout: the back buttons beside the one bar follow the held bar, in combat too.
 - A stance bar in Top's place (a warrior's): Top's back buttons stay with their own actions.

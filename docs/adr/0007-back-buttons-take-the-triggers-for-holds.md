@@ -14,8 +14,9 @@ go never switches a bar on. Everything else is the toggle's machinery as it stan
 the held bar's game buttons (the game no longer sees the triggers), the marker shows the held bar,
 and LT and RT held mean Bottom; letting one go gives the other's bar. The back buttons' header says it wants
 this with a `wantsbar` attribute; the toggle watches it out of combat. All 16 back buttons show in
-the full layout, a row per bar at the far left and right of the page unit, clear of the game's LB and
-RB prompts and of the interlocking bars.
+the full layout, a cross per back button at the far left and right of the page unit (each holding
+that button's four bars where the game's cross of bars has them, the bar in use's full size, the
+others small), clear of the game's LB and RB prompts and of the interlocking bars.
 
 ## Consequences
 

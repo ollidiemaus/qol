@@ -298,7 +298,11 @@ local function newRegion(kind, parent, template)
     function region:UnregisterEvent(event) self.events[event] = nil end
     function region:SetScript(script, fn) self.scripts[script] = fn end
     function region:GetScript(script) return self.scripts[script] end
-    function region:HookScript(script, fn) self.hooks[script] = fn end
+    -- Hooks run in the order they were made, as in the game.
+    function region:HookScript(script, fn)
+        local before = self.hooks[script]
+        self.hooks[script] = before and function(...) before(...) fn(...) end or fn
+    end
     -- Runs a script the way the game does: the handler, then the hooks.
     function region:RunScript(script, ...)
         if self.scripts[script] then self.scripts[script](self, ...) end
