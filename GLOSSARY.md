@@ -207,6 +207,26 @@ _Avoid_: label, bar text
 The third bar on the player frame that shows a druid's mana while bear or cat form uses rage or energy.
 _Avoid_: druid-only mana bar, alternate power bar (that's Blizzard's own third bar)
 
+### Threat
+
+**Threat badge**:
+A small box with the player's threat on an enemy in percent, colored by their threat state: above the
+name on the target or focus frame, or beside the health bar on a nameplate. Shown only while the player
+is on that enemy's threat list.
+_Avoid_: threat plate (collides with nameplate), threat box, numeric threat (that's the game's own
+badge)
+
+**Threat state**:
+Where the player stands on an enemy's threat list, one of four: below the tank (grey), above the tank
+without having pulled (yellow), holding aggro with someone close (orange), holding aggro securely
+(red).
+_Avoid_: threat level, threat status (in player text)
+
+**Tank colors**:
+The threat states' colors turned round for a tank, so that holding aggro securely is green and having
+lost it is red.
+_Avoid_: reversed colors, tank mode
+
 ### Cooldown Manager
 
 **Cooldown Manager**:
