@@ -153,6 +153,28 @@ icon (Classic Era has no ferry icon). On retail, the default map marks dungeon e
   flashing over your and your pet's portrait. Floating combat text in the world stays as it is. Off by
   default.
 
+### Threat
+
+On WoW Forever, **threat badges**: a small box with your threat on an enemy in percent, its
+background in the color of your threat state: grey below the tank, yellow above the tank before you
+pull, orange once you've pulled with someone close, red while you hold aggro securely. While you're
+tanking it shows your lead over the next player instead. It's the same number as the game's own
+numeric threat, and a badge only shows on an enemy you're fighting, in a group or with a pet (solo
+you always have all of it).
+
+- **Target frame:** the badge sits on top of the target's name, in a bronze border, where the game
+  puts its own numeric threat (hidden while the badge is on, back when you turn it off). On by default.
+- **Focus frame:** the same on the focus frame, for a second enemy. Off by default.
+- **Nameplates:** a badge left of the health bar on every enemy nameplate, in the level box's art,
+  so you can scan a whole pack. Not on small adds, as the game also skips them. The game's own threat
+  coloring of the health bar stays as it is. Off by default.
+- **Colors:** Normal, Tank or Automatic (the default). Tank colors turn them round: green while you hold
+  aggro securely, yellow when it's insecure, orange when you're about to take it back, red when it's
+  lost. Automatic uses them whenever the game counts you as a tank: in Defensive Stance or Bear Form,
+  or with the tank role.
+
+The badges keep up during a fight, also when the game sends no update for a small change.
+
 ### Group frames
 
 On WoW Forever, a page for the game's own raid-style party and raid frames:
@@ -580,6 +602,7 @@ The pages, in five groups:
 - **Display**
   - **Interface:** hiding the system and bag bars, frames past the screen edge, tooltips.
   - **Unit Frames:** mana in bear and cat form, portrait hit text, health bars in class color.
+  - **Threat** (on Forever): the threat badges on the target and focus frames and nameplates, and their colors.
   - **Group Frames** (on Forever): the game's buffs and tracked buffs on the group frames, hiding the raid manager.
   - **Action Bars**, **Cooldown Manager** (on Forever) and **Viewport**.
 - **Maps:** **Minimap** and **World map** (on Forever and Classic Era).

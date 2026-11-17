@@ -5,10 +5,11 @@ local _, ns = ...
 local Options = { watchers = {} }
 ns.Options = Options
 
--- Only junk selling, the vendor price and /rl (which only exists when nothing else has it) are on
--- by default. Repairs spend gold (yours or the guild's), IDs are clutter for most players, quest
--- automation decides for the player, and everything that changes the look of the interface waits
--- for the player to opt in.
+-- Only junk selling, the vendor price, /rl (which only exists when nothing else has it) and the
+-- target frame's threat badge (Forever only, where it adds a small box and hides nothing the player
+-- sees unless they turned on the game's own numeric threat) are on by default. Repairs spend gold
+-- (yours or the guild's), IDs are clutter for most players, quest automation decides for the player,
+-- and everything else that changes the look of the interface waits for the player to opt in.
 local DEFAULTS = {
     sellJunk = true,
     autoRepair = false,
@@ -87,6 +88,10 @@ local DEFAULTS = {
     classColorFocus = false,
     classColorFocusTarget = false,
     druidManaBar = false,
+    threatTarget = true, -- Forever only, on the Threat page: the threat badge on the target frame
+    threatFocus = false, -- the threat badge on the focus frame
+    threatNameplates = false, -- a threat badge on every enemy nameplate
+    threatColors = "auto", -- "normal", "tank" or "auto" (tank colors while the game counts the player as a tank)
     hidePortraitHitText = false,
     pastScreenEdge = false,
     hideRaidManager = false, -- Forever only, on the Group Frames page

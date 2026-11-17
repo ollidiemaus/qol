@@ -97,6 +97,27 @@ L.DRUID_MANA_BAR_TIP = "Shows your mana in a third bar below rage or energy whil
 L.HIDE_PORTRAIT_HIT_TEXT = "Hide portrait hit text"
 L.HIDE_PORTRAIT_HIT_TEXT_TIP = "Hides the damage and healing numbers that flash over your and your pet's portrait."
 
+-- Settings: threat page
+L.CATEGORY_THREAT = "Threat"
+L.SECTION_THREAT_BADGES = "Threat badges"
+L.THREAT_TARGET = "Target frame"
+L.THREAT_TARGET_TIP = "Shows your threat on your target in percent above its name, colored by your threat state: "
+    .. "grey below the tank, yellow above it, orange and red once you've pulled aggro. While tanking it shows your "
+    .. "lead over the next player. Only in a group or with a pet. Hides the game's own numeric threat there."
+L.THREAT_FOCUS = "Focus frame"
+L.THREAT_FOCUS_TIP = "The same badge on the focus frame, for the threat on a second enemy."
+L.THREAT_NAMEPLATES = "Nameplates"
+L.THREAT_NAMEPLATES_TIP = "A threat badge left of the health bar on every enemy nameplate you're on the threat list "
+    .. "of, so you can scan a whole pack. Not on small adds."
+L.SECTION_THREAT_COLORS = "Colors"
+L.THREAT_COLORS = "Colors"
+L.THREAT_COLORS_TIP = "Tank colors turn the colors round for tanks: green while you hold aggro securely, yellow when "
+    .. "it's insecure, orange when you're about to take it back, red when it's lost. Automatic uses them whenever the "
+    .. "game counts you as a tank: in Defensive Stance or Bear Form, or with the tank role."
+L.THREAT_COLORS_AUTO = "Automatic"
+L.THREAT_COLORS_NORMAL = "Normal"
+L.THREAT_COLORS_TANK = "Tank"
+
 -- Settings: group frames page
 L.CATEGORY_GROUP_FRAMES = "Group Frames"
 L.GAME_BUFFS = "Show the game's buffs"

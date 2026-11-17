@@ -2272,6 +2272,42 @@ local function install()
         WARRIOR = { r = 0.78, g = 0.61, b = 0.43 },
     }
 
+    --- Threat: state.threat[unit] = { isTanking, status (0-3), rawPercent, lead }, the player's place
+    -- on that enemy's threat list (none: not on it). Stubs.SetThreat changes it and fires the game's
+    -- event. state.units[unit].dead, state.classification[unit] ("normal" when not set), and the tank
+    -- state: state.tankAura (a stance or form) and state.role (UnitGroupRolesAssigned).
+    G.UnitExists = function(unit) return state.units[unit] ~= nil end
+    G.UnitIsDead = function(unit)
+        local info = state.units[unit]
+        return info ~= nil and info.dead == true
+    end
+    G.UnitClassification = function(unit) return state.classification[unit] or "normal" end
+    G.UnitDetailedThreatSituation = function(unit, mob)
+        local info = unit == "player" and state.threat[mob]
+        if not info then return nil end
+        return info.isTanking == true, info.status, info.rawPercent, info.rawPercent, 0
+    end
+    G.UnitThreatPercentageOfLead = function(unit, mob)
+        local info = unit == "player" and state.threat[mob]
+        return info and info.lead or 0
+    end
+    -- The game's colors (Blizzard's GetThreatStatusColor).
+    local THREAT_COLORS = { [0] = { 0.69, 0.69, 0.69 }, { 1, 1, 0.47 }, { 1, 0.6, 0 }, { 1, 0, 0 } }
+    G.GetThreatStatusColor = function(status)
+        local color = THREAT_COLORS[status]
+        return color[1], color[2], color[3]
+    end
+    G.UnitHasEffectivelyTankAura = function(unit) return unit == "player" and state.tankAura == true end
+    G.UnitGroupRolesAssigned = function(unit) return unit == "player" and state.role or "NONE" end
+    -- As UnitUtil.lua has it, without retail's specializations.
+    G.PlayerUtil = {
+        IsPlayerEffectivelyTank = function()
+            return G.UnitHasEffectivelyTankAura("player") or G.UnitGroupRolesAssigned("player") == "TANK"
+        end,
+    }
+    -- The nameplate (the game's base frame, its UnitFrame on it) a nameplate unit has.
+    G.C_NamePlate = { GetNamePlateForUnit = function(unit) return state.plates[unit] end }
+
     --- Unit frames (secure unit buttons), each with the health bar UnitFrame_Initialize stores in
     -- frame.healthbar. state.rawFrames maps a read-only frame (PlayerFrame) to the frame under it.
     state.healthBars, state.rawFrames = {}, {}
@@ -2281,6 +2317,21 @@ local function install()
         state.healthBars[name] = raw
         raw.bar = bar
         newUnitButton(unit, name).healthbar = bar
+    end
+    -- The target and focus frames' name background and the game's numeric threat on top of it
+    -- (TargetFrame.xml), hidden as the game keeps it unless threatShowNumeric is on.
+    for _, name in ipairs({ "TargetFrame", "FocusFrame" }) do
+        local frame = G[name]
+        local content = newRegion("Frame", frame)
+        local main, contextual = newRegion("Frame", content), newRegion("Frame", content)
+        content.TargetFrameContentMain, content.TargetFrameContentContextual = main, contextual
+        main.ReputationColor = main:CreateTexture()
+        local threat = newRegion("Frame", contextual)
+        threat:SetSize(49, 18)
+        threat:SetPoint("BOTTOM", main.ReputationColor, "TOP", 0, 0)
+        threat:Hide()
+        contextual.NumericalThreat = threat
+        frame.TargetFrameContent = content
     end
     G.PlayerFrame = newPlayerFrame(G.PlayerFrame)
     -- The Personal Resource Display's container for its class bar: that bar, once built, sits under
@@ -2485,6 +2536,7 @@ function Stubs.Reset(options)
         -- The cursor in UI units, the controller's sticks (nil: no controller) and the actions
         -- secure buttons used.
         cursorX = 500, cursorY = 400, gamepad = nil, usedActions = {},
+        threat = {}, classification = {}, plates = {}, tankAura = false, role = "NONE",
     }
     addGameSliders(state)
     for _, name in ipairs(ADDON_GLOBALS) do _G[name] = nil end
@@ -3261,14 +3313,47 @@ function Stubs.NewPooledNamePlate(index)
         self.attributes[attribute] = value
     end
     _G.CompactUnitFrame_SetUpFrame(frame, noop)
+    -- The base nameplate C_NamePlate hands out (its UnitFrame), the health bar's other key
+    -- (HealthBarsContainer.healthBar) and the level box anchored right of it
+    -- (Camelot/Blizzard_NamePlateLevelFrame.xml), 20 wide.
+    frame.plate = newRegion("Frame", nil)
+    frame.plate.UnitFrame = frame
+    local container = frame.HealthBarsContainer
+    container.healthBar = container.HealthBar
+    local level = newRegion("Frame", frame)
+    level:SetPoint("TOPLEFT", container.healthBar, "TOPRIGHT", 5, 3)
+    level:SetPoint("BOTTOMLEFT", container.healthBar, "BOTTOMRIGHT", 5, -2)
+    level:SetWidth(20)
+    level.playerLevelDiffIcon = level:CreateTexture()
+    level.playerLevelDiffIcon:SetAtlas("ui-hud-nameplates-levelindicator")
+    frame.PlayerLevelDiffFrame = level
     Stubs.SetPlateUnit(frame, "nameplate" .. index)
     return frame
 end
 
 -- The pooled plate gets another unit, as the game does in combat too, and says so.
 function Stubs.SetPlateUnit(frame, unit)
+    if frame.plate then
+        if frame.unit and state.plates[frame.unit] == frame.plate then state.plates[frame.unit] = nil end
+        state.plates[unit] = frame.plate
+    end
     frame.unit, frame.attributes.unit = unit, unit
     Stubs.Fire("NAME_PLATE_UNIT_ADDED", unit)
+end
+
+-- The pooled plate's unit goes away (out of range, dead and gone): the game says so, then takes
+-- the plate back into its pool.
+function Stubs.RemovePlate(frame)
+    local unit = frame.unit
+    Stubs.Fire("NAME_PLATE_UNIT_REMOVED", unit)
+    state.plates[unit] = nil
+    frame.unit, frame.attributes.unit = nil, nil
+end
+
+-- The player's place on an enemy's threat list (nil: off it), and the game's event for it.
+function Stubs.SetThreat(unit, info)
+    state.threat[unit] = info
+    Stubs.Fire("UNIT_THREAT_LIST_UPDATE", unit)
 end
 
 -- Forever's arena frames, loaded on demand.

@@ -26,6 +26,9 @@ read_globals = {
     "C_ClickBindings", "GetStringFromModifiers", "SHIFT_KEY_TEXT", "CTRL_KEY_TEXT", "ALT_KEY_TEXT",
     "PartyFrame", "CompactUnitFrame_SetUpFrame", "hooksecurefunc", "SecureHandlerSetFrameRef",
     "Grid2Frame", -- Grid2's frames module: its frames join click casting
+    -- Threat badges
+    "UnitDetailedThreatSituation", "UnitThreatPercentageOfLead", "GetThreatStatusColor", "PlayerUtil",
+    "UnitExists", "UnitIsDead", "UnitClassification", "C_NamePlate",
     -- Lua extensions in the WoW client
     "issecretvalue", "strsplit", "strtrim", "date",
     "GetFileIDFromPath",

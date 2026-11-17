@@ -93,7 +93,7 @@ local function listed(ns)
 end
 
 -- The list on a client without Forever's controller action bar.
-local LISTED = { "[General]", "Automation", "Chat", "Mail", "[Display]", "Interface", "Unit Frames", "Group Frames",
+local LISTED = { "[General]", "Automation", "Chat", "Mail", "[Display]", "Interface", "Unit Frames", "Threat", "Group Frames",
     "Action Bars",
     "Viewport", "[Maps]", "Minimap", "World map", "[Input]", "Ring", "Click casting", "[System]",
     "Graphics & Camera" }
@@ -201,8 +201,8 @@ describe("settings pages", function()
         Stubs.InstallSettings()
         Stubs.Login()
         T.same(listed(ns), { "[Allgemein]", "Automatisierung", "Chat", "Post", "[Darstellung]", "Oberfläche",
-            "Einheitenfenster", "Gruppenfenster", "Aktionsleisten", "Viewport", "[Karten]", "Minimap", "Weltkarte", "[Eingabe]", "Ring",
-            "Klickzauber", "[System]", "Grafik & Kamera" })
+            "Einheitenfenster", "Bedrohung", "Gruppenfenster", "Aktionsleisten", "Viewport", "[Karten]", "Minimap",
+            "Weltkarte", "[Eingabe]", "Ring", "Klickzauber", "[System]", "Grafik & Kamera" })
     end)
 
     it("lists on retail only the groups it has pages for, Maps with only the Minimap", function()
@@ -300,7 +300,7 @@ describe("settings pages", function()
         local ns = start(nil, true)
         local names = listed(ns)
         T.eq(#names, #LISTED + 3)
-        T.same({ names[16], names[17], names[18], names[19], names[20] },
+        T.same({ names[17], names[18], names[19], names[20], names[21] },
             { "Ring", "Click casting", "Controller", "Back buttons", "[System]" }, "under Input")
         T.same(headers(pages(ns).controller, "left"), { "Triggers" })
         T.same(headers(pages(ns).controller, "right"), { "Buffs", "Bars that follow the stance" })
@@ -321,7 +321,7 @@ describe("settings pages", function()
     it("adds a Cooldown Manager page on Forever, in Display after Action Bars", function()
         local ns = start(nil, true)
         local names = listed(ns)
-        T.same({ names[9], names[10], names[11] }, { "Action Bars", "Cooldown Manager", "Viewport" })
+        T.same({ names[10], names[11], names[12] }, { "Action Bars", "Cooldown Manager", "Viewport" })
         local page = pages(ns).cooldownManager
         T.same(headers(page, "left"), { "Look", "Reminders" })
         local c = control(ns, "hideCooldownManagerBorders")
@@ -550,13 +550,40 @@ describe("settings pages", function()
         local page = pages(ns).groupFrames
         T.eq(page.title, "Group Frames")
         local names = listed(ns)
-        T.same({ names[7], names[8], names[9] }, { "Unit Frames", "Group Frames", "Action Bars" }, "in Display")
+        T.same({ names[8], names[9], names[10] }, { "Threat", "Group Frames", "Action Bars" }, "in Display")
         local c, on = control(ns, "hideRaidManager")
         T.eq(on, page)
         T.eq(c.text:GetText(), "Hide the raid manager")
         T.eq(c.tooltip, ns.L.HIDE_RAID_MANAGER_TIP)
         T.truthy(ns.L.HIDE_RAID_MANAGER_TIP ~= "")
         T.eq(gameBuffsRow(ns).tooltip, ns.L.GAME_BUFFS_TIP)
+    end)
+
+    it("has the Threat page on Forever, in Display after Unit Frames, its badges and colors", function()
+        local ns = start()
+        local names = listed(ns)
+        T.same({ names[7], names[8] }, { "Unit Frames", "Threat" })
+        local page = pages(ns).threat
+        T.same(headers(page, "left"), { "Threat badges" })
+        T.same(headers(page, "right"), { "Colors" })
+        for key, default in pairs({ threatTarget = true, threatFocus = false, threatNameplates = false }) do
+            local c, on = control(ns, key)
+            T.eq(on, page, key)
+            T.eq(c.kind, "checkbox", key)
+            T.truthy(c.tooltip ~= "", key .. " has a tooltip")
+            T.eq(ns.Options:Get(key), default, key .. "'s default")
+        end
+        local colors = control(ns, "threatColors")
+        T.same(values(colors), { "auto", "normal", "tank" })
+        T.eq(ns.Options:Get("threatColors"), "auto")
+    end)
+
+    it("names the Threat page in German", function()
+        local ns = Stubs.LoadAddon({ locale = "deDE" })
+        Stubs.InstallSettings()
+        Stubs.Login()
+        loaded = ns
+        T.eq(pages(ns).threat.title, "Bedrohung")
     end)
 
     for _, client in ipairs({ "retail", "classicEra" }) do
@@ -566,6 +593,7 @@ describe("settings pages", function()
             Stubs.Login()
             T.eq(pages(ns).groupFrames, nil)
             T.eq(control(ns, "hideRaidManager"), nil)
+            T.eq(pages(ns).threat, nil, "nor the Threat page")
         end)
     end
 

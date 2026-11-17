@@ -80,6 +80,21 @@ local function buildUnitFrames(page)
     page:Checkbox("right", "classColorFocusTarget", L.CLASS_COLOR_FOCUS_TARGET, L.CLASS_COLOR_TIP)
 end
 
+-- Threat page: where the threat badges show on the left, their colors on the right.
+local function buildThreat(page)
+    page:Header("left", L.SECTION_THREAT_BADGES)
+    page:Checkbox("left", "threatTarget", L.THREAT_TARGET, L.THREAT_TARGET_TIP)
+    page:Checkbox("left", "threatFocus", L.THREAT_FOCUS, L.THREAT_FOCUS_TIP)
+    page:Checkbox("left", "threatNameplates", L.THREAT_NAMEPLATES, L.THREAT_NAMEPLATES_TIP)
+
+    page:Header("right", L.SECTION_THREAT_COLORS)
+    page:Dropdown("right", "threatColors", L.THREAT_COLORS, {
+        { value = "auto", label = L.THREAT_COLORS_AUTO },
+        { value = "normal", label = L.THREAT_COLORS_NORMAL },
+        { value = "tank", label = L.THREAT_COLORS_TANK },
+    }, L.THREAT_COLORS_TIP)
+end
+
 -- Chat page: the chat window on the left, the chat commands on the right.
 local function buildChat(page)
     page:Header("left", L.SECTION_CHAT_WINDOW)
@@ -669,6 +684,9 @@ local GROUPS = {
     { title = L.GROUP_DISPLAY, pages = {
         { key = "interface", title = L.CATEGORY_INTERFACE, build = buildInterface },
         { key = "unitFrames", title = L.CATEGORY_UNIT_FRAMES, build = buildUnitFrames },
+        -- Only on Forever: threat is secret on retail, and Classic Era's frames differ.
+        { key = "threat", title = L.CATEGORY_THREAT, build = buildThreat,
+            available = function() return ns.Threat.IsAvailable() end },
         -- Only on Forever.
         { key = "groupFrames", title = L.CATEGORY_GROUP_FRAMES, build = buildGroupFrames,
             available = function() return ns.GroupFrames.IsAvailable() end },
