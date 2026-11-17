@@ -70,10 +70,6 @@ local tankColors = false
 -- How many badges show.
 local shownCount = 0
 
-local function isPlateUnit(unit)
-    return type(unit) == "string" and unit:sub(1, 9) == "nameplate"
-end
-
 local function readTank()
     local mode = Options:Get(COLORS)
     if mode == "tank" then return true end
@@ -114,6 +110,15 @@ end
 
 -- Reads the badge's unit again. Sets the text only when the shown number changes and the color
 -- only when the state or the colors do: this runs a few times a second for every badge.
+-- A nameplate badge: wide enough for its number, and at least the level box's width (read when the
+-- plate gets its unit, not on every number).
+local function fitPlateWidth(badge)
+    local width = badge.levelWidth
+    local needed = badge.text:GetStringWidth()
+    if ns.IsUsable(needed) and needed + PLATE_PADDING > width then width = needed + PLATE_PADDING end
+    badge:SetWidth(width)
+end
+
 local function update(badge)
     local value, status
     if badge.unit then value, status = threatOn(badge.unit) end
@@ -125,7 +130,7 @@ local function update(badge)
     if number ~= badge.number then
         badge.number = number
         badge.text:SetFormattedText("%d%%", number)
-        if badge.fitWidth then badge:fitWidth() end
+        if badge.isPlate then fitPlateWidth(badge) end
     end
     if status ~= badge.status or tankColors ~= badge.tank then
         badge.status, badge.tank = status, tankColors
@@ -205,15 +210,6 @@ local function newFrameBadge(unit)
     return badge
 end
 
--- Wide enough for its number, and at least the level box's width.
-local function fitPlateWidth(badge)
-    local width = badge.levelBox and badge.levelBox:GetWidth()
-    if not (ns.IsUsable(width) and width > PLATE_MIN_WIDTH) then width = PLATE_MIN_WIDTH end
-    local needed = badge.text:GetStringWidth()
-    if ns.IsUsable(needed) and needed + PLATE_PADDING > width then width = needed + PLATE_PADDING end
-    badge:SetWidth(width)
-end
-
 -- The badge on a nameplate: a child of its unit frame (so it follows the plate's scale), left of
 -- the health bar as the level box sits right of it, in the level box's art.
 local function newPlateBadge(unitFrame)
@@ -227,10 +223,26 @@ local function newPlateBadge(unitFrame)
     badge.text = badge:CreateFontString(nil, "OVERLAY", "SystemFont_NamePlateLevel")
     badge.text:SetPoint("CENTER", badge, "CENTER", 0, 0)
     badge.text:SetTextColor(1, 1, 1)
-    badge.levelBox = unitFrame.PlayerLevelDiffFrame
-    badge.fitWidth = fitPlateWidth
+    badge.isPlate = true
     badge:Hide()
     return badge
+end
+
+-- What the badge takes from the plate's level box, read when the plate gets a unit (the game sets
+-- the box up again when the nameplate size changes): its width, its frame level (above the health
+-- bar's border) and its number's font.
+local function matchLevelBox(badge, unitFrame)
+    local box = unitFrame.PlayerLevelDiffFrame
+    local width = box and box:GetWidth()
+    if not (ns.IsUsable(width) and width > PLATE_MIN_WIDTH) then width = PLATE_MIN_WIDTH end
+    badge.levelWidth = width
+    if not box then return end
+    local level = box:GetFrameLevel()
+    if ns.IsUsable(level) then badge:SetFrameLevel(level) end
+    local text = box.playerLevelDiffText
+    local file, height, flags
+    if text then file, height, flags = text:GetFont() end
+    if ns.IsUsable(file) and ns.IsUsable(height) then badge.text:SetFont(file, height, flags) end
 end
 
 local function detachPlate(unit)
@@ -248,28 +260,37 @@ local function attachPlate(unit)
     local plate = C_NamePlate.GetNamePlateForUnit(unit)
     local unitFrame = plate and plate.UnitFrame
     if not (unitFrame and unitFrame.HealthBarsContainer) then return end
-    if UnitClassification(unit) == "minus" then return end
     local badge = plateBadges[unitFrame]
+    -- A pooled plate that still reads another unit lets it go first.
+    if badge and badge.unit then detachPlate(badge.unit) end
+    if UnitClassification(unit) == "minus" then return end
     if not badge then
         badge = newPlateBadge(unitFrame)
         plateBadges[unitFrame] = badge
     end
-    -- A pooled plate that still reads another unit.
-    if badge.unit and badge.unit ~= unit then unitBadges[badge.unit] = nil end
+    matchLevelBox(badge, unitFrame)
+    badge.number = nil
     badge.unit = unit
     unitBadges[unit] = badge
     update(badge)
 end
 
+-- The threat event comes for every unit: only nameplate units have a badge in unitBadges, so one
+-- lookup skips the rest.
 local function onPlateEvent(event, unit)
-    if not isPlateUnit(unit) then return end
+    if event == "UNIT_THREAT_LIST_UPDATE" then
+        local badge = unitBadges[unit]
+        if badge then
+            update(badge)
+            updateTicker()
+        end
+        return
+    end
+    if not (type(unit) == "string" and unit:find("^nameplate")) then return end
     if event == "NAME_PLATE_UNIT_ADDED" then
         attachPlate(unit)
-    elseif event == "NAME_PLATE_UNIT_REMOVED" then
-        detachPlate(unit)
     else
-        local badge = unitBadges[unit]
-        if badge then update(badge) end
+        detachPlate(unit)
     end
     updateTicker()
 end

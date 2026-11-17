@@ -264,7 +264,8 @@ so it follows the plate's scale (Forever's nameplate size) and hides with it; th
 touches nothing of the game's. It mirrors the level box (`PlayerLevelDiffFrame`,
 `Camelot/Blizzard_NamePlateLevelFrame.xml`: right of `HealthBarsContainer.healthBar`, 5 out, 3 above
 and 2 below), drawn with the same `ui-hud-nameplates-levelindicator` atlas tinted in the threat
-color, at least as wide as the level box and wider for a long number. Plates are pooled, so the
+color, at least as wide as the level box and wider for a long number. The box's width, frame level
+and number font (which the game sets per nameplate size) are read when the plate gets its unit. Plates are pooled, so the
 badge is made once per unit frame and handed to whichever unit the plate shows on
 `NAME_PLATE_UNIT_ADDED`; `NAME_PLATE_UNIT_REMOVED` hides it. Minus mobs get none, as the game
 gives them no numeric threat.
@@ -274,8 +275,10 @@ or `UnitThreatPercentageOfLead` while tanking; no state (not on the threat list)
 nothing. A badge also needs an attackable, living unit and a group or a pet (solo the player
 always has all of it). Normal colors are `GetThreatStatusColor`'s; tank colors map state 3 to green
 and 2, 1, 0 to the game's yellow, orange and red. Automatic asks `PlayerUtil.IsPlayerEffectivelyTank`
-on the stance and form, role, group and combat events, not per update, and not on `UNIT_AURA`
-(nothing of QoL hears the player's auras while no reminder is on). Threat isn't secret on Forever
+on the stance and form, role, group, target, focus and combat events, not per update, and not on
+`UNIT_AURA` (nothing of QoL hears the player's auras while no reminder is on). So a tank aura
+that isn't a stance or form (a paladin's Righteous Fury, if Forever counts it) switches the
+colors only at the next of those events, at the latest when combat starts. Threat isn't secret on Forever
 (ADR 0008), but every value passes `ns.IsUsable` first and an unusable one hides the badge.
 
 Events: the target and focus badges hear `UNIT_THREAT_LIST_UPDATE` on a "target"/"focus" unit

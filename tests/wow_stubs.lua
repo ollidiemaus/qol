@@ -3324,8 +3324,11 @@ function Stubs.NewPooledNamePlate(index)
     level:SetPoint("TOPLEFT", container.healthBar, "TOPRIGHT", 5, 3)
     level:SetPoint("BOTTOMLEFT", container.healthBar, "BOTTOMRIGHT", 5, -2)
     level:SetWidth(20)
+    level:SetFrameLevel(50)
     level.playerLevelDiffIcon = level:CreateTexture()
     level.playerLevelDiffIcon:SetAtlas("ui-hud-nameplates-levelindicator")
+    level.playerLevelDiffText = level:CreateFontString()
+    level.playerLevelDiffText:SetFont("Fonts\\FRIZQT__.TTF", 9, "OUTLINE")
     frame.PlayerLevelDiffFrame = level
     Stubs.SetPlateUnit(frame, "nameplate" .. index)
     return frame

@@ -302,6 +302,21 @@ describe("threat badges on nameplates", function()
         T.same(badge:PointFor("TOPRIGHT"), { "TOPRIGHT", healthBar, "TOPLEFT", -5, 3 })
         T.same(badge:PointFor("BOTTOMRIGHT"), { "BOTTOMRIGHT", healthBar, "BOTTOMLEFT", -5, -2 })
         T.truthy(badge.width >= 20, "at least the level box's width")
+        T.eq(badge:GetFrameLevel(), 50, "the level box's frame level")
+        local text = parts(badge)
+        T.same({ text:GetFont() }, { "Fonts\\FRIZQT__.TTF", 9, "OUTLINE" }, "the level box's font")
+    end)
+
+    it("hides a pooled plate's badge when the plate comes back for a minus mob", function()
+        start({ threatNameplates = true })
+        enemy("nameplate1")
+        enemy("nameplate4")
+        local plate = Stubs.NewPooledNamePlate(1)
+        Stubs.SetThreat("nameplate1", { status = 1, rawPercent = 90 })
+        Stubs.state().classification.nameplate4 = "minus"
+        Stubs.state().threat.nameplate4 = { status = 1, rawPercent = 90 }
+        Stubs.SetPlateUnit(plate, "nameplate4")
+        T.eq(seen(plateBadge(plate)), nil)
     end)
 
     it("badges the plates already there when turned on", function()
