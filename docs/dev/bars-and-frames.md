@@ -246,6 +246,52 @@ rounds to nearest while `TextStatusBar` rounds up, so it can read 1% lower; a cu
 worth it. Clients without secret values keep the computed percentage and never touch those two
 globals.
 
+The threat badges (Forever only, ADR 0008) are frames of ours, none protected, so they show, move
+and change color in combat. The target and focus badges are children of the frame's
+`TargetFrameContentContextual` (above its art, hidden with the frame, at the focus frame's scale),
+the game's `NumericalThreat` size (49×18), anchored `BOTTOM` to `TargetFrameContentMain.ReputationColor`'s
+`TOP` as `TargetFrame.xml` anchors the game's: an anchor to a Blizzard region is a read. Their bronze is
+eight pieces cut from `Media/MinimapSquareBorder.tga` (corners and edges, `SetTexCoord`), around
+the game's `UI-StatusBar` background tinted in the threat color. While a frame's badge is on, the
+game's `NumericalThreat` there is parented to `ns.Hider`'s holder, and given back when it's turned
+off, through `ns.Later` (so a badge turned on mid-fight hides the game's only once combat ends;
+it only shows with the game's `threatShowNumeric`). That frame is a plain `Frame` in
+`TargetFrame.xml`, no template; the game shows and hides it in `UnitFrame_UpdateThreatIndicator`,
+which then changes nothing on screen. Nothing on it is written or hooked.
+
+A nameplate badge is a child of the plate's unit frame (`C_NamePlate.GetNamePlateForUnit(unit).UnitFrame`),
+so it follows the plate's scale (Forever's nameplate size) and hides with it; that adds a child and
+touches nothing of the game's. It mirrors the level box (`PlayerLevelDiffFrame`,
+`Camelot/Blizzard_NamePlateLevelFrame.xml`: right of `HealthBarsContainer.healthBar`, 5 out, 3 above
+and 2 below), drawn with the same `ui-hud-nameplates-levelindicator` atlas tinted in the threat
+color, at least as wide as the level box and wider for a long number. The box's width, frame level
+and number font (which the game sets per nameplate size) are read when the plate gets its unit. Plates are pooled, so the
+badge is made once per unit frame and handed to whichever unit the plate shows on
+`NAME_PLATE_UNIT_ADDED`; `NAME_PLATE_UNIT_REMOVED` hides it. Minus mobs get none, as the game
+gives them no numeric threat.
+
+The number follows `UnitFrame_UpdateThreatIndicator`: `UnitDetailedThreatSituation`'s raw percent,
+or `UnitThreatPercentageOfLead` while tanking; no state (not on the threat list) or a 0 shows
+nothing. A badge also needs an attackable, living unit and a group or a pet (solo the player
+always has all of it). Normal colors are `GetThreatStatusColor`'s; tank colors map state 3 to green
+and 2, 1, 0 to the game's yellow, orange and red. Automatic asks `PlayerUtil.IsPlayerEffectivelyTank`
+on the stance and form, role, group, target, focus and combat events, not per update, and not on
+`UNIT_AURA` (nothing of QoL hears the player's auras while no reminder is on). So a tank aura
+that isn't a stance or form (a paladin's Righteous Fury, if Forever counts it) switches the
+colors only at the next of those events, at the latest when combat starts. Threat isn't secret on Forever
+(ADR 0008), but every value passes `ns.IsUsable` first and an unusable one hides the badge.
+
+Events: the target and focus badges hear `UNIT_THREAT_LIST_UPDATE` on a "target"/"focus" unit
+listener, the player's `UNIT_THREAT_SITUATION_UPDATE` and `UNIT_PET` on a "player" one, and target,
+focus, group, role, stance and combat changes in an event group; all of it only while a badge is on.
+The nameplate badges' `UNIT_THREAT_LIST_UPDATE` and the nameplate added and removed events are on
+`ns.Events` (forty units are too many for unit listeners, as with click casting's `UNIT_FACTION`),
+in their own group, only while those badges are on; the handler skips every unit but nameplates.
+Threat events don't come for every change of the number, so in combat, while any badge shows, a
+`C_Timer.NewTicker` reads the shown badges again four times a second; it stops out of combat or
+once none shows. An update makes no garbage: the text is set only when the rounded number changes,
+the color only when the state or the colors do.
+
 Every Edit Mode frame is clamped to the screen (`EditModeSystemTemplate`), and Edit Mode makes the
 clamped rectangle the frame's selection box: `EditModeSystemMixin:UpdateClampOffsets` sets the clamp
 insets from the frame's edges to its `Selection`'s. That box takes in the empty space around the

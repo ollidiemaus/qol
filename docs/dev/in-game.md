@@ -24,6 +24,12 @@ Things only the real client can confirm:
   summoning a pet, and no "tainted by" error shows up in combat afterwards.
 - Hiding the system bar leaves the main action bar where it was (on Forever it is anchored to the
   micro menu), and the micro menu still shows on the vehicle bar.
+- Threat badges, in a dungeon group: the target badge sits on the name background where the game's
+  numeric threat goes (also on the small focus frame), the bronze border looks like Forever's and
+  the number fits; with `threatShowNumeric` on, only ours shows, and the game's comes back once the
+  toggle is off. The nameplate badge mirrors the level box left of the health bar at every nameplate
+  size, and a "100%" fits. Tank colors switch with Defensive Stance or Bear Form. No "tainted by" or
+  blocked action error in combat, and no frame rate drop in a big pull with nameplate badges on.
 - Hide portrait hit text: no numbers or Dodge/Parry over the player's and the pet's portrait in
   combat, also in a vehicle; unticked, they come back at once, and no "tainted by" error shows up.
 - Sort on open, with keyboard and mouse and in the controller interface: real items move into place

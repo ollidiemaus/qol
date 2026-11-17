@@ -105,9 +105,10 @@ Forever beta. So:
   never freed.
   `listener:On(event, handler)` skips an unknown event like `ns.Events:On` (one handler per event,
   a second `On` replaces it; handlers get `(event, ...)`), and `listener:Off(event)` unregisters it,
-  for an event that only matters while something shows. The one exception is click casting's
-  `UNIT_FACTION`, for any of 40 nameplate units: it stays on `ns.Events:On`, only while click casting
-  is on, and the handler checks the unit.
+  for an event that only matters while something shows. The exceptions are events for any of 40
+  nameplate units: click casting's `UNIT_FACTION` and the nameplate threat badges'
+  `UNIT_THREAT_LIST_UPDATE`. They stay on `ns.Events:On`, only while that feature is on, and the
+  handler checks the unit.
 - The few calls into Blizzard code are listed here, each with why it's safe: the world map's
   `AddDataProvider` (the map's own extension point; it calls each provider in a secure call of its
   own) and `SetMapID` (only from a click on one of our own pins, like a click on a zone). Click
@@ -138,6 +139,10 @@ Forever beta. So:
   stay: the copy behind `SlashCmdList`'s metatable (nothing runs it) and
   `hash_ChatTypeInfoList["/RL"]`, which names no chat type, so `/rl` still tab-completes but does
   nothing.
+- The threat badges hide the game's numeric threat on the target and focus frames
+  (`NumericalThreat`, a plain frame) by parenting it to `ns.Hider`'s holder through `ns.Later`, and
+  anchor frames of ours to the name background and to the nameplates' health bars, which only reads
+  them (see [`dev/bars-and-frames.md`](dev/bars-and-frames.md)).
 - Controller buff tooltips: `BuffFrameTooltip:HookScript("OnShow", ...)` and `SetAlpha(0)` on it
   right there, not through `ns.Later`. `HookScript` runs after the game's own handler and replaces
   nothing; `SetAlpha` is a widget method on a tooltip nothing else uses and that isn't protected, so it
@@ -205,7 +210,7 @@ Forever beta. So:
 
 Each file holds the design notes of one part of the addon. Read the one for the area you change:
 
-- [`dev/bars-and-frames.md`](dev/bars-and-frames.md): the action bar flip, button borders, the Cooldown Manager's icon borders, reminders, class-colored health bars, the druid mana bar, frames past the screen edge, portrait hit text, the frames QoL hides, quests on Classic Era
+- [`dev/bars-and-frames.md`](dev/bars-and-frames.md): the action bar flip, button borders, the Cooldown Manager's icon borders, reminders, class-colored health bars, the druid mana bar, the threat badges, frames past the screen edge, portrait hit text, the frames QoL hides, quests on Classic Era
 - [`dev/group-frames.md`](dev/group-frames.md): the Group Frames page: tracked buffs, hiding the raid manager, the game's buffs checkbox
 - [`dev/tooltips-chat-bags-mail.md`](dev/tooltips-chat-bags-mail.md): the combat log, the vendor price line and tooltip IDs, the buff tooltips, chat class colors, faster auto loot, Sort on open, the mail bookmarks
 - [`dev/minimap.md`](dev/minimap.md): the square minimap and its border, button positions, class colors and font sizes, the FPS and ping text
