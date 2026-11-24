@@ -1472,6 +1472,8 @@ local function install()
         InputDeviceInterfaceType = { Mkb = 0, Gamepad = 1 },
         PowerType = { Mana = 0, Rage = 1, Focus = 2, Energy = 3 },
         BagIndex = { Backpack = 0 },
+        AuctionHouseNotification = { BidPlaced = 0, AuctionRemoved = 1, AuctionWon = 2, AuctionOutbid = 3,
+            AuctionSold = 4, AuctionExpired = 5 },
     }
     G.TooltipDataProcessor = {
         AddTooltipPostCall = function(tooltipType, fn)
@@ -1520,6 +1522,12 @@ local function install()
     -- the window keeps its slots.
     G.GetNumLootItems = function() return state.lootSlots end
     G.LootSlot = function(slot) table.insert(state.looted, slot) end
+    --- Sound files: each one played, { file, channel }, in order.
+    G.PlaySoundFile = function(file, channel)
+        table.insert(state.soundFiles, { file, channel })
+        return true, #state.soundFiles
+    end
+    G.ERR_AUCTION_SOLD_S = "A buyer has been found for your auction of %s."
     -- The clock: Stubs.Wait moves it on.
     G.GetTime = function() return state.now end
 
@@ -2471,7 +2479,7 @@ function Stubs.Reset(options)
         sorts = 0, combinedBags = true, bagFrames = {},
         canRepair = false, repairCost = 0, repairs = {}, money = 0,
         inGuild = false, guildCanRepair = false, guildLimit = 0, guildMoney = 0,
-        lootSlots = 0, looted = {},
+        lootSlots = 0, looted = {}, soundFiles = {},
         now = 1000, -- GetTime: seconds since the computer started
         layouts = {}, reloads = 0, errors = {},
         units = { player = { isPlayer = true, class = "MAGE", name = "Testmage" } }, realm = "TestRealm",

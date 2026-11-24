@@ -66,6 +66,14 @@ L.FASTER_AUTO_LOOT_TIP = "When the game auto loots, takes all of the loot at onc
     .. "another. Without auto loot nothing changes. Items that don't fit in your bags, that ask you to confirm "
     .. "binding them or that are up for a roll stay in the loot window."
 
+L.SECTION_AUCTION_HOUSE = "Auction house"
+L.AUCTION_SALE_SOUND = "Auction sale sound"
+L.AUCTION_SALE_SOUND_TIP = "Plays a cash register when a buyer is found for one of your auctions, wherever you are, "
+    .. "also with sound effects turned off. Several sales at once play it once."
+L.AUCTION_SALE_PREVIEW = "Preview sound"
+L.AUCTION_SALE_PLAY = "Play"
+L.AUCTION_SALE_PREVIEW_TIP = "Plays the sound once, also while the option is off."
+
 -- Settings: interface page
 L.CATEGORY_INTERFACE = "Interface"
 L.SECTION_TOOLTIPS = "Tooltips"

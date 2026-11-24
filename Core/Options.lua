@@ -20,6 +20,8 @@ local DEFAULTS = {
 
     fasterAutoLoot = false,
 
+    auctionSaleSound = false,
+
     tooltipIDs = false,
     tooltipSellPrice = true,
 

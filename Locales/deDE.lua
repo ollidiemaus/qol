@@ -64,6 +64,14 @@ L.FASTER_AUTO_LOOT_TIP = "Nimmt die ganze Beute auf einmal statt einen Gegenstan
     .. "Gegenstände, die nicht in deine Taschen passen, deren Bindung du bestätigen musst oder um die "
     .. "gewürfelt wird, bleiben im Beutefenster."
 
+L.SECTION_AUCTION_HOUSE = "Auktionshaus"
+L.AUCTION_SALE_SOUND = "Ton bei Auktionsverkauf"
+L.AUCTION_SALE_SOUND_TIP = "Spielt eine Registrierkasse ab, wenn sich für eine deiner Auktionen ein Käufer findet, "
+    .. "egal wo du bist und auch bei ausgeschalteten Soundeffekten. Mehrere Verkäufe auf einmal spielen sie einmal ab."
+L.AUCTION_SALE_PREVIEW = "Ton anhören"
+L.AUCTION_SALE_PLAY = "Abspielen"
+L.AUCTION_SALE_PREVIEW_TIP = "Spielt den Ton einmal ab, auch wenn die Option aus ist."
+
 -- Settings: interface page
 L.CATEGORY_INTERFACE = "Oberfläche"
 L.SECTION_TOOLTIPS = "Tooltips"

@@ -36,6 +36,10 @@ Things only the real client can confirm:
   when you open the bags yourself (key binding, bag bar, controller button, radial menu; separate
   bags too), a quick close and reopen gives no error, and opening the bags stays quiet. A vendor, a
   mailbox and a spell that targets an item don't sort, and the next open of your own does.
+- Auction sale sound: one real sale on Forever, away from the auctioneer, rings once as the chat line
+  comes (not confirmed yet that the client sends it there and then); winning, being outbid, an expired
+  auction and sale mail waiting at login stay silent. The preview plays after a full client restart,
+  also with sound effects off, and not with all sound off.
 - Junk selling and repairs (including guild repairs) at a merchant. Right after login a grey item
   the client hasn't loaded yet makes junk selling wait for `GET_ITEM_INFO_RECEIVED` (at most a
   second, `Merchant:SellJunk`); it then sells everything at once with the right count and value.

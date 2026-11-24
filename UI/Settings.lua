@@ -24,7 +24,8 @@ local function is(key)
     return function() return Options:Get(key) == true end
 end
 
--- Automation page: what's done for you at merchants, with your bags, at quest givers and with loot.
+-- Automation page: what's done for you at merchants, with your bags, at quest givers, with loot and
+-- when an auction sells.
 local function buildAutomation(page)
     page:Header("left", L.SECTION_MERCHANT)
     page:Checkbox("left", "sellJunk", L.SELL_JUNK, L.SELL_JUNK_TIP)
@@ -47,6 +48,11 @@ local function buildAutomation(page)
 
     page:Header("right", L.SECTION_LOOT)
     page:Checkbox("right", "fasterAutoLoot", L.FASTER_AUTO_LOOT, L.FASTER_AUTO_LOOT_TIP)
+
+    page:Header("right", L.SECTION_AUCTION_HOUSE)
+    page:Checkbox("right", "auctionSaleSound", L.AUCTION_SALE_SOUND, L.AUCTION_SALE_SOUND_TIP)
+    page:Button("right", L.AUCTION_SALE_PREVIEW, L.AUCTION_SALE_PLAY, L.AUCTION_SALE_PREVIEW_TIP,
+        ns.AuctionSaleSound.Play)
 end
 
 -- Interface page: the bars to hide and Edit Mode on the left, tooltips on the right.

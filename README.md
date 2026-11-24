@@ -37,6 +37,13 @@ Hold **Shift** while talking to an NPC to do everything yourself that time.
   (full bags, a bind-on-pickup item to confirm, a roll) stays in the loot window. Off until you turn
   it on.
 
+### Auction house
+
+- **Auction sale sound:** a short cash register when a buyer is found for one of your auctions,
+  wherever you are. Several sales within a second ring once. It's heard with sound effects turned
+  down or off, but not with all game sound off. The button below the option plays it. Off until you
+  turn it on. After an update that brings the sound, restart the game once (a `/reload` isn't enough).
+
 ### Tooltips
 
 - **IDs:** spell, item, buff and debuff, NPC, quest, currency and achievement IDs in their tooltips.
@@ -596,7 +603,7 @@ controller interface the button opens the window once you close the game's optio
 The pages, in five groups:
 
 - **General**
-  - **Automation:** junk selling, repairs, quests, faster auto loot, sorting the bags.
+  - **Automation:** junk selling, repairs, quests, faster auto loot, sorting the bags, the auction sale sound.
   - **Chat:** the chat buttons, the combat log, names in class color, `/rl`.
   - **Mail:** the bookmarks' names.
 - **Display**
