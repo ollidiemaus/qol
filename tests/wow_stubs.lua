@@ -423,10 +423,10 @@ function Stubs.CancelColor()
     picker.info.cancelFunc()
 end
 
--- A fake tooltip: records lines, has an owner and the info it is being built from (getterName and
--- getterArgs, as the game's SetX methods record them).
-function Stubs.NewTooltip(owner, info)
-    local tooltip = { lines = {}, owner = owner, info = info }
+-- Makes a table a fake tooltip: it records lines, has an owner and the info it is being built from
+-- (getterName and getterArgs, as the game's SetX methods record them).
+local function makeTooltip(tooltip, owner, info)
+    tooltip.lines, tooltip.owner, tooltip.info = {}, owner, info
     function tooltip:AddLine(text, r, g, b) self.lines[#self.lines + 1] = { left = text, color = { r, g, b } } end
     function tooltip:AddDoubleLine(left, right) self.lines[#self.lines + 1] = { left = left, right = right } end
     function tooltip:GetOwner() return self.owner end
@@ -434,14 +434,24 @@ function Stubs.NewTooltip(owner, info)
     return tooltip
 end
 
--- Builds a tooltip like the game's data processor: each data line (unless a line pre-call drops
--- it), then the post calls for the tooltip type. The game's sell price line reads
--- "Sell Price: <price>c (game)".
+function Stubs.NewTooltip(owner, info)
+    local tooltip = makeTooltip({}, owner, info)
+    function tooltip:Show() self.shown = true end
+    return tooltip
+end
+
+-- Builds a tooltip like the game's data processor: cleared, then, unless a tooltip pre-call returns
+-- true, each data line (unless a line pre-call drops it), the post calls for the tooltip type and
+-- Show(). The game's sell price line reads "Sell Price: <price>c (game)".
 function Stubs.ShowTooltip(typeName, data, tooltip)
     tooltip = tooltip or Stubs.NewTooltip()
+    tooltip.lines = {}
     tooltip.info = tooltip.info or {}
     tooltip.info.tooltipData = data
     data.type = _G.Enum.TooltipDataType[typeName]
+    for _, fn in ipairs(state.preCalls[data.type] or {}) do
+        if fn(tooltip, data) then return tooltip end
+    end
     for _, line in ipairs(data.lines or {}) do
         local dropped = false
         for _, fn in ipairs(state.linePreCalls[line.type] or {}) do
@@ -449,11 +459,14 @@ function Stubs.ShowTooltip(typeName, data, tooltip)
         end
         if not dropped and line.type == _G.Enum.TooltipDataLineType.SellPrice then
             tooltip:AddLine("Sell Price: " .. line.price .. "c (game)")
+        elseif not dropped and line.text then
+            tooltip:AddLine(line.text)
         end
     end
     for _, fn in ipairs(state.postCalls[data.type] or {}) do
         fn(tooltip, data)
     end
+    tooltip:Show()
     return tooltip
 end
 
@@ -1474,6 +1487,10 @@ local function install()
         BagIndex = { Backpack = 0 },
     }
     G.TooltipDataProcessor = {
+        AddTooltipPreCall = function(tooltipType, fn)
+            state.preCalls[tooltipType] = state.preCalls[tooltipType] or {}
+            table.insert(state.preCalls[tooltipType], fn)
+        end,
         AddTooltipPostCall = function(tooltipType, fn)
             state.postCalls[tooltipType] = state.postCalls[tooltipType] or {}
             table.insert(state.postCalls[tooltipType], fn)
@@ -1616,7 +1633,8 @@ local function install()
     G.ChatFrameToggleVoiceMuteButton = newRegion("Button", G.UIParent)
     G.TextToSpeechButtonFrame = newRegion("Frame", G.UIParent)
     -- The tooltip the controller interface shows for new buffs.
-    G.BuffFrameTooltip = newRegion("Frame", G.UIParent)
+    G.BuffFrameTooltip = makeTooltip(newRegion("GameTooltip", G.UIParent))
+    G.BuffFrameTooltip:Hide()
 
     --- The minimap as Forever builds it: the cluster with its header bar and zone text button, the
     -- container with the map, the round frame and the coordinates under the map. Since 1.60.1 the
@@ -2458,7 +2476,8 @@ function Stubs.Reset(options)
         client = options.client or "forever",
         locale = options.locale or "enUS",
         version = options.version, loadedAddons = {},
-        restricted = 0, regions = {}, timers = {}, delayed = {}, messages = {}, registry = {}, postCalls = {}, linePreCalls = {},
+        restricted = 0, regions = {}, timers = {}, delayed = {}, messages = {}, registry = {},
+        preCalls = {}, postCalls = {}, linePreCalls = {},
         unknownEvents = options.unknownEvents or {},
         combat = false,
         resting = false, mounted = false, dead = false, onTaxi = false, level = 10, maxLevel = 60,

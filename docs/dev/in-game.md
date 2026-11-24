@@ -249,12 +249,13 @@ Things only the real client can confirm:
     clicks back. A unit frame addon that joins through `ClickCastHeader` or `ClickCastFrames`, and
     Grid2's party and raid frames (clicks and keys, a raid joined in combat getting them after it).
   - No "tainted by" error in combat afterwards.
-- Hide new buff tooltips (Options > Controller), in the controller interface: gaining or refreshing a
-  buff (a food buff, a flask, a party member's buff) and a debuff shows no tooltip; selecting a buff
-  through the buff frame (the radial's Buffs) and pointing at one with the mouse still do. After the
-  game menu closes, the cursor goes to the middle and hides (these three confirmed 2026-10-11, Steam
-  Deck). Turning it off brings the pop-ups back without a reload. Right-clicking a buff away in
-  combat still works.
+- Hide new buff tooltips (Options > Controller), in the controller interface, over at least one longer
+  session (the bug was inconsistent) with the addon NoNewBuffTooltip disabled: gaining or refreshing a
+  buff (a food buff, a flask, a party member's buff) and a debuff shows no tooltip, in and out of
+  combat; selecting a buff through the buff frame (the radial's Buffs) and pointing at one with the
+  mouse still do. After the game menu closes, the cursor goes to the middle and hides. Turning it off
+  brings the pop-ups back without a reload. Right-clicking a buff away in combat still works. No
+  "tainted by" error.
 - Group Frames page (Forever): in a party with raid-style frames and in a raid, Hide the raid manager
   takes the tab away and the group frames stay where they were, also with an Edit Mode preset layout
   (which anchors them to the manager); unticking brings the tab back. Show the game's buffs agrees with

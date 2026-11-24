@@ -44,14 +44,31 @@ button without it gets the price of one with Shift held too.
 The tooltips Forever's controller interface shows for new buffs come from the buff frame
 (`BuffFrameMixin:Update` queues each aura gained or refreshed, `ShowNextAuraForTooltip` shows it
 for 4 seconds) in `BuffFrameTooltip`, which nothing else uses: pointing at a buff or selecting it
-with the controller shows `GameTooltip`. So the option makes `BuffFrameTooltip` transparent
-(`SetAlpha(0)`, again from an `OnShow` hook each time it shows), the way the game's controller
-action bar editor hides its own tooltip (`GamepadActionBarEditFrameMixin`): the tooltip still shows
-and hides as the game wants, only unseen. It first went to the hidden holder like the frames above,
-where it never showed at all; on the Steam Deck, pointing at a buff then showed no tooltip either,
-and after the game menu closed the cursor jumped to the middle as usual but stayed in sight
-(2026-10, cause not found in the UI code; both gone with the alpha, confirmed 2026-10-11). The game has a
-setting for it too, `GamepadShowAutoAuraTooltip`, which isn't in its options. It's left alone:
+with the controller shows `GameTooltip`. So the option adds a pre-call for the `UnitAura` type to the
+game's tooltip data processor, which returns true for `BuffFrameTooltip`: `ProcessInfo` then stops
+before it adds lines and shows the tooltip, on the first show and on each rebuild. Only aura
+tooltips, as the game fills this one only through `SetUnitAuraByAuraInstanceID`; go to all types only
+if a pop-up still gets through in the game. The processor can't remove a call, so it's added once, the
+first time the option is on, and looks at the option and `ns.IsControllerUI()` each time: no interface
+switch event to miss. It reads nothing from the tooltip's data, which can hold secret values. A pop-up
+already up when the option is turned on runs out (4 seconds).
+
+Two other ways were tried first:
+
+- The hidden holder, like the frames above: the tooltip never showed, but on the Steam Deck pointing
+  at a buff then showed no tooltip either, and after the game menu closed the cursor jumped to the
+  middle as usual but stayed in sight (2026-10, cause not found in the UI code). The tooltip doesn't
+  show now either, but the pre-call doesn't move or write to the frame. If this comes back, return to
+  the fade and apply it again after each rebuild.
+- The fade: `SetAlpha(0)`, again from an `OnShow` hook, as the game's controller action bar editor
+  hides its own tooltip (`GamepadActionBarEditFrameMixin`). That cured both (confirmed 2026-10-11), but
+  a pop-up still showed now and then. The likely cause, read from the UI source and not reproduced:
+  `OnShow` runs only when the tooltip goes from hidden to shown, and while it's shown,
+  `TOOLTIP_DATA_UPDATE` makes the game rebuild it and call `Show()` without `OnShow`; if the client
+  gives it its alpha back then, it appears. Also, the hook was only added if the controller interface
+  was on at login or when the switch event came.
+
+The game has a setting for it too, `GamepadShowAutoAuraTooltip`, which isn't in its options. It's left alone:
 `CVarCallbackRegistry` caches it and the buff frame reads it on every aura change, and a
 `SetCVar` from our code would fire `CVAR_UPDATE`, whose handler writes that cache without the
 `issecure()` check its reads have. If that handler runs with our taint, every later read would taint
