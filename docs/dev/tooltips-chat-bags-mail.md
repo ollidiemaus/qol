@@ -1,4 +1,4 @@
-# Combat log, tooltips, chat, loot, bags and mail
+# Combat log, tooltips, chat, loot, auction sales, bags and mail
 
 Part of the [developer notes](../DEVELOPMENT.md); their rules for touching Blizzard frames apply here.
 
@@ -68,6 +68,26 @@ the auto loot key instead, which misses Forever's controller: tapping or holding
 switches auto loot through `C_AutoLoot.SetUseAutoLootToggle`, and the event's flag has that too. The
 event can come more than once for the same loot, so loot is taken at most once in 0.3 s (Leatrix's
 throttle). While the option is off, nothing listens to `LOOT_READY` (`ns.Events:Off`).
+
+The auction sale sound only hears events: no Blizzard frame is touched or hooked and no chat filter
+installed (a filter would run our code in the chat frame's message handling), so nothing can taint.
+It listens for both ways the client can announce an auction sale:
+
+- `AUCTION_HOUSE_SHOW_FORMATTED_NOTIFICATION` and `AUCTION_HOUSE_SHOW_NOTIFICATION` with
+  `Enum.AuctionHouseNotification.AuctionSold`. Forever's, retail's and Classic Era's event routing
+  has both; its handler writes the chat line with `ChatFrameUtil.AddSystemMessage`, which sends no
+  `CHAT_MSG_SYSTEM`.
+- `CHAT_MSG_SYSTEM` matching `ERR_AUCTION_SOLD_S`, the string that handler uses, as a pattern for
+  the whole line. The string differs per client and language: `%s` or `%1$s` (German), and grammar
+  escapes the client may or may not have replaced by then (`|2 ` in French, `|1...;...;` in Classic
+  Era's Korean), so those match anything.
+
+The UI code doesn't say which a sale sends, so both stay, and the 1 s throttle makes a sale announced
+both ways ring once. Silent sales don't extend it. Both payloads go through `ns.IsUsable` first, as
+they could be secret on retail. A WoW Token sale has its own event, which nothing listens to. While
+the option is off, nothing listens at all. The preview calls `AuctionSaleSound.Play` directly, past
+the throttle. `docs/dev/auction-sale-sound.py` synthesizes `Media/AuctionSale.ogg` (numpy and
+soundfile, whose wheel brings the Vorbis encoder). The client finds a new file only when it starts.
 
 Sort on open runs `C_Container.SortBags()`, the call behind Blizzard's sort button, when the player
 opens their bags themselves. Nothing of Blizzard's is written or moved, and it stays taint-safe this way:

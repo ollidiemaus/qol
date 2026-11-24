@@ -79,6 +79,8 @@ read_globals = {
     "IsInGuild", "GuildBankFrame_LoadUI", "CanGuildBankRepair", "GetGuildBankWithdrawMoney", "GetGuildBankMoney",
     -- Loot, and the clock its throttle reads
     "GetNumLootItems", "LootSlot", "GetTime",
+    -- Auction sales
+    "PlaySoundFile", "ERR_AUCTION_SOLD_S",
     "GetAddOnMetadata", "IsAddOnLoaded", "IsMacClient", "GetBuildInfo",
     -- Namespaces
     "Enum", "C_ActionBar", "C_AddOns", "C_Container", "C_CVar", "C_EventUtils", "C_GossipInfo", "C_Item", "C_Map", "C_MerchantFrame",
