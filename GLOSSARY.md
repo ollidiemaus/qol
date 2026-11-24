@@ -122,6 +122,13 @@ The game's own bag sort, run for the player each time they open their bags thems
 on its own (at a vendor, for a spell that targets an item) and bags opened in combat aren't sorted.
 _Avoid_: auto sort, clean up
 
+### Auction house
+
+**Auction sale**:
+A buyer found for one of the player's auctions, as the game announces it to the character being
+played. Selling to a merchant, an expired auction and collecting the gold from the mail aren't.
+_Avoid_: sale (alone), sold item, auction won (that's buying), successful auction
+
 ### Click casting
 
 **Click casting**:
