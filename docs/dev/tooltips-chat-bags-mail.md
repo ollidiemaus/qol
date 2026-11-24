@@ -51,7 +51,9 @@ tooltips, as the game fills this one only through `SetUnitAuraByAuraInstanceID`;
 if a pop-up still gets through in the game. The processor can't remove a call, so it's added once, the
 first time the option is on, and looks at the option and `ns.IsControllerUI()` each time: no interface
 switch event to miss. It reads nothing from the tooltip's data, which can hold secret values. A pop-up
-already up when the option is turned on runs out (4 seconds).
+already up when the option is turned on runs out (4 seconds); if the game builds that one again
+meanwhile, it's empty until then, as `ProcessInfo` clears the lines before the pre-calls and doesn't
+hide it.
 
 Two other ways were tried first:
 

@@ -203,8 +203,9 @@ Forever beta. So:
   buttons hide, lose their `type` attribute (so their keys, saved bindings included, press nothing)
   and their override bindings, and the buff tooltips show. The game switches interfaces
   without a reload and fires `INPUT_DEVICE_INTERFACE_TRANSITION`; `ns.OnControllerUIChange` runs
-  the features' updates on it (the bar paging overrides go and come back with it too). The rings
-  aren't among them: each has a mouse key and a stick key and works in both.
+  the features' updates on it (the bar paging overrides go and come back with it too); the buff
+  tooltips need no event, as their pre-call asks for the interface each time. The rings aren't
+  among them: each has a mouse key and a stick key and works in both.
 
 ## Notes per area
 
