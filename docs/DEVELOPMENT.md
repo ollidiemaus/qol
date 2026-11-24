@@ -143,10 +143,10 @@ Forever beta. So:
   (`NumericalThreat`, a plain frame) by parenting it to `ns.Hider`'s holder through `ns.Later`, and
   anchor frames of ours to the name background and to the nameplates' health bars, which only reads
   them (see [`dev/bars-and-frames.md`](dev/bars-and-frames.md)).
-- Controller buff tooltips: `BuffFrameTooltip:HookScript("OnShow", ...)` and `SetAlpha(0)` on it
-  right there, not through `ns.Later`. `HookScript` runs after the game's own handler and replaces
-  nothing; `SetAlpha` is a widget method on a tooltip nothing else uses and that isn't protected, so it
-  works in combat, and done later the tooltip would show for a frame (see
+- Controller buff tooltips: `TooltipDataProcessor.AddTooltipPreCall` for the `UnitAura` type, added
+  once the option is on. It's the game's own API for addons, which runs the call insecurely; the call
+  compares the tooltip with `BuffFrameTooltip` and returns true to stop it. No frame is written to,
+  hooked or reparented and no tooltip data is read, so it needs no `ns.Later` and works in combat (see
   [`dev/tooltips-chat-bags-mail.md`](dev/tooltips-chat-bags-mail.md)).
 - Sort on open: `hooksecurefunc("OpenAllBags", ...)` and `hooksecurefunc("OpenAllBagsMatchingContext", ...)`,
   hooks on global functions, not on a frame's methods, which run after them, set a flag of ours and
@@ -201,10 +201,11 @@ Forever beta. So:
 - The other way round, the controller features (the back buttons, the buff tooltips, following
   bars, the trigger toggle, the Controller page) act only while the controller interface is on: with keyboard and mouse the back
   buttons hide, lose their `type` attribute (so their keys, saved bindings included, press nothing)
-  and their override bindings, and the buff tooltip keeps its alpha. The game switches interfaces
+  and their override bindings, and the buff tooltips show. The game switches interfaces
   without a reload and fires `INPUT_DEVICE_INTERFACE_TRANSITION`; `ns.OnControllerUIChange` runs
-  the features' updates on it (the bar paging overrides go and come back with it too). The rings
-  aren't among them: each has a mouse key and a stick key and works in both.
+  the features' updates on it (the bar paging overrides go and come back with it too); the buff
+  tooltips need no event, as their pre-call asks for the interface each time. The rings aren't
+  among them: each has a mouse key and a stick key and works in both.
 
 ## Notes per area
 

@@ -3,63 +3,34 @@ local Options = ns.Options
 
 -- In the controller interface the buff frame shows the tooltip of each buff or debuff the player
 -- gains or refreshes for a few seconds (BuffFrameMixin:ShowNextAuraForTooltip), in BuffFrameTooltip,
--- which nothing else uses: pointing at a buff or selecting it shows GameTooltip. With the option on
--- that tooltip is made transparent, again each time it shows, the way the game hides the tooltip of
--- its controller action bar editor (GamepadActionBarEditFrameMixin). It still shows and hides as
--- the game wants, only nothing of it is seen.
+-- which nothing else uses: pointing at a buff or selecting it shows GameTooltip. With the option on,
+-- a pre-call of the tooltip data processor stops the game before it fills and shows that tooltip,
+-- also when the game builds it again. Nothing of the frame is touched and the aura's data, which can
+-- be secret, isn't read.
 --
--- Not with the hidden holder: parented there it never showed, and on Forever pointing at a buff then
--- showed no tooltip either and the cursor stayed in sight after the game menu closed.
---
--- Only in the controller interface: with keyboard and mouse the tooltip keeps its alpha.
+-- A pop-up already up when the option is turned on runs out. With keyboard and mouse nothing is stopped.
 local BuffTooltips = {}
 ns.BuffTooltips = BuffTooltips
 
 local KEY = "hideBuffTooltips"
 
-local function isOn()
-    return Options:Get(KEY) == true and ns.IsControllerUI()
-end
+-- The processor can't remove a call: added the first time the option is on, it stays and looks at
+-- the option and the interface each time.
+local added = false
 
-local hooked = false
--- Whether we made the tooltip transparent.
-local faded = false
-
-local function fade(tooltip)
-    if tooltip:GetAlpha() > 0 then tooltip:SetAlpha(0) end
-    faded = true
-end
-
-function BuffTooltips:Apply()
-    local tooltip = BuffFrameTooltip
-    if not tooltip then return end
-    if isOn() then
-        if not hooked then
-            tooltip:HookScript("OnShow", function(shown)
-                if isOn() then fade(shown) end
-            end)
-            hooked = true
-        end
-        fade(tooltip)
-    elseif faded then
-        -- A tooltip we never faded is left completely alone.
-        tooltip:SetAlpha(1)
-        faded = false
-    end
-end
-
-local function apply()
-    BuffTooltips:Apply()
-end
-
-local function schedule()
-    ns.Later("buffTooltips", apply, true)
+local function addPreCall()
+    if added or Options:Get(KEY) ~= true then return end
+    local processor, types = TooltipDataProcessor, Enum and Enum.TooltipDataType
+    local buffTooltip = BuffFrameTooltip
+    if not (buffTooltip and processor and processor.AddTooltipPreCall and types and types.UnitAura) then return end
+    added = true
+    processor.AddTooltipPreCall(types.UnitAura, function(tooltip)
+        if tooltip ~= buffTooltip then return false end
+        return Options:Get(KEY) == true and ns.IsControllerUI()
+    end)
 end
 
 function BuffTooltips:Init()
-    Options:Watch({ KEY }, schedule)
-    ns.OnControllerUIChange(function()
-        if isOn() or faded then schedule() end
-    end)
-    if isOn() then schedule() end
+    Options:Watch({ KEY }, addPreCall)
+    addPreCall()
 end
