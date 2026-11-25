@@ -2570,7 +2570,7 @@ local ADDON_GLOBALS = {
     "GetMinimapShape", "HybridMinimap", "TimeManagerClockButton", "GameTimeFrame", "AddonCompartmentFrame",
     "ToggleCalendar", "MinimapBackdrop", "MinimapBorder", "MiniMapTracking", "MiniMapMailFrame",
     "TimeManagerClockTicker", "QoLNoAction", "ColorPickerFrame", "SettingsPanel", "GameMenuFrame",
-    "GamepadMainActionBarFrame", "BINDING_HEADER_QOL",
+    "GamepadMainActionBarFrame", "BINDING_HEADER_QOL", "CharacterFrame", "PaperDollFrame",
     "QoLRing", "QoLRingButton", "QoLRingEditor", "QoLSettings",
     "QoLTriggerToggle", "QoLTriggerToggleLT", "QoLTriggerToggleRT",
     "QoLClickCast", "QoLClickCastKeys", "QoLClickCastClicks", "QoLClickCastEditor", "ClickCastFrames", "ClickCastHeader",
@@ -2890,6 +2890,56 @@ end
 
 function Stubs.SetControllerUI(on)
     state.interfaceStyle = on and 1 or 0
+end
+
+-- The game's own switch code for the equipment set list, with its bug: one anchor and a height, the
+-- anchor on a frame Forever's character window doesn't have (so on the screen).
+local function breakEquipmentSetList()
+    local pane = _G.PaperDollFrame and _G.PaperDollFrame.EquipmentManagerPane
+    if not pane then return end
+    local controller = state.interfaceStyle == 1
+    local list, bar = pane.ScrollBox, pane.ScrollBar
+    list:ClearAllPoints()
+    list:SetPoint("TOPLEFT", nil, "TOPLEFT", 4, controller and -5 or -27)
+    list:SetHeight(controller and 352 or 331)
+    bar:ClearAllPoints()
+    bar:SetPoint("TOPLEFT", list, "TOPRIGHT", 8, controller and 0 or 17)
+    bar:SetPoint("BOTTOMLEFT", list, "BOTTOMLEFT", 8, controller and 0 or 30)
+end
+
+-- Forever's character window (hidden) with its equipment set tab, laid out as its layout file does,
+-- and broken by the game as it loads if the controller interface is on already. Call before Login.
+function Stubs.NewCharacterWindow()
+    local window = _G.CreateFrame("Frame", "CharacterFrame", _G.UIParent)
+    window:Hide()
+    window:SetScript("OnHide", function() Stubs.TriggerRegistry("CharacterFrame.Hide") end)
+    local paperDoll = _G.CreateFrame("Frame", "PaperDollFrame", window)
+    local pane = _G.CreateFrame("Frame", nil, paperDoll)
+    paperDoll.EquipmentManagerPane = pane
+    pane:SetSize(220, 460)
+    local list = _G.CreateFrame("Frame", nil, pane)
+    local bar = _G.CreateFrame("Frame", nil, pane)
+    pane.ScrollBox, pane.ScrollBar = list, bar
+    -- Anchored on both sides it has the pane's width between them; else the one set, none here.
+    function list:GetWidth()
+        if state.secretListWidth then return Stubs.SECRET end
+        local left, right = self:PointFor("TOPLEFT"), self:PointFor("BOTTOMRIGHT")
+        if left and right then return pane:GetWidth() + right[4] - left[4] end
+        return self.width
+    end
+    list:SetPoint("TOPLEFT", pane, "TOPLEFT", 5, -8)
+    list:SetPoint("BOTTOMRIGHT", pane, "BOTTOMRIGHT", -20, 105)
+    bar:SetPoint("TOPLEFT", list, "TOPRIGHT", -5, -12)
+    bar:SetPoint("BOTTOMLEFT", list, "BOTTOMRIGHT", 0, 0)
+    if state.interfaceStyle == 1 then breakEquipmentSetList() end
+    return window
+end
+
+-- The player switches interfaces: the game runs its switch code and fires the event.
+function Stubs.SwitchInterface(controller)
+    Stubs.SetControllerUI(controller)
+    breakEquipmentSetList()
+    Stubs.Fire("INPUT_DEVICE_INTERFACE_TRANSITION")
 end
 
 -- A window of the game with the controller (shown), or none with nil.
