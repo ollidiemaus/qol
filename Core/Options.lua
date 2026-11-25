@@ -28,6 +28,8 @@ local DEFAULTS = {
     hideMicroMenu = false,
     hideBagsBar = false,
     sortOnOpen = false,
+    setMarks = false,
+    setMarkCorner = "TOPRIGHT", -- one of SetMarks.CORNERS
 
     hideChatSocial = false,
     hideChatButtons = false,

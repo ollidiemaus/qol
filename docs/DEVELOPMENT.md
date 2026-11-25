@@ -153,6 +153,13 @@ Forever beta. So:
   hooks on global functions, not on a frame's methods, which run after them, set a flag of ours and
   schedule a run; and `C_Container.SortBags()` from that run, on a frame of ours (see
   [`dev/tooltips-chat-bags-mail.md`](dev/tooltips-chat-bags-mail.md)).
+- Set marks: reads of the bag frames' `Items`, of the bank panel's pool
+  (`BankPanel.itemButtonPool:EnumerateActive()`) and of the buttons' own getters (`GetBagID`, `GetID`,
+  `GetBankTabID`, `GetContainerSlotID`); `EquipmentManager_GetLocationData`, which only computes;
+  textures of ours on the buttons (`CreateTexture`, `CreateFontString`); a callback on the bank panel's
+  own registry (`BankPanel:RegisterCallback`, the mixin behind `EventRegistry`); and
+  `hooksecurefunc("ContainerFrame_GenerateFrame", ...)`, a hook on a global function that only schedules
+  a run (see [`dev/tooltips-chat-bags-mail.md`](dev/tooltips-chat-bags-mail.md)).
 - Following bars change the ID of the game's controller bar buttons, and set an attribute on them, from
   a secure snippet on a frame of ours (`HANDLE:SetID`, `HANDLE:SetAttribute`), which the game allows in
   combat; nothing is written or hooked. To catch a page flip, `SecureHandlerWrapScript` wraps those
@@ -214,7 +221,7 @@ Each file holds the design notes of one part of the addon. Read the one for the 
 
 - [`dev/bars-and-frames.md`](dev/bars-and-frames.md): the action bar flip, button borders, the Cooldown Manager's icon borders, reminders, class-colored health bars, the druid mana bar, the threat badges, frames past the screen edge, portrait hit text, the frames QoL hides, quests on Classic Era
 - [`dev/group-frames.md`](dev/group-frames.md): the Group Frames page: tracked buffs, hiding the raid manager, the game's buffs checkbox
-- [`dev/tooltips-chat-bags-mail.md`](dev/tooltips-chat-bags-mail.md): the combat log, the vendor price line and tooltip IDs, the buff tooltips, chat class colors, faster auto loot, the auction sale sound, Sort on open, the mail bookmarks
+- [`dev/tooltips-chat-bags-mail.md`](dev/tooltips-chat-bags-mail.md): the combat log, the vendor price line and tooltip IDs, the buff tooltips, chat class colors, faster auto loot, the auction sale sound, Sort on open, set marks, the mail bookmarks
 - [`dev/minimap.md`](dev/minimap.md): the square minimap and its border, button positions, class colors and font sizes, the FPS and ping text
 - [`dev/controller.md`](dev/controller.md): bar paging, the back buttons and their bindings, following bars, the trigger toggle, the Controller and Back buttons pages
 - [`dev/rings.md`](dev/rings.md): the rings: secure choice, saved data, the Ring page and its editor, the textures

@@ -64,6 +64,10 @@ the price of one, as its buttons may not say how many items a slot holds.
   arranged by hand, so it's off until you turn it on. It doesn't run in combat, and doesn't catch up
   afterwards, or when the game opens your bags: at a vendor, the bank or a mailbox, in a trade, or
   for a spell that targets an item. The keyring and bank bags don't sort either.
+- **Mark equipment set items** (not on Classic Era): every item in the game's bags and bank that
+  belongs to an equipment set shows a small copy of the set's icon, in a corner you pick (top right
+  unless you change it). An item in several sets shows the first one's, by name, with a `+`. With two
+  copies of an item, only the one in the set is marked. Off until you turn it on.
 - **Frames past the screen edge:** in Edit Mode, frames can go a little past the edge of the screen
   (30 points, more for a frame you made bigger), so their art can sit right on it. Turn off Snap to
   Elements for the last bit: it lines a frame's box up with the edge. Where you put a frame is saved
@@ -609,7 +613,7 @@ The pages, in five groups:
   - **Chat:** the chat buttons, the combat log, names in class color, `/rl`.
   - **Mail:** the bookmarks' names.
 - **Display**
-  - **Interface:** hiding the system and bag bars, frames past the screen edge, tooltips.
+  - **Interface:** hiding the system and bag bars, frames past the screen edge, tooltips, marks on equipment set items.
   - **Unit Frames:** mana in bear and cat form, portrait hit text, health bars in class color.
   - **Threat** (on Forever): the threat badges on the target and focus frames and nameplates, and their colors.
   - **Group Frames** (on Forever): the game's buffs and tracked buffs on the group frames, hiding the raid manager.

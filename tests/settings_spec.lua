@@ -907,7 +907,7 @@ describe("settings pages", function()
         T.same(headers(pages(ns).automation, "left"), { "Merchant", "Bags" })
         T.same(headers(pages(ns).automation, "right"), { "Quests", "Loot", "Auction house" })
         T.same(headers(pages(ns).interface, "left"), { "Hide", "Edit Mode" })
-        T.same(headers(pages(ns).interface, "right"), { "Tooltips" })
+        T.same(headers(pages(ns).interface, "right"), { "Tooltips", "Bags" })
         T.same(headers(pages(ns).unitFrames, "left"), { "Player frame" })
         T.same(headers(pages(ns).unitFrames, "right"), { "Health bars in class color" })
         T.same(headers(pages(ns).chat, "left"), { "Chat window" })
@@ -918,7 +918,8 @@ describe("settings pages", function()
     it("puts each option of the old Interface page on the page now named for it", function()
         local ns = start()
         for key, page in pairs({ hideMicroMenu = "interface", hideBagsBar = "interface", pastScreenEdge = "interface",
-            tooltipIDs = "interface", tooltipSellPrice = "interface", druidManaBar = "unitFrames",
+            tooltipIDs = "interface", tooltipSellPrice = "interface", setMarks = "interface",
+            setMarkCorner = "interface", druidManaBar = "unitFrames",
             hidePortraitHitText = "unitFrames", classColorPlayer = "unitFrames", classColorTarget = "unitFrames",
             classColorTargetOfTarget = "unitFrames", classColorFocus = "unitFrames",
             classColorFocusTarget = "unitFrames", sortOnOpen = "automation" }) do
@@ -939,6 +940,20 @@ describe("settings pages", function()
         T.eq(control(ns, "sortOnOpen").text:GetText(), "Sort on open")
         T.eq(control(ns, "showCombinedBagSort"), nil)
         T.eq(control(ns, "combinedBagTopLeft"), nil)
+    end)
+
+    it("offers the set marks' corner while they're on", function()
+        local ns = start()
+        local c, page = control(ns, "setMarkCorner")
+        T.eq(control(ns, "setMarks").text:GetText(), "Mark equipment set items")
+        local labels = {}
+        for _, choice in ipairs(c.choices) do labels[#labels + 1] = choice.label end
+        T.same(labels, { "Top left", "Top right", "Bottom left", "Bottom right" })
+        page:Refresh()
+        T.falsy(c.widget:IsEnabled())
+        ns.Options:Set("setMarks", true)
+        page:Refresh()
+        T.truthy(c.widget:IsEnabled())
     end)
 
     it("says what the mail bookmarks are above them, wrapped across the page", function()
