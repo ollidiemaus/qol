@@ -92,6 +92,65 @@ describe("selling junk", function()
         T.eq(#state.messages, 0)
     end)
 
+    it("keeps a grey item in an equipment set and sells the rest one by one", function()
+        local _, state = start()
+        Stubs.SetBags({
+            { bag = 0, slot = 1, itemID = 100, quality = POOR, price = 10, inSet = true },
+            { bag = 0, slot = 2, itemID = 101, quality = POOR, count = 2, price = 20 },
+            { bag = 3, slot = 7, itemID = 100, quality = POOR, price = 10 },
+        })
+        openMerchant()
+        T.eq(state.soldAll, 0)
+        T.same(state.used, { "0:2", "3:7" })
+        T.same(state.messages, { "|cff33ff99Quality of Life|r: Sold 2 junk |4item:items; for 50c." })
+    end)
+
+    it("keeps a grey item when the game doesn't say usably whether it's in a set", function()
+        local _, state = start()
+        Stubs.SetBags({
+            { bag = 0, slot = 1, itemID = 100, quality = POOR, price = 10, inSet = Stubs.SECRET },
+            { bag = 0, slot = 2, itemID = 101, quality = POOR, price = 20 },
+        })
+        openMerchant()
+        T.eq(state.soldAll, 0)
+        T.same(state.used, { "0:2" })
+    end)
+
+    it("sells nothing when the only grey items are in sets, and doesn't wait for their info", function()
+        local _, state = start()
+        Stubs.SetBags({ { bag = 0, slot = 1, itemID = 100, quality = POOR, price = 10, inSet = true } })
+        Stubs.UnloadItem(100)
+        openMerchant()
+        T.same(state.itemRequests, {})
+        T.eq(state.soldAll, 0)
+        T.same(state.used, {})
+        T.eq(#state.messages, 0)
+    end)
+
+    it("still keeps set items after waiting for another item's info", function()
+        local _, state = start()
+        Stubs.SetBags({
+            { bag = 0, slot = 1, itemID = 100, quality = POOR, price = 10, inSet = true },
+            { bag = 0, slot = 2, itemID = 101, quality = POOR, price = 20 },
+        })
+        Stubs.UnloadItem(101)
+        openMerchant()
+        Stubs.LoadItem(101)
+        T.eq(state.soldAll, 0)
+        T.same(state.used, { "0:2" })
+    end)
+
+    it("doesn't use sell-all while a set item is locked", function()
+        local _, state = start()
+        Stubs.SetBags({
+            { bag = 0, slot = 1, itemID = 100, quality = POOR, price = 10, inSet = true, isLocked = true },
+            { bag = 0, slot = 2, itemID = 101, quality = POOR, price = 20 },
+        })
+        openMerchant()
+        T.eq(state.soldAll, 0)
+        T.same(state.used, { "0:2" })
+    end)
+
     it("does nothing without junk", function()
         local _, state = start()
         Stubs.SetBags({ { bag = 0, slot = 1, itemID = 200, quality = COMMON, price = 50 } })

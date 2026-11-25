@@ -17,7 +17,7 @@ It's made for WoW Forever and also runs on retail (Midnight) and Classic Era (1.
 ### Merchant
 
 - **Sell junk automatically:** every grey item in your bags is sold when you open a merchant. The
-  chat tells you how many items went and for how much.
+  chat tells you how many items went and for how much. Items in one of your equipment sets are kept.
 - **Repair automatically:** your equipment is repaired at every merchant who can repair.
 - **Use guild funds:** repairs come out of the guild bank first, as far as your guild lets you
   withdraw. If that doesn't cover everything, your own gold pays the rest.

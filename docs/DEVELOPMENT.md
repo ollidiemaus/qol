@@ -262,7 +262,8 @@ unit, and touching a slot button while `Stubs.WithholdAuras(true)` fails, as on 
 instead: `Stubs.ShowClassicTooltip` builds one, with the game's sell price line for an item with a
 price), the spell book's skill-line calls, toys, the
 addon compartment, the combined bags, `ContainerFrameContainer`, `BankPanel`,
-`EquipmentManager_GetLocationData`, `C_Container.SortBags`, Forever's `CircleMask` atlas and controller globals and the
+`EquipmentManager_GetLocationData`, `C_Container.SortBags`,
+`C_Container.GetContainerItemEquipmentSetInfo`, Forever's `CircleMask` atlas and controller globals and the
 guild bank calls and `ToggleCalendar` are gone, the player frame's art container, the minimap's
 coordinates, its tracking button and day and night icon are `false` (a stub frame answers any
 other capitalized field with a no-op method, so a check reads them with `type(...) == "table"`),

@@ -1162,6 +1162,7 @@ local function makeClassicEra(G)
     G.GetBuildInfo = function() return "1.15.9", "70576", "Oct 21 2026", 11509 end
     G.WOW_PROJECT_ID = G.WOW_PROJECT_CLASSIC
     G.PersonalResourceDisplayFrame = nil
+    G.C_Container.GetContainerItemEquipmentSetInfo = nil
     -- Its hidden settings as /qol probe measured them (1.15.9 build 70576, 2026-10-30): the game
     -- defaults and ranges, Ground Clutter's steps, and no View Distance slider. Each starts at its
     -- game default.
@@ -1548,6 +1549,10 @@ local function install()
     G.C_Container = {
         GetContainerNumSlots = function(bag) return state.bags[bag] and state.bags[bag].size or 0 end,
         GetContainerItemInfo = function(bag, slot) return state.bags[bag] and state.bags[bag][slot] end,
+        GetContainerItemEquipmentSetInfo = function(bag, slot)
+            local item = state.bags[bag] and state.bags[bag][slot]
+            return item and item.inSet or false, ""
+        end,
         UseContainerItem = function(bag, slot) table.insert(state.used, bag .. ":" .. slot) end,
         SortBags = function() state.sorts = state.sorts + 1 end,
     }
@@ -3758,7 +3763,8 @@ function Stubs.LoadItem(itemID)
     Stubs.Fire("GET_ITEM_INFO_RECEIVED", itemID, true)
 end
 
--- The whole bag contents: items ={ { bag, slot, itemID, quality, count, price, hasNoValue } }.
+-- The whole bag contents: items ={ { bag, slot, itemID, quality, count, price, hasNoValue, inSet } }.
+-- inSet: what the game answers to whether the slot's item is in an equipment set (may be SECRET).
 function Stubs.SetBags(items)
     state.bags = {}
     for bag = 0, 5 do state.bags[bag] = { size = 16 } end
@@ -3766,6 +3772,7 @@ function Stubs.SetBags(items)
         state.bags[item.bag][item.slot] = {
             itemID = item.itemID, quality = item.quality, stackCount = item.count or 1,
             hasNoValue = item.hasNoValue or false, isLocked = item.isLocked or false,
+            inSet = item.inSet,
         }
         state.prices[item.itemID] = item.price
     end

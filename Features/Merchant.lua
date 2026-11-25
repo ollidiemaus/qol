@@ -22,29 +22,43 @@ local function sellPrice(itemID)
     return nil, true
 end
 
--- Every grey item in the bags that a merchant pays for: { bag, slot, count, value }. Second, the
--- IDs of grey items whose info isn't loaded yet, as keys (nil when there are none).
+-- Whether the item in the slot is in an equipment set, or the game doesn't say so usably. The game is
+-- asked per slot, to tell two copies of one item apart. Classic Era lacks the function.
+local function keptForSet(bag, slot)
+    if not C_Container.GetContainerItemEquipmentSetInfo then return false end
+    local inSet = C_Container.GetContainerItemEquipmentSetInfo(bag, slot)
+    return not ns.IsUsable(inSet) or inSet
+end
+
+-- Every grey item in the bags that a merchant pays for and that is in no equipment set:
+-- { bag, slot, count, value }. Second, the IDs of grey items whose info isn't loaded yet, as keys
+-- (nil when there are none). Third, whether a grey item is kept because of a set; a locked one
+-- counts too, as the lock only says that it's being moved.
 function Merchant:FindJunk()
-    local junk, unloaded = {}, nil
+    local junk, unloaded, keepsSetItem = {}, nil, false
     for bag = 0, lastBag() do
         for slot = 1, C_Container.GetContainerNumSlots(bag) or 0 do
             local info = C_Container.GetContainerItemInfo(bag, slot)
-            if info and info.quality == POOR and not info.hasNoValue and not info.isLocked and info.itemID then
-                local price, loaded = sellPrice(info.itemID)
-                if not loaded then
-                    unloaded = unloaded or {}
-                    unloaded[info.itemID] = true
-                elseif price and price > 0 then
-                    local count = info.stackCount or 1
-                    junk[#junk + 1] = { bag = bag, slot = slot, count = count, value = price * count }
+            if info and info.quality == POOR and not info.hasNoValue and info.itemID then
+                if keptForSet(bag, slot) then
+                    keepsSetItem = true
+                elseif not info.isLocked then
+                    local price, loaded = sellPrice(info.itemID)
+                    if not loaded then
+                        unloaded = unloaded or {}
+                        unloaded[info.itemID] = true
+                    elseif price and price > 0 then
+                        local count = info.stackCount or 1
+                        junk[#junk + 1] = { bag = bag, slot = slot, count = count, value = price * count }
+                    end
                 end
             end
         end
     end
-    return junk, unloaded
+    return junk, unloaded, keepsSetItem
 end
 
-local function sell(junk)
+local function sell(junk, keepsSetItem)
     if #junk == 0 then return end
 
     local total = 0
@@ -53,9 +67,11 @@ local function sell(junk)
     end
 
     -- The game's own "sell all junk" is a single request and keeps the buyback list intact. Some
-    -- merchants turn it off; then the items go one by one, like a right-click would sell them.
+    -- merchants turn it off, and it takes no exceptions, so it may not run while a set item is kept;
+    -- then the items go one by one, like a right-click would sell them.
     local frameAPI = C_MerchantFrame
-    if frameAPI and frameAPI.SellAllJunkItems and frameAPI.IsSellAllJunkEnabled and frameAPI.IsSellAllJunkEnabled() then
+    if not keepsSetItem and frameAPI and frameAPI.SellAllJunkItems
+        and frameAPI.IsSellAllJunkEnabled and frameAPI.IsSellAllJunkEnabled() then
         frameAPI.SellAllJunkItems()
     else
         for _, item in ipairs(junk) do
@@ -77,7 +93,8 @@ local onItemInfo, stopWaiting
 local function finish()
     if not unloadedIDs then return end
     stopWaiting()
-    sell((Merchant:FindJunk()))
+    local junk, _, keepsSetItem = Merchant:FindJunk()
+    sell(junk, keepsSetItem)
 end
 
 function onItemInfo(_, itemID)
@@ -94,9 +111,9 @@ end
 
 function Merchant:SellJunk()
     if unloadedIDs then return end
-    local junk, unloaded = self:FindJunk()
+    local junk, unloaded, keepsSetItem = self:FindJunk()
     if not unloaded then
-        sell(junk)
+        sell(junk, keepsSetItem)
         return
     end
     unloadedIDs = unloaded
