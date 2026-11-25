@@ -229,6 +229,9 @@ local function buildMinimap(page)
         element("minimapDayNight", L.MINIMAP_DAY_NIGHT, { position = L.MINIMAP_INSIDE_POSITION_TIP,
             offset = L.MINIMAP_OFFSET_TIP })
     end
+    if Layout.HasMail() then
+        element("minimapMail", L.MINIMAP_MAIL, { position = L.MINIMAP_MAIL_TIP, offset = L.MINIMAP_OFFSET_TIP })
+    end
     if Layout.HasCalendar() then
         element("minimapCalendar", L.MINIMAP_CALENDAR, { position = L.MINIMAP_CALENDAR_TIP })
     end

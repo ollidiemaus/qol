@@ -61,6 +61,7 @@ settings are open, and closing our window is a plain `Hide` of a frame of ours.
     there. The Player frame section keeps the portrait hit text.
   - The calendar button (`ToggleCalendar`): Classic Era has no calendar; its `GameTimeFrame` is the
     time of day icon, which the day and night row moves instead (see the minimap notes).
+  - The mail icon's line (`MinimapCluster.IndicatorFrame` or Classic Era's `MiniMapMailFrame`).
   - The addon compartment's place (`AddonCompartmentFrame`) and the coordinates' line
     (`MinimapCluster.MinimapContainer.PlayerCoords`): Classic Era's minimap has neither.
   - Guild bank repair (`GuildBankFrame_LoadUI`, which Blizzard_GuildBankUI's bootstrap defines at

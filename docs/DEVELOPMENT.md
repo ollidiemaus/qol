@@ -89,7 +89,8 @@ Forever beta. So:
   too, and in Forever's controller interface also away from the game's windows that have the
   controller (see [`dev/settings-window.md`](dev/settings-window.md)).
 - Hide frames by parenting them to `ns.Hider`'s holder instead of `Hide()` plus hooks; Blizzard's
-  own `Show()` calls then change nothing.
+  own `Show()` calls then change nothing. One exception: Retail's mail icon, made
+  invisible in place (see [`dev/minimap.md`](dev/minimap.md)).
 - Compare or compute with game values only after `ns.IsUsable(value)` (nil and secret values fail).
 - Register events through `ns.Events:On`; it skips events the client doesn't know.
   `ns.Events:Off(event, handler)` takes a handler away again and unregisters the event once none is

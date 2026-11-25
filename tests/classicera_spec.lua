@@ -158,6 +158,7 @@ describe("QoL on Classic Era", function()
         T.truthy(keys.autoRepair)
         T.truthy(keys.minimapDayNight, "its time of day icon")
         T.truthy(keys.minimapTracking)
+        T.truthy(keys.minimapMail, "its mail button")
         local headers = {}
         for _, header in ipairs(ns.SettingsPanel.pages.automation.headers) do headers[header.text] = true end
         for _, header in ipairs(ns.SettingsPanel.pages.unitFrames.headers) do headers[header.text] = true end
