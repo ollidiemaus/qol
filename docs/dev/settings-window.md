@@ -69,7 +69,8 @@ settings are open, and closing our window is a plain `Hide` of a frame of ours.
     startup on Forever and retail): Classic Era has no guild banks; its merchant frame names
     `CanGuildBankRepair` only in a button that is never shown. `Merchant:Repair` asks the same check
     before the guild bank calls, so a guild repair saved on another client pays with own gold
-    there. Junk selling and own gold repairs work as everywhere.
+    there. Own gold repairs work as everywhere, and so does junk selling, but for the equipment
+    sets it keeps elsewhere (Classic Era lacks `C_Container.GetContainerItemEquipmentSetInfo`).
   - The controller's buff tooltips and equipment sets are on the Controller page and the back buttons on their own, which only Forever
     (with `GamepadMainActionBarFrame`) lists.
 - The list is drawn as the game's (`Blizzard_CategoryList`) but with frames of ours, not its

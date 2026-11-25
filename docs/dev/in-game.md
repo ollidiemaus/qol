@@ -48,6 +48,8 @@ Things only the real client can confirm:
 - Junk selling and repairs (including guild repairs) at a merchant. Right after login a grey item
   the client hasn't loaded yet makes junk selling wait for `GET_ITEM_INFO_RECEIVED` (at most a
   second, `Merchant:SellJunk`); it then sells everything at once with the right count and value.
+- A grey item in an equipment set stays in the bags when junk is sold, and a second copy of it outside
+  the set is sold (the game's sell-all isn't used then; the items go one by one).
 - The vendor price of a stack in your bags shows the price of one, and `Vendor x<count>` with the
   stack total while Shift is held (pressing Shift while pointing flips it within a moment), with
   and without a merchant open, and only once (the game's own sell price line is replaced, not
