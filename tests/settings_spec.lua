@@ -911,7 +911,7 @@ describe("settings pages", function()
         T.same(headers(pages(ns).automation, "left"), { "Merchant", "Bags" })
         T.same(headers(pages(ns).automation, "right"), { "Quests", "Loot", "Auction house" })
         T.same(headers(pages(ns).interface, "left"), { "Hide", "Edit Mode" })
-        T.same(headers(pages(ns).interface, "right"), { "Tooltips" })
+        T.same(headers(pages(ns).interface, "right"), { "Tooltips", "Bags" })
         T.same(headers(pages(ns).unitFrames, "left"), { "Player frame" })
         T.same(headers(pages(ns).unitFrames, "right"), { "Health bars in class color" })
         T.same(headers(pages(ns).chat, "left"), { "Chat window" })
@@ -922,7 +922,8 @@ describe("settings pages", function()
     it("puts each option of the old Interface page on the page now named for it", function()
         local ns = start()
         for key, page in pairs({ hideMicroMenu = "interface", hideBagsBar = "interface", pastScreenEdge = "interface",
-            tooltipIDs = "interface", tooltipSellPrice = "interface", druidManaBar = "unitFrames",
+            tooltipIDs = "interface", tooltipSellPrice = "interface", setMarks = "interface",
+            setMarkCorner = "interface", druidManaBar = "unitFrames",
             hidePortraitHitText = "unitFrames", classColorPlayer = "unitFrames", classColorTarget = "unitFrames",
             classColorTargetOfTarget = "unitFrames", classColorFocus = "unitFrames",
             classColorFocusTarget = "unitFrames", sortOnOpen = "automation" }) do
@@ -943,6 +944,20 @@ describe("settings pages", function()
         T.eq(control(ns, "sortOnOpen").text:GetText(), "Sort on open")
         T.eq(control(ns, "showCombinedBagSort"), nil)
         T.eq(control(ns, "combinedBagTopLeft"), nil)
+    end)
+
+    it("offers the set marks' corner while they're on", function()
+        local ns = start()
+        local c, page = control(ns, "setMarkCorner")
+        T.eq(control(ns, "setMarks").text:GetText(), "Mark equipment set items")
+        local labels = {}
+        for _, choice in ipairs(c.choices) do labels[#labels + 1] = choice.label end
+        T.same(labels, { "Top left", "Top right", "Bottom left", "Bottom right" })
+        page:Refresh()
+        T.falsy(c.widget:IsEnabled())
+        ns.Options:Set("setMarks", true)
+        page:Refresh()
+        T.truthy(c.widget:IsEnabled())
     end)
 
     it("says what the mail bookmarks are above them, wrapped across the page", function()
@@ -1252,7 +1267,7 @@ describe("settings pages", function()
         T.eq(page.note.text, "Click a box, then press the key. A right-click clears a key.")
     end)
 
-    it("offers the inside of the map only to the tracking button and the day and night icon", function()
+    it("offers the inside of the map only to the tracking button and the day and night and mail icons", function()
         local ns = start()
         local outside = { "default", "topLeft", "top", "topRight", "bottomLeft", "bottom", "bottomRight", "hidden" }
         local inside = { "default", "topLeft", "top", "topRight", "bottomLeft", "bottom", "bottomRight",
@@ -1262,6 +1277,8 @@ describe("settings pages", function()
         T.same(values(control(ns, "minimapCompartment")), outside)
         T.same(values(control(ns, "minimapTracking")), inside)
         T.same(values(control(ns, "minimapDayNight")), inside)
+        T.same(values(control(ns, "minimapMail")), inside)
+        T.truthy(control(ns, "minimapMail").tooltip:find("unread mail", 1, true))
         T.eq(control(ns, "minimapTracking").choices[9].label, "Inside, top center")
         T.eq(control(ns, "minimapClock").choices[2].label, "Above, left")
     end)
@@ -1282,6 +1299,7 @@ describe("settings pages", function()
             "Addon compartment | dropdown | - | - | number | number",
             "Tracking button | dropdown | - | - | number | number",
             "Day and night icon | dropdown | - | - | number | number",
+            "Mail icon | dropdown | - | - | number | number",
             "Calendar button | dropdown | - | - | - | -",
         })
         local border = -control(ns, "squareMinimapBorder").row:PointFor("TOPLEFT")[5]
@@ -1427,6 +1445,7 @@ describe("settings pages", function()
             { "minimapCompartment", "default" },
             { "minimapTracking", "default" },
             { "minimapDayNight", "default" },
+            { "minimapMail", "default" },
             { "minimapCoords", "default" },
         }) do
             local key = case[1]
@@ -1514,6 +1533,15 @@ describe("settings pages", function()
         MinimapCluster.DielFrame = false -- this client has none
         Stubs.Login()
         T.eq(control(ns, "minimapDayNight"), nil)
+    end)
+
+    it("offers the mail icon only where the game has one", function()
+        local ns = Stubs.LoadAddon()
+        Stubs.InstallSettings()
+        MinimapCluster.IndicatorFrame = false -- this client has none
+        Stubs.Login()
+        T.eq(control(ns, "minimapMail"), nil)
+        T.eq(control(ns, "minimapMailOffsetX"), nil)
     end)
 
     it("puts what's marked on the world map in rows across its page", function()

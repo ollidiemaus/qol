@@ -64,6 +64,10 @@ the price of one, as its buttons may not say how many items a slot holds.
   arranged by hand, so it's off until you turn it on. It doesn't run in combat, and doesn't catch up
   afterwards, or when the game opens your bags: at a vendor, the bank or a mailbox, in a trade, or
   for a spell that targets an item. The keyring and bank bags don't sort either.
+- **Mark equipment set items** (not on Classic Era): every item in the game's bags and bank that
+  belongs to an equipment set shows a small copy of the set's icon, in a corner you pick (top right
+  unless you change it). An item in several sets shows the first one's, by name, with a `+`. With two
+  copies of an item, only the one in the set is marked. Off until you turn it on.
 - **Frames past the screen edge:** in Edit Mode, frames can go a little past the edge of the screen
   (30 points, more for a frame you made bigger), so their art can sit right on it. Turn off Snap to
   Elements for the last bit: it lines a frame's box up with the edge. Where you put a frame is saved
@@ -103,19 +107,21 @@ the price of one, as its buttons may not say how many items a slot holds.
 - **Font size of the zone text, the clock, the coordinates and FPS and ping,** from 9 to 24 or the
   game's own. With a larger font the clock's button grows with it, and the rows above and below the
   minimap make room.
-- **Clock, addon compartment, tracking button and the day and night icon** (Forever's, or the
-  time of day icon on Classic Era): each can move to a row above or below the minimap (left,
-  center or right), or be hidden. The tracking button and the day and night icon can also sit
-  inside the map: in a corner, or in the middle of its top or bottom edge. Things in the same spot
+- **Clock, addon compartment, tracking button, the day and night icon** (Forever's, or the
+  time of day icon on Classic Era) **and the mail icon:** each can move to a row above or below the minimap (left,
+  center or right), or be hidden. The tracking button, the day and night icon and the mail icon can
+  also sit inside the map: in a corner, or in the middle of its top or bottom edge. Things in the same spot
   sit side by side, the zone text taking the room the others leave; with something below the
   minimap, the coordinates move under it. On Classic
-  Era the tracking button shows only while you track something, as the game has it.
+  Era the tracking button shows only while you track something, as the game has it. The mail icon
+  shows only while you have unread mail; its place is kept without mail. On Retail the crafting
+  orders icon moves along with it, and stays when you hide the mail icon.
 - **FPS and ping** in a row above or below the minimap (left, center or right), like the clock,
   updated every second, also in class color and at another font size. The ping is the higher of
   your home and world latency. **Show** picks FPS and ping, FPS or Ping; the text takes only the
   room it needs.
 - **Offset:** the zone text, the clock, FPS and ping, the addon compartment, the tracking button, the
-  day and night icon and the coordinates can each shift a little from their spot, up to 30 either
+  day and night icon, the mail icon and the coordinates can each shift a little from their spot, up to 30 either
   way across and up or down, by the arrows or a typed number. An offset works at the game's own
   place, in a row and inside the map, stays when you change the Position, and moves only that
   element. At its default spot the zone text moves just its name, so the clock and the buttons
@@ -613,7 +619,7 @@ The pages, in five groups:
   - **Chat:** the chat buttons, the combat log, names in class color, `/rl`.
   - **Mail:** the bookmarks' names.
 - **Display**
-  - **Interface:** hiding the system and bag bars, frames past the screen edge, tooltips.
+  - **Interface:** hiding the system and bag bars, frames past the screen edge, tooltips, marks on equipment set items.
   - **Unit Frames:** mana in bear and cat form, portrait hit text, health bars in class color.
   - **Threat** (on Forever): the threat badges on the target and focus frames and nameplates, and their colors.
   - **Group Frames** (on Forever): the game's buffs and tracked buffs on the group frames, hiding the raid manager.

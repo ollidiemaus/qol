@@ -36,6 +36,11 @@ Things only the real client can confirm:
   when you open the bags yourself (key binding, bag bar, controller button, radial menu; separate
   bags too), a quick close and reopen gives no error, and opening the bags stays quiet. A vendor, a
   mailbox and a spell that targets an item don't sort, and the next open of your own does.
+- Set marks: the bank and the account bank mark set items (the game reports their slots, with the bag
+  numbers the bank's buttons use); of two copies of an item only the set's own is marked; a mark dims
+  with its item in a search; it can be read in both interfaces, the `+` too. Marks are right after
+  sorting, turning bank pages (retail: tabs), collapsing a bag in the controller interface and editing
+  sets. Using, moving and selling marked items, in and out of combat, gives no taint error.
 - Auction sale sound: one real sale on Forever, away from the auctioneer, rings once as the chat line
   comes (not confirmed yet that the client sends it there and then); winning, being outbid, an expired
   auction and sale mail waiting at login stay silent. The preview plays after a full client restart,
@@ -104,6 +109,10 @@ Things only the real client can confirm:
 - The tracking button and the day and night icon inside the map: drawn above it, clear of the round
   frame and the bronze border in every corner, clickable there, and the mail icon (anchored to the
   tracking button by the game) still readable.
+- The mail icon with unread mail: at every Position, centered well enough in its box (32×24 on
+  Forever), clear of the round frame inside the map, with its tooltip; mail arriving and read while it
+  is moved or hidden; Classic Era's button in a row and inside its smaller map; on Retail Hidden
+  leaves the crafting orders icon.
 - Bar paging off: Shift+1 to Shift+6 press the action buttons (a `[mod:shift]` macro sees Shift),
   also with a bar addon that binds the number keys itself; turning it off pages again, and changing
   a key binding in combat is picked up after combat.

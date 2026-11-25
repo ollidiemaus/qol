@@ -47,6 +47,7 @@ Features\BuffTooltips.lua
 Features\CombatLog.lua
 Features\ChatClassColors.lua
 Features\SortOnOpen.lua
+Features\SetMarks.lua
 Features\MailBookmarks.lua
 Features\ClassHealthBars.lua
 Features\DruidManaBar.lua

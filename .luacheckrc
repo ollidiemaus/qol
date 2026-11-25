@@ -38,10 +38,11 @@ read_globals = {
     "ColorPickerFrame",
     "SETTINGS_DEFAULTS", "RESET", "NORMAL_FONT_COLOR", "GRAY_FONT_COLOR", "HIGHLIGHT_FONT_COLOR", "PlaySound", "SOUNDKIT",
     "GridLayoutUtil", "AnchorUtil", "TooltipDataProcessor",
-    "MicroMenuContainer", "NUM_TOTAL_BAG_FRAMES",
+    "MicroMenuContainer", "NUM_TOTAL_BAG_FRAMES", "ContainerFrameContainer", "ContainerFrameCombinedBags",
+    "ContainerFrame_GenerateFrame", "BankPanel", "EquipmentManager_GetLocationData",
     "BagsBar", "QuickJoinToastButton", "CompactRaidFrameManager", "MinimapCluster", "Minimap", "MinimapZoneText", "MinimapCompassTexture",
     "MinimapCompassTextureUnderlay", "HybridMinimap", "TimeManagerClockButton",
-    "TimeManagerClockTicker", "GameTimeFrame", "AddonCompartmentFrame", "ToggleCalendar", "MiniMapTracking", "MinimapBorder", "WorldMapFrame", "MapCanvasDataProviderMixin", "CreateFromMixins",
+    "TimeManagerClockTicker", "GameTimeFrame", "AddonCompartmentFrame", "ToggleCalendar", "MiniMapTracking", "MiniMapMailFrame", "MinimapBorder", "WorldMapFrame", "MapCanvasDataProviderMixin", "CreateFromMixins",
     "GameTooltip", "SELL_PRICE",
     "ChatFrame2", "ChatFrame2Tab", "ChatFrameMenuButton", "ChatFrameChannelButton", "ChatFrameToggleVoiceDeafenButton",
     "ChatFrameToggleVoiceMuteButton", "TextToSpeechButtonFrame", "BuffFrameTooltip", "CharacterFrame", "PaperDollFrame",
@@ -83,7 +84,7 @@ read_globals = {
     "PlaySoundFile", "ERR_AUCTION_SOLD_S",
     "GetAddOnMetadata", "IsAddOnLoaded", "IsMacClient", "GetBuildInfo",
     -- Namespaces
-    "Enum", "C_ActionBar", "C_AddOns", "C_Container", "C_CVar", "C_EventUtils", "C_GossipInfo", "C_Item", "C_Map", "C_MerchantFrame",
+    "Enum", "C_ActionBar", "C_AddOns", "C_Container", "C_CVar", "C_EquipmentSet", "C_EventUtils", "C_GossipInfo", "C_Item", "C_Map", "C_MerchantFrame",
     "C_InputInterfaceStyle", "C_KeyBindings", "C_Texture", "C_Timer", "C_XMLUtil",
     "C_GamePad", "C_TooltipInfo", "C_Spell", "C_UnitAuras", "C_Secrets", "C_SpellBook", "C_MountJournal", "C_ToyBox",
 }

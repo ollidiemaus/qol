@@ -55,7 +55,7 @@ local function buildAutomation(page)
         ns.AuctionSaleSound.Play)
 end
 
--- Interface page: the bars to hide and Edit Mode on the left, tooltips on the right.
+-- Interface page: the bars to hide and Edit Mode on the left, tooltips and set marks on the right.
 local function buildInterface(page)
     page:Header("left", L.SECTION_HIDE)
     page:Checkbox("left", "hideMicroMenu", L.HIDE_MICRO_MENU, L.HIDE_MICRO_MENU_TIP)
@@ -67,6 +67,18 @@ local function buildInterface(page)
     page:Header("right", L.SECTION_TOOLTIPS)
     page:Checkbox("right", "tooltipIDs", L.TOOLTIP_IDS, L.TOOLTIP_IDS_TIP)
     page:Checkbox("right", "tooltipSellPrice", L.TOOLTIP_SELL_PRICE, L.TOOLTIP_SELL_PRICE_TIP)
+
+    -- Not on Classic Era.
+    if ns.SetMarks.IsAvailable() then
+        page:Header("right", L.SECTION_BAGS)
+        page:Checkbox("right", "setMarks", L.SET_MARKS, L.SET_MARKS_TIP)
+        local corners = {}
+        for _, corner in ipairs(ns.SetMarks.CORNERS) do
+            corners[#corners + 1] = { value = corner, label = L["SET_MARK_CORNER_" .. corner] }
+        end
+        page:Dropdown("right", "setMarkCorner", L.SET_MARK_CORNER, corners, L.SET_MARK_CORNER_TIP,
+            { indent = true, enabled = is("setMarks") })
+    end
 end
 
 -- Unit Frames page: the player frame on the left, the health bars in class color on the right.
@@ -228,6 +240,9 @@ local function buildMinimap(page)
     if Layout.HasDayNight() then
         element("minimapDayNight", L.MINIMAP_DAY_NIGHT, { position = L.MINIMAP_INSIDE_POSITION_TIP,
             offset = L.MINIMAP_OFFSET_TIP })
+    end
+    if Layout.HasMail() then
+        element("minimapMail", L.MINIMAP_MAIL, { position = L.MINIMAP_MAIL_TIP, offset = L.MINIMAP_OFFSET_TIP })
     end
     if Layout.HasCalendar() then
         element("minimapCalendar", L.MINIMAP_CALENDAR, { position = L.MINIMAP_CALENDAR_TIP })

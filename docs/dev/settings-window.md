@@ -54,13 +54,15 @@ settings are open, and closing our window is a plain `Hide` of a frame of ours.
 - On Classic Era the pages offer only what changes something there. Each check asks the client for
   the thing the option works on, not which client it is: a row whose frame or system is missing is
   left out, and a section whose rows all are with it.
-  - Sort on open (`C_Container.SortBags`): Classic Era's client doesn't have it, and the Bags section
-    goes with its one row.
+  - Sort on open (`C_Container.SortBags`): Classic Era's client doesn't have it.
+  - Set marks (`C_EquipmentSet`, `EquipmentManager_GetLocationData`, the bag frames'
+    `ContainerFrameContainer`): Classic Era has no equipment manager. Neither Bags section has a row then.
   - Mana in bear and cat form (`PlayerFrame.PlayerFrameContainer`): Classic Era's player frame is the
     old one, without the art container the bar is drawn into; QoL doesn't draw a bar of its own
     there. The Player frame section keeps the portrait hit text.
   - The calendar button (`ToggleCalendar`): Classic Era has no calendar; its `GameTimeFrame` is the
     time of day icon, which the day and night row moves instead (see the minimap notes).
+  - The mail icon's line (`MinimapCluster.IndicatorFrame` or Classic Era's `MiniMapMailFrame`).
   - The addon compartment's place (`AddonCompartmentFrame`) and the coordinates' line
     (`MinimapCluster.MinimapContainer.PlayerCoords`): Classic Era's minimap has neither.
   - Guild bank repair (`GuildBankFrame_LoadUI`, which Blizzard_GuildBankUI's bootstrap defines at

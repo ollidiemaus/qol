@@ -24,10 +24,10 @@ goes to the hidden holder when it moves, or at its default spot when the player 
 Forever 1.60.1 the separate `MinimapCluster.BorderTop`, since then the button's own `StateTexture`
 and `AddTexture` (the mouse-over glow, which the game shows with `SetShown` on every button state
 change, so `Hide()` wouldn't hold). Only the textures are reparented; the button is untouched. The clock,
-addon compartment, tracking button and day and night icon are moved the same way, into a row above
+addon compartment, tracking button, day and night icon and mail icon are moved the same way, into a row above
 or below a frame of ours around what is drawn of the minimap (the square and its border, or the
-round frame with its north triangle). The tracking button and the day and night icon can also go
-inside the map, anchored to its center: on a round map along the diagonal, clear of the round frame
+round frame with its north triangle). The tracking button, the day and night icon and the mail icon can
+also go inside the map, anchored to its center: on a round map along the diagonal, clear of the round frame
 (which covers about 7% of the radius). Inside the map they're raised above its frame level (the
 cluster's buttons sit below the map) and get their level back when they leave. The zone text takes
 the same position values but only the middle ones (`centerOnly`: a long name has no room at the
@@ -38,7 +38,7 @@ covers) at the spot's outer edge. At the very top of Forever's round map (198 ac
 about 54 units, too narrow for most names, so where it is less than 60% of the map's width
 (`ROUND_ZONE_WIDTH`) the spot moves in until the circle is that wide, about 20 units below the
 round frame; the other elements of the spot move with it. Hidden sends the button to the hidden
-holder: on Forever the clock, the calendar, the mail indicator and the instance difficulty are
+holder: on Forever the clock, the calendar, the mail icon and the instance difficulty are
 children of `MinimapCluster`, only anchored to the button (`GameTimeFrameTemplate.xml`,
 `MinimapIndicatorFrameTemplate.xml`, `Blizzard_TimeManager.xml`), so they keep showing. The header
 bar goes whenever the zone text isn't at its default spot. The coordinates and the calendar button
@@ -96,6 +96,23 @@ through the clock's code too: the frame grows both ways with a larger font, and 
 (`WhiteNormalNumberFont`) back. The sizes are applied before the positions, so the frame is made there
 when it gets a row and has its size before it's first placed.
 
+## The mail icon
+
+It shows only while there is unread mail, and the settings don't change that. What the layout moves:
+- Forever and Retail: the cluster's `IndicatorFrame`, not its `MailFrame`. On every
+  `UPDATE_PENDING_MAIL` the mail frame calls `Layout()` on its parent, the box, which anchors the mail
+  frame inside it again. The box's size is fixed (`fixedWidth`, `fixedHeight`: 32×24 on Forever, 20×15
+  on Retail), so its room doesn't depend on mail.
+- Classic Era: the global `MiniMapMailFrame` (33×33, a child of `Minimap`).
+
+Hidden sends that frame to the hidden holder, except on Retail (the box has a `CraftingOrderFrame`),
+where the crafting orders icon in the same box has to stay. There only the mail frame goes: alpha 0
+and no mouse (the element's `hiddenPart`). It can't be reparented, as its parent has to have `Layout()`,
+which the holder hasn't. The game sets neither the frame's alpha nor its mouse; its animations fade
+textures in it. The box is at the game's own place meanwhile. With both icons showing, Retail's may
+overlap a neighbor, as the box's width stays 20. No mail event, hook or timer is involved. The
+element is last in `ELEMENTS`, so its empty place is at the inner side of its spot.
+
 ## Offsets
 
 An offset is a shift of one element in screen units (`x / GetEffectiveScale()`), so a scaled minimap
@@ -109,7 +126,7 @@ layout). With an offset of 0 a frame we don't hold isn't touched at all, and the
 towards `layoutActive` only when they aren't 0, as they're compared with their defaults.
 
 Some elements hold other frames up, so there the offset moves what's inside the frame (`parts`):
-- The zone text's button: on Forever the clock, the calendar, the mail indicator (and through the
+- The zone text's button: on Forever the clock, the calendar, the mail icon (and through the
   calendar the compartment) and the instance difficulty hang on it (`GameTimeFrameTemplate.xml`,
   `MinimapIndicatorFrameTemplate.xml`, `Blizzard_TimeManager.xml`), so only `MinimapZoneText` moves
   and the button with its hover area stays. In a row the whole button moves. Classic Era and Retail get
@@ -121,10 +138,10 @@ Some elements hold other frames up, so there the offset moves what's inside the 
   filling its parent (to check in game). Classic Era's `MiniMapTracking` has nothing on it and moves
   whole.
 Checked in Forever's, Retail's and Classic Era's UI source: nothing anchors to the clock, the
-compartment, the day and night icon or the coordinates.
+compartment, the day and night icon, the mail icon or the coordinates.
 
-Edit Mode's "Header underneath" anchors the zone text and the compartment anew, and Forever's skin
-the day and night icon on every minimap scale. A layout runs after leaving Edit Mode and on
+Edit Mode's "Header underneath" anchors the zone text, the compartment and the mail icon's box anew,
+and Forever's skin the day and night icon on every minimap scale. A layout runs after leaving Edit Mode and on
 `EDIT_MODE_LAYOUTS_UPDATED`, for a layout that changes outside it; inside Edit Mode the offset waits
 for the exit. `originals` holds the game's anchors and `placed` what
 the last layout left: anchors that aren't `placed` are the game's new ones (`followGame`) and become
@@ -134,8 +151,8 @@ the originals, also with the offset back at 0 or for a frame in a row.
 
 The page has the Shape section (square, border) and below it a table of the elements, one line each:
 `Element | Position | Font size | Class color | Offset X | Y` (see the settings window notes for
-tables). A line has the cells its element has: the compartment, the tracking button and the day and
-night icon no font size or class color, the calendar button only a Position. Hidden is set only
+tables). A line has the cells its element has: the compartment, the tracking button, the
+day and night icon and the mail icon no font size or class color, the calendar button only a Position. Hidden is set only
 through Position, and a hidden element's other cells hide with it (there's nothing to size, color
 or shift). Two extra lines, indented below their element, are there only while they apply: the zone
 text's Hide its frame while it's at its default spot, and FPS and ping's Show while it isn't

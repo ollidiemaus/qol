@@ -28,6 +28,8 @@ local DEFAULTS = {
     hideMicroMenu = false,
     hideBagsBar = false,
     sortOnOpen = false,
+    setMarks = false,
+    setMarkCorner = "TOPRIGHT", -- one of SetMarks.CORNERS
 
     hideChatSocial = false,
     hideChatButtons = false,
@@ -79,6 +81,9 @@ local DEFAULTS = {
     minimapDayNight = "default",
     minimapDayNightOffsetX = 0,
     minimapDayNightOffsetY = 0,
+    minimapMail = "default",
+    minimapMailOffsetX = 0,
+    minimapMailOffsetY = 0,
     minimapCalendar = "default", -- the calendar button: "default" (the game's spot) or "hidden"
 
     mapDungeons = false,
