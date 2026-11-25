@@ -209,6 +209,13 @@ _Avoid_: active bar (that's the bar the game highlights, which stays Top), toggl
 The game's trigger glow on a frame of ours, behind the bar on and during a hold of a trigger, because the game's own highlight stays on Top.
 _Avoid_: highlight (that's the game's)
 
+### Character window
+
+**Equipment set**:
+A named set of worn gear the game saves for a character and can put on at once. The sets are the same
+in every interface.
+_Avoid_: EQ set, gear set, outfit (the game's word for a saved appearance)
+
 ### Player frame
 
 **Status text**:
