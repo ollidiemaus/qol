@@ -75,8 +75,8 @@ _Avoid_: proxy, index CVar, Graphics Quality (that's the preset that moves all o
 
 **Minimap element**:
 Something around or on the minimap that the player can place on its own: the zone text, the clock, FPS
-and ping, the addon compartment, the tracking button, the day and night icon, the calendar button, or
-the coordinates. Each can be hidden through its Position.
+and ping, the addon compartment, the tracking button, the day and night icon, the mail icon, the
+calendar button, or the coordinates. Each can be hidden through its Position.
 _Avoid_: minimap feature, minimap widget
 
 **Spot**:
@@ -89,6 +89,11 @@ _Avoid_: position (that's the setting that picks the spot), slot, anchor
 A small shift of one element from its spot, across and up or down. It moves only that element; the
 others stay where their spots put them.
 _Avoid_: nudge, position, custom position
+
+**Mail icon**:
+The game's icon at the minimap that shows only while the player has unread mail. It keeps its room at
+its spot without mail.
+_Avoid_: new mail icon (it shows for older unread mail too), mail indicator
 
 **Ping**:
 The higher of the player's home and world latency, shown next to the FPS.
