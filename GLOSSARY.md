@@ -127,6 +127,11 @@ The game's own bag sort, run for the player each time they open their bags thems
 on its own (at a vendor, for a spell that targets an item) and bags opened in combat aren't sorted.
 _Avoid_: auto sort, clean up
 
+**Set mark**:
+The icon of an equipment set, shown on an item in the bags or bank that belongs to it. An item in
+several sets has one mark, which says that there are more.
+_Avoid_: set icon (that's the set's own icon in the character window), badge, overlay
+
 ### Auction house
 
 **Auction sale**:
