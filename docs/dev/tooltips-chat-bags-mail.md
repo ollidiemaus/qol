@@ -140,6 +140,15 @@ opens their bags themselves. Nothing of Blizzard's is written or moved, and it s
   plays none. There is no wait between sorts and no check whether the bags changed; add a short
   wait only if a quick reopen turns out to give an error.
 
+Known gaps, both rare, which stay as they are unless they turn out to matter:
+
+- In the controller interface the professions window can open the backpack to point at a reagent
+  (`OpenBagTo`, `OpenBackpack`), which passes through neither global, so a sort runs there and can
+  move the item it points at.
+- `ContainerFrame.OpenBag` comes with every show, not only an open. Swapping a bag with the combined
+  bag open reopens it (`ContainerFrameSettingsManager:CheckReopenBags`, `OpenBag`), and showing the
+  interface again with the bags open (Alt+Z) should show it too, so those sort as well.
+
 Set marks (`Features/SetMarks.lua`) draw an equipment set's icon on the item buttons of the bags and the
 bank. They come from the UI source (Forever 1.60.1.71091, retail's live branch), not yet from the game,
 and stay taint-safe this way:
@@ -169,15 +178,6 @@ and stay taint-safe this way:
   (ARTWORK), below the search shade (4), so a mark dims with its item. The junk coin (5, at a merchant)
   is above the shade, so top left it is drawn over the mark.
 - Off, no event or callback is registered, and the hook returns at once.
-
-Known gaps, both rare, which stay as they are unless they turn out to matter:
-
-- In the controller interface the professions window can open the backpack to point at a reagent
-  (`OpenBagTo`, `OpenBackpack`), which passes through neither global, so a sort runs there and can
-  move the item it points at.
-- `ContainerFrame.OpenBag` comes with every show, not only an open. Swapping a bag with the combined
-  bag open reopens it (`ContainerFrameSettingsManager:CheckReopenBags`, `OpenBag`), and showing the
-  interface again with the bags open (Alt+Z) should show it too, so those sort as well.
 
 The mail bookmarks are side tabs of ours on `SendMailFrame` (Blizzard shows it only on the Send Mail
 tab, so the tabs come and go with it), made from `LargeSideTabButtonTemplate`, the template of

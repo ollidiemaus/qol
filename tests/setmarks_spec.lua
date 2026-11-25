@@ -210,7 +210,7 @@ describe("set marks", function()
     end)
 
     it("sit in the top right corner, or the one chosen, at once", function()
-        local ns = start(ON, { [0] = set("Tank", TANK, Stubs.BagLocation(0, 2)) })
+        local ns = start({ setMarks = true }, { [0] = set("Tank", TANK, Stubs.BagLocation(0, 2)) })
         ToggleAllBags()
         T.eq(corner(), "TOPRIGHT")
         for _, choice in ipairs({ "TOPLEFT", "BOTTOMLEFT", "BOTTOMRIGHT", "TOPRIGHT" }) do
@@ -261,6 +261,39 @@ describe("set marks", function()
         T.same(marks(), { ["0:5"] = "111" })
     end)
 
+    it("stay on protected buttons until combat ends", function()
+        local ns = start({ setMarks = true }, { [0] = set("Tank", TANK, Stubs.BagLocation(0, 2)) })
+        ToggleAllBags()
+        T.same(marks(), { ["0:2"] = "111" })
+        for _, button in ipairs(ContainerFrameCombinedBags.Items) do button.secretSecurity = true end
+        Stubs.SetCombat(true)
+        ns.Options:Set("setMarks", false)
+        T.same(marks(), { ["0:2"] = "111" })
+        Stubs.SetCombat(false)
+        T.same(marks(), {})
+    end)
+
+    it("leave out secret places in the bank", function()
+        start(ON, { [0] = set("Tank", TANK, Stubs.BankLocation(6, 1), Stubs.BankLocation(6, 2)) })
+        Stubs.state().bankPages = { { { 6, 1 }, { 6, 2 } } }
+        Stubs.OpenBank()
+        T.same(marks(), { ["6:1"] = "111", ["6:2"] = "111" })
+        local buttons = {}
+        for button in BankPanel.itemButtonPool:EnumerateActive() do buttons[#buttons + 1] = button end
+        buttons[1].bankTabID = Stubs.SECRET
+        buttons[2].containerSlotID = Stubs.SECRET
+        fire("BAG_UPDATE_DELAYED")
+        T.eq(markOn(buttons[1]), nil)
+        T.eq(markOn(buttons[2]), nil)
+    end)
+
+    it("do nothing while the list of sets is secret", function()
+        start(ON, { [0] = set("Tank", TANK, Stubs.BagLocation(0, 2)) })
+        C_EquipmentSet.GetEquipmentSetIDs = function() return Stubs.SECRET end
+        ToggleAllBags()
+        T.same(marks(), {})
+    end)
+
     it("leave out what the game keeps secret", function()
         local SECRET = Stubs.SECRET
         start(ON, {
@@ -275,7 +308,6 @@ describe("set marks", function()
         ContainerFrameCombinedBags.Items[2].slotID = SECRET
         fire("BAG_UPDATE_DELAYED")
         T.eq(markOn(ContainerFrameCombinedBags.Items[1]), nil)
-        Stubs.state().bankPages = { {} }
     end)
 
     it("do nothing where the bank panel is missing", function()

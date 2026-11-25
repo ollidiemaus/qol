@@ -40,6 +40,10 @@ local function isNumber(value)
     return ns.IsUsable(value) and type(value) == "number"
 end
 
+local function placeKey(bag, slot)
+    return bag * SLOTS + slot
+end
+
 local function byName(a, b)
     if a.name ~= b.name then return a.name < b.name end
     return a.id < b.id
@@ -52,7 +56,7 @@ local function addPlaces(set)
         -- Worn items, empty set slots (0), ignored ones (1) and missing items (-1) have no bag.
         local place = isNumber(location) and EquipmentManager_GetLocationData(location)
         if place and place.bag and place.slot then
-            local key = place.bag * SLOTS + place.slot
+            local key = placeKey(place.bag, place.slot)
             if icons[key] == nil then
                 icons[key] = set.icon
             else
@@ -66,7 +70,9 @@ local function readSets()
     stale = false
     icons, several = {}, {}
     local sets = {}
-    for _, id in ipairs(C_EquipmentSet.GetEquipmentSetIDs()) do
+    local ids = C_EquipmentSet.GetEquipmentSetIDs()
+    if not ns.IsUsable(ids) then return end
+    for _, id in ipairs(ids) do
         local name, icon = C_EquipmentSet.GetEquipmentSetInfo(id)
         if isNumber(id) and ns.IsUsable(name) and ns.IsUsable(icon) then
             sets[#sets + 1] = { id = id, name = name, icon = icon }
@@ -113,7 +119,7 @@ local function hide(mark)
     mark.plus:Hide()
 end
 
-local function place(mark, button, corner)
+local function anchor(mark, button, corner)
     if mark.corner == corner then return end
     mark.corner = corner
     local inward, offset = INWARD[corner], INSET + EDGE
@@ -136,20 +142,15 @@ end
 local function markButton(button, bag, slot, corner)
     if not (isNumber(bag) and isNumber(slot)) then return end
     if stale then readSets() end
-    local key = bag * SLOTS + slot
+    local key = placeKey(bag, slot)
     local icon, mark = icons[key], marks[button]
-    if not (icon or mark) then return end
-    if mustWait(button) then
-        if mark then mark.run = run end
-        return
-    end
-    if not icon then return end
+    if not icon or mustWait(button) then return end
     if not mark then
         mark = newMark(button)
         marks[button] = mark
     end
     mark.run = run
-    place(mark, button, corner)
+    anchor(mark, button, corner)
     mark.icon:SetTexture(icon)
     mark.plus:SetShown(several[key] == true)
     setShown(mark, true)
@@ -178,8 +179,8 @@ function refresh()
         for _, frame in ipairs(ContainerFrameContainer.ContainerFrames) do markBag(frame, corner) end
         markBank(BankPanel, corner)
     end
-    for _, mark in pairs(marks) do
-        if mark.run ~= run then hide(mark) end
+    for button, mark in pairs(marks) do
+        if mark.shown and mark.run ~= run and not mustWait(button) then hide(mark) end
     end
 end
 
