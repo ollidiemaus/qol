@@ -571,6 +571,7 @@ L.BACK_BUTTON_BAR_KEY_TIP = "Die Tasten, die diese Rückseitentaste auf dieser L
     .. "eine andere Taste senden, solange der Trigger dieser Leiste gehalten wird (LT für die linke, RT für die rechte, "
     .. "beide für die untere Leiste), und drückst hier dann Trigger und Rückseitentaste."
 L.SECTION_BUFFS = "Buffs"
+L.SECTION_EQUIPMENT_SETS = "Ausrüstungssets"
 L.SECTION_FOLLOWING_BARS = "Leisten, die der Haltung folgen"
 L.FOLLOWING_BAR_TOP = "Obere Leiste"
 L.FOLLOWING_BAR_LEFT = "Linke Leiste"
@@ -601,6 +602,9 @@ L.HIDE_BUFF_TOOLTIPS = "Tooltips neuer Buffs ausblenden"
 L.HIDE_BUFF_TOOLTIPS_TIP = "Die Controller-Oberfläche zeigt ein paar Sekunden lang den Tooltip jedes Stärkungs- und "
     .. "Schwächungszaubers, den du bekommst oder der erneuert wird. Das blendet sie aus. Ein Stärkungszauber, den du "
     .. "auswählst oder auf den du zeigst, zeigt seinen Tooltip weiterhin."
+L.SHOW_EQUIPMENT_SETS = "Ausrüstungssets anzeigen"
+L.SHOW_EQUIPMENT_SETS_TIP = "Zeigt deine Ausrüstungssets im Charakterfenster, wo die Controller-Oberfläche die Liste "
+    .. "sonst leer lässt. Ausschalten wirkt erst nach dem Neuladen der Oberfläche."
 
 -- Settings: graphics & camera page (the game's hidden settings)
 L.CATEGORY_ADVANCED = "Grafik & Kamera"

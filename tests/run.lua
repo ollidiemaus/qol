@@ -15,7 +15,7 @@ local SPECS = {
     "druidmanabar", "threat", "screenedge", "minimap",
     "mappins", "viewport", "actionbars", "buttonborders", "cooldownmanager", "reminders", "groupframes",
     "barpaging", "rankupgrades", "backbuttons",
-    "followingbars", "triggertoggle", "ring", "clickcast",
+    "followingbars", "triggertoggle", "equipmentsets", "ring", "clickcast",
     "reloadcommand",
     "settings", "classicera", "advancedsettings", "probe", "locales",
 }

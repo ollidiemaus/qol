@@ -435,8 +435,8 @@ What it can't do:
 
 ### Controller
 
-Only on WoW Forever, and only while its controller interface is on: with keyboard and mouse the
-back buttons hide and their keys press nothing, and the buff tooltips show as usual. Turning the
+Only on WoW Forever, and (but for the equipment sets) only while its controller interface is on:
+with keyboard and mouse the back buttons hide and their keys press nothing, and the buff tooltips show as usual. Turning the
 controller interface on or off switches them right away.
 
 **Back buttons:** more buttons on the controller action bar for controllers with back buttons or
@@ -526,6 +526,12 @@ Right bar, and both on is the Bottom bar, also when you press them together.
 **Buff tooltips:** the controller interface shows the tooltip of every buff or debuff you gain or
 refresh for a few seconds. **Hide new buff tooltips** keeps those away; a buff you select or point
 at still shows its tooltip.
+
+**Equipment sets:** in the controller interface the game leaves the character window's list of
+equipment sets empty. **Show equipment sets**, on by default, puts the game's own list back, with
+every set you have and its usual menu, also after switching to keyboard and mouse. After a switch
+with the character window open, close and reopen it; after one in combat, the list is back when
+combat ends. Turning the option off takes effect after a reload.
 
 ### Graphics & Camera
 

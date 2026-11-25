@@ -142,6 +142,7 @@ local DEFAULTS = {
     controllerTriggerToggle = false,
     controllerTriggerToggleTopAfterCombat = true,
     hideBuffTooltips = false,
+    showEquipmentSets = true,
 }
 -- Action bar flips ("flipVertical_MainActionBar" and so on) default to false and are added by
 -- ActionBars.lua through Options:AddDefault, next to the list of bars they belong to.

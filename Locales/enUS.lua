@@ -549,6 +549,7 @@ L.BACK_BUTTON_BAR_KEY_TIP = "The keys that press this back button on this bar, t
     .. "bar's trigger is held (LT for the Left bar, RT for the Right bar, both for the Bottom bar), then press the "
     .. "trigger and the back button here."
 L.SECTION_BUFFS = "Buffs"
+L.SECTION_EQUIPMENT_SETS = "Equipment sets"
 L.SECTION_FOLLOWING_BARS = "Bars that follow the stance"
 L.FOLLOWING_BAR_TOP = "Top bar"
 L.FOLLOWING_BAR_LEFT = "Left bar"
@@ -575,6 +576,9 @@ L.TRIGGER_TOGGLE_TOP_TIP = "Switches the bar off when combat ends, so that A jum
 L.HIDE_BUFF_TOOLTIPS = "Hide new buff tooltips"
 L.HIDE_BUFF_TOOLTIPS_TIP = "The controller interface shows the tooltip of each buff or debuff you gain or refresh for "
     .. "a few seconds. This keeps them hidden. A buff you select or point at still shows its tooltip."
+L.SHOW_EQUIPMENT_SETS = "Show equipment sets"
+L.SHOW_EQUIPMENT_SETS_TIP = "Shows your equipment sets in the character window, which the controller interface "
+    .. "otherwise leaves empty. Turning it off takes effect after a reload."
 
 -- Settings: graphics & camera page (the game's hidden settings)
 L.CATEGORY_ADVANCED = "Graphics & Camera"

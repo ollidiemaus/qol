@@ -68,7 +68,7 @@ settings are open, and closing our window is a plain `Hide` of a frame of ours.
     `CanGuildBankRepair` only in a button that is never shown. `Merchant:Repair` asks the same check
     before the guild bank calls, so a guild repair saved on another client pays with own gold
     there. Junk selling and own gold repairs work as everywhere.
-  - The controller's buff tooltips are on the Controller page and the back buttons on their own, which only Forever
+  - The controller's buff tooltips and equipment sets are on the Controller page and the back buttons on their own, which only Forever
     (with `GamepadMainActionBarFrame`) lists.
 - The list is drawn as the game's (`Blizzard_CategoryList`) but with frames of ours, not its
   templates: `SettingsCategoryListButtonMixin` reads its scroll box's element data and a file local
