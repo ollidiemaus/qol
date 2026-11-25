@@ -11,7 +11,7 @@ local T = require("testlib")
 local SPECS = {
     "options", "saveddata", "api", "events", "later", "merchant", "quests", "fasterautoloot", "auctionsalesound",
     "tooltips", "hideframes", "bufftooltips",
-    "combatlog", "chatclasscolors", "sortonopen", "mailbookmarks", "classhealthbars",
+    "combatlog", "chatclasscolors", "sortonopen", "setmarks", "mailbookmarks", "classhealthbars",
     "druidmanabar", "threat", "screenedge", "minimap",
     "mappins", "viewport", "actionbars", "buttonborders", "cooldownmanager", "reminders", "groupframes",
     "barpaging", "rankupgrades", "backbuttons",

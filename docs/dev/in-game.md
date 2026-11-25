@@ -36,6 +36,11 @@ Things only the real client can confirm:
   when you open the bags yourself (key binding, bag bar, controller button, radial menu; separate
   bags too), a quick close and reopen gives no error, and opening the bags stays quiet. A vendor, a
   mailbox and a spell that targets an item don't sort, and the next open of your own does.
+- Set marks: the bank and the account bank mark set items (the game reports their slots, with the bag
+  numbers the bank's buttons use); of two copies of an item only the set's own is marked; a mark dims
+  with its item in a search; it can be read in both interfaces, the `+` too. Marks are right after
+  sorting, turning bank pages (retail: tabs), collapsing a bag in the controller interface and editing
+  sets. Using, moving and selling marked items, in and out of combat, gives no taint error.
 - Auction sale sound: one real sale on Forever, away from the auctioneer, rings once as the chat line
   comes (not confirmed yet that the client sends it there and then); winning, being outbid, an expired
   auction and sale mail waiting at login stay silent. The preview plays after a full client restart,

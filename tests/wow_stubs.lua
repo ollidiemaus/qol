@@ -1123,6 +1123,35 @@ local function makeRetail(G)
     view[1].farclip, view[1].horizonClip = "2000", "2000"
 end
 
+-- A frame's pool of item buttons: released ones are hidden, and the last one released comes back first.
+local function newItemButtonPool(parent, init)
+    local active, free, pool = {}, {}, {}
+    function pool:Acquire()
+        local button = table.remove(free)
+        if not button then
+            button = newRegion("ItemButton", parent)
+            init(button)
+        end
+        active[#active + 1] = button
+        return button
+    end
+    function pool:ReleaseAll()
+        for _, button in ipairs(active) do
+            button:Hide()
+            free[#free + 1] = button
+        end
+        active = {}
+    end
+    function pool:EnumerateActive()
+        local index = 0
+        return function()
+            index = index + 1
+            return active[index]
+        end
+    end
+    return pool
+end
+
 -- Takes out what Classic Era (1.15.9) lacks: the tooltip data processor (its tooltips run scripts
 -- instead, Stubs.ShowClassicTooltip), the spell book's skill
 -- lines, toys, the addon compartment, combined bags, C_Container's sort, Forever's controller interface, the player
@@ -1166,7 +1195,8 @@ local function makeClassicEra(G)
     G.C_ActionBar.IsHighestSpellRank = nil
     G.C_ToyBox, G.PlayerHasToy = nil, nil
     G.AddonCompartmentFrame = nil
-    G.ContainerFrameCombinedBags = nil
+    G.ContainerFrameCombinedBags, G.ContainerFrameContainer, G.BankPanel = nil, nil, nil
+    G.EquipmentManager_GetLocationData = nil
     G.C_Container.SortBags = nil
     G.C_InputInterfaceStyle, G.GamepadMode, G.BuffFrameTooltip = nil, nil, nil
     -- false, not nil: a stub frame answers any other capitalized field with a no-op method. The
@@ -1480,6 +1510,12 @@ local function install()
             state.registry[event] = state.registry[event] or {}
             table.insert(state.registry[event], { fn = fn, owner = owner })
         end,
+        UnregisterCallback = function(_, event, owner)
+            local callbacks = state.registry[event] or {}
+            for index = #callbacks, 1, -1 do
+                if callbacks[index].owner == owner then table.remove(callbacks, index) end
+            end
+        end,
     }
 
     G.Enum = {
@@ -1570,10 +1606,16 @@ local function install()
     -- OpenAllBagsMatchingContext for the bags holding an item that fits. Every bag frame tells EventRegistry
     -- it opened from its OnShow, the combined bag too. Stubs.SetSeparateBags turns the combined bag off;
     -- the keyring (-1) and the bank bags (6 and up) always have a frame of their own. state.sorts counts
-    -- C_Container.SortBags.
+    -- C_Container.SortBags. A bag frame's Items are its slots' buttons, taken from a pool of its own each
+    -- time the frame is generated, so a button can come back for another slot.
     local function newBagFrame()
         local frame = newRegion("Frame", G.UIParent)
         frame:Hide()
+        frame.Items, frame.itemButtonPool = {}, newItemButtonPool(frame, function(button)
+            function button:GetBagID() return self.bagID end
+            function button:GetID() return self.slotID end
+        end)
+        table.insert(G.ContainerFrameContainer.ContainerFrames, frame)
         function frame:GetID() return self.bagID end
         frame.scripts.OnShow = function(self) Stubs.TriggerRegistry("ContainerFrame.OpenBag", self) end
         return frame
@@ -1583,12 +1625,26 @@ local function install()
         state.bagFrames[bagID] = state.bagFrames[bagID] or newBagFrame()
         return state.bagFrames[bagID]
     end
-    -- ContainerFrame_GenerateFrame sets the frame's ID before it shows it; the combined bag's is the backpack's.
+    -- Sets the frame's ID and its buttons before it shows it; the combined bag's ID is the backpack's, and
+    -- it has the last bag's last slot first.
+    G.ContainerFrame_GenerateFrame = function(frame, _, bagID)
+        frame.bagID = bagID
+        frame.itemButtonPool:ReleaseAll()
+        frame.Items = {}
+        for bag = frame == G.ContainerFrameCombinedBags and 4 or bagID, bagID, -1 do
+            for slot = G.C_Container.GetContainerNumSlots(bag), 1, -1 do
+                local button = frame.itemButtonPool:Acquire()
+                button.bagID, button.slotID = bag, slot
+                table.insert(frame.Items, button)
+                button:Show()
+            end
+        end
+        frame:Show()
+    end
     local function openBag(bagID)
         local frame = bagFrame(bagID)
         if not frame:IsShown() then
-            frame.bagID = frame == G.ContainerFrameCombinedBags and 0 or bagID
-            frame:Show()
+            G.ContainerFrame_GenerateFrame(frame, 0, frame == G.ContainerFrameCombinedBags and 0 or bagID)
         end
     end
     local function openAll()
@@ -1615,7 +1671,50 @@ local function install()
         return false
     end
     G.NUM_TOTAL_BAG_FRAMES = 5
+    G.ContainerFrameContainer = newRegion("Frame", G.UIParent)
+    G.ContainerFrameContainer.ContainerFrames = {}
     G.ContainerFrameCombinedBags = newBagFrame()
+    -- Not one of the container's frames.
+    G.ContainerFrameContainer.ContainerFrames = {}
+    --- The bank, closed: Stubs.OpenBank, Stubs.CloseBank and Stubs.TurnBankPage. state.bankPages lists each
+    -- page's slots ({ bag, slot }), its buttons come from one pool. Forever announces a page through
+    -- EventRegistry, retail (state.retailBank) through the panel's own callbacks.
+    G.BankFrame = newRegion("Frame", G.UIParent)
+    G.BankFrame:Hide()
+    G.BankPanel = newRegion("Frame", G.BankFrame)
+    G.BankFrame.BankPanel = G.BankPanel
+    function G.BankPanel:RegisterCallback(event, fn, owner) G.EventRegistry:RegisterCallback("panel:" .. event, fn, owner) end
+    function G.BankPanel:UnregisterCallback(event, owner) G.EventRegistry:UnregisterCallback("panel:" .. event, owner) end
+    G.BankPanel.itemButtonPool = newItemButtonPool(G.BankPanel, function(button)
+        function button:GetBankTabID() return self.bankTabID end
+        function button:GetContainerSlotID() return self.containerSlotID end
+    end)
+    --- Equipment sets: state.equipmentSets[id] = { name, icon, locations = { [inventory slot] = location } },
+    -- in the game's packed locations: Stubs.BagLocation, Stubs.BankLocation and Stubs.WornLocation.
+    G.C_EquipmentSet = {
+        GetEquipmentSetIDs = function()
+            local ids = {}
+            for id in pairs(state.equipmentSets) do ids[#ids + 1] = id end
+            return ids
+        end,
+        GetEquipmentSetInfo = function(id)
+            local set = state.equipmentSets[id]
+            return set and set.name, set and set.icon, id, false
+        end,
+        GetItemLocations = function(id) return state.equipmentSets[id] and state.equipmentSets[id].locations end,
+    }
+    G.EquipmentManager_GetLocationData = function(location)
+        local data = {}
+        if location < 0 then return data end
+        local function has(flag) return math.floor(location / flag) % 2 == 1 end
+        data.isPlayer, data.isBags, data.isBank = has(0x100000), has(0x200000), has(0x400000)
+        data.slot = location % 0x100
+        if data.isBags then
+            data.bag = math.floor(location % 0x100000 / 0x100)
+            if data.isBank then data.bag = data.bag + G.NUM_TOTAL_EQUIPPED_BAG_SLOTS end
+        end
+        return data
+    end
     G.ToggleAllBags = function()
         if closeAll() < (state.combinedBags and 1 or 5) then openAll() end
     end
@@ -2532,6 +2631,7 @@ function Stubs.Reset(options)
         framerate = 59.7, latencyHome = 45, latencyWorld = 38,
         bags = {}, prices = {}, unloadedItems = {}, itemRequests = {}, used = {}, soldAll = 0, sellAllEnabled = true,
         sorts = 0, combinedBags = true, bagFrames = {},
+        equipmentSets = {}, bankPages = { {} },
         canRepair = false, repairCost = 0, repairs = {}, money = 0,
         inGuild = false, guildCanRepair = false, guildLimit = 0, guildMoney = 0,
         lootSlots = 0, looted = {}, soundFiles = {},
@@ -3675,6 +3775,45 @@ end
 function Stubs.SetSeparateBags(separate)
     state.combinedBags = not separate
 end
+
+-- A bag collapsed or opened again in the controller interface's bags: the game generates the frame's
+-- buttons anew while it's open.
+function Stubs.CollapseBag()
+    ContainerFrame_GenerateFrame(ContainerFrameCombinedBags, 0, 0)
+end
+
+-- Turns to a page of the bank.
+function Stubs.TurnBankPage(page)
+    BankPanel.itemButtonPool:ReleaseAll()
+    for _, place in ipairs(state.bankPages[page]) do
+        local button = BankPanel.itemButtonPool:Acquire()
+        button.bankTabID, button.containerSlotID = place[1], place[2]
+        button:Show()
+    end
+    if state.retailBank then
+        Stubs.TriggerRegistry("panel:NewBankTabSelected", page)
+    else
+        Stubs.TriggerRegistry("BankPanelMixin.PageInfoChanged", page)
+    end
+end
+
+-- Opens the bank on its first page.
+function Stubs.OpenBank()
+    BankFrame:Show()
+    Stubs.TurnBankPage(1)
+    Stubs.Fire("BANKFRAME_OPENED")
+end
+
+function Stubs.CloseBank()
+    BankFrame:Hide()
+    Stubs.Fire("BANKFRAME_CLOSED")
+end
+
+-- Packed item locations, as C_EquipmentSet.GetItemLocations gives them (Constants.lua). A bank bag's
+-- number starts after the bags carried.
+function Stubs.BagLocation(bag, slot) return 0x300000 + bag * 0x100 + slot end
+function Stubs.BankLocation(bag, slot) return 0x600000 + (bag - NUM_TOTAL_EQUIPPED_BAG_SLOTS) * 0x100 + slot end
+function Stubs.WornLocation(slot) return 0x100000 + slot end
 
 -- Blizzard's EditModeSystemMixin:UpdateClampOffsets: the frame's clamp insets go from its edges to
 -- its selection box's.

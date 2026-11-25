@@ -149,6 +149,36 @@ Known gaps, both rare, which stay as they are unless they turn out to matter:
   bag open reopens it (`ContainerFrameSettingsManager:CheckReopenBags`, `OpenBag`), and showing the
   interface again with the bags open (Alt+Z) should show it too, so those sort as well.
 
+Set marks (`Features/SetMarks.lua`) draw an equipment set's icon on the item buttons of the bags and the
+bank. They come from the UI source (Forever 1.60.1.71091, retail's live branch), not yet from the game,
+and stay taint-safe this way:
+
+- A mark is textures and a font string of ours, made on the button once and kept in a table of ours by
+  button. No field is written on a button, no method or script hooked, and its own textures are left
+  alone. It isn't a frame: a `CreateFrame` inside an open controller window makes the controller cursor
+  refresh, which the game refuses to addon code in combat. Nothing of ours takes the mouse.
+- The buttons are found by reading: `ContainerFrameCombinedBags` and each of
+  `ContainerFrameContainer.ContainerFrames` keep theirs in `Items` (both interfaces), the bank panel's
+  pool lists its active ones. Each says its bag and slot through its own getters, which only read.
+- `C_EquipmentSet.GetItemLocations` gives a set's items as packed locations, and
+  `EquipmentManager_GetLocationData` unpacks one, bank bags with their container numbers. Worn items and
+  the special values (-1 missing, 0 empty, 1 ignored) have no bag there and drop out. Names aren't
+  compared, so of two copies only the set's own is marked.
+- The map from places to sets is read when a refresh first meets a button and something changed since.
+- Refreshes go through one `ns.Later` key that also runs in combat, as item buttons are plain
+  `ItemButton`s; a button that is protected in combat, or won't say, waits for combat to end. Asked for
+  by the bag-open callback, bag updates, worn equipment, sets, the bank opening, its tabs changing,
+  and the options. Forever's bank pages announce themselves with `BankPanelMixin.PageInfoChanged` on
+  `EventRegistry`. Retail's bank doesn't, so its tabs are heard through the panel's own registry
+  (`NewBankTabSelected`; `CallbackRegistryMixin`, whose `RegisterCallback` has a taint barrier).
+- Collapsing a bag in the controller interface calls `ContainerFrame_GenerateFrame` on the open frame,
+  which hands out its pooled buttons anew and announces nothing. A hook on that global function schedules
+  a refresh; it's installed the first time the option is on.
+- Draw order: OVERLAY sublevel 3, above the icon's border (0), the upgrade arrow (1) and the stack count
+  (ARTWORK), below the search shade (4), so a mark dims with its item. The junk coin (5, at a merchant)
+  is above the shade, so top left it is drawn over the mark.
+- Off, no event or callback is registered, and the hook returns at once.
+
 The mail bookmarks are side tabs of ours on `SendMailFrame` (Blizzard shows it only on the Send Mail
 tab, so the tabs come and go with it), made from `LargeSideTabButtonTemplate`, the template of
 Forever's own side tabs (Collections, Inspect, Group Finder; its `common-sidetab` art has `-c60`
