@@ -147,11 +147,11 @@ describe("QoL on Classic Era", function()
         end
         -- The bag sort, the second mana bar of Forever's and retail's player frame, the addon
         -- compartment, the player coordinates, the calendar button, guild banks, the controller's buff
-        -- tooltips and back buttons.
+        -- tooltips and back buttons, the equipment sets of its character window.
         for _, key in ipairs({ "sortOnOpen", "druidManaBar", "minimapCompartment",
             "minimapCoords", "minimapCoordsClassColor", "minimapCoordsSize", "minimapCoordsOffsetX",
             "minimapCompartmentOffsetY", "minimapCalendar", "guildRepair", "hideBuffTooltips",
-            "controllerBackButtons" }) do
+            "controllerBackButtons", "showEquipmentSets" }) do
             T.falsy(keys[key], key)
         end
         T.truthy(keys.sellJunk)

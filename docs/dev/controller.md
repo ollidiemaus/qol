@@ -369,3 +369,29 @@ To check in game (not answerable from the source or the stubs):
 - A plain override beats the game's bar bindings. A window's priority overrides have to win over
   ours, also in combat when ours can't be removed, which rules out priority if a plain one works.
 - Whether a real hold still lights the game's bar.
+
+## Equipment sets
+
+`Features/EquipmentSets.lua`. In the controller interface the character window's equipment set tab
+lists no sets (seen in game: 2 sets, the list 0 x 352).
+
+- Cause (1.60.1.71091, `Blizzard_UIPanels_Game/Camelot/PaperDollFrame.lua`):
+  `PaperDollEquipmentManagerPaneMixin:InitializeGamepad` clears the list's anchors and sets TOPLEFT
+  and a height only, but the list's width comes from its second anchor in `PaperDollFrame.xml`. The
+  anchor's target, `CharacterFrame.InsetRight`, exists only in retail's window. `UninitializeGamepad`
+  does the same, so keyboard and mouse should break after a switch without a reload (from the
+  source). The init runs as the pane loads when the interface is on, and both run in the game's
+  handler of `INPUT_DEVICE_INTERFACE_TRANSITION`, so a check a frame later is after them.
+- Fix: the anchors of `PaperDollFrame.xml`, for the list and the scroll bar, in both interfaces. The
+  space of Equip and Save, hidden in the controller interface, stays empty.
+- When: at login, when the option is turned on and on each switch, if the list's width is 0. Once
+  Blizzard gives the list a width, nothing happens.
+- Taint: only widget methods, through `ns.Later`, so out of combat. Never while the character window
+  is shown: a size change could run the scroll box's update from our code, and the rows it makes
+  would be tainted (Equip and the menu come from them). With the window open it waits for
+  `CharacterFrame.Hide` and checks everything again, through the same queue.
+- Turning it off restores nothing; the game's broken layout is back after a reload.
+
+To check in game: whether re-anchoring the hidden list runs its size handler in a way that taints
+rows made later (`ScrollBoxBaseMixin:OnSizeChanged` doesn't check visibility, and the list keeps its
+data once the tab was opened), and whether a hidden list's width reads 0 right after a switch (the checklist in [`in-game.md`](in-game.md)).

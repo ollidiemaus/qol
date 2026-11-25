@@ -398,7 +398,8 @@ local function buildClickCast(page)
     end
 end
 
--- Controller page: the trigger toggle, next to the buff tooltips and the bars that follow the stance.
+-- Controller page: the trigger toggle, next to the buff tooltips, the equipment sets and the
+-- bars that follow the stance.
 local function buildController(page)
     page:Header("left", L.SECTION_TRIGGER_TOGGLE)
     page:Checkbox("left", "controllerTriggerToggle", L.TRIGGER_TOGGLE, L.TRIGGER_TOGGLE_TIP)
@@ -406,6 +407,8 @@ local function buildController(page)
         { indent = true, enabled = is("controllerTriggerToggle") })
     page:Header("right", L.SECTION_BUFFS)
     page:Checkbox("right", "hideBuffTooltips", L.HIDE_BUFF_TOOLTIPS, L.HIDE_BUFF_TOOLTIPS_TIP)
+    page:Header("right", L.SECTION_EQUIPMENT_SETS)
+    page:Checkbox("right", "showEquipmentSets", L.SHOW_EQUIPMENT_SETS, L.SHOW_EQUIPMENT_SETS_TIP)
     page:Header("right", L.SECTION_FOLLOWING_BARS)
     local FollowingBars = ns.FollowingBars
     for _, name in ipairs(FollowingBars.BARS) do
