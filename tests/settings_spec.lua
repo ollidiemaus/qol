@@ -1248,7 +1248,7 @@ describe("settings pages", function()
         T.eq(page.note.text, "Click a box, then press the key. A right-click clears a key.")
     end)
 
-    it("offers the inside of the map only to the tracking button and the day and night icon", function()
+    it("offers the inside of the map only to the tracking button and the day and night and mail icons", function()
         local ns = start()
         local outside = { "default", "topLeft", "top", "topRight", "bottomLeft", "bottom", "bottomRight", "hidden" }
         local inside = { "default", "topLeft", "top", "topRight", "bottomLeft", "bottom", "bottomRight",
@@ -1258,6 +1258,8 @@ describe("settings pages", function()
         T.same(values(control(ns, "minimapCompartment")), outside)
         T.same(values(control(ns, "minimapTracking")), inside)
         T.same(values(control(ns, "minimapDayNight")), inside)
+        T.same(values(control(ns, "minimapMail")), inside)
+        T.truthy(control(ns, "minimapMail").tooltip:find("unread mail", 1, true))
         T.eq(control(ns, "minimapTracking").choices[9].label, "Inside, top center")
         T.eq(control(ns, "minimapClock").choices[2].label, "Above, left")
     end)
@@ -1278,6 +1280,7 @@ describe("settings pages", function()
             "Addon compartment | dropdown | - | - | number | number",
             "Tracking button | dropdown | - | - | number | number",
             "Day and night icon | dropdown | - | - | number | number",
+            "Mail icon | dropdown | - | - | number | number",
             "Calendar button | dropdown | - | - | - | -",
         })
         local border = -control(ns, "squareMinimapBorder").row:PointFor("TOPLEFT")[5]
@@ -1423,6 +1426,7 @@ describe("settings pages", function()
             { "minimapCompartment", "default" },
             { "minimapTracking", "default" },
             { "minimapDayNight", "default" },
+            { "minimapMail", "default" },
             { "minimapCoords", "default" },
         }) do
             local key = case[1]
@@ -1510,6 +1514,15 @@ describe("settings pages", function()
         MinimapCluster.DielFrame = false -- this client has none
         Stubs.Login()
         T.eq(control(ns, "minimapDayNight"), nil)
+    end)
+
+    it("offers the mail icon only where the game has one", function()
+        local ns = Stubs.LoadAddon()
+        Stubs.InstallSettings()
+        MinimapCluster.IndicatorFrame = false -- this client has none
+        Stubs.Login()
+        T.eq(control(ns, "minimapMail"), nil)
+        T.eq(control(ns, "minimapMailOffsetX"), nil)
     end)
 
     it("puts what's marked on the world map in rows across its page", function()

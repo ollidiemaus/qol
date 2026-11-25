@@ -104,6 +104,10 @@ Things only the real client can confirm:
 - The tracking button and the day and night icon inside the map: drawn above it, clear of the round
   frame and the bronze border in every corner, clickable there, and the mail icon (anchored to the
   tracking button by the game) still readable.
+- The mail icon with unread mail: at every Position, centered well enough in its box (32×24 on
+  Forever), clear of the round frame inside the map, with its tooltip; mail arriving and read while it
+  is moved or hidden; Classic Era's button in a row and inside its smaller map; on Retail Hidden
+  leaves the crafting orders icon.
 - Bar paging off: Shift+1 to Shift+6 press the action buttons (a `[mod:shift]` macro sees Shift),
   also with a bar addon that binds the number keys itself; turning it off pages again, and changing
   a key binding in combat is picked up after combat.

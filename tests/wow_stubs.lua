@@ -1193,7 +1193,7 @@ local function makeClassicEra(G)
     -- underlay; the tracking button (MiniMapTracking) and the time of day icon (GameTimeFrame, as
     -- there is no calendar) sit on MinimapBackdrop, not on the cluster.
     local cluster = G.MinimapCluster
-    cluster.Tracking, cluster.DielFrame = false, false
+    cluster.Tracking, cluster.DielFrame, cluster.IndicatorFrame = false, false, false
     G.ToggleCalendar = nil
     G.Minimap:SetSize(140, 140)
     G.MinimapBackdrop = newRegion("Frame", G.Minimap)
@@ -1207,6 +1207,11 @@ local function makeClassicEra(G)
     G.GameTimeFrame = newRegion("Frame", G.MinimapBackdrop)
     G.GameTimeFrame:SetSize(50, 50)
     G.GameTimeFrame:SetPoint("TOPRIGHT", G.MinimapBackdrop, "TOPRIGHT", -4, -23)
+    G.MiniMapMailFrame = newRegion("Frame", G.Minimap)
+    G.MiniMapMailFrame:SetSize(33, 33)
+    G.MiniMapMailFrame:SetPoint("TOPRIGHT", G.Minimap, "TOPRIGHT", 24, -37)
+    G.MiniMapMailFrame:EnableMouse(true)
+    G.MiniMapMailFrame:Hide()
     G.GuildBankFrame_LoadUI, G.CanGuildBankRepair = nil, nil
     G.GetGuildBankWithdrawMoney, G.GetGuildBankMoney = nil, nil
     -- Its own circle mask atlas instead of Forever's.
@@ -1700,6 +1705,19 @@ local function install()
     cluster.DielFrame = newRegion("Frame", cluster)
     cluster.DielFrame:SetSize(42, 42)
     cluster.DielFrame:SetPoint("CENTER", cluster, "CENTER", 63, 72)
+    -- The box with the mail icon, which hangs on the zone text's button. The game lays it out each
+    -- time mail comes or goes (Stubs.SetMail); its own size is fixed.
+    local indicator = newRegion("Frame", cluster)
+    cluster.IndicatorFrame = indicator
+    indicator:SetSize(32, 24)
+    indicator:SetPoint("TOPLEFT", cluster.ZoneTextButton, "BOTTOMLEFT", 0, 0)
+    indicator.MailFrame = newRegion("Frame", indicator)
+    indicator.MailFrame:EnableMouse(true)
+    indicator.MailFrame:Hide()
+    function indicator:Layout()
+        self.MailFrame:ClearAllPoints()
+        self.MailFrame:SetPoint("TOPLEFT", self, "TOPLEFT", 0, 0)
+    end
     -- Forever's calendar button is GameTimeFrame; the calendar's bootstrap defines this at startup.
     G.ToggleCalendar = function() end
     G.C_Texture = {
@@ -2419,6 +2437,24 @@ local function install()
     G.MinimalSliderWithSteppersMixin = { Label = { Right = 2 }, Event = { OnValueChanged = "OnValueChanged" } }
 end
 
+-- Retail's box beside the tracking button: smaller, and it holds the crafting orders icon too.
+function Stubs.UseRetailMailBox()
+    local cluster = MinimapCluster
+    local box = cluster.IndicatorFrame
+    box:SetSize(20, 15)
+    box:ClearAllPoints()
+    box:SetPoint("TOPRIGHT", cluster.Tracking, "BOTTOMRIGHT", 2, -1)
+    box.CraftingOrderFrame = newRegion("Frame", box)
+end
+
+-- Mail comes or is read, as the game's mail frame handles UPDATE_PENDING_MAIL.
+function Stubs.SetMail(unread)
+    local box = MinimapCluster.IndicatorFrame
+    local mail = box and box.MailFrame or MiniMapMailFrame
+    mail:SetShown(unread)
+    if box then mail:GetParent():Layout() end
+end
+
 -- Globals the addon or a test may leave behind.
 local ADDON_GLOBALS = {
     "QoLDB", "SLASH_QOL1", "SLASH_QOL2", "SlashCmdList", "Settings",
@@ -2428,7 +2464,7 @@ local ADDON_GLOBALS = {
     "SLASH_QOL_RELOAD1", "hash_SlashCmdList", "IsSecureCmd", "SLASH_OTHERADDON1", "SLASH_RELOAD1",
     "HUD_EDIT_MODE_ACTION_BAR_LABEL", "HUD_EDIT_MODE_STANCE_BAR_LABEL", "HUD_EDIT_MODE_PET_ACTION_BAR_LABEL",
     "GetMinimapShape", "HybridMinimap", "TimeManagerClockButton", "GameTimeFrame", "AddonCompartmentFrame",
-    "ToggleCalendar", "MinimapBackdrop", "MinimapBorder", "MiniMapTracking",
+    "ToggleCalendar", "MinimapBackdrop", "MinimapBorder", "MiniMapTracking", "MiniMapMailFrame",
     "TimeManagerClockTicker", "QoLNoAction", "ColorPickerFrame", "SettingsPanel", "GameMenuFrame",
     "GamepadMainActionBarFrame", "BINDING_HEADER_QOL",
     "QoLRing", "QoLRingButton", "QoLRingEditor", "QoLSettings",

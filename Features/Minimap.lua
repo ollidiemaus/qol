@@ -7,11 +7,11 @@ local Options = ns.Options
 --     frame onto a square, or a thin black line); the round frame goes to the hidden holder.
 --     GetMinimapShape() then answers "SQUARE", the convention other addons read to place their
 --     minimap buttons.
---   * Positions: the zone text, the clock, the addon compartment, the tracking button and Forever's
---     day and night icon can each move to a row above or below the minimap (left, center or right;
---     the zone text only the center), or be hidden; the zone text, the tracking button and the day
---     and night icon can also go inside the map, in a corner (not the zone text) or at the middle of
---     the top or bottom edge. The calendar button and the coordinates stay at the game's spot or are
+--   * Positions: the zone text, the clock, the addon compartment, the tracking button, Forever's
+--     day and night icon and the mail icon can each move to a row above or below the minimap (left,
+--     center or right; the zone text only the center), or be hidden; the zone text, the tracking
+--     button, the day and night icon and the mail icon can also go inside the map, in a corner (not
+--     the zone text) or at the middle of the top or bottom edge. The calendar button and the coordinates stay at the game's spot or are
 --     hidden. Things that share a spot sit side by side, the zone text gets the room left in the
 --     middle, and the coordinates move under a row below. Away from its default spot the zone text
 --     leaves the header bar, which then goes to the hidden holder; at its default spot the header
@@ -86,11 +86,23 @@ local function dayNightFrame()
     return clusterFrame("DielFrame") or (ToggleCalendar == nil and GameTimeFrame or nil)
 end
 
+-- The mail icon: the cluster's box around it (the game lays out the mail frame inside the box each
+-- time mail comes or goes), or Classic Era's own button.
+local function mailElementFrame()
+    return clusterFrame("IndicatorFrame") or MiniMapMailFrame
+end
+
+-- Retail's box also holds the crafting orders icon, so there only the mail frame in it hides.
+local function mailInSharedBox()
+    local box = clusterFrame("IndicatorFrame")
+    return box and type(box.CraftingOrderFrame) == "table" and box.MailFrame or nil
+end
+
 -- The elements that move, in the order they sit side by side within a spot (the first one at the
 -- minimap's edge for left and right, the first one on the left in the middle). parts: what an
 -- offset moves at the game's own place instead of the frame, where the game anchors other frames
 -- to it (the zone text's button holds the clock, the calendar and the mail icon, Retail's tracking
--- frame the mail icon).
+-- frame the mail icon). hiddenPart: what Hidden makes invisible in place, instead of hiding the frame.
 MinimapLayout.ELEMENTS = {
     { key = "minimapTracking", inside = true,
         frame = function() return clusterFrame("Tracking") or MiniMapTracking end,
@@ -111,6 +123,8 @@ MinimapLayout.ELEMENTS = {
     { key = "minimapCompartment", frame = function() return AddonCompartmentFrame end },
     -- Forever's day and night icon on the round frame, Classic Era's time of day icon.
     { key = "minimapDayNight", inside = true, frame = dayNightFrame },
+    -- Last, so its empty place without mail is at the inner side of its spot.
+    { key = "minimapMail", inside = true, frame = mailElementFrame, hiddenPart = mailInSharedBox },
 }
 
 -- Whether an element can take a spot: inside the map only one marked inside, and only the middle
@@ -196,6 +210,23 @@ local function setHidden(hidden, ...)
         if region and (hidden or ns.Hider:IsHidden(region)) then
             ns.Hider:SetHidden(region, hidden)
         end
+    end
+end
+
+-- Frames hidden in place, with the alpha they had.
+local invisible = {}
+
+-- Invisible and deaf to the mouse, for a frame whose parent the game's code needs: Retail's mail
+-- code calls Layout on it, which the hidden holder doesn't have.
+local function setInvisible(frame, hidden)
+    if hidden and not invisible[frame] then
+        invisible[frame] = frame:GetAlpha()
+        frame:SetAlpha(0)
+        frame:EnableMouse(false)
+    elseif not hidden and invisible[frame] then
+        frame:SetAlpha(invisible[frame])
+        frame:EnableMouse(true)
+        invisible[frame] = nil
     end
 end
 
@@ -620,7 +651,12 @@ function MinimapLayout:ApplyPositions()
         local frame = element.frame()
         if frame then
             local position = positionOf(element)
-            setHidden(position == "hidden", frame)
+            local hiddenPart = element.hiddenPart and element.hiddenPart()
+            if hiddenPart then
+                setInvisible(hiddenPart, position == "hidden")
+            else
+                setHidden(position == "hidden", frame)
+            end
             if element.isZoneText then zoneTextMoved = position ~= "default" end
             -- The offset at the game's own place; anywhere else what it moved goes back.
             local dx, dy = 0, 0
@@ -898,6 +934,11 @@ end
 -- Whether this client has a day and night icon: Forever's, or Classic Era's time of day icon.
 function MinimapLayout.HasDayNight()
     return dayNightFrame() ~= nil
+end
+
+-- Whether this client has the mail icon.
+function MinimapLayout.HasMail()
+    return mailElementFrame() ~= nil
 end
 
 -- Whether this client has the calendar button (Classic Era doesn't).
