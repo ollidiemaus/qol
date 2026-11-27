@@ -2892,23 +2892,42 @@ function Stubs.SetControllerUI(on)
     state.interfaceStyle = on and 1 or 0
 end
 
--- The game's own switch code for the equipment set list, with its bug: one anchor and a height, the
--- anchor on a frame Forever's character window doesn't have (so on the screen).
-local function breakEquipmentSetList()
+-- The equipment set list and its scroll bar as the layout file anchors them, but for the list's space
+-- below (105: for New Set and, under it, Equip and Save).
+local function anchorEquipmentSetList(pane, list, bar, bottom)
+    list:SetPoint("TOPLEFT", pane, "TOPLEFT", 5, -8)
+    list:SetPoint("BOTTOMRIGHT", pane, "BOTTOMRIGHT", -20, bottom)
+    bar:SetPoint("TOPLEFT", list, "TOPRIGHT", -5, -12)
+    bar:SetPoint("BOTTOMLEFT", list, "BOTTOMRIGHT", 0, 0)
+end
+
+-- The game's own switch code for the equipment set tab: Equip and Save hidden in the controller
+-- interface, shown for keyboard and mouse, and the list with its bug: one anchor and a height, the
+-- anchor on a frame Forever's character window doesn't have (so on the screen). With
+-- state.fixedEquipmentSetList, a later client's: the list keeps a width and, in the controller
+-- interface, reaches down into the buttons' space.
+local function switchEquipmentSetPane()
     local pane = _G.PaperDollFrame and _G.PaperDollFrame.EquipmentManagerPane
     if not pane then return end
     local controller = state.interfaceStyle == 1
+    if pane.EquipSet then pane.EquipSet:SetShown(not controller) end
+    if pane.SaveSet then pane.SaveSet:SetShown(not controller) end
     local list, bar = pane.ScrollBox, pane.ScrollBar
+    if not (list and bar) then return end
     list:ClearAllPoints()
+    bar:ClearAllPoints()
+    if state.fixedEquipmentSetList then
+        anchorEquipmentSetList(pane, list, bar, controller and 20 or 105)
+        return
+    end
     list:SetPoint("TOPLEFT", nil, "TOPLEFT", 4, controller and -5 or -27)
     list:SetHeight(controller and 352 or 331)
-    bar:ClearAllPoints()
     bar:SetPoint("TOPLEFT", list, "TOPRIGHT", 8, controller and 0 or 17)
     bar:SetPoint("BOTTOMLEFT", list, "BOTTOMLEFT", 8, controller and 0 or 30)
 end
 
 -- Forever's character window (hidden) with its equipment set tab, laid out as its layout file does,
--- and broken by the game as it loads if the controller interface is on already. Call before Login.
+-- and switched by the game as it loads if the controller interface is on already. Call before Login.
 function Stubs.NewCharacterWindow()
     local window = _G.CreateFrame("Frame", "CharacterFrame", _G.UIParent)
     window:Hide()
@@ -2927,18 +2946,22 @@ function Stubs.NewCharacterWindow()
         if left and right then return pane:GetWidth() + right[4] - left[4] end
         return self.width
     end
-    list:SetPoint("TOPLEFT", pane, "TOPLEFT", 5, -8)
-    list:SetPoint("BOTTOMRIGHT", pane, "BOTTOMRIGHT", -20, 105)
-    bar:SetPoint("TOPLEFT", list, "TOPRIGHT", -5, -12)
-    bar:SetPoint("BOTTOMLEFT", list, "BOTTOMRIGHT", 0, 0)
-    if state.interfaceStyle == 1 then breakEquipmentSetList() end
+    anchorEquipmentSetList(pane, list, bar, 105)
+    -- Equip and Save side by side under New Set (which is 50 up, 34 high).
+    for key, x in pairs({ EquipSet = -50, SaveSet = 50 }) do
+        local button = _G.CreateFrame("Button", nil, pane)
+        button:SetSize(99, 28)
+        button:SetPoint("BOTTOM", pane, "BOTTOM", x, 20)
+        pane[key] = button
+    end
+    if state.interfaceStyle == 1 then switchEquipmentSetPane() end
     return window
 end
 
 -- The player switches interfaces: the game runs its switch code and fires the event.
 function Stubs.SwitchInterface(controller)
     Stubs.SetControllerUI(controller)
-    breakEquipmentSetList()
+    switchEquipmentSetPane()
     Stubs.Fire("INPUT_DEVICE_INTERFACE_TRANSITION")
 end
 

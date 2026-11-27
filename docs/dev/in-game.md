@@ -274,13 +274,18 @@ Things only the real client can confirm:
 - Show equipment sets (Options > Controller), on a character with sets made with keyboard and mouse:
   logged in with the controller interface on, the equipment set tab lists them the first time the
   window opens, inside its pane, clear of New Set, with the scroll bar beside it and scrolling with
-  many sets. The controller cursor goes through the rows; Equip, Save, Bind to bar, rename and change
-  icon, and delete work. Switching to keyboard and mouse and back without a reload: the list is there
-  each time, with Equip and Save below it in keyboard and mouse; switched with the window open, once
-  it's closed and opened again; switched in combat, after combat. No "tainted by" or blocked action
-  error when equipping or binding a set, in combat or after: check in particular that re-anchoring
-  the hidden list doesn't taint rows made later (the likeliest case: open the tab, close the window,
-  switch, open it again, equip a set in combat). Off, after a reload, the list is empty again.
+  many sets. Equip and Save are side by side under New Set, clear of the list, its scroll bar and New
+  Set. The controller cursor goes through the rows and stops on Equip and Save, and A presses them;
+  the mouse clicks them too. Save is greyed out while the selected set is worn as saved, lights up
+  once a piece of it is changed or a slot ignored or unignored, asks before it overwrites the set and
+  saves it; Equip is greyed out while the set is worn and puts it on; both are greyed out with no set
+  selected. Record whether A on a set now opens the game's "more actions" menu (in 1.60.1 it opened
+  none). Switching to keyboard and mouse and back without a reload: the list, Equip and Save are
+  there each time; switched with the window open, once it's closed and opened again; switched in
+  combat, after combat. No "tainted by" or blocked action error when equipping or saving a set, in
+  combat or after: check in particular that re-anchoring the hidden list doesn't taint rows made
+  later (the likeliest case: open the tab, close the window, switch, open it again, equip a set in
+  combat). Off, after a reload, the list is empty and Equip and Save are gone again.
 - Group Frames page (Forever): in a party with raid-style frames and in a raid, Hide the raid manager
   takes the tab away and the group frames stay where they were, also with an Edit Mode preset layout
   (which anchors them to the manager); unticking brings the tab back. Show the game's buffs agrees with

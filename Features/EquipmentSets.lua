@@ -3,8 +3,11 @@ local Options = ns.Options
 
 -- Forever's character window loses its list of equipment sets when the game switches interfaces (and
 -- at login in the controller interface): its switch code leaves the list one anchor and a height, so
--- no width. This gives the list and its scroll bar the anchors of the game's layout file again, which
--- serve both interfaces. A list with a width is left alone, so a fix of the game's ends this.
+-- no width. In the controller interface it also hides Equip and Save, whose "more actions" menu
+-- doesn't open. This gives the list and its scroll bar the anchors of the game's layout file again,
+-- which leave room for the buttons under New Set, and shows the game's Equip and Save. A list with a
+-- width and a shown Save is left alone, so a fix of the game's ends this; a hidden Save also tells
+-- that the controller interface is on.
 --
 -- Never while the character window is shown: re-anchoring could run the game's list code from here
 -- and taint its rows. docs/dev/controller.md has the rest.
@@ -21,8 +24,11 @@ local function repair()
     local window, pane = CharacterFrame, PaperDollFrame and PaperDollFrame.EquipmentManagerPane
     local list, scrollBar = pane and pane.ScrollBox, pane and pane.ScrollBar
     if not (window and list and scrollBar) or Options:Get(KEY) ~= true then return end
-    local width = list:GetWidth()
-    if not ns.IsUsable(width) or width > 0 then return end
+    local width, equip, save = list:GetWidth(), pane.EquipSet, pane.SaveSet
+    -- A secret width doesn't count as missing; a hidden Save is the controller interface's either way.
+    local noWidth = ns.IsUsable(width) and width <= 0
+    local saveHidden = save and not save:IsShown()
+    if not (noWidth or saveHidden) then return end
     if window:IsShown() then
         waitingForClose = true
         return
@@ -33,6 +39,8 @@ local function repair()
     scrollBar:ClearAllPoints()
     scrollBar:SetPoint("TOPLEFT", list, "TOPRIGHT", -5, -12)
     scrollBar:SetPoint("BOTTOMLEFT", list, "BOTTOMRIGHT", 0, 0)
+    if equip then equip:Show() end
+    if save then save:Show() end
 end
 
 local function schedule()

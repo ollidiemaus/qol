@@ -591,8 +591,9 @@ L.HIDE_BUFF_TOOLTIPS = "Hide new buff tooltips"
 L.HIDE_BUFF_TOOLTIPS_TIP = "The controller interface shows the tooltip of each buff or debuff you gain or refresh for "
     .. "a few seconds. This keeps them hidden. A buff you select or point at still shows its tooltip."
 L.SHOW_EQUIPMENT_SETS = "Show equipment sets"
-L.SHOW_EQUIPMENT_SETS_TIP = "Shows your equipment sets in the character window, which the controller interface "
-    .. "otherwise leaves empty. Turning it off takes effect after a reload."
+L.SHOW_EQUIPMENT_SETS_TIP = "Shows your equipment sets in the character window, with Equip and Save under them, as "
+    .. "with keyboard and mouse: the controller interface otherwise leaves the list empty and hides the buttons. "
+    .. "Turning it off takes effect after a reload."
 
 -- Settings: graphics & camera page (the game's hidden settings)
 L.CATEGORY_ADVANCED = "Graphics & Camera"

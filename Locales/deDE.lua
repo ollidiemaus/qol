@@ -617,8 +617,9 @@ L.HIDE_BUFF_TOOLTIPS_TIP = "Die Controller-Oberfläche zeigt ein paar Sekunden l
     .. "Schwächungszaubers, den du bekommst oder der erneuert wird. Das blendet sie aus. Ein Stärkungszauber, den du "
     .. "auswählst oder auf den du zeigst, zeigt seinen Tooltip weiterhin."
 L.SHOW_EQUIPMENT_SETS = "Ausrüstungssets anzeigen"
-L.SHOW_EQUIPMENT_SETS_TIP = "Zeigt deine Ausrüstungssets im Charakterfenster, wo die Controller-Oberfläche die Liste "
-    .. "sonst leer lässt. Ausschalten wirkt erst nach dem Neuladen der Oberfläche."
+L.SHOW_EQUIPMENT_SETS_TIP = "Zeigt deine Ausrüstungssets im Charakterfenster, darunter Anlegen und Speichern, wie "
+    .. "mit Tastatur und Maus: Die Controller-Oberfläche lässt die Liste sonst leer und blendet die Schaltflächen aus. "
+    .. "Ausschalten wirkt erst nach dem Neuladen der Oberfläche."
 
 -- Settings: graphics & camera page (the game's hidden settings)
 L.CATEGORY_ADVANCED = "Grafik & Kamera"
