@@ -373,25 +373,46 @@ To check in game (not answerable from the source or the stubs):
 ## Equipment sets
 
 `Features/EquipmentSets.lua`. In the controller interface the character window's equipment set tab
-lists no sets (seen in game: 2 sets, the list 0 x 352).
+lists no sets (seen in game: 2 sets, the list 0 x 352) and has no Equip or Save, so a set can't be
+saved again at all. The option makes the tab work as it does with keyboard and mouse.
 
-- Cause (1.60.1.71091, `Blizzard_UIPanels_Game/Camelot/PaperDollFrame.lua`):
+- Cause of the empty list (1.60.1.71091, `Blizzard_UIPanels_Game/Camelot/PaperDollFrame.lua`):
   `PaperDollEquipmentManagerPaneMixin:InitializeGamepad` clears the list's anchors and sets TOPLEFT
   and a height only, but the list's width comes from its second anchor in `PaperDollFrame.xml`. The
   anchor's target, `CharacterFrame.InsetRight`, exists only in retail's window. `UninitializeGamepad`
   does the same, so keyboard and mouse should break after a switch without a reload (from the
   source). The init runs as the pane loads when the interface is on, and both run in the game's
   handler of `INPUT_DEVICE_INTERFACE_TRANSITION`, so a check a frame later is after them.
-- Fix: the anchors of `PaperDollFrame.xml`, for the list and the scroll bar, in both interfaces. The
-  space of Equip and Save, hidden in the controller interface, stays empty.
-- When: at login, when the option is turned on and on each switch, if the list's width is 0. Once
-  Blizzard gives the list a width, nothing happens.
+- Equip and Save (`pane.EquipSet`, `pane.SaveSet`): the init hides them on purpose and gives the
+  list their space (352 high instead of 331); the uninit shows them. The pane's controller prompts
+  (`CreateGamepadPromptedBindings`) put Equip set and Save set, with Bind, Change name and icon, and Delete, in
+  a "more actions" menu on a set, through the character window's right-hand footer. In game
+  (1.60.1), A on a set opened no menu; why wasn't looked into. QoL leaves that menu alone, so it
+  works if a later build makes it open.
+- Their state needs nothing from QoL: `PaperDollEquipmentManagerPane_Update` enables and disables
+  both in either interface (a selected set that isn't worn enables both, none selected or the set
+  worn disables both), and ignoring or unignoring a slot in the flyout enables Save. Save asks
+  through `CONFIRM_SAVE_EQUIPMENT_SET`. They are Buttons, so the controller cursor stops on them.
+- Fix, one repair: the anchors of `PaperDollFrame.xml` for the list and the scroll bar, in both
+  interfaces, which leave room for Equip and Save under New Set; and `Show` on Equip and Save.
+- When: at login, when the option is turned on and on each switch, if the list's width is 0 or Save
+  is hidden. The game hides Save only in the controller interface, so the second test also says which
+  interface is on. A width is compared only once `ns.IsUsable`: a secret width doesn't count as
+  missing, but a hidden Save repairs either way. Equip is shown with Save, whichever test fired.
+  Once the list has a width and Save is shown, nothing happens: a later build that fixes the list
+  but still hides the buttons gets both buttons and the layout file's list (which makes room for
+  them); one that fixes both is left alone. On each switch to the controller interface the game
+  hides the buttons again and the repair shows them again.
 - Taint: only widget methods, through `ns.Later`, so out of combat. Never while the character window
   is shown: a size change could run the scroll box's update from our code, and the rows it makes
-  would be tainted (Equip and the menu come from them). With the window open it waits for
+  would be tainted (Equip and the menu come from them), and a shown button's `OnShow`
+  (`ThreeSliceButtonMixin:UpdateButton`) would run from our code. With the window hidden it runs when
+  the window opens, from the game's. With the window open the repair waits for
   `CharacterFrame.Hide` and checks everything again, through the same queue.
-- Turning it off restores nothing; the game's broken layout is back after a reload.
+- Turning it off restores nothing; the game's broken layout is back after a reload, and its hidden
+  Equip and Save also after the next switch of the interface.
 
 To check in game: whether re-anchoring the hidden list runs its size handler in a way that taints
 rows made later (`ScrollBoxBaseMixin:OnSizeChanged` doesn't check visibility, and the list keeps its
-data once the tab was opened), and whether a hidden list's width reads 0 right after a switch (the checklist in [`in-game.md`](in-game.md)).
+data once the tab was opened), whether a hidden list's width reads 0 right after a switch, and
+whether A on a set now opens the game's menu (the checklist in [`in-game.md`](in-game.md)).

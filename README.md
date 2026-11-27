@@ -534,10 +534,14 @@ refresh for a few seconds. **Hide new buff tooltips** keeps those away; a buff y
 at still shows its tooltip.
 
 **Equipment sets:** in the controller interface the game leaves the character window's list of
-equipment sets empty. **Show equipment sets**, on by default, puts the game's own list back, with
-every set you have and its usual menu, also after switching to keyboard and mouse. After a switch
-with the character window open, close and reopen it; after one in combat, the list is back when
-combat ends. Turning the option off takes effect after a reload.
+equipment sets empty and hides Equip and Save, so a set can't be saved again after you change its
+gear. **Show equipment sets**, on by default, makes the tab work as it does with keyboard and mouse.
+It puts the game's own list back, with every set you have and its usual menu, also after switching
+to keyboard and mouse, and the game's own Equip and Save under New Set. The controller cursor stops
+on them and A presses them. Save is greyed out while you wear the selected set as saved and asks
+before it overwrites a set; Equip puts the selected set on. After a switch with the character window
+open, close and reopen it; after one in combat, the tab is back when combat ends. Turning the option
+off takes effect after a reload (for Equip and Save, also after the next switch of the interface).
 
 ### Graphics & Camera
 
