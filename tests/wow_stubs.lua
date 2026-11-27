@@ -2892,6 +2892,15 @@ function Stubs.SetControllerUI(on)
     state.interfaceStyle = on and 1 or 0
 end
 
+-- The equipment set list and its scroll bar as the layout file anchors them, but for the list's space
+-- below (105: for New Set and, under it, Equip and Save).
+local function anchorEquipmentSetList(pane, list, bar, bottom)
+    list:SetPoint("TOPLEFT", pane, "TOPLEFT", 5, -8)
+    list:SetPoint("BOTTOMRIGHT", pane, "BOTTOMRIGHT", -20, bottom)
+    bar:SetPoint("TOPLEFT", list, "TOPRIGHT", -5, -12)
+    bar:SetPoint("BOTTOMLEFT", list, "BOTTOMRIGHT", 0, 0)
+end
+
 -- The game's own switch code for the equipment set tab: Equip and Save hidden in the controller
 -- interface, shown for keyboard and mouse, and the list with its bug: one anchor and a height, the
 -- anchor on a frame Forever's character window doesn't have (so on the screen). With
@@ -2908,10 +2917,7 @@ local function switchEquipmentSetPane()
     list:ClearAllPoints()
     bar:ClearAllPoints()
     if state.fixedEquipmentSetList then
-        list:SetPoint("TOPLEFT", pane, "TOPLEFT", 5, -8)
-        list:SetPoint("BOTTOMRIGHT", pane, "BOTTOMRIGHT", -20, controller and 20 or 105)
-        bar:SetPoint("TOPLEFT", list, "TOPRIGHT", -5, -12)
-        bar:SetPoint("BOTTOMLEFT", list, "BOTTOMRIGHT", 0, 0)
+        anchorEquipmentSetList(pane, list, bar, controller and 20 or 105)
         return
     end
     list:SetPoint("TOPLEFT", nil, "TOPLEFT", 4, controller and -5 or -27)
@@ -2940,10 +2946,7 @@ function Stubs.NewCharacterWindow()
         if left and right then return pane:GetWidth() + right[4] - left[4] end
         return self.width
     end
-    list:SetPoint("TOPLEFT", pane, "TOPLEFT", 5, -8)
-    list:SetPoint("BOTTOMRIGHT", pane, "BOTTOMRIGHT", -20, 105)
-    bar:SetPoint("TOPLEFT", list, "TOPRIGHT", -5, -12)
-    bar:SetPoint("BOTTOMLEFT", list, "BOTTOMRIGHT", 0, 0)
+    anchorEquipmentSetList(pane, list, bar, 105)
     -- Equip and Save side by side under New Set (which is 50 up, 34 high).
     for key, x in pairs({ EquipSet = -50, SaveSet = 50 }) do
         local button = _G.CreateFrame("Button", nil, pane)

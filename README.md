@@ -535,7 +535,8 @@ at still shows its tooltip.
 
 **Equipment sets:** in the controller interface the game leaves the character window's list of
 equipment sets empty and hides Equip and Save, so a set can't be saved again after you change its
-gear. **Show equipment sets**, on by default, makes the tab work as it does with keyboard and mouse.
+gear. **Show equipment sets**, on by default, makes the character window's equipment set tab work
+as it does with keyboard and mouse.
 It puts the game's own list back, with every set you have and its usual menu, also after switching
 to keyboard and mouse, and the game's own Equip and Save under New Set. The controller cursor stops
 on them and A presses them. Save is greyed out while you wear the selected set as saved and asks

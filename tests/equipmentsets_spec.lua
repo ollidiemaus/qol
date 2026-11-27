@@ -89,15 +89,16 @@ describe("equipment sets", function()
         assertRepaired()
     end)
 
-    -- A later client that fixes the whole tab in the controller interface, with a layout of its own.
-    local function fixedTab()
+    -- In the controller interface, as a later client that shows Equip and Save there would leave it;
+    -- each test gives the list the layout of that client's own.
+    local function loadWithButtonsShown()
         load(true)
         pane().EquipSet:Show()
         pane().SaveSet:Show()
     end
 
     it("leaves a list that has a width, with Save shown, where the game put it", function()
-        fixedTab()
+        loadWithButtonsShown()
         local list, bar = pane().ScrollBox, pane().ScrollBar
         list:SetWidth(180)
         bar:ClearAllPoints()
@@ -109,7 +110,7 @@ describe("equipment sets", function()
     end)
 
     it("leaves a list whose width is secret alone while Save is shown", function()
-        fixedTab()
+        loadWithButtonsShown()
         Stubs.state().secretListWidth = true
         Stubs.Login()
         T.eq(pane().ScrollBox:GetNumPoints(), 1)
